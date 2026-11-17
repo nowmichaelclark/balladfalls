@@ -398,3 +398,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   (`tests/dummy.rs`). The format is `core/README.md`, "Share codes, version
   2", frozen by `core/golden/share-codes.txt`; `node tools/codes.mjs` makes and
   opens codes and albums from the command line. The app's module grew 10 KB.
+- #416, audio export in the app, lossless, safe first (item 104b, session
+  20, v179); preview URL: the branch's preview (no hash kept). Nothing that
+  plays moved. Save, the Share tab, Audio: a loop or a piece exported as a
+  FLAC by its own instance of the core in a Worker (`js/export-worker.js`,
+  `js/export-render.js`), written as it is made (the save picker, else the
+  site's private file system and a download, else memory to 10 minutes),
+  free space checked first, Cancel leaving no file, "lighter on processor"
+  making it gentle. Check on the Moto and the tablet (`for-mikey.md`): a
+  30-minute export while the music plays, nothing stuttering. Every file
+  nulls against a straight render (`tools/export.mjs`, in the gate);
+  `tools/rows.mjs` has the export's rows and `tools/export-long.mjs` the
+  three-hour run (the `export` workflow). The app's module grew 23 KB.

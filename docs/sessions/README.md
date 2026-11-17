@@ -82,7 +82,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 17 | `17-long-jump.md` | 106a: the core's jump and the piece map for the page | Opus 5.5, high | B2 | 20, 21, 22, 24, 26 | |
 | 18 | `18-long-screens.md` | 106b: long pieces on screen | Sonnet 5.5, high | 17 | 20, 21, 22, 24, 26, 27, 28, 29 | |
 | | | **Export** | | | | |
-| 20 | `20-export-app.md` | 104b: export in the app, lossless, safe first | Opus 5.5, high | B2 (19 is in) | 17, 18, 22, 24, 26 | |
+| 20 | `20-export-app.md` | 104b: export in the app, lossless, safe first | Opus 5.5, high | B2 (19 is in) | 17, 18, 22, 24, 26 | yes, 2026-11-17 (#416) |
 | 21 | `21-export-small.md` | 104c: the small format | Sonnet 5.5, high | 20 | 17, 18, 22, 23, 24, 26, 27 | |
 | | | **Codes** | | | | |
 | 22 | `22-codes-core.md` | 105a: codes, version 2, in the core | Opus 5.5, high | B2 | 17, 18, 20, 21, 26, 27, 28, 29 | yes, 2026-11-17 (#412) |

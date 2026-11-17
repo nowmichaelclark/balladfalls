@@ -491,7 +491,7 @@ A loop or an album as a short run of the 64 link-safe characters, written and
 read by `src/code.rs` (natively; `dl_code_*` and `dl_album_*` in the C header;
 `dl_code_*` in the tools' wasm, and the app's from session 23;
 `node tools/codes.mjs` from the command line). **Frozen from 1.0:**
-`golden/codes.txt` holds it to its bytes, natively and on the web.
+`golden/share-codes.txt` holds it to its bytes, natively and on the web.
 
 **Characters.** `A`-`Z` `a`-`z` `0`-`9` `-` `_` are the values 0 to 63, a
 *sextet* each. Spaces around a code are let be; anything else outside the

@@ -16,7 +16,7 @@
 //                                   sharing REQUEST's picks
 //
 // As a module: `loopCode`, `readLoop`, `albumCode`, `seedAlbumCode`,
-// `albumTracks` (test/codes.test.mjs holds them to core/golden/codes.txt).
+// `albumTracks` (test/codes.test.mjs holds them to core/golden/share-codes.txt).
 
 import { open } from './gen-lib.mjs';
 

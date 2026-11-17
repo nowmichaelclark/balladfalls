@@ -1,5 +1,5 @@
 // Share codes, version 2 (queue item 105) through the tools' WebAssembly
-// build (`dl_code_*`, tools/codes.mjs): every line of core/golden/codes.txt
+// build (`dl_code_*`, tools/codes.mjs): every line of core/golden/share-codes.txt
 // written and read back to the same characters, as the core's native test
 // holds them, so the web and the native core speak one format. Needs
 // `tools/build-core.sh --tools`.
@@ -21,8 +21,8 @@ const refusal = (fn) => {
   }
 };
 
-console.log('\ncore/golden/codes.txt, on the web build');
-const lines = fs.readFileSync(new URL('../core/golden/codes.txt', import.meta.url), 'utf8').split('\n').filter((l) => l && !l.startsWith('#'));
+console.log('\ncore/golden/share-codes.txt, on the web build');
+const lines = fs.readFileSync(new URL('../core/golden/share-codes.txt', import.meta.url), 'utf8').split('\n').filter((l) => l && !l.startsWith('#'));
 for (const line of lines) {
   const f = line.split(' ');
   const req = (r) => (r === '-' ? '' : r);

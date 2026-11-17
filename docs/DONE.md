@@ -385,5 +385,5 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   every name by its id in `data/codes.txt` with the version it joined, and
   a code's loop drawn at its version so later additions never move it
   (`tests/dummy.rs`). The format is `core/README.md`, "Share codes, version
-  2", frozen by `core/golden/codes.txt`; `node tools/codes.mjs` makes and
+  2", frozen by `core/golden/share-codes.txt`; `node tools/codes.mjs` makes and
   opens codes and albums from the command line. The app's module grew 10 KB.

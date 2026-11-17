@@ -644,9 +644,9 @@ fn a_request_asks_its_version_in_text() {
 
 #[test]
 fn the_formats_fixtures_are_its_bytes() {
-    // core/golden/codes.txt: the format held to its bytes, the same lines
+    // core/golden/share-codes.txt: the format held to its bytes, the same lines
     // test/codes.test.mjs holds the web build to. From 1.0 on none changes.
-    let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/golden/codes.txt")).expect("the fixtures");
+    let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/golden/share-codes.txt")).expect("the fixtures");
     let req = |r: &str| if r == "-" { Request::new() } else { Request::parse(r).expect("a request") };
     let title = |t: &str| if t == "-" { Title::NONE } else { Title::new(t.as_bytes()).expect("a title") };
     let mut out = vec![0u8; 8192];

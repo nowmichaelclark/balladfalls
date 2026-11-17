@@ -66,7 +66,7 @@ Mikey's two calls, v175 #402: batch 6's draws count against a loop's
 changes, way A of `docs/archive/notes/101h-change-counts.md`, and twang picks a
 beat apart); hands session 10 done (2026-11-17: 84b, v177, the chords a
 fifth under the tune where 84's whole octave left them past an octave, #404);
-brain B2 done (2026-11-17: batch 6 and 84b checked on v177, the "Batch 6 Album" out, `docs/ALBUMS.md`; sessions 17 and 22's prompts adjusted); brain B-parallel (2026-11-17, in Claude Code): from 17 on the road runs as four chains, two sessions at a time (`docs/sessions/README.md`, "From 17 on"), started and overseen by that brain; Mikey heard the Batch 6 Album (2026-11-17: every sound kept, twang soft only, in session 17's first PR; 84b kept); hands session 22 done (2026-11-17: 105a, v178, codes version 2 in the core, #412; the app writes version 1 until session 23); hands session 26 done (2026-11-17: 107b, the core native on Android's own audio, AAudio from a Rust crate in `android/native`, a debug screen and tests, #411; no app change); next: the chains, and his testers' pastes
+brain B2 done (2026-11-17: batch 6 and 84b checked on v177, the "Batch 6 Album" out, `docs/ALBUMS.md`; sessions 17 and 22's prompts adjusted); brain B-parallel (2026-11-17, in Claude Code): from 17 on the road runs as four chains, two sessions at a time (`docs/sessions/README.md`, "From 17 on"), started and overseen by that brain; Mikey heard the Batch 6 Album (2026-11-17: every sound kept, twang soft only, in session 17's first PR; 84b kept); hands session 22 done (2026-11-17: 105a, v178, codes version 2 in the core, #412; the app writes version 1 until session 23); hands session 26 done (2026-11-17: 107b, the core native on Android's own audio, AAudio from a Rust crate in `android/native`, a debug screen and tests, #411; no app change); hands session 17 done (2026-11-18: v179 twang soft only, Mikey's call, #414; 106a, v180, the core's jump within a long piece, where it is, and the piece's map for the page, #417; no screens yet, session 18's); next: the chains, and his testers' pastes
 (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
@@ -566,7 +566,11 @@ played and left; for Endless, time played), moving within a piece (a jump
 to a section or a point, from the seed and the section's number, promise
 11), section markers from 102's piece map, and a piece's length or
 duration in the Library. **Yardsticks:** a jump to three hours in starts
-within a second, nothing late (`tools/rows.mjs` gains the rows).
+within a second, nothing late (`tools/rows.mjs` gains the rows). **106a done** (session 17, #417): the core's jump
+(`Player::jump`, `dl_play_jump`, the worklet's `playJump`), where it is
+(`Player::place`) and the map (`pieceMarks` in `js/gen.js`):
+`docs/LONGFORM.md`, "The jump and the map". 106b, the screens, is session
+18's.
 
 ## 104. Audio export
 

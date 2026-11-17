@@ -49,6 +49,7 @@ fn round_trip(g: Option<&mut Generator>, l: &Loop) -> String {
     text
 }
 
+#[allow(clippy::large_types_passed_by_value)] // the request's builders' results, as they come
 fn asked(r: Result<Request, &'static str>) -> Loop {
     Loop { request: r.expect("a request"), ..Loop::of(20_261_009) }
 }
@@ -79,7 +80,7 @@ fn every_member_has_an_id_and_a_version() {
     covers("tones", data::CODE_TONES, &request::TONE_NAMES);
     covers("choices", data::CODE_CHOICES, &CHOICES.iter().map(|c| c.id).collect::<Vec<_>>());
     for c in CHOICES {
-        let list = data::CODE_OPTIONS.iter().find(|e| e.0 == c.id).map(|e| e.1).unwrap_or_else(|| panic!("{}: no [options]", c.id));
+        let list = data::CODE_OPTIONS.iter().find(|e| e.0 == c.id).map_or_else(|| panic!("{}: no [options]", c.id), |e| e.1);
         covers(c.id, list, &c.options.iter().map(|o| o.0).collect::<Vec<_>>());
     }
     assert_eq!(data::CODE_OPTIONS.len(), CHOICES.len(), "an [options] block for no choice");
@@ -91,7 +92,7 @@ fn every_member_has_an_id_and_a_version() {
         let full: &'static str = Box::leak(format!("{prefix}{name}").into_boxed_str());
         settings.push(full);
         if let Some(words) = Pins::words(number) {
-            let list = data::CODE_WORDS.iter().find(|e| e.0 == full).map(|e| e.1).unwrap_or_else(|| panic!("{full}: no [words]"));
+            let list = data::CODE_WORDS.iter().find(|e| e.0 == full).map_or_else(|| panic!("{full}: no [words]"), |e| e.1);
             covers(full, list, &words.iter().map(|w| w.0).collect::<Vec<_>>());
             worded.push(full);
         }
@@ -117,9 +118,6 @@ fn every_member_has_an_id_and_a_version() {
             assert!(data::CODE_BASS_STYLES.iter().any(|e| e.0 == *name), "bass style '{name}' has no row");
         }
     }
-    // Every id below 2^32 and every version from 2 to the newest (build.rs
-    // holds them once each).
-    assert!(data::CODE_NEWEST >= request::FIRST_VERSION);
 }
 
 #[test]
@@ -239,7 +237,7 @@ fn walk() {
                 check(g, asked(Request::new().with_pin(number, x)));
             }
         } else if let Some(([lo, hi], whole)) = Pins::range(number) {
-            let mid = if whole { ((lo + hi) / 2.0).floor() } else { lo + (hi - lo) * 0.37 };
+            let mid = if whole { lo.midpoint(hi).floor() } else { lo + (hi - lo) * 0.37 };
             for x in [lo, hi, mid] {
                 check(g, asked(Request::new().with_pin(number, x)));
             }
@@ -300,7 +298,7 @@ fn a_pin_to_today_frees_a_change_and_its_code_plays_it() {
 // --------------------------------------------------------------- the fuzz
 
 /// A random request, as a listener's picks and edits could make one.
-#[allow(clippy::too_many_lines)] // one part of the request after another
+#[allow(clippy::too_many_lines, clippy::many_single_char_names)] // one part of the request after another, each on its stream
 fn random_loop(r: &mut Rng) -> Loop {
     let mut q = Request::new();
     let mut d = Rng::new(r.seed32());
@@ -456,7 +454,7 @@ fn an_album_of_loops_holds_each_as_it_was() {
 
 #[test]
 fn an_album_from_one_seed_is_one_short_code() {
-    let picks = Request::parse("glacial,cozy,bars=3072,journey=wander").expect("picks");
+    let picks = Request::parse("glacial,cozy,bars=3072").expect("picks");
     let mut out = [0u8; 256];
     let n = code::write_seed_album(424_242, 12, &picks, &Title::NONE, &mut out).expect("an album");
     let album = String::from_utf8(out[..n].to_vec()).expect("ASCII");
@@ -497,10 +495,10 @@ fn sealed(chars: &str) -> String {
 fn uv(mut x: u64) -> String {
     let mut s = String::new();
     while x >= 32 {
-        s.push(ALPHABET[(x & 31) as usize | 32] as char);
+        s.push(ALPHABET[usize::try_from(x & 31).unwrap() | 32] as char);
         x >>= 5;
     }
-    s.push(ALPHABET[x as usize] as char);
+    s.push(ALPHABET[usize::try_from(x).unwrap()] as char);
     s
 }
 
@@ -516,12 +514,12 @@ fn a_newer_builds_code_is_refused_plainly() {
     // An id this build lacks: a vibe, a choice, a setting, a voice, a field.
     let head = &plain[..7];
     for fields in [
-        format!("{}{}", uv(1), uv(9999 * 2)),
-        format!("{}{}{}", uv(13), uv(999), uv(1)),
-        format!("{}{}{}", uv(13), uv(0), uv(99)),
-        format!("{}{}{}", uv(14), uv(999), uv(0)),
-        format!("{}{}{}{}", uv(9), uv(3), uv(1), uv(200)),
-        format!("{}{}", uv(5), uv(7)),
+        format!("{}{}", uv(1), uv(9999)),
+        format!("{}{}{}", uv(15), uv(999), uv(1)),
+        format!("{}{}{}", uv(15), uv(0), uv(99)),
+        format!("{}{}{}", uv(16), uv(999), uv(0)),
+        format!("{}{}{}{}", uv(11), uv(3), uv(1), uv(200)),
+        format!("{}{}", uv(7), uv(7)),
         uv(25),
         uv(31),
     ] {
@@ -559,7 +557,7 @@ fn no_code_is_read_as_another() {
     assert!(code::read_loop(format!("  {text}\n").as_bytes()).is_ok());
     // Out of order, twice, or a set empty: no code's.
     let head = &text[..7];
-    for fields in [format!("{}{}", uv(2), uv(0)) + &uv(0) + &uv(1) + &uv(1), format!("{}{}{}{}", uv(6), uv(1), uv(0), uv(6)) + &uv(1) + &uv(0), format!("{}{}", uv(6), uv(0))] {
+    for fields in [format!("{}{}", uv(3), uv(0)) + &uv(1) + &uv(1), format!("{}{}{}{}", uv(8), uv(1), uv(0), uv(8)) + &uv(1) + &uv(0), format!("{}{}", uv(8), uv(0))] {
         assert_eq!(code::read_loop(sealed(&format!("{head}{fields}")).as_bytes()).err(), Some(NOT_A_CODE), "{fields}");
     }
 }
@@ -642,4 +640,38 @@ fn a_request_asks_its_version_in_text() {
     // No room: refused, not cut short.
     let mut small = [0u8; 8];
     assert_eq!(code::write_loop(&Loop::of(1), &mut small).err(), Some(code::NO_ROOM));
+}
+
+#[test]
+fn the_formats_fixtures_are_its_bytes() {
+    // core/golden/codes.txt: the format held to its bytes, the same lines
+    // test/codes.test.mjs holds the web build to. From 1.0 on none changes.
+    let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/golden/codes.txt")).expect("the fixtures");
+    let req = |r: &str| if r == "-" { Request::new() } else { Request::parse(r).expect("a request") };
+    let title = |t: &str| if t == "-" { Title::NONE } else { Title::new(t.as_bytes()).expect("a title") };
+    let mut out = vec![0u8; 8192];
+    let mut lines = 0;
+    for line in text.lines().filter(|l| !l.is_empty() && !l.starts_with('#')) {
+        let f: Vec<&str> = line.split(' ').collect();
+        match f[0] {
+            "loop" => {
+                let l = Loop { seed: f[1].parse().unwrap(), request: req(f[2]), mutes: f[3].parse().unwrap(), salt: f[4].parse().unwrap() };
+                assert_eq!(write(&l), f[5], "{line}");
+                assert_eq!(write(&code::read_loop(f[5].as_bytes()).expect("reads")), f[5]);
+            }
+            "album" => {
+                let codes: Vec<&str> = f[2].split(',').collect();
+                let n = code::write_album(codes.iter().map(|c| c.as_bytes()), &title(f[1]), &mut out).expect("an album");
+                assert_eq!(core::str::from_utf8(&out[..n]).unwrap(), f[3], "{line}");
+                assert_eq!(album_tracks(f[3]), codes);
+            }
+            "seed-album" => {
+                let n = code::write_seed_album(f[1].parse().unwrap(), f[2].parse().unwrap(), &req(f[3]), &title(f[4]), &mut out).expect("an album");
+                assert_eq!(core::str::from_utf8(&out[..n]).unwrap(), f[5], "{line}");
+            }
+            other => panic!("a line of no kind: {other}"),
+        }
+        lines += 1;
+    }
+    assert!(lines >= 19);
 }

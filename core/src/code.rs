@@ -65,24 +65,26 @@ const CHECK_PRIME: u32 = 4093;
 mod tag {
     pub const VERSION: u64 = 0;
     pub const VIBE: u64 = 1;
-    pub const TEMPO: u64 = 2;
-    pub const LENGTH: u64 = 3;
-    pub const ENDLESS: u64 = 4;
-    pub const JOURNEY: u64 = 5;
-    pub const KEYS: u64 = 6;
-    pub const SCALES: u64 = 7;
-    pub const STYLES: u64 = 8;
-    pub const VOICES: u64 = 9;
-    pub const LAYERS_ON: u64 = 10;
-    pub const LAYERS_OFF: u64 = 11;
-    pub const THEME: u64 = 12;
-    pub const CHOICE: u64 = 13;
-    pub const SETTING: u64 = 14;
-    pub const SEED: u64 = 15;
-    pub const TONE: u64 = 16;
-    pub const BPM: u64 = 17;
-    pub const MUTES: u64 = 18;
-    pub const SALT: u64 = 19;
+    pub const VIBE_WEIGHTED: u64 = 2;
+    pub const TEMPO: u64 = 3;
+    pub const TEMPO_RANGE: u64 = 4;
+    pub const LENGTH: u64 = 5;
+    pub const ENDLESS: u64 = 6;
+    pub const JOURNEY: u64 = 7;
+    pub const KEYS: u64 = 8;
+    pub const SCALES: u64 = 9;
+    pub const STYLES: u64 = 10;
+    pub const VOICES: u64 = 11;
+    pub const LAYERS_ON: u64 = 12;
+    pub const LAYERS_OFF: u64 = 13;
+    pub const THEME: u64 = 14;
+    pub const CHOICE: u64 = 15;
+    pub const SETTING: u64 = 16;
+    pub const SEED: u64 = 17;
+    pub const TONE: u64 = 18;
+    pub const BPM: u64 = 19;
+    pub const MUTES: u64 = 20;
+    pub const SALT: u64 = 21;
     pub const TITLE: u64 = 30;
 }
 
@@ -371,20 +373,28 @@ fn body(w: &mut Out, song: &Loop, version: u32, own_version: Option<u32>, picks_
         }
     }
     vibes[..asked].sort_unstable_by_key(|e| e.0);
-    for &(id, weight) in &vibes[..asked] {
-        w.uv(tag::VIBE);
-        let weighted = !weight.is_nan();
-        w.uv(u64::from(id) * 2 + u64::from(weighted));
-        if weighted {
-            w.dec(weight);
+    // Those asked without a weight first, then those with one.
+    for weighted in [false, true] {
+        for &(id, weight) in vibes[..asked].iter().filter(|e| e.1.is_nan() != weighted) {
+            w.uv(if weighted { tag::VIBE_WEIGHTED } else { tag::VIBE });
+            w.uv(u64::from(id));
+            if weighted {
+                w.dec(weight);
+            }
         }
     }
+    // A tempo pinned, its bpm; a range, its low and how far past it.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // whole bpm, 32 to 190
     if let Some([lo, hi]) = req.tempo() {
-        w.uv(tag::TEMPO);
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // whole bpm, 32 to 190
-        {
-            w.uv((lo - request::TEMPO_LIMIT[0]) as u64);
-            w.uv((hi - lo) as u64);
+        let low = (lo - request::TEMPO_LIMIT[0]) as u64;
+        let span = (hi - lo) as u64;
+        if span == 0 {
+            w.uv(tag::TEMPO);
+            w.uv(low);
+        } else {
+            w.uv(tag::TEMPO_RANGE);
+            w.uv(low);
+            w.uv(span - 1);
         }
     }
     match req.length() {
@@ -748,7 +758,7 @@ fn read_body(r: &mut In, version: u32, fields: Fields, title: &mut Title) -> Res
         }
         // The key read with the tag, to hold the order.
         let (k, keyed) = match t {
-            tag::VIBE | tag::VOICES | tag::CHOICE | tag::SETTING | tag::SEED | tag::TONE => (r.uv()?, true),
+            tag::VIBE | tag::VIBE_WEIGHTED | tag::VOICES | tag::CHOICE | tag::SETTING | tag::SEED | tag::TONE => (r.uv()?, true),
             _ => (0, false),
         };
         match last {
@@ -777,18 +787,18 @@ fn read_body(r: &mut In, version: u32, fields: Fields, title: &mut Title) -> Res
                 }
                 version = v;
             }
-            tag::VIBE => {
-                let id = u32::try_from(k / 2).map_err(|_| NEEDS_NEWER)?;
+            tag::VIBE | tag::VIBE_WEIGHTED => {
+                let id = u32::try_from(k).map_err(|_| NEEDS_NEWER)?;
                 let i = data::vibe_index(name_of(data::CODE_VIBES, id, version)?).ok_or(NEEDS_NEWER)?;
                 // A vibe twice (with a weight and without) is no code's.
                 if req.vibe(i).is_some() {
                     return Err(NOT_A_CODE);
                 }
-                req = if k % 2 == 1 { met(req.with_weight(i, r.dec()?))? } else { req.with(i) };
+                req = if t == tag::VIBE_WEIGHTED { met(req.with_weight(i, r.dec()?))? } else { req.with(i) };
             }
-            tag::TEMPO => {
+            tag::TEMPO | tag::TEMPO_RANGE => {
                 let lo = r.below(200)?;
-                let hi = lo + r.below(200)?;
+                let hi = if t == tag::TEMPO { lo } else { lo + 1 + r.below(200)? };
                 #[allow(clippy::cast_precision_loss)] // below 400
                 let (lo, hi) = (lo as f64 + request::TEMPO_LIMIT[0], hi as f64 + request::TEMPO_LIMIT[0]);
                 req = met(req.with_tempo(lo, hi))?;

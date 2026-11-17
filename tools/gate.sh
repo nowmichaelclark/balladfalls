@@ -5,7 +5,8 @@
 #
 #   tools/gate.sh                 every part, one after another
 #   tools/gate.sh core            the committed .wasm is its source; the
-#                                 core's tests; clippy pedantic at zero
+#                                 core's tests (and the dummy build's);
+#                                 clippy pedantic at zero
 #   tools/gate.sh sketch          the same tests and clippy, sketch build
 #   tools/gate.sh node            the Node tests, the generation goldens and
 #                                 the balance lock, on the core's generator
@@ -35,10 +36,14 @@ cd "$root"
 core() {
   tools/build-core.sh --check
   (cd core && cargo test --locked)
+  # Additions leave old codes as they sound (queue item 105): the dummy
+  # build's members at a later version move no golden.
+  (cd core && cargo test --locked --features dummy --test dummy)
   (cd core && rustup component add clippy >/dev/null 2>&1 || true
    cargo clippy --all-targets --locked -- -W clippy::pedantic -D warnings
    cargo clippy --lib --locked --features capi -- -W clippy::pedantic -D warnings
-   cargo clippy --lib --locked --features tools -- -W clippy::pedantic -D warnings)
+   cargo clippy --lib --locked --features tools -- -W clippy::pedantic -D warnings
+   cargo clippy --all-targets --locked --features dummy -- -W clippy::pedantic -D warnings)
 }
 
 sketch() {

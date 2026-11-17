@@ -872,6 +872,7 @@ impl Render {
             "floorDrop" => cx.spec.bars >= 4.0 && (has_drums || has_bass),
             "pedalBass" => PEDAL.styles.contains(&self.bass_out.style.get()) && has_bass,
             "padSweep" => self.chords.iter().any(|e| e.vel != 0.0 && PADSWEEP.sustained.contains(&e.voice.get())),
+            #[cfg(feature = "dummy")] "dummyAlone" => true,
             _ => false,
         }
     }

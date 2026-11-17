@@ -1,9 +1,11 @@
 # Session 30: the known issues and the polish
 
+**Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" was "sessions 24 and 29, and brain session B4": the chains end at 18, 21, 24 and 29, so all four are named; it runs alone.
+
 **Changed by brain B1 (2026-11-11):** the Painter's test kit's broken imports, found in B1's check of item 97.
 
 - **Model:** Sonnet 5.5. **Effort:** high.
-- **Start after:** sessions 24 and 29, and brain session B4.
+- **Start after:** sessions 18, 21, 24 and 29, and brain session B4. Nothing runs alongside it.
 - **Queue item:** the "Known issues" section and the road's "the known issues, the polish".
 
 Paste everything in the block as the session's first message.

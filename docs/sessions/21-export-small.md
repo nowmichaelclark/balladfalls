@@ -1,7 +1,9 @@
 # Session 21: audio export: the small format (104c)
 
+**Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" unchanged after 20; what may run beside it is new.
+
 - **Model:** Sonnet 5.5. **Effort:** high.
-- **Start after:** session 20.
+- **Start after:** session 20. It may run alongside 17, 18, 22, 23, 24, 26 and 27; 28 waits for it.
 - **Queue item:** item 104.
 
 Paste everything in the block as the session's first message.

@@ -1,7 +1,9 @@
 # Session 26: the Android app: the core native, on Android's own audio (107b)
 
+**Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" unchanged after 25; 22 is no longer named (Android doesn't read the codes), and what may run beside it is new.
+
 - **Model:** Opus 5.5. **Effort:** high.
-- **Start after:** session 25 (and session 22 if it is merged: not required).
+- **Start after:** session 25. It may run alongside 17, 18, 20, 21, 22, 23 and 24: it changes `android/` and its workflow.
 - **Queue item:** item 107.
 
 Paste everything in the block as the session's first message.

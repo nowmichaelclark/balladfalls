@@ -1,9 +1,11 @@
 # Session 24: codes: links, an album from one seed, and the plain lines (105c)
 
+**Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" unchanged after 23; what may run beside it is new.
+
 **Changed by brain B1 (2026-11-11):** the name and address from one place, for the rename at 1.0.
 
 - **Model:** Sonnet 5.5. **Effort:** medium.
-- **Start after:** session 23.
+- **Start after:** session 23. It may run alongside 17, 18, 20, 21, 26, 27, 28 and 29.
 - **Queue item:** item 105.
 
 Paste everything in the block as the session's first message.

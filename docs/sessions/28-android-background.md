@@ -1,7 +1,9 @@
 # Session 28: the Android app: the screen off, the notification, saving an export (107d)
 
+**Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" was "session 27": it saves 20's and 21's exports on Android (Small shown only where the WebView has the encoder), so it waits for 21 too. Mikey's APK check after 27 doesn't hold it (that row: the work goes on meanwhile).
+
 - **Model:** Sonnet 5.5. **Effort:** high.
-- **Start after:** session 27.
+- **Start after:** sessions 27 and 21. It may run alongside 18, 22, 23 and 24.
 - **Queue item:** item 107.
 
 Paste everything in the block as the session's first message.

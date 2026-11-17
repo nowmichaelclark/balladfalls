@@ -1,7 +1,9 @@
 # Session 27: the Android app: the page talks to the native core (107c)
 
+**Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" was "session 26": it also waits for 17, since it carries 17's jump over the bridge (94a's table gains the jump) and both change `js/worklet.js`, `js/player.js` and `js/core.js`.
+
 - **Model:** Opus 5.5. **Effort:** high.
-- **Start after:** session 26.
+- **Start after:** sessions 26 and 17. It may run alongside 18, 21, 22, 23 and 24; never beside 20 (both change "lighter on processor" in `js/main.js`).
 - **Queue item:** item 107.
 
 Paste everything in the block as the session's first message.

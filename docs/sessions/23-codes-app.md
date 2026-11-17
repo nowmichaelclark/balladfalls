@@ -1,7 +1,9 @@
 # Session 23: codes, version 2, in the app (105b)
 
+**Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" unchanged after 22; what may run beside it is new.
+
 - **Model:** Opus 5.5. **Effort:** high.
-- **Start after:** session 22.
+- **Start after:** session 22. It may run alongside 21, 26, 27, 28 and 29; never beside 17 (both change `js/gen.js`), 18 (`js/library.js`) or 20 (the same actions in `js/main.js`).
 - **Queue item:** item 105.
 
 Paste everything in the block as the session's first message.

@@ -291,6 +291,15 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 
 ### Start here (for the next brain)
 
+- **Brain B-parallel (Opus 5.5, 2026-11-17, in Claude Code): the chains.**
+  Started on `main` at v177 (bffafa4, CI green, the nightly green on
+  2026-11-16). The plan made parallel (`docs/sessions/README.md`, "From 17
+  on"): four chains with an After and an Alongside for every row, checked
+  against the prompts and the code; each prompt's "Start after" corrected
+  (said at its top); the merge-main rule in "Rules for every session".
+  **Running:** see the sessions list below as it fills. This brain stops at
+  B4 (`brain-4-codes.md`, the next brain's).
+  - Sessions: (none started yet)
 - **Brain B2 (Opus 5.5, 2026-11-17): batch 6 and 84b checked, the album
   out.** On `main` at v177 (686543d), measured, not taken from the reports:
   the module matches its source (886,209 bytes); goldens 5,139 of 5,139; the

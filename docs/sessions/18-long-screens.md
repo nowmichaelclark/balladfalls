@@ -1,7 +1,9 @@
 # Session 18: long pieces on screen (106b)
 
+**Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" unchanged after 17; what may run beside it is new.
+
 - **Model:** Sonnet 5.5. **Effort:** high.
-- **Start after:** session 17.
+- **Start after:** session 17. It may run alongside 20, 21, 22, 24, 26, 27, 28 and 29; never beside 23 (both change `js/library.js` and the same parts of `js/main.js`).
 - **Queue item:** item 106.
 
 Paste everything in the block as the session's first message.

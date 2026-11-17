@@ -66,7 +66,7 @@ Mikey's two calls, v175 #402: batch 6's draws count against a loop's
 changes, way A of `docs/archive/notes/101h-change-counts.md`, and twang picks a
 beat apart); hands session 10 done (2026-11-17: 84b, v177, the chords a
 fifth under the tune where 84's whole octave left them past an octave, #404);
-brain B2 done (2026-11-17: batch 6 and 84b checked on v177, the "Batch 6 Album" out, `docs/ALBUMS.md`; sessions 17 and 22's prompts adjusted); next: session 17 onward, Mikey's album, and his testers' pastes
+brain B2 done (2026-11-17: batch 6 and 84b checked on v177, the "Batch 6 Album" out, `docs/ALBUMS.md`; sessions 17 and 22's prompts adjusted); brain B-parallel (2026-11-17, in Claude Code): from 17 on the road runs as four chains, two sessions at a time (`docs/sessions/README.md`, "From 17 on"), started and overseen by that brain; next: the chains, Mikey's album, and his testers' pastes
 (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
@@ -586,8 +586,9 @@ nothing broken.
 
 ## 105. Short codes and links (codes, version 2)
 
-**Hands:** Opus or Fable, high. Before 1.0, after 102 and 104, so it
-carries everything 1.0 has; **from 1.0 on, codes stay stable** (Mikey,
+**Hands:** Opus or Fable, high. Before 1.0, after 102, so it
+carries everything 1.0 has (B-parallel, 2026-11-17: not after 104 or
+106, since a code carries no export and no jump); **from 1.0 on, codes stay stable** (Mikey,
 2026-11-10). `docs/CORE.md` phase 6 and promise 8, `docs/PAINTER.md`,
 "Share codes, version 2": short plain codes (what was pinned beside the
 seed, nothing else), plain links that open the loop, an album from one
@@ -615,7 +616,8 @@ refused plainly.
 
 ## 107. The Android app, on F-Droid
 
-**Hands:** Fable, high. After 105. Mikey (2026-10-12): from the same Rust
+**Hands:** Fable, high. Alongside 104 to 106 (B-parallel, 2026-11-17:
+the chains in `docs/sessions/README.md`; it reads no codes). Mikey (2026-10-12): from the same Rust
 core, with the web screens inside it; the website stays. The core native,
 on Android's own audio (AAudio, through a small Rust layer or Oboe) at a
 high priority, the page's screens in a WebView talking to it by the same

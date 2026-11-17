@@ -12,13 +12,15 @@ F-Droid), as a prompt to copy and paste, in the order to start them. One
 file per prompt in this folder; each file says the model, the effort, what
 must be merged before it starts, and holds the prompt in a block.
 
-**How to use it (Mikey):** start the sessions in the table's order, one at
-a time, each in a new Claude Code session (the brain's in the claude.ai
-Driftloom Project). Open the file, copy the block, paste it as the first
-message. When a session ends it ticks its row here and says what it left
-for you in `docs/notes/for-mikey.md`. The rows marked **you** are yours:
-nothing after them should start until you have done them, unless the row
-says the work goes on meanwhile.
+**How to use it (Mikey):** to 16, the sessions ran in the table's order,
+one at a time, each in a new Claude Code session (the brain's in the
+claude.ai Driftloom Project). From 17 on, the B-parallel brain starts them
+for you (the chains below); to start one yourself, pick a row whose After is
+ticked and whose running neighbors are all in its Alongside, open the file,
+copy the block, paste it as the first message. When a session ends it ticks
+its row here and says what it left for you in `docs/notes/for-mikey.md`.
+The rows marked **you** are yours: nothing after them should start until
+you have done them, unless the row says the work goes on meanwhile.
 
 ## The order
 
@@ -46,35 +48,69 @@ says the work goes on meanwhile.
 | 10 | `10-chords-nearer.md` | 84b: the chords nearer the tune | Opus 5.5, high | yes, 2026-11-17 (#404) |
 | B2 | `brain-2-batch6.md` | Brain: check batch 6 and 84b; build the batch album | Opus 5.5, high | yes, 2026-11-17 (the Batch 6 Album, `docs/ALBUMS.md`; 17 and 22's prompts adjusted) |
 | | **you** | Listen to the batch album; verdicts to the brain. The work goes on meanwhile. | | |
-| B-par | `brain-parallel.md` | Brain, in Claude Code: makes the plan below parallel (four chains: 17-18, 20-21, 22-24, 26-29), then starts and oversees the hands sessions two at a time, up to B4 (Mikey, 2026-11-17) | Opus 5.5, high | |
 | 16 | `16-long-tuning.md` | 102f: from Mikey's notes (he kept everything): the two holes B3 found, fixed, and a yardstick against them; runs now, ahead of the rows 04 to B2 above it (they don't wait for it, nor it for them) | Opus 5.5, high | yes, 2026-11-14 (#385; the second set on `long-clips`) |
-| 17 | `17-long-jump.md` | 106a: the core's jump and the piece map for the page | Opus 5.5, high | |
-| 18 | `18-long-screens.md` | 106b: long pieces on screen | Sonnet 5.5, high | |
 | 19 | `19-export-flac.md` | 104a: the FLAC writer in the core | Opus 5.5, high | yes, 2026-11-14 (#390; ran alongside 05 to 18, as the table allows) |
-| 20 | `20-export-app.md` | 104b: export in the app, lossless, safe first | Opus 5.5, high | |
-| 21 | `21-export-small.md` | 104c: the small format | Sonnet 5.5, high | |
-| 22 | `22-codes-core.md` | 105a: codes, version 2, in the core | Opus 5.5, high | |
-| 23 | `23-codes-app.md` | 105b: codes in the app | Opus 5.5, high | |
-| 24 | `24-codes-links.md` | 105c: links, an album from one seed, the plain lines | Sonnet 5.5, medium | |
-| B4 | `brain-4-codes.md` | Brain: check 104 to 106; the albums again in the new codes | Opus 5.5, high | |
 | 25 | `25-android-shell.md` | 107a: the Android project and its CI build | Sonnet 5.5, high | yes, 2026-11-14 (#389) |
-| 26 | `26-android-audio.md` | 107b: the core native, on Android's audio | Opus 5.5, high | |
-| 27 | `27-android-bridge.md` | 107c: the page talks to the native core | Opus 5.5, high | |
-| | **you** | Install the APK from 27's PR on the Moto and the tablet; say what you hear. The work goes on meanwhile. | | |
-| 28 | `28-android-background.md` | 107d: the screen off, the notification, saving an export | Sonnet 5.5, high | |
-| 29 | `29-android-fdroid.md` | 107e: F-Droid's metadata, recipe and icons | Sonnet 5.5, high | |
-| | **you** | The signing choice (`docs/notes/for-mikey.md` will have the steps); buy the new name's domain and attach it to the Worker, if not done. | | |
-| 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | |
-| B5 | `brain-5-release.md` | Brain: the release check | Opus 5.5, high | |
-| 31a | `31a-new-name.md` | The new name, built and left open (you paste the name, the domain and the id) | Opus 5.5, high | |
-| 31 | `31-one-point-oh.md` | 108: 1.0 (merges 31a first) | Sonnet 5.5, medium | |
-| | **you** | Rename the repo; the F-Droid submission (its merge request is public, so after 1.0) | | |
 
-Thirty-two hands sessions and five brain sessions. Sessions 25 (the Android
-shell) and 19 (the FLAC writer) touch nothing the others do until they
-merge, so either may run alongside another session if you want to save
-days; everything else runs one at a time, because each takes the next
-version number and rebuilds the same `.wasm`.
+### From 17 on: four chains, two at a time (brain B-parallel, 2026-11-17)
+
+Mikey, 2026-11-17: from here the road is four chains that barely touch each
+other, run two at a time by a brain session in Claude Code
+(`brain-parallel.md`), which starts each hands session in its own worktree
+and checks it when it reports. A row starts when every row in its **After**
+column is ticked. **Alongside** names the rows that may be running at the
+same time; a row not named there must not be. Each pair was checked by
+reading the prompts and the code (B-parallel): two rows are kept apart when
+they change the same file beyond the shared spots below, and a row waits
+for another only when it uses what that one builds.
+
+**Shared spots** (two sessions may both change them; the merge rule below
+settles them): `BUILD` and `CACHE`, `js/dlplayer.wasm`, `core/src/wasm.rs`,
+`core/include/dlcore.h`, `docs/DONE.md`, the queue's status line, this
+table, `docs/notes/for-mikey.md`, and `tools/rows.mjs`'s list (each session
+adds its own rows; none rewrites the others'). Kept apart for the rest:
+`js/main.js` by its sections (18 the card and Now Playing; 20 the actions'
+export and "lighter on processor"; 23 the albums and the actions' share
+and paste; 24 the boot and the albums; 27 "lighter on processor" and
+Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
+`js/worklet.js`, `js/player.js` and `js/core.js` (17, 27).
+
+| # | File | What | Model, effort | After | Alongside | Done |
+|---|---|---|---|---|---|---|
+| B-par | `brain-parallel.md` | Brain, in Claude Code: makes this plan parallel, then starts and oversees the hands sessions two at a time, up to B4 (Mikey, 2026-11-17) | Opus 5.5, high | B2 | every row to B4 | |
+| | | **Long pieces** | | | | |
+| 17 | `17-long-jump.md` | 106a: the core's jump and the piece map for the page | Opus 5.5, high | B2 | 20, 21, 22, 24, 26 | |
+| 18 | `18-long-screens.md` | 106b: long pieces on screen | Sonnet 5.5, high | 17 | 20, 21, 22, 24, 26, 27, 28, 29 | |
+| | | **Export** | | | | |
+| 20 | `20-export-app.md` | 104b: export in the app, lossless, safe first | Opus 5.5, high | B2 (19 is in) | 17, 18, 22, 24, 26 | |
+| 21 | `21-export-small.md` | 104c: the small format | Sonnet 5.5, high | 20 | 17, 18, 22, 23, 24, 26, 27 | |
+| | | **Codes** | | | | |
+| 22 | `22-codes-core.md` | 105a: codes, version 2, in the core | Opus 5.5, high | B2 | 17, 18, 20, 21, 26, 27, 28, 29 | |
+| 23 | `23-codes-app.md` | 105b: codes in the app | Opus 5.5, high | 22 | 21, 26, 27, 28, 29 | |
+| 24 | `24-codes-links.md` | 105c: links, an album from one seed, the plain lines | Sonnet 5.5, medium | 23 | 17, 18, 20, 21, 26, 27, 28, 29 | |
+| B4 | `brain-4-codes.md` | Brain: check 16 to 24; the albums again in the new codes | Opus 5.5, high | 18, 21, 24 | 26 to 29 | |
+| | | **Android** | | | | |
+| 26 | `26-android-audio.md` | 107b: the core native, on Android's audio | Opus 5.5, high | 25 | 17, 18, 20, 21, 22, 23, 24 | |
+| 27 | `27-android-bridge.md` | 107c: the page talks to the native core | Opus 5.5, high | 26, 17 | 18, 21, 22, 23, 24 | |
+| | **you** | Install the APK from 27's PR on the Moto and the tablet; say what you hear. The work goes on meanwhile. | | 27 | | |
+| 28 | `28-android-background.md` | 107d: the screen off, the notification, saving an export | Sonnet 5.5, high | 27, 21 | 18, 22, 23, 24 | |
+| 29 | `29-android-fdroid.md` | 107e: F-Droid's metadata, recipe and icons | Sonnet 5.5, high | 28 | 18, 22, 23, 24 | |
+| | | **Then in order, one at a time** | | | | |
+| 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | 18, 21, 24, 29, B4 | none | |
+| B5 | `brain-5-release.md` | Brain: the release check | Opus 5.5, high | 30 | none | |
+| | **you** | The signing choice (`docs/notes/for-mikey.md` will have the steps); buy the new name's domain and attach it to the Worker, if not done. **31a waits for this.** | | 29 | | |
+| 31a | `31a-new-name.md` | The new name, built and left open (you paste the name, the domain and the id) | Opus 5.5, high | B5, the row above | none | |
+| 31 | `31-one-point-oh.md` | 108: 1.0 (merges 31a first) | Sonnet 5.5, medium | B5, 31a open and green | none | |
+| | **you** | Rename the repo; the F-Droid submission (its merge request is public, so after 1.0) | | 31 | | |
+
+Why the chains wait where they do: 22 needs nothing from 17 to 21 (a code
+carries the request, the journey and the length, all in the core since 102;
+no jump, no export); 20 needs 19's writer, not 18's screens; 27 carries 17's
+jump over the bridge and changes the same page files; 28 saves 20's and 21's
+exports on Android; 30 polishes the whole app, so it runs alone. 17 and 23
+both change `js/gen.js`; 20 and 27 both change "lighter on processor".
+
+Thirty-two hands sessions and five brain sessions, and B-parallel.
 
 **Why this many.** Batch 6 is fourteen approved sounds across five parts of
 the core; one or two a session keeps each PR measurable. Long pieces get
@@ -91,7 +127,21 @@ queue's standing rules and merge policy, and `core/AGENTS.md`.
 
 - **Check your place first.** Every row above yours should be ticked,
   except rows the table says may run meanwhile. If one isn't, stop and say
-  so: don't do another session's work.
+  so: don't do another session's work. From 17 on (the chains), "the rows
+  above yours" are the rows in your row's **After** column; every other row
+  above yours is one the table says may run meanwhile. Check too that every
+  hands session open now (its PR open, or its row started and not ticked) is
+  named in your row's **Alongside**; the brain that started you says which
+  are running. If your work turns out to need a file a running session
+  changes, beyond the shared spots, say so and wait for the brain.
+- **Before merging, merge the latest `main` into your branch** (B-parallel,
+  2026-11-17: two sessions run at once, and force-pushes are refused on
+  Mikey's machine, so never rebase). Where `js/dlplayer.wasm` or `BUILD` /
+  `CACHE` conflict, take main's, rebuild with `tools/build-core.sh` (and
+  `--tools` where your checks read the generator), take the next version
+  number after main's, commit, and let CI run again on that last commit;
+  merge only when it is green there. Where any other file conflicts, resolve
+  it keeping both sides' work, and say so in the PR.
 - **One PR per item** (or per sub-item), from the latest `main`, on the
   branch the session was given. Take the next version number from `main`
   and bump `BUILD` (`js/main.js`) and `CACHE` (`sw.js`) together on every

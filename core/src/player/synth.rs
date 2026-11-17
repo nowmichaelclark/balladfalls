@@ -650,6 +650,35 @@ impl Synth {
         }
     }
 
+    /// A jump within a piece (session 17, `Player::jump`): what swings from
+    /// the loop's first step stands at `time` where playing would have it,
+    /// `age` seconds into the loop: the wash's swells, the chords' sweep
+    /// (wideSweep's too) and their wow, the master's breath (the loop's
+    /// `arc`), and a space that opens over the loop (widePad's late kind);
+    /// and where the loop plays colors (`colors`), colorTone forgets the
+    /// chords' level the jump left, to read it from the chords after.
+    pub fn aged<H: Host>(&self, host: &mut H, arc: Option<&crate::generator::choices::Arc>, colors: bool, age: f64, time: f64) {
+        if self.wash {
+            host.set(WASH_CHANNEL, own::WASH, crate::blocks::wash::set::AGE, age, time);
+        }
+        if self.pad_sweep {
+            host.set(CHORDS, own::PAD_SWEEP, crate::blocks::pad_sweep::AGE, age, time);
+        }
+        if self.pad_wow {
+            host.set(CHORDS, own::PAD_WOW, pad_wow::AGE, age, time);
+        }
+        if colors {
+            host.set(CHORDS, own::COLOR_TONE, color_tone::FORGET, 1.0, time);
+        }
+        // The arc's swing from where it would be (`from`, a share of its
+        // period, the block keeping the fraction), gliding there.
+        if let Some(a) = arc.filter(|a| a.period > 0.0) {
+            let from = a.from + age / a.period;
+            Self::arc_setup(host, Some(&crate::generator::choices::Arc { from: from - js::floor(from), ..*a }), time);
+        }
+        host.param(crate::SPACE_AGE, SET, age, time, 0.0);
+    }
+
     /// `arcSetup(o, time)`: the master's lowpass breathing over minutes, or
     /// none.
     pub fn arc_setup<H: Host>(host: &mut H, arc: Option<&crate::generator::choices::Arc>, time: f64) {

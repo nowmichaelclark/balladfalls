@@ -54,6 +54,12 @@ impl<const N: usize> Lfo<N> {
         self.depth.reset(depth);
     }
 
+    /// Start `cycles` into its swing, after `set` (session 17: a sweep at
+    /// the phase a jump within a piece lands on).
+    pub fn turn(&mut self, cycles: f64) {
+        self.sine.turn(cycles);
+    }
+
     /// Its rate, to automate after `set`.
     pub fn rate(&mut self) -> &mut Param<N> {
         self.sine.freq()

@@ -52,8 +52,14 @@ pub mod set {
     /// order (the melody's, the chords', the bass's, the textures', the
     /// drums'): each channel's gain in the mix, 0 for one muted.
     pub const WEIGHT: usize = 6;
-    /// How many settings there are.
+    /// How many settings hold a value (the weights the last).
     pub const COUNT: usize = 11;
+    /// Where the swells are (session 17, a jump within a piece): the
+    /// seconds since they started, at the setting's time, as playing from
+    /// the loop's first step would have them. They start again there, that
+    /// far on, the ones before fading as a new loop's do. Past the values:
+    /// a moment, not a value kept.
+    pub const AGE: usize = COUNT;
 }
 
 /// The layers it listens to: one route each, in channel order.
@@ -380,6 +386,8 @@ impl Block for Wash {
         Setting { name: "bass", probe: f64::NAN },
         Setting { name: "texture", probe: f64::NAN },
         Setting { name: "drums", probe: f64::NAN },
+        // Where the swells are, which a probe from their start cannot hear.
+        Setting { name: "age", probe: f64::NAN },
     ];
 
     fn start(&mut self, s: &Settings, cx: &Context) {
@@ -405,6 +413,10 @@ impl Block for Wash {
         }
         match setting {
             set::PERIOD => self.restart(value, time),
+            set::AGE if self.now.period > 0.0 => {
+                self.restart(self.now.period, time);
+                self.now.start = time - value.max(0.0);
+            }
             set::TINT | set::TINT_GAIN | set::TINT_HIGH | set::TINT_Q => self.set_tints(),
             _ => {}
         }

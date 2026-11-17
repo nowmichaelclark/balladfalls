@@ -200,6 +200,12 @@ pub const SPACE_START: u32 = TONE_FREQ + 23;
 /// parameter, by `op`.
 pub const ARC_LOWER: u32 = TONE_FREQ + 24;
 pub const ARC_SHALLOW: u32 = TONE_FREQ + 25;
+/// How long the loop's space has played at `time`, in seconds (session 17,
+/// a jump within a piece): a space that opens over the loop (widePad's late
+/// kind, queue item 101c) stands where playing from the loop's first step
+/// would have it, open past its opening. Any other space is the same
+/// throughout, and this moves nothing of it.
+pub const SPACE_AGE: u32 = TONE_FREQ + 26;
 
 /// How long a layout changed while the core plays takes (queue item 66;
 /// `Core::set_layout`), in seconds: the side fades in over it, or out
@@ -541,6 +547,9 @@ pub struct Core {
     /// The frame the loop's space was taken from: where a space that moves
     /// over the loop (widePad's late kind, queue item 101c) counts from.
     space_from: u64,
+    /// Whether that frame moved (`SPACE_AGE`): the space is set where it
+    /// stands at the next block, though past its opening.
+    space_moved: bool,
     /// The bass layer's lift for the loop, in dB (queue item 76c), stamped on
     /// each bass note as it arrives. 0 is today's level.
     bass_lift: f64,
@@ -618,6 +627,7 @@ impl Core {
             space_waits: false,
             space_at: 0,
             space_from: 0,
+            space_moved: false,
             space_drawn: space::ZERO,
             space_on: false,
             bass_lift: 0.0,
@@ -997,6 +1007,13 @@ impl Core {
             }
             SPACE_LIGHT => {
                 self.space_loop.light = value != 0.0;
+                true
+            }
+            SPACE_AGE => {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a frame count, exact for millennia
+                let age = (value.max(0.0) * self.rate) as u64;
+                self.space_from = frame_at(time, self.rate).saturating_sub(age);
+                self.space_moved = true;
                 true
             }
             SPACE_START => {
@@ -1612,10 +1629,12 @@ impl Core {
             }
         } else if self.spaced && self.drawn.open > 0.0 {
             // widePad's late kind (queue item 101c): the chords' spread and
-            // the ceiling open block by block, until a second past the end.
+            // the ceiling open block by block, until a second past the end
+            // (and once where a jump moved where it counts from).
             #[allow(clippy::cast_precision_loss)] // a frame count, exact for millennia
             let seconds = block.saturating_sub(self.space_from) as f64 / self.rate.max(1.0);
-            if seconds <= self.drawn.open + 1.0 {
+            if seconds <= self.drawn.open + 1.0 || self.space_moved {
+                self.space_moved = false;
                 let now = self.drawn.at(seconds);
                 self.mix.move_space(&now);
                 self.master.set_width(0, now.ceiling);

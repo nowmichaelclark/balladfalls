@@ -398,3 +398,22 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   (`tests/dummy.rs`). The format is `core/README.md`, "Share codes, version
   2", frozen by `core/golden/share-codes.txt`; `node tools/codes.mjs` makes and
   opens codes and albums from the command line. The app's module grew 10 KB.
+- #414, twang soft only (Mikey's Batch 6 Album, session 17, v179), preview
+  URL: <https://claude-s17-twang-soft-driftloom.nowmichaelclark.workers.dev>
+  (commit 416462c): every loop that drew twang plays the soft version; the
+  draw is kept whole, so the same loops play twang and no other loop moved
+  (239 generation goldens, each a slow or bright twang loop, only its load
+  part; the baseline's dith-shuisk and tei-har). Listen to he-rosk (corpus
+  20261009 #33, was bright) and tom-wen (#172, was slow): the same picks, in
+  the soft voice.
+- #417, the jump within a long piece, where it is, and the map for the page
+  (item 106a, session 17, v180), preview URL:
+  <https://claude-s17-jump-driftloom.nowmichaelclark.workers.dev>: nothing
+  should sound different (the generation goldens, the core's render tests and
+  the baseline hold). Nothing on screen yet (session 18): the core jumps to a
+  section, a bar or a time, heard about 0.06 s after asked three hours into a
+  32,768-bar piece or Endless, no late note, playing's notes bit for bit; it
+  says where it is (the bar of how many, the time played and left); and the
+  page reads the piece's map (`pieceMarks`: a whole piece's movements in about
+  10 ms). The PR's table has the commands and the measures
+  (`dlrender --jumps`).

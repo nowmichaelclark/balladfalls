@@ -215,6 +215,14 @@ export class CoreHost {
     this.node.port.postMessage({ type: 'playNext', moment, fade });
   }
 
+  // Go on from somewhere else in the loop playing (session 17, item 106a):
+  // `kind` 0 a section, 1 a bar, 2 a time in seconds (`JUMP` in
+  // js/player.js), `at` from the piece's start, landing on the phrase line at
+  // or before it; heard a few blocks on, a `jump` event saying where.
+  playJump(kind, at) {
+    this.node.port.postMessage({ type: 'playJump', kind, at });
+  }
+
   // The Sound panel's tone, gliding there from now.
   playTone(tone) {
     this.node.port.postMessage({ type: 'playTone', warmth: tone.warmth, space: tone.space, wobble: tone.wobble });

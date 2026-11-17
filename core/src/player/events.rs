@@ -1,5 +1,5 @@
 //! What the player tells a host about where the loop is (queue item 94a):
-//! events, each at the time on the core's clock it is heard, so a host can
+//! events (0 to 8), each at the time on the core's clock it is heard, so a host can
 //! draw the cursor, the pass, the phrase lines and a piece's sections as the
 //! music reaches them, with nothing of its own deciding when.
 //!
@@ -54,11 +54,16 @@ pub enum Kind {
     /// (`Player::set_draws`), with the picks the host numbered `number`
     /// (`Player::set_picks`), so the host knows which loop it is.
     Own = 7,
+    /// The loop playing goes on from somewhere else in it (session 17,
+    /// `Player::jump`): `number` and `step` are the step it goes on from,
+    /// from the load (a piece's from its start); its section, phrase and
+    /// steps follow as they come.
+    Jump = 8,
 }
 
 impl Kind {
     /// Every kind, in the hosts' numbering.
-    pub const ALL: [Kind; 8] = [Kind::Step, Kind::Pass, Kind::Section, Kind::Phrase, Kind::Loop, Kind::Revised, Kind::End, Kind::Own];
+    pub const ALL: [Kind; 9] = [Kind::Step, Kind::Pass, Kind::Section, Kind::Phrase, Kind::Loop, Kind::Revised, Kind::End, Kind::Own, Kind::Jump];
 }
 
 /// An event: what it says, when it is heard, and where the loop is then.

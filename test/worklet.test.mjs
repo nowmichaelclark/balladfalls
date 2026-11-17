@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { newSpec } from '../js/gen.js';
 import { rerollLayer, vibeSelection, LAYERS } from '../js/request.js';
-import { askOf, picksAsk, KIND, END_FADE, MOMENT, CHANGE_FADE } from '../js/player.js';
+import { askOf, picksAsk, KIND, JUMP, END_FADE, MOMENT, CHANGE_FADE } from '../js/player.js';
 import { Rng } from '../js/rng.js';
 
 const QUANTUM = 128;
@@ -371,6 +371,43 @@ console.log('\nThe picks through the core (queue item 95)');
   check('picks the core can\'t meet are held as their vibes alone, and it says why', no && no.met === false && no.why === 'tempo must be 32 to 190 bpm' && bad.refused === 0, JSON.stringify(no));
   const unread = picksAsk({ vibes: ['cozy'], tempo: [20, 30] });
   check('picks the reader refuses are sent as their vibes alone', unread.vibesOnly && unread.why === 'tempo must be 32 to 190 bpm' && !unread.ask.tempo && unread.ask.vibes.length === 1);
+}
+
+console.log('\nA jump within a long piece (session 17, item 106a)');
+{
+  const make = () => new DriftloomCore({ numberOfOutputs: 1, processorOptions: { bytes: wasm, quality: 'full', layout: 2 } });
+  const render = (p, seconds) => {
+    const from = p.next || 0;
+    for (let b = 0; b * QUANTUM < seconds * RATE; b++) {
+      globalThis.currentFrame = from + b * QUANTUM;
+      p.process(Array.from({ length: 5 }, () => []), [[new Float32Array(QUANTUM), new Float32Array(QUANTUM)]]);
+    }
+  };
+  const spec = newSpec(176315227, 'bars=32768');
+  const p = make();
+  p.receive({ type: 'playLoad', seed: spec.seed, ask: askOf(spec), at: 0 });
+  render(p, 2);
+  const before = p.sent.length;
+  p.receive({ type: 'playJump', kind: JUMP.time, at: 3 * 3600 });
+  render(p, 1);
+  const posted = p.sent.slice(before).filter((m) => m.type === 'events');
+  const events = posted.flatMap((m) => m.events);
+  let jumped = null;
+  for (let i = 0; i < events.length; i += 4) if (events[i + 1] === KIND.jump) jumped = { time: events[i], step: events[i + 3], at: i / 4 };
+  const withGrid = jumped && posted.some((m) => m.grids.length);
+  const place = posted.length ? posted[posted.length - 1].place : null;
+  const sd = 60 / spec.bpm / 4;
+  check('the page\'s playJump lands three hours in, on its event, with the grid there', jumped && Math.abs(jumped.step * sd - 3 * 3600) < 60 && withGrid, JSON.stringify(jumped));
+  check('the events carry where it is: three hours in, of 32,768 bars', place && Math.abs(place.played - 3 * 3600) < 60 && place.bars === 32768 && place.left > 0, JSON.stringify(place));
+  // Endless: no end, no time left.
+  const e = make();
+  const endless = newSpec(176315227, 'bars=endless');
+  e.receive({ type: 'playLoad', seed: endless.seed, ask: askOf(endless), at: 0 });
+  render(e, 1);
+  e.receive({ type: 'playJump', kind: JUMP.section, at: 1000 });
+  render(e, 1);
+  const last = e.sent.filter((m) => m.type === 'events').pop();
+  check('Endless: its section, and no end or time left', last && last.place && last.place.section === 1000 && last.place.bars === null && last.place.left === null, JSON.stringify(last && last.place));
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

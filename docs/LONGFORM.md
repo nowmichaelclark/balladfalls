@@ -420,6 +420,34 @@ finite arcs since session 13 landed on the tune's tonic alone. The landing
 now takes a chord the loop plays (else the chords' loudest velocity), and
 the tune's last note that sounds.
 
+## The jump and the map (session 17, 106a)
+
+`Player::jump` (`dl_play_jump`, `dl_player_jump`, the worklet's `playJump`)
+goes to a section, a bar or a time, on the phrase line at or before it,
+straight from the seed and the number: the section's second tune, its pass
+drawn and its pass heard, a block each, then it lands `START` on, at the
+place in the core's block where playing's step would sit, the old notes
+falling over 0.25 s (`JUMP_FADE`). About 0.06 s after it is asked, three
+hours in or 10^9 sections. What plays there is what playing would have
+reached (`Sequencer::jumped`): the notes bit for bit (`core/tests/jump.rs`);
+lateFloor and slowOpening count in steps; widePad's opening, the wash's
+swells, padSweep's and padWow's swings, the arc's breath and twang's tremolo
+are set to the loop's age (an `AGE` setting each, `SPACE_AGE`); the organ
+holds the chord playing would hold; the room's tails, the floor drop and
+the spotlight read the bar before; colorTone reads the chords afresh. Let
+go, as at a new loop: anything struck before the line (a long chord, a
+held bass, the bell, twang's strings, which start fresh). Not walked, so not
+restored: twang's strings' and the organ's pipes' phases, which run on from
+every pick and chord before. `dlrender --jumps` measures it against playing.
+
+`Player::place` (`dl_play_place`) says where it is as heard: the bar of how
+many, the time played and left (none for Endless). `Player::marks`
+(`dl_play_marks`, js/gen.js's `pieceMarks`) is the map for the page: the
+units where a role, theme, key or movement begins, or with `coarse` a
+movement's start only. A finite piece's whole movements in one call (477 for
+a 32,768-bar piece, about 10 ms in Node), a window of roles around the
+playhead (about 1 ms), and Endless a window at a time.
+
 ## The cost
 
 The plan allocates nothing and adds no state to the player (it starts as

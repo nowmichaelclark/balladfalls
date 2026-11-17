@@ -41,6 +41,7 @@ const PASS = 1;
 const SECTION = 2;
 const LOOP = 4;
 const REVISED = 5;
+const JUMP = 8;
 const LAYER_COUNT = 5;
 const EVENTS_EVERY = 0.05;
 // A change at the track's end (`Moment::End`).
@@ -221,6 +222,14 @@ class DriftloomCore extends AudioWorkletProcessor {
           this.urgent = true;
         }
         return;
+      // A jump within the loop playing (session 17, item 106a): a section,
+      // a bar or a time from the piece's start (`Player::jump`).
+      case 'playJump':
+        if (core) {
+          core.dl_play_jump(m.kind >>> 0, m.at);
+          this.urgent = true;
+        }
+        return;
       case 'playTone':
         if (core) core.dl_play_tone(m.warmth, m.space, m.wobble);
         return;
@@ -353,7 +362,7 @@ class DriftloomCore extends AudioWorkletProcessor {
       for (let i = 0; i < n; i++) {
         const kind = f[4 * i + 1];
         if (kind !== STEP) this.urgent = true;
-        if (kind === PASS || kind === SECTION || kind === LOOP || kind === REVISED) {
+        if (kind === PASS || kind === SECTION || kind === LOOP || kind === REVISED || kind === JUMP) {
           const grid = [];
           for (let l = 0; l < LAYER_COUNT; l++) {
             const k = core.dl_play_grid(l);
@@ -370,9 +379,23 @@ class DriftloomCore extends AudioWorkletProcessor {
     this.port.postMessage({
       type: 'events', events: this.events, grids: this.grids,
       trackEnd: core.dl_play_track_end(), lost: core.dl_play_events_lost(), refused: this.refused,
+      place: this.place(),
     });
     this.events = [];
     this.grids = [];
+  }
+
+  // Where the loop playing is as heard (session 17, `Player::place`): the
+  // bar from the piece's start of `bars` (null for Endless), the seconds
+  // played and left (null for none), and the section; null with nothing
+  // playing, or a module with no place to say.
+  place() {
+    const core = this.core;
+    if (!core || typeof core.dl_play_place !== 'function' || !core.dl_play_place()) return null;
+    const views = this.views;
+    if (!views.place) views.place = new Float64Array(views.buffer, core.dl_play_place_at(), 5);
+    const [bar, bars, played, left, section] = views.place;
+    return { bar, bars: bars < 0 ? null : bars, played, left: left < 0 ? null : left, section };
   }
 
   // The late and dropped notes so far, by kind.

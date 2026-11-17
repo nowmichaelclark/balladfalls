@@ -47,6 +47,10 @@ fn rms(x: &[f32]) -> f64 {
     (x.iter().map(|&s| f64::from(s) * f64::from(s)).sum::<f64>() / x.len() as f64).sqrt()
 }
 
+fn js_floor(x: f64) -> f64 {
+    x.floor()
+}
+
 fn db(x: f64) -> f64 {
     if x > 0.0 { 20.0 * x.log10() } else { -300.0 }
 }
@@ -59,6 +63,8 @@ struct Heard {
     jump_worst: f64,
     own_worst: f64,
     landed: f64,
+    /// The line's time on the core's clock.
+    line: f64,
 }
 
 /// Play `seed` as `way` asks, after `silence` seconds of the core alone; with
@@ -79,11 +85,6 @@ fn render(seed: u32, way: &Way, silence: f64, jump: Option<f64>, target: u64) ->
     while t < silence {
         step(&mut core, &mut player, &mut block);
         t += QUANTUM as f64 / way.rate;
-    }
-    if let Some(solo) = std::env::var("DL_JUMP_SOLO").ok().and_then(|s| s.parse::<usize>().ok()) {
-        for (i, &l) in dlcore::generator::LAYERS.iter().enumerate() {
-            player.set_mute(&mut *core, l, i != solo);
-        }
     }
     player.load(seed, &request);
     let mut out = Vec::new();
@@ -106,9 +107,6 @@ fn render(seed: u32, way: &Way, silence: f64, jump: Option<f64>, target: u64) ->
                 _ => false,
             };
             if at_line && from.is_none() {
-                if std::env::var("DL_JUMP_DEBUG").is_ok() {
-                    eprintln!("line at {:.9} s, frame {:.6}", e.time - start, e.time * way.rate);
-                }
                 from = Some(e.time);
                 if let Some(a) = asked {
                     landed = e.time - a;
@@ -140,7 +138,7 @@ fn render(seed: u32, way: &Way, silence: f64, jump: Option<f64>, target: u64) ->
             return Err(format!("seed {seed}: never reached step {target}"));
         }
     }
-    Ok(Heard { samples: out, jump_worst, own_worst, landed })
+    Ok(Heard { samples: out, jump_worst, own_worst, landed, line: from.unwrap_or(f64::NAN) })
 }
 
 /// The difference of `b` from `a`, in dB under `a`, and the largest gap
@@ -169,7 +167,7 @@ pub fn run(way: &Way) -> Result<(), String> {
 
 fn measure(way: &Way) -> Result<(), String> {
     let deadline = QUANTUM as f64 / way.rate;
-    let (mut worst_jump, mut worst_ctl, mut worst_gap, mut worst_cost, mut worst_heard) = (-300.0f64, -300.0f64, 0.0f64, 0.0f64, 0.0f64);
+    let (mut worst_jump, mut worst_ctl, mut worst_gap, mut worst_cost, mut worst_heard) = (-300.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64);
     let mut fails = 0;
     for &seed in &way.seeds {
         // The phrase line `at` seconds in, as the jump reaches it.
@@ -185,44 +183,42 @@ fn measure(way: &Way) -> Result<(), String> {
             (target, target as f64 / spec.steps_per_bar)
         };
         let played = render(seed, way, 0.0, None, target)?;
-        let late = render(seed, way, std::env::var("DL_JUMP_LATE").ok().and_then(|s| s.parse().ok()).unwrap_or(3.0), None, target)?;
+        let late = render(seed, way, 3.0, None, target)?;
         let jumped = render(seed, way, 0.0, Some(bar), target)?;
-        let (r_jump, g_jump) = against(&played.samples, &jumped.samples, way.rate);
-        if std::env::var("DL_JUMP_DEBUG").is_ok() {
-            let w = (0.4 * way.rate) as usize;
-            for ((a, b), c) in played.samples.chunks(w).zip(jumped.samples.chunks(w)).zip(late.samples.chunks(w)) {
-                eprint!("[{:.1} {:.1} {:.1}] ", db(rms(a)), db(rms(b)), db(rms(c)));
-            }
-            eprintln!();
-        }
-        let (r_ctl, g_ctl) = against(&played.samples, &late.samples, way.rate);
+        // The same jump on a core started so that its line falls within a
+        // block of playing's on the core's clock: the master's wobble and
+        // flutter, which run from the core's start, then stand where
+        // playing's do, and what is left is the jump's own.
+        let blocks = js_floor((played.line - jumped.line) * way.rate / QUANTUM as f64).max(0.0);
+        let aligned = render(seed, way, blocks * QUANTUM as f64 / way.rate, Some(bar), target)?;
+        let (_, g_jump) = against(&played.samples, &jumped.samples, way.rate);
+        let (_, g_ctl) = against(&played.samples, &late.samples, way.rate);
+        let (r_jump, _) = against(&played.samples, &aligned.samples, way.rate);
         let cost = jumped.jump_worst / deadline;
         println!(
-            "seed {seed}: step {target} (bar {bar}), heard {:.3} s after asked; from {:.0} s for {:.0} s: jumped {r_jump:.1} dB under played, level gap {g_jump:.2} dB; control {r_ctl:.1} dB, {g_ctl:.2} dB; busiest jump block {:.1}% of a block (the loop's own {:.1}%)",
+            "seed {seed}: step {target} (bar {bar}), heard {:.3} s after asked; from {:.0} s for {:.0} s: level gap {g_jump:.2} dB (control {g_ctl:.2} dB); on a core in step, {r_jump:.1} dB under played; busiest jump block {:.1}% of a block (the loop's own {:.1}%)",
             jumped.landed,
             way.settle,
             way.length,
             100.0 * cost,
             100.0 * played.own_worst / deadline
         );
-        // The jump may differ from playing by a little more than the
-        // control (the master's state, the room's own, differ too).
-        if r_jump > r_ctl + 3.0 || g_jump > g_ctl + 0.5 {
+        if g_jump > g_ctl + 0.5 || r_jump > -20.0 {
             fails += 1;
         }
         worst_jump = worst_jump.max(r_jump);
-        worst_ctl = worst_ctl.max(r_ctl);
         worst_gap = worst_gap.max(g_jump);
+        worst_ctl = worst_ctl.max(g_ctl);
         worst_cost = worst_cost.max(cost);
         worst_heard = worst_heard.max(jumped.landed);
     }
     println!(
-        "jumps: {} loops; worst: jumped {worst_jump:.1} dB under played (control {worst_ctl:.1} dB), level gap {worst_gap:.2} dB, heard {worst_heard:.3} s after asked, busiest jump block {:.1}% of a block",
+        "jumps: {} loops; worst: level gap {worst_gap:.2} dB (control {worst_ctl:.2} dB), on a core in step {worst_jump:.1} dB under played, heard {worst_heard:.3} s after asked, busiest jump block {:.1}% of a block",
         way.seeds.len(),
         100.0 * worst_cost
     );
     if fails > 0 {
-        return Err(format!("{fails} jumps differ from playing more than the control does"));
+        return Err(format!("{fails} jumps differ from playing: a level gap past the control's by 0.5 dB, or a core in step not 20 dB under"));
     }
     Ok(())
 }

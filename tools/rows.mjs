@@ -578,9 +578,9 @@ async function longRows(browser, port, errors) {
     const piece = await import('/js/piece.js');
     const model = piece.pieceState().model;
     const roles = new Set(model ? model.marks.map((k) => k.role) : []);
-    return { endless: !!(model && model.endless), wander: roles.has('turning') && roles.has('holding') && !roles.has('peak'), window: model ? model.last - model.first : 0 };
+    return { endless: !!(model && model.endless), wander: roles.has('holding') && !roles.has('peak') && !roles.has('opening'), window: model ? model.last - model.first : 0 };
   });
-  row('long piece: Endless: bar and time played, no time left, a window of the map with a wander\'s turns',
+  row('long piece: Endless: bar and time played, no time left, a window of the map with a wander\'s holds',
     end.endless && end.wander && end.window > 0 && /^bar [\d,]+( \u00b7 [a-z ]+)?$/.test(w.bars) && !/ of /.test(w.bars) && /^[\d:]+ played$/.test(w.times), `${w.bars}; ${w.times}; ${JSON.stringify(end)}`);
 
   // The Library says each loop's length: from 4 bars to 27 hours, or

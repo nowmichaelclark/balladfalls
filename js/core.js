@@ -9,10 +9,20 @@
 // fell back to are gone, and a browser without AudioWorklet or WebAssembly,
 // or one whose core fails to load or traps while playing, is told so in a
 // plain line (Mikey, 2026-11-07; Diagnostics says which, `none (...)`).
+//
+// In the Android app (session 27) the same player runs natively, on
+// Android's own audio: CoreHost posts the same messages to it over the app's
+// bridge instead of a worklet's port, and hears the same back (js/native.js).
+// One path, two transports.
+
+import { nativeBridge } from './native.js';
 
 // Why this browser cannot run the core at all, or null: it needs
 // WebAssembly and an AudioWorklet (loadCore() checks the context's own).
 export function coreUnsupported() {
+  // The app plays the core natively: no worklet needed (the page's record
+  // of a loop still needs WebAssembly, js/gen.js).
+  if (nativeBridge() && typeof WebAssembly === 'object') return null;
   if (typeof WebAssembly !== 'object' || typeof WebAssembly.Module !== 'function') return 'no WebAssembly in this browser';
   if (typeof globalThis.AudioWorkletNode !== 'function') return 'no AudioWorklet in this browser';
   return null;
@@ -85,6 +95,8 @@ const modules = new WeakMap();
 // and the core's bytes. Resolves with `{ bytes }` for CoreHost; rejects
 // with why the core cannot run here.
 export async function loadCore(ctx) {
+  // The app's native core (js/native.js): its port, no module to fetch.
+  if (ctx.native) return { port: ctx.port };
   if (typeof WebAssembly !== 'object') throw new Error('no WebAssembly in this browser');
   if (!ctx.audioWorklet) throw new Error('no AudioWorklet in this browser');
   let added = modules.get(ctx);
@@ -101,7 +113,10 @@ export async function loadCore(ctx) {
 // switches it while it plays (item 66, the Mono switch): the node's output
 // carries two channels either way, the mono render in both, so the switch
 // never rebuilds it. The node takes the player's commands (`playLoad` and
-// the rest) and reports what it decides as events (`onevents`).
+// the rest) and reports what it decides as events (`onevents`). In the app
+// (`core.port`, js/native.js) there is no node: the same messages go to the
+// native player, starting with `init` (the worklet's processorOptions), and
+// the same come back.
 export class CoreHost {
   constructor(ctx, core, { quality = 'full', layout = 1, burn = 0 } = {}) {
     this.ctx = ctx;
@@ -132,13 +147,24 @@ export class CoreHost {
     this.eventsLost = 0;
     this.refused = 0;
     this._probes = new Map();
+    // Where the player is: a worklet's node in a browser, the app's native
+    // player behind its port in the app.
+    this.native = !!core.port;
+    if (this.native) {
+      this.node = null;
+      this.port = core.port;
+      this.port.onmessage = (e) => this._receive(e.data);
+      this.port.postMessage({ type: 'init', quality, layout: this.layout, burn });
+      return;
+    }
     this.node = new AudioWorkletNode(ctx, 'driftloom-core', {
       numberOfInputs: 0,
       numberOfOutputs: 1,
       outputChannelCount: [2],
       processorOptions: { bytes: core.bytes, quality, layout: this.layout, burn },
     });
-    this.node.port.onmessage = (e) => this._receive(e.data);
+    this.port = this.node.port;
+    this.port.onmessage = (e) => this._receive(e.data);
     // A throw inside the worklet (the module would not compile, a trap).
     this.node.onprocessorerror = (e) => this._fail((e && e.message) || 'processor error');
   }
@@ -146,7 +172,7 @@ export class CoreHost {
   // The render from now: mono (1) or stereo (2), faded by the core.
   setLayout(layout) {
     this.layout = layout === 2 ? 2 : 1;
-    this.node.port.postMessage({ type: 'layout', channels: this.layout });
+    this.port.postMessage({ type: 'layout', channels: this.layout });
   }
 
   // For Diagnostics: what the render costs this device, each layout apart.
@@ -160,7 +186,7 @@ export class CoreHost {
   // One of the mix's parameters (`MIX`), by one of the AudioParam calls
   // (`SET` and the rest), at `time` on the context's clock.
   param(id, op, value, time, tau = 0) {
-    this.node.port.postMessage({ type: 'param', id, op, value, time, tau });
+    this.port.postMessage({ type: 'param', id, op, value, time, tau });
   }
 
   // The core's player (queue items 82 and 94b). `ask` is a loop's request
@@ -172,15 +198,15 @@ export class CoreHost {
   // js/player.js), the old loop falling to nothing over `fade` seconds;
   // `playRevise` makes the loop playing again in its place (a re-roll).
   playLoad(seed, ask, at = 0, resumed = false) {
-    this.node.port.postMessage({ type: 'playLoad', seed, ask, at, resumed });
+    this.port.postMessage({ type: 'playLoad', seed, ask, at, resumed });
   }
 
   playChange(seed, ask, moment, fade) {
-    this.node.port.postMessage({ type: 'playChange', seed, ask, moment, fade });
+    this.port.postMessage({ type: 'playChange', seed, ask, moment, fade });
   }
 
   playRevise(seed, ask) {
-    this.node.port.postMessage({ type: 'playRevise', seed, ask });
+    this.port.postMessage({ type: 'playRevise', seed, ask });
   }
 
   // How long the track plays (`kind` 0 on and on, 1 `count` passes, 2
@@ -188,31 +214,31 @@ export class CoreHost {
   // fade }), the loop that follows when it ends, in the same message so that
   // no block falls between them.
   playTrack(kind, count, arm = null) {
-    this.node.port.postMessage({ type: 'playTrack', kind, count, arm });
+    this.port.postMessage({ type: 'playTrack', kind, count, arm });
   }
 
   // The loop that follows when the track ends (`MOMENT.end`), alone; with
   // `arm.track` ([kind, count]) the track it plays; null drops the one
   // waiting, so the core's own loop follows (queue item 95).
   playArm(arm) {
-    this.node.port.postMessage({ type: 'playArm', arm });
+    this.port.postMessage({ type: 'playArm', arm });
   }
 
   // The picks (queue item 95): the New loops panel's request (`picksAsk` in
   // js/player.js), held by the core for every loop it makes itself and
   // numbered `tag`; the core answers (`onpicks`) whether it can meet them.
   playPicks(ask, tag) {
-    this.node.port.postMessage({ type: 'playPicks', ask, tag });
+    this.port.postMessage({ type: 'playPicks', ask, tag });
   }
 
   // The seed the core draws its own loops' seeds from (0, none of its own).
   playDraws(seed) {
-    this.node.port.postMessage({ type: 'playDraws', seed });
+    this.port.postMessage({ type: 'playDraws', seed });
   }
 
   // A new loop of the core's own at `moment`, the old falling over `fade`.
   playNext(moment, fade) {
-    this.node.port.postMessage({ type: 'playNext', moment, fade });
+    this.port.postMessage({ type: 'playNext', moment, fade });
   }
 
   // Go on from somewhere else in the loop playing (session 17, item 106a):
@@ -220,37 +246,37 @@ export class CoreHost {
   // js/player.js), `at` from the piece's start, landing on the phrase line at
   // or before it; heard a few blocks on, a `jump` event saying where.
   playJump(kind, at) {
-    this.node.port.postMessage({ type: 'playJump', kind, at });
+    this.port.postMessage({ type: 'playJump', kind, at });
   }
 
   // The Sound panel's tone, gliding there from now.
   playTone(tone) {
-    this.node.port.postMessage({ type: 'playTone', warmth: tone.warmth, space: tone.space, wobble: tone.wobble });
+    this.port.postMessage({ type: 'playTone', warmth: tone.warmth, space: tone.space, wobble: tone.wobble });
   }
 
   playStop() {
-    this.node.port.postMessage({ type: 'playStop' });
+    this.port.postMessage({ type: 'playStop' });
   }
 
   playResume(at) {
-    this.node.port.postMessage({ type: 'playResume', at });
+    this.port.postMessage({ type: 'playResume', at });
   }
 
   // `salt` (queue item 92): the wander's stream salted, 0 for none.
   playWander(amount, salt = 0) {
-    this.node.port.postMessage({ type: 'playWander', amount, salt });
+    this.port.postMessage({ type: 'playWander', amount, salt });
   }
 
   playMute(layer, muted) {
-    this.node.port.postMessage({ type: 'playMute', layer, muted });
+    this.port.postMessage({ type: 'playMute', layer, muted });
   }
 
   playTempo(bpm) {
-    this.node.port.postMessage({ type: 'playTempo', bpm });
+    this.port.postMessage({ type: 'playTempo', bpm });
   }
 
   playVolume(volume) {
-    this.node.port.postMessage({ type: 'playVolume', volume });
+    this.port.postMessage({ type: 'playVolume', volume });
   }
 
   // Resolves with what the player says about the loop now: its state, step,
@@ -260,7 +286,7 @@ export class CoreHost {
     const id = ++this._ping;
     return new Promise((resolve) => {
       this._probes.set(id, resolve);
-      this.node.port.postMessage({ type: 'probe', id });
+      this.port.postMessage({ type: 'probe', id });
     });
   }
 
@@ -268,7 +294,7 @@ export class CoreHost {
   // sounding carry on (queue item 39). With `from`, only those asked for
   // at that time or later (queue item 40).
   cancel(from = null) {
-    this.node.port.postMessage(from == null ? { type: 'cancel' } : { type: 'cancel', from });
+    this.port.postMessage(from == null ? { type: 'cancel' } : { type: 'cancel', from });
   }
 
   // Resolves once the worklet has taken every message sent before it.
@@ -276,7 +302,7 @@ export class CoreHost {
     const id = ++this._ping;
     return new Promise((resolve) => {
       this._pings.set(id, resolve);
-      this.node.port.postMessage({ type: 'ping', id });
+      this.port.postMessage({ type: 'ping', id });
     });
   }
 
@@ -285,10 +311,13 @@ export class CoreHost {
   dispose() {
     this.onfail = null;
     this.onevents = null;
-    this.node.onprocessorerror = null;
-    this.node.port.postMessage({ type: 'dispose' });
-    try { this.node.disconnect(); } catch { /* already detached */ }
-    this.node.port.onmessage = null;
+    this.port.postMessage({ type: 'dispose' });
+    if (this.node) {
+      this.node.onprocessorerror = null;
+      try { this.node.disconnect(); } catch { /* already detached */ }
+    }
+    // The app's port is the next player's too: only this one's ear goes.
+    if (this.port.onmessage && !this.native) this.port.onmessage = null;
   }
 
   _receive(m) {

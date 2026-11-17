@@ -4,8 +4,9 @@ Queue item 107. This folder is the Android app: one activity, one WebView,
 the page's own files inside the APK, served to it from a local origin, and the
 core built natively for Android's own audio. Session 25 (107a) made the shell
 and its CI build; session 26 (107b) the core native on AAudio, with a debug
-screen and tests but no page yet; the page talking to it is session 27, the
-background service and exports 28, F-Droid's metadata 29 (`docs/sessions/`).
+screen and tests; session 27 (107c) the page talking to it, so the app plays
+on the native core and the WebView plays no audio of its own; the background
+service and exports are 28, F-Droid's metadata 29 (`docs/sessions/`).
 
 ## What is here
 
@@ -23,13 +24,21 @@ background service and exports 28, F-Droid's metadata 29 (`docs/sessions/`).
 - `native/`: the core for Android (session 26), a small crate of its own over
   `core/` (a path dependency: the core stays `no_std` with no dependencies):
   `src/engine.rs` (the core and its player, the lock-free queue the commands
-  come by, and `fill`, the audio thread's one call), `src/aaudio.rs` (the
-  stream), `src/jni.rs` (five JVM calls, by hand), `src/lib.rs` (the bridge).
+  come by, the queue back its reports go by, and `fill`, the audio thread's
+  one call), `src/bridge.rs` (the page's messages as commands, and the
+  reports back as the worklet's messages; `src/json.rs` reads them),
+  `src/aaudio.rs` (the stream), `src/jni.rs` (five JVM calls, by hand),
+  `src/lib.rs` (the bridge's functions).
   `build.sh` builds `libdriftloom.so` for each ABI; `abi-check.c` holds the
   numbers written by hand there to the NDK's own headers at every build.
 - `app/src/main/kotlin/app/loops/NativeCore.kt`: the bridge's Kotlin side
   (start and stop the stream, load a seed with a request, play, pause, next,
-  volume, the counts, an offline render).
+  volume, the counts, an offline render; the page's `send`, `drain` and
+  `pageGone`).
+- `.../PageBridge.kt` (session 27): puts `DriftloomNative` in the page (a
+  WebView message listener for the app's origin) and carries text both ways
+  on a thread of its own: each message from the page into the core's bridge,
+  and every 25 ms what is due back (`js/native.js` is the page's end).
 - `app/src/debug/`: the **Native audio test**, a second launcher icon in debug
   builds only (`NativeTestActivity.kt`): "Play the test" plays the golden loop
   natively and shows underruns, the busiest callback against its deadline, and
@@ -38,9 +47,13 @@ background service and exports 28, F-Droid's metadata 29 (`docs/sessions/`).
 - `app/src/androidTest/`: the instrumented tests (`NativeCoreTest.kt`): the
   samples against the golden line and js/dlplayer.wasm's, a device change, and
   five minutes of play with no underrun and nothing late.
-- `smoke.mjs`, `emulator-smoke.sh`: the smoke test. `emulator-native.sh`: the
-  instrumented tests on an emulator with audio. `emulator-lib.sh`: the boot
-  both share. `check-tree.sh`: no
+- `smoke.mjs`, `emulator-smoke.sh`: the smoke test (the page plays on the
+  native core; its main thread blocked 5 s, the music plays on).
+  `emulator-rows.sh`: `tools/rows.mjs --app`, every row of item 94a's table
+  that makes sense in the app. `cdp.mjs`: the WebView's DevTools client both
+  use, which finds the app's process and page as they are now on every
+  connect. `emulator-native.sh`: the instrumented tests on an emulator with
+  audio. `emulator-lib.sh`: the boot they share. `check-tree.sh`: no
   binary in the tree but the Gradle wrapper's jar, which is checked against
   Gradle's published checksum. `test-signing/`: the test builds' key.
 
@@ -70,7 +83,11 @@ allocated in `fill`); `DL_WASM_LINE` adds a line from `tools/player-wasm.mjs`.
 
 `node android/smoke.mjs --cdp URL` runs the smoke test against any DevTools
 endpoint (how it was tried on desktop Chromium); `android/emulator-smoke.sh
-APK` boots an AOSP emulator (needs KVM) and runs it on that.
+APK` boots an AOSP emulator (needs KVM) and runs it on that, as
+`android/emulator-rows.sh APK --long` does the rows. Both need a sound server
+for the emulator (CI's is PulseAudio with a null sink). The workflow's
+`smoke_runs` input (run it by hand) boots that many emulators for the smoke
+test at once.
 
 ## The rename (session 31a): one line each
 
@@ -109,11 +126,24 @@ The Kotlin package (`app.loops`, the `namespace`) is not the id and stays.
   allocations inside it over half a minute of callbacks with a load, a Next, a
   pause and a play.
 - **One engine a process**, made at the first start at the device's rate and
-  kept: the stream stops and starts around it. The page drives it from
-  session 27.
-- **For now the page plays as in a browser** (its own worklet in the WebView).
-  Its `sw.js` is not in the app, so Diagnostics says `sw: failed` there: noise
-  to be silenced when the page next changes (session 27).
+  kept: the stream stops and starts around it.
+- **The page on the native core** (session 27): one path, two transports.
+  `js/core.js`'s `CoreHost` posts the worklet's very messages, starting with
+  `init` (what a worklet's options carry: the quality, the layout), and hears
+  the worklet's messages back, batched as the worklet batches them (events
+  every 50 ms, or at once with one that is not a step; the cost every two
+  seconds of audio). The page's context is a stand-in on the core's clock
+  (`js/native.js`); the page still reads a loop's record and notes from its
+  own module (`js/gen.js`), which is not audio. A new page's player (`init`)
+  lets every voice go and builds the mix afresh at its quality on the same
+  engine, so the quality switch is the browser's: the old fades, the new one
+  takes the loop from its top. The bridge's text is read on the app's bridge
+  thread, never the audio thread: the commands reach it as fixed slots, the
+  reports leave it the same way, and `fill` still allocates nothing
+  (`fill_allocates_nothing` runs every command the page sends). Too-slow
+  (item 100) can't show in the app. A WebView without the message listener
+  (older than 2020's) plays the page as a browser does. No service worker in
+  the app: Diagnostics says `sw: none (the app holds its own files)`.
 - **Not yet:** the screen off and a notification (28), saving an export and the
   restore file picker (28), the system bars' color following the page's theme
   (a Painter's choice), the launcher icon (a placeholder in plain vectors).

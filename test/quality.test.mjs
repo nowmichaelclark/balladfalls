@@ -139,6 +139,20 @@ console.log('too slow even on lite (queue item 100)');
   for (let t = 0; t < 40; t += 2) busy.add({ max: 1.2, behind: 8, windows: 8, seconds: 2 }, true, t);
   busy.add({ max: 0.2, behind: 0, windows: 8, seconds: 2 }, false);
   check('a pause starts the count again', q.stuck({ quality: 'lite', busy }) === null);
+  // The Android app (session 27): the line can't show there, however the
+  // native core's reports read.
+  const app = new q.Busy();
+  for (let t = 0; t < 40; t += 2) app.add({ max: 1.2, behind: 8, windows: 8, seconds: 2 }, true, t, t * 4);
+  check('the web: every quarter-second behind is too slow', q.stuck({ quality: 'lite', busy: app }) !== null);
+  check('the app\'s native core: never', q.stuck({ quality: 'lite', busy: app, native: true }) === null);
+}
+
+console.log('the alarm on the app\'s clock (session 27)');
+{
+  let rang = null;
+  const ctx = { alarm: (at, fn) => { rang = { at, fn }; return { stop() {} }; } };
+  q.alarm(ctx, 7, () => {});
+  check('a context with an alarm of its own keeps it', rang && rang.at === 7);
 }
 
 if (failures) {

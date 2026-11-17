@@ -8,8 +8,9 @@ package app.loops
  * count: the audio thread takes the commands at its next callback, through a
  * lock-free queue, as the page's worklet takes its messages.
  *
- * The page does not use it yet (session 27); the debug screen
- * (NativeTestActivity, debug builds) and the instrumented tests do.
+ * The page drives it through [send] and [drain] (session 27, PageBridge);
+ * the debug screen (NativeTestActivity, debug builds) and the instrumented
+ * tests through the rest.
  */
 object NativeCore {
     init {
@@ -59,6 +60,18 @@ object NativeCore {
      * the same as the given one when the samples are the same, bit for bit.
      */
     @JvmStatic external fun renderLine(line: String, chunk: Int): String
+
+    /**
+     * A message from the page (js/core.js's, as the worklet takes it; `init` starts the stream and the
+     * page's player). Null, or a batch to post back at once (the `failed` message).
+     */
+    @JvmStatic external fun send(message: String): String?
+
+    /** What is due to the page now (a JSON array of the worklet's messages), or null. */
+    @JvmStatic external fun drain(): String?
+
+    /** The page went: its player is let go, as a closed tab's worklet is. */
+    @JvmStatic external fun pageGone()
 
     /** The figures now. */
     fun figures(): Figures = Figures(counts())

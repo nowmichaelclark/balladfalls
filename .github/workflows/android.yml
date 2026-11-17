@@ -3,8 +3,13 @@
 # install, and a smoke test of it on a headless emulator. Since session 26
 # (107b) the APK carries the core, native (android/native, built by cargo
 # for each ABI with the pinned NDK), and the `native` job plays it on the
-# emulator's own audio. Not part of the merge gate yet (docs/QUEUE.md,
-# "Merge policy"); it is run, and read, before a merge.
+# emulator's own audio. Since session 27 (107c) the page plays on that
+# native core: the smoke test and `rows` (tools/rows.mjs --app, every row of
+# item 94a's table that makes sense in the app) drive the app's page on the
+# emulator, with a sound server for its stream. Not part of the merge gate
+# yet (docs/QUEUE.md, "Merge policy"); it is run, and read, before a merge.
+# By hand, `smoke_runs` boots that many emulators for the smoke test at once
+# (session 27: ten in a row before it is relied on).
 #
 # The app's files are the list sw.js keeps (android/app/build.gradle.kts
 # copies them into the APK), so the paths below are that list's folders;
@@ -29,7 +34,12 @@ on:
       - 'core/build.rs'
       - 'core/Cargo.*'
       - 'core/golden/seeds.hashes'
+      - 'tools/rows.mjs'
   workflow_dispatch:
+    inputs:
+      smoke_runs:
+        description: 'Smoke tests to run, each on an emulator of its own'
+        default: '1'
 
 permissions:
   contents: read
@@ -43,8 +53,16 @@ jobs:
     name: the debug APK builds from a clean checkout
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    outputs:
+      smoke: ${{ steps.runs.outputs.list }}
     steps:
       - uses: actions/checkout@v4
+
+      # How many smoke tests (one on a PR; `smoke_runs` by hand).
+      - id: runs
+        run: |
+          n="${{ github.event.inputs.smoke_runs || '1' }}"
+          echo "list=[$(seq -s, 1 "$n")]" >> "$GITHUB_OUTPUT"
 
       # No binary in the tree but the Gradle wrapper's jar, and that jar is
       # the one Gradle publishes (F-Droid's rules).
@@ -137,10 +155,14 @@ jobs:
           retention-days: 14
 
   smoke:
-    name: the APK installs, starts and plays on an emulator
+    name: the APK installs, starts and plays on an emulator (${{ matrix.run }})
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        run: ${{ fromJSON(needs.build.outputs.smoke) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -161,13 +183,23 @@ jobs:
           sudo udevadm trigger --name-match=kvm
           ls -l /dev/kvm
 
+      # The page plays on the core's native stream (session 27), which needs
+      # a device to play to: PulseAudio with a null sink, as `native`'s.
+      - name: a sound server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pulseaudio >/dev/null
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=driftloom
+          pactl set-default-sink driftloom
+
       - name: smoke test
         run: sh android/emulator-smoke.sh "$(ls apk/*-universal-debug.apk)" "$RUNNER_TEMP/smoke.png"
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: smoke-screenshot
+          name: smoke-screenshot-${{ matrix.run }}
           path: ${{ runner.temp }}/smoke.png
           if-no-files-found: ignore
           retention-days: 14
@@ -218,3 +250,41 @@ jobs:
         run: |
           WASM_LINE="$(cat wasm-line/wasm-line.txt)" sh android/emulator-native.sh \
             "$(ls apk/*-x86_64-debug.apk)" "$(ls test-apk/*.apk)" "$GITHUB_STEP_SUMMARY"
+
+  rows:
+    name: the app's rows on the native core, on an emulator (tools/rows.mjs --app)
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: driftloom-debug-apk
+          path: apk
+
+      - name: KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: a sound server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pulseaudio >/dev/null
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=driftloom
+          pactl set-default-sink driftloom
+
+      # Every row that makes sense in the app, with the length slider's
+      # minute (--long): the page driving the native core through the
+      # WebView's DevTools port.
+      - name: the rows
+        run: sh android/emulator-rows.sh "$(ls apk/*-x86_64-debug.apk)" --long

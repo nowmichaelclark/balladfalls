@@ -158,7 +158,11 @@ export function decide({ quality, yours, auto, guess, busy }) {
 
 // Whether the browser is too slow even on lite (queue item 100), or null:
 // { why }, in a tester's words for Diagnostics.
-export function stuck({ quality, busy }) {
+export function stuck({ quality, busy, native = false }) {
+  // Never in the Android app (session 27): its core plays natively, at
+  // high priority, and there is no browser to be too slow; the line's
+  // advice (get the app) would be the app's own.
+  if (native) return null;
   if (quality !== 'lite') return null;
   const o = busy.over(STUCK_FOR);
   if (!o) return null;
@@ -211,6 +215,9 @@ export function handOff(old, at, fade = FADE) {
 // Call `fn` once the context's clock reaches `at`: an alarm on the audio
 // clock (a silent source's end), which a hidden page's timers would delay.
 export function alarm(ctx, at, fn) {
+  // The Android app's context (js/native.js) keeps its own, on the core's
+  // clock: it has no nodes to make one of.
+  if (ctx.alarm) return ctx.alarm(at, fn);
   const src = ctx.createConstantSource();
   const mute = ctx.createGain();
   mute.gain.value = 0;

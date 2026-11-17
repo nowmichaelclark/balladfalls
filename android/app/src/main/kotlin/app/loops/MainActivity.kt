@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -18,13 +19,15 @@ import android.widget.FrameLayout
 import androidx.webkit.WebViewAssetLoader
 
 /**
- * The whole app for now: one WebView with the page in it, as it plays in a
- * browser (its own worklet, in the WebView). Session 26 puts the core's
- * native audio under it; this is the shell.
+ * The whole app for now: one WebView with the page in it, its player on the
+ * core's native audio (session 27, [PageBridge]): the page sends the commands
+ * and draws what the core reports, and plays no audio of its own. A WebView
+ * too old for the bridge plays the page as a browser does.
  */
 class MainActivity : Activity() {
 
     private var web: WebView? = null
+    private var page: PageBridge? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,9 +99,17 @@ class MainActivity : Activity() {
                 return true
             }
 
+            // A page going (a reload, a link): the player it drove goes with
+            // it, as a closed tab's does.
+            override fun onPageStarted(v: WebView, url: String?, favicon: Bitmap?) {
+                page?.pageGone()
+            }
+
             // WebView's renderer was killed (memory): the page is rebuilt.
             override fun onRenderProcessGone(v: WebView, detail: RenderProcessGoneDetail): Boolean {
                 (v.parent as? ViewGroup)?.removeView(v)
+                page?.close()
+                page = null
                 v.destroy()
                 web = null
                 recreate()
@@ -107,10 +118,14 @@ class MainActivity : Activity() {
         }
         root.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         web = view
+        // The page's player on the native core: put in before the page loads.
+        if (PageBridge.supported()) page = PageBridge(view).also { it.attach() }
         view.loadUrl(BundledSite.START)
     }
 
     override fun onDestroy() {
+        page?.close()
+        page = null
         web?.let { (it.parent as? ViewGroup)?.removeView(it); it.destroy() }
         web = null
         super.onDestroy()

@@ -7,13 +7,17 @@
 #          the export's rows among them (the sheet, a minute at both speeds,
 #          Cancel, the free space checked first, a disk that fills
 #          mid-export, the private file and its download)
+#   views  (by hand: jobs = views) tools/views.mjs on every view with a
+#          32,768-bar piece open (session 18, queue item 106b): the long
+#          tasks per view, the new drawing's among them
 #   long   tools/export-long.mjs: a three-hour lossless export on
 #          tools/autolite.mjs's slow case (burn 1700 us, lighter on processor
 #          on) while the music plays: memory flat, nothing late or behind,
 #          and the file decodes and nulls against a straight render
 #
-# By hand: `length` (seconds, one of the sheet's lengths) and `burn` for the
-# long job.
+# By hand: `jobs` (rows, views, long or all), `repeat` (the rows, that many
+# times in a row, all must pass), `length` (seconds, one of the sheet's
+# lengths) and `burn` for the long job.
 name: export
 
 on:
@@ -21,6 +25,14 @@ on:
     paths:
       - 'js/export*.js'
       - 'js/main.js'
+      - 'js/piece.js'
+      - 'js/picks.js'
+      - 'js/library.js'
+      - 'js/ui.js'
+      - 'js/request.js'
+      - 'js/worklet.js'
+      - 'css/style.css'
+      - 'tools/views.mjs'
       - 'js/dlplayer.wasm'
       - 'index.html'
       - 'tools/rows.mjs'
@@ -28,6 +40,12 @@ on:
       - '.github/workflows/export.yml'
   workflow_dispatch:
     inputs:
+      jobs:
+        description: 'Which jobs: rows, views, long or all'
+        default: 'all'
+      repeat:
+        description: 'The rows, this many times in a row'
+        default: '1'
       length:
         description: 'The long export, in seconds (one of the sheet lengths)'
         default: '10800'
@@ -44,8 +62,9 @@ concurrency:
 
 jobs:
   rows:
+    if: github.event_name != 'workflow_dispatch' || inputs.jobs == 'all' || inputs.jobs == 'rows'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -54,9 +73,29 @@ jobs:
       - name: Playwright's Chromium
         run: npm install --no-save --no-audit --no-fund playwright@1.56.1 && npx playwright install --with-deps chromium
       - name: The app's rows, the export's among them
-        run: node tools/rows.mjs
+        run: |
+          for i in $(seq 1 "${{ github.event.inputs.repeat || '1' }}"); do
+            echo "=== rows, run $i ==="
+            node tools/rows.mjs || exit 1
+          done
+
+  views:
+    if: github.event_name == 'workflow_dispatch' && (inputs.jobs == 'views' || inputs.jobs == 'all')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Playwright's Chromium
+        run: npm install --no-save --no-audit --no-fund playwright@1.56.1 && npx playwright install --with-deps chromium
+      - name: Every view with a 32,768-bar piece open
+        run: node tools/views.mjs --loops piece,arc --throttle 4,6 --quality full,lite --md views.md && cat views.md
+
 
   long:
+    if: github.event_name != 'workflow_dispatch' || inputs.jobs == 'all' || inputs.jobs == 'long'
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     steps:

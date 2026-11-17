@@ -294,6 +294,31 @@ async function go(tab, name) {
 
 const PHASES = [
   { view: 'now playing', run: async (tab) => { await go(tab, 'now'); await sleep(8000); } },
+  // A long piece's line (session 18, queue item 106b): taps along it and the
+  // section keys, each a jump whose place the core then says. On a loop that
+  // is no long piece the line is not there and this is a wait on Now Playing.
+  { view: 'now playing: the piece\'s line', run: async (tab) => {
+    await go(tab, 'now');
+    await sleep(1500);
+    for (const f of [0.12, 0.4, 0.66, 0.9]) {
+      await tab.evaluate(`(() => {
+        const line = document.getElementById('pieceLine');
+        if (!line || document.getElementById('nowPiece').hidden) return false;
+        const r = line.getBoundingClientRect();
+        const at = { clientX: r.left + r.width * ${f}, clientY: r.top + r.height / 2, pointerId: 1, button: 0, bubbles: true, cancelable: true };
+        line.dispatchEvent(new PointerEvent('pointerdown', at));
+        line.dispatchEvent(new PointerEvent('pointermove', at));
+        line.dispatchEvent(new PointerEvent('pointerup', at));
+        return true;
+      })()`);
+      await sleep(2000);
+    }
+    for (const key of ['#pieceNext', '#pieceNext', '#piecePrev', '#pieceNext']) {
+      if (await tab.evaluate(`!!document.querySelector('${key}:not([disabled])') && !document.getElementById('nowPiece').hidden`)) await click(tab, key);
+      await sleep(1500);
+    }
+    await sleep(2000);
+  } },
   { view: 'vibes', run: async (tab) => { await go(tab, 'vibes'); await sleep(1500); await scroll(tab, 500); await sleep(4000); } },
   { view: 'library: albums', run: async (tab) => {
     await go(tab, 'library');

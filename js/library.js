@@ -364,7 +364,7 @@ function loopsById() {
 }
 
 function keyOf(spec) {
-  return `${NOTE_NAMES[spec.root]}${NB}${SCALES[spec.scale].label} · ${spec.bpm}${NB}bpm`;
+  return `${NOTE_NAMES[spec.root]}${NB}${SCALES[spec.scale].label} · ${spec.bpm}${NB}bpm · ${ui.lengthLine(spec)}`;
 }
 
 function count(n, word) {

@@ -12,7 +12,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v181';
+const BUILD = 'v182';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -87,6 +87,7 @@ import * as ui from './ui.js';
 import * as library from './library.js';
 import { VIBE_IDS } from './vibes.js';
 import * as picks from './picks.js';
+import * as piece from './piece.js';
 
 const state = {
   ctx: null,
@@ -109,7 +110,7 @@ const state = {
   vibes: [],
   // The other next picks (design/next-picks.md): a tempo range and a
   // length in bars (or 'endless'); null is "any". Saved in the prefs.
-  picks: { tempo: null, length: null, key: null, scale: null, style: null, voices: null, layers: null },
+  picks: { tempo: null, length: null, key: null, scale: null, style: null, voices: null, layers: null, journey: null },
   // The album most recently left, so Now Playing can offer the way back.
   lastAlbum: null,
   // Now Playing's last audible position, in steps, held while paused.
@@ -1053,7 +1054,7 @@ function onOwn(seed, tag) {
 // length, so it clears both.
 function clearPickLine(line) {
   if (line === 'mood') setVibes([]);
-  else if (line === 'pace') setPicks({ tempo: null, length: null });
+  else if (line === 'pace') setPicks({ tempo: null, length: null, journey: null });
   else if (line === 'key') setPicks({ key: null, scale: null });
   else if (line === 'style') setPicks({ style: null });
   else if (line === 'voices') setPicks({ voices: null, layers: null });
@@ -1124,6 +1125,7 @@ function renderNow() {
   } else {
     action.hidden = true;
   }
+  fitNow();
 }
 
 function nextName() {
@@ -1162,6 +1164,7 @@ function updateNowClock() {
   if (!spec || !e || !e.live) {
     setNowText('0:00');
     ui.el('nowFill').style.transform = 'scaleX(0)';
+    piece.updatePiece();
     return;
   }
   const pos = state.nowSteps || 0;
@@ -1183,6 +1186,17 @@ function updateNowClock() {
   }
   setNowText(text);
   ui.el('nowFill').style.transform = `scaleX(${frac.toFixed(4)})`;
+  // A long piece's line and where you are (queue item 106b).
+  piece.updatePiece();
+}
+
+// A short screen: the piece's line and words take less room before Now
+// Playing would run over its panel (nothing scrolls).
+function fitNow() {
+  const view = ui.el('viewNow');
+  const mid = view.querySelector('.np-mid');
+  view.classList.remove('fit-tight');
+  if (mid.scrollHeight > mid.clientHeight + 1) view.classList.add('fit-tight');
 }
 
 function setNowText(text) {
@@ -1684,10 +1698,20 @@ function wire() {
     setView,
     openVibes: () => setView('vibes'),
     openLength: () => { picks.openLength(); setView('length'); },
-    setLength: (length) => setPicks({ length }),
+    setLength: (length, journey) => setPicks({ length, journey }),
     clearLine: clearPickLine,
   });
   ui.el('vibesClear').addEventListener('click', () => setVibes([]));
+  // A long piece on Now Playing (queue item 106b): its line, where you are,
+  // and the jump (session 17's command).
+  piece.wirePiece({
+    jump: (kind, at) => !!(state.engine && state.engine.jumpTo && state.engine.jumpTo(kind, at)),
+    spec: () => state.spec,
+    place: () => (state.engine && state.engine.place ? state.engine.place() : null),
+    playing: () => !!(state.engine && state.engine.playing),
+    barSeconds: () => (state.spec ? ui.barSeconds(state.spec) : 3),
+    fit: fitNow,
+  });
 
   ui.el('libraryBtn').addEventListener('click', () => {
     setView(state.view === 'library' ? state.lastView : 'library');

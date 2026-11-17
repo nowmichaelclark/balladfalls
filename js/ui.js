@@ -162,6 +162,17 @@ function barsText(spec) {
   return `${String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} ${n === 1 ? 'bar' : 'bars'}`;
 }
 
+// A piece's length for a Library list (queue item 106b): its bars and, where
+// a length was asked, its duration at its tempo, from "4 bars · 12s" to
+// "32,768 bars · 27h 18m"; "endless" for Endless.
+export function lengthLine(spec) {
+  if (!spec) return '';
+  const n = loopBars(spec);
+  if (!Number.isFinite(n)) return 'endless';
+  const bars = `${String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} ${n === 1 ? 'bar' : 'bars'}`;
+  return spec.length != null ? `${bars} · ${formatTime(passSeconds(spec))}` : bars;
+}
+
 // One pass of the loop, in seconds: every bar it is (a long loop's every
 // section; Infinity for Endless).
 export function passSeconds(spec) {

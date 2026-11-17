@@ -18,7 +18,7 @@
 // but cannot be tapped until a Painter session designs their pickers.
 
 import { el } from './ui.js';
-import { readRequest, RequestError, pieceTime, LAYERS } from './request.js';
+import { readRequest, RequestError, pieceTime, LAYERS, JOURNEYS } from './request.js';
 import { NOTE_NAMES, SCALES, SCALE_ORDER } from './theory.js';
 import { PROFILE_ORDER, VOICE_ORDER } from './characters.js';
 
@@ -40,13 +40,16 @@ let api = null;
 // The Bars picker works on a draft: done keeps it, cancel drops it.
 // mode is 'bars', 'endless' or 'any'; bars is the number shown when the
 // mode is 'bars', and where −1, +1 and the slider start from otherwise.
-let draft = null;   // { bars, mode }
+let draft = null;   // { bars, mode, journey }
 let before = null;  // what length was when the picker opened
 
 // ------------------------------------------------------------- words
 
 export function cleanPicks(p) {
-  const out = { tempo: null, length: null, key: null, scale: null, style: null, voices: null, layers: null };
+  const out = { tempo: null, length: null, key: null, scale: null, style: null, voices: null, layers: null, journey: null };
+  // The journey a long piece takes (queue item 106b): an arc, a wander, or
+  // left to chance (null).
+  if (p && JOURNEYS.includes(p.journey)) out.journey = p.journey;
   if (p && Array.isArray(p.tempo) && p.tempo.length === 2) {
     const lo = Math.round(Number(p.tempo[0])), hi = Math.round(Number(p.tempo[1]));
     if (lo > 0 && hi >= lo) out.tempo = [lo, hi];
@@ -127,6 +130,14 @@ export function voicesText(voices, layers) {
   return parts.join(', ');
 }
 
+// A journey only means something to a long piece (the core: a loop of up
+// to 32 bars has none): the pick as a request or a pill shows it, else null.
+export const LONG_FROM = 33;
+export function journeyFor(picks) {
+  const len = picks && picks.length;
+  return picks && picks.journey && (len === 'endless' || (typeof len === 'number' && len >= LONG_FROM)) ? picks.journey : null;
+}
+
 export function lengthText(len) {
   if (len === 'endless') return 'endless';
   if (len == null) return '';
@@ -142,7 +153,7 @@ const spoken = (t) => t.replace('–', ' to ').replace(/ /g, ' ').replace('…'
 // tempo and the length picked. The same shape a game or a developer sends.
 export function requestFor(state) {
   const { tempo, length, key, scale, style, voices, layers } = state.picks;
-  return { vibes: state.vibes.slice(), tempo, length, key, scale, style, voices, layers };
+  return { vibes: state.vibes.slice(), tempo, length, key, scale, style, voices, layers, journey: journeyFor(state.picks) };
 }
 
 // The picks as the core holds them (queue item 95: `state.held`, its answer
@@ -212,6 +223,8 @@ export function renderNowPicks() {
     row.className = 'pk-row';
     if (tempo) { row.append(pill(tempoText(tempo), 'tempo')); spokenParts.push(spoken(tempoText(tempo))); }
     if (length != null) { row.append(pill(lengthText(length), 'length')); spokenParts.push(spoken(lengthText(length))); }
+    const journey = journeyFor(held.picks);
+    if (journey) { row.append(pill(journey, 'journey')); spokenParts.push(`${journey} journey`); }
     b.append(row);
   }
   if (key || scale) {
@@ -269,6 +282,7 @@ export function renderPanel() {
   list.textContent = '';
   const moods = state.vibes;
   const { tempo, length, key, scale, style, voices, layers } = state.picks;
+  const journey = journeyFor(state.picks);
   const isAny = { mood: !moods.length, pace: !tempo && length == null, key: !key && !scale, style: !style, voices: !voices && !layers };
 
   for (const line of LINES) {
@@ -310,7 +324,8 @@ export function renderPanel() {
         vals.append(t);
         const b = lineButton('', () => api.openLength());
         b.append(length != null ? pill(lengthText(length), 'length') : pill('any bars', 'length', { dashed: true }));
-        b.setAttribute('aria-label', `Bars: ${length != null ? spoken(lengthText(length)) : 'any'}`);
+        if (journey) b.append(pill(journey, 'journey'));
+        b.setAttribute('aria-label', `Bars: ${length != null ? spoken(lengthText(length)) : 'any'}${journey ? `, ${journey} journey` : ''}`);
         vals.append(b);
       }
       const cant = pickProblem(state);
@@ -432,7 +447,7 @@ export function openLength() {
   // loop's length.
   const start = typeof before === 'number' ? before : (state.spec ? state.spec.bars : 16);
   const mode = before === 'endless' ? 'endless' : before == null ? 'any' : 'bars';
-  draft = { bars: clampBars(start), mode };
+  draft = { bars: clampBars(start), mode, journey: state.picks.journey };
   renderLength();
 }
 
@@ -475,6 +490,17 @@ export function renderLength() {
   const anyKey = el('lenAny');
   anyKey.setAttribute('aria-pressed', any ? 'true' : 'false');
   anyKey.classList.toggle('armed', any);
+  // The journey (queue item 106b): a pick like the vibes', for a piece past
+  // 32 bars or Endless; dimmed, and not asked, for a shorter loop. Arc or
+  // wander, lit; pressed again, back to chance.
+  const long = endless || (mode === 'bars' && bars >= LONG_FROM);
+  el('lenJourney').classList.toggle('off', !long);
+  for (const key of el('lenJourney').querySelectorAll('button')) {
+    const on = draft.journey === key.dataset.journey;
+    key.setAttribute('aria-pressed', on ? 'true' : 'false');
+    key.classList.toggle('armed', on);
+    key.disabled = !long;
+  }
   fitNumber();
 }
 
@@ -510,8 +536,9 @@ export function wirePicks(handlers) {
   el('lenDone').addEventListener('click', () => {
     if (document.activeElement === el('lenNum')) commitTyped();
     const value = draft.mode === 'endless' ? 'endless' : draft.mode === 'any' ? null : draft.bars;
+    const journey = draft.journey || null;
     draft = null;
-    api.setLength(value);
+    api.setLength(value, journey);
     api.setView('vibe');
   });
   el('lenDown').addEventListener('click', () => setDraftBars(draft.bars - 1));
@@ -551,6 +578,14 @@ export function wirePicks(handlers) {
     e.preventDefault();
     setDraftBars(2 ** Math.max(0, Math.min(STOPS, next)));
   });
+
+  // The journey: a lit key pressed again goes back to chance.
+  for (const key of el('lenJourney').querySelectorAll('button')) {
+    key.addEventListener('click', () => {
+      draft.journey = draft.journey === key.dataset.journey ? null : key.dataset.journey;
+      renderLength();
+    });
+  }
 
   // The ∞ key lights while endless is on; pressed again, it goes back to
   // a number of bars. The any key lights while length is left to chance;

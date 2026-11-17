@@ -132,12 +132,12 @@ const WEIGHT_TEXT = /^\d+(\.\d+)?$/;
 const BPM_TEXT = /^\d+$/;
 
 export function readRequest(input) {
-  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null, key: null, scale: null, style: null, voices: null, layers: null };
+  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null, key: null, scale: null, style: null, voices: null, layers: null, journey: null };
   if (input == null) return out;
   if (typeof input === 'string') return parseRequest(input);
   if (Array.isArray(input)) return { ...out, vibes: lenientVibes(input) };
   if (typeof input !== 'object') throw new RequestError('a request is text, a list or an object');
-  if (!['vibes', 'tempo', 'theme', 'pins', 'length', 'key', 'scale', 'style', 'voices', 'layers'].some((k) => k in input)) return { ...out, vibes: lenientVibes(Object.keys(input)) };
+  if (!['vibes', 'tempo', 'theme', 'pins', 'length', 'key', 'scale', 'style', 'voices', 'layers', 'journey'].some((k) => k in input)) return { ...out, vibes: lenientVibes(Object.keys(input)) };
   const vibes = input.vibes;
   if (Array.isArray(vibes) && vibes.some(Array.isArray)) {
     // The read form's own pairs, so a request read is read the same again.
@@ -169,11 +169,13 @@ export function readRequest(input) {
   // on or off: { layer: 'on' | 'off' }.
   if (input.voices != null) out.voices = voicesOf(input.voices);
   if (input.layers != null) out.layers = layersOf(input.layers);
+  // The journey a long piece takes (queue item 106b; core: `Journey`).
+  if (input.journey != null) out.journey = journeyOf(input.journey);
   return out;
 }
 
 export function parseRequest(text) {
-  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null, key: null, scale: null, style: null, voices: null, layers: null };
+  const out = { vibes: null, tempo: null, theme: null, pins: null, length: null, key: null, scale: null, style: null, voices: null, layers: null, journey: null };
   const t = String(text).trim();
   if (t === '' || t === '-') return out;
   const asked = new Map();
@@ -193,6 +195,8 @@ export function parseRequest(text) {
     } else if (name === 'bars') {
       if (value !== 'endless' && (value == null || !BPM_TEXT.test(value))) throw new RequestError('a bad length');
       out.length = lengthOf(value === 'endless' ? value : Number(value));
+    } else if (name === 'journey') {
+      out.journey = journeyOf(value);
     } else if (name === 'theme') {
       if (value == null || !BPM_TEXT.test(value)) throw new RequestError('a bad theme');
       out.theme = themeOf(Number(value));
@@ -229,6 +233,7 @@ export function requestText(request) {
   const items = (r.vibes || []).map(([id, w]) => (w == null ? id : `${id}=${w}`));
   if (r.tempo) items.push(`bpm=${r.tempo[0] === r.tempo[1] ? r.tempo[0] : `${r.tempo[0]}-${r.tempo[1]}`}`);
   if (r.length != null) items.push(`bars=${r.length}`);
+  if (r.journey) items.push(`journey=${r.journey}`);
   if (r.theme != null) items.push(`theme=${r.theme}`);
   if (r.key) items.push(`key=${r.key.map((k) => NOTE_NAMES[k]).join('|')}`);
   if (r.scale) items.push(`scale=${r.scale.join('|')}`);
@@ -255,6 +260,7 @@ export function requestOf(spec) {
     style: spec && Array.isArray(spec.askStyle) ? spec.askStyle.slice() : null,
     voices: spec && spec.askVoices ? Object.fromEntries(Object.entries(spec.askVoices).map(([l, v]) => [l, v.slice()])) : null,
     layers: spec && spec.askLayers ? { ...spec.askLayers } : null,
+    journey: spec && spec.askJourney ? spec.askJourney : null,
   };
 }
 
@@ -322,6 +328,21 @@ function layersOf(x) {
 // for a layer, a bit each by place in the layer's frozen list; 0 for none.
 export function voiceMask(voices, layer) {
   return voices && voices[layer] ? voices[layer].reduce((m, k) => m | (1 << VOICE_ORDER[layer].indexOf(k)), 0) : 0;
+}
+
+// The journeys a long piece can take, by name, in the core's order
+// (`dl_play_journey`: 1 an arc, 2 a wander; 0 for none asked).
+export const JOURNEYS = ['arc', 'wander'];
+
+// A journey as the number the core takes, 0 for none.
+export function journeyNumber(journey) {
+  return journey ? JOURNEYS.indexOf(journey) + 1 : 0;
+}
+
+// A journey: 'arc' or 'wander', or refused with the core's own line.
+function journeyOf(x) {
+  if (typeof x !== 'string' || !JOURNEYS.includes(x)) throw new RequestError('no such journey');
+  return x;
 }
 
 // A layer's state as the core takes it: 0 chance, 1 on, 2 off.
@@ -478,6 +499,7 @@ export function askOf(spec) {
     styles: styleMask(asked.style),
     voices: LAYERS.map((l) => voiceMask(asked.voices, l)),
     layers: LAYERS.map((l) => layerState(asked.layers, l)),
+    journey: journeyNumber(asked.journey),
     seeds,
     tone: tone && tone.every((v) => v != null) ? tone : null,
     bpm: Number.isFinite(spec.bpm) ? spec.bpm : null,
@@ -499,6 +521,7 @@ export function askFor(asked) {
     styles: styleMask(asked.style),
     voices: LAYERS.map((l) => voiceMask(asked.voices, l)),
     layers: LAYERS.map((l) => layerState(asked.layers, l)),
+    journey: journeyNumber(asked.journey),
   };
 }
 

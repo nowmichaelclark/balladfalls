@@ -121,6 +121,13 @@ the points where the next step is yours.
 
 ## Decisions
 
+- **Codes, version 2 (#412, session 22): nothing to decide now, one thing to
+  know.** From 1.0 a code never changes, and the format that will freeze is in
+  `core/README.md`, "Share codes, version 2". A code carries no app name, so
+  the "needs a newer version" line is shown with the app's name by the app.
+  Codes no longer carry a loop's custom name or the length slider's setting
+  (version 1 did); say if you want either back before 1.0.
+
 (The long pieces' first picks were all kept, 2026-11-14, `docs/DECISIONS.md`.
 How many changes a loop gets, and twang's picks, were decided 2026-11-17 and
 built in v175: see twang's entry above.)

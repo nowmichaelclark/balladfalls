@@ -620,9 +620,16 @@ spotlightLeast = 2
 # The share of the loops it may play in that play it before the vibes lean
 # it: 0.15, the batch's conservative share, for Mikey's ears.
 share = 0.15
-kinds = soft 1, slow 1, bright 1
-# The batch's [JUDGMENT] rows, one a version (never 0): each leans its own
-# version's share.
+# The versions a loop plays: soft alone (Mikey, 2026-11-17, the Batch 6
+# Album: "I only liked the soft version"). `drawn` is the draw as the batch
+# made it, every version by weight, so the loops that play twang are the
+# ones that did; a loop whose draw lands on a version not in `kinds` plays
+# the first of them. The code for slow and bright stays (a request's
+# `twang.kind` pin still reaches it).
+kinds = soft 1
+drawn = soft 1, slow 1, bright 1
+# The batch's [JUDGMENT] rows, one a version drawn (never 0): each leans its
+# own version's share of the draw.
 kindVibes.soft = dusky 2, wistful 2, moonlit 1.5, spacious 1.5, mellow 1.5,
     cruising 1.5, reflective 1.5, swaying 1.5, hazy 1.5, zany 0.4, goofy 0.4,
     bouncy 0.5, frosty 0.5, crisp 0.5, sour 0.5

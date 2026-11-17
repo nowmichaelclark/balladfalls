@@ -909,7 +909,10 @@ pub const TWANG_KINDS: data::Pool = &[("today", 1.0), ("soft", 1.0), ("slow", 1.
 /// at load on its own stream, outside the choices, as `low_bell_of` is: one
 /// draw across today's `1 - share` and each version's `share` split by the
 /// versions' weights and leaned by that version's vibes (`[setting twang]`),
-/// so each has its own leans and none goes to 0. Only for a loop that may
+/// so each has its own leans and none goes to 0; the version drawn then
+/// plays as [`played_twang`] says (soft alone, since Mikey's Batch 6 Album:
+/// the draw is kept whole so the loops that play twang stay the same). Only
+/// for a loop that may
 /// play it (`may`: a chord, and no kit busier than a soft one); a request's
 /// `twang.kind` pin plays that version instead, where the loop may (today's
 /// keeps it off).
@@ -917,9 +920,9 @@ pub const TWANG_KINDS: data::Pool = &[("today", 1.0), ("soft", 1.0), ("slow", 1.
 pub fn twang_of(seed: u32, may: bool, v: Option<&Vibes>, p: &Pins) -> u8 {
     let mut r = Rng::new(js::salted(seed, TWANG_SALT, 1));
     let x = r.f();
-    let total: f64 = TWANG.kinds.iter().map(|k| k.1).sum();
+    let total: f64 = TWANG.drawn.iter().map(|k| k.1).sum();
     let mut weights = [1.0 - TWANG.share, 0.0, 0.0, 0.0];
-    for &(id, k) in TWANG.kinds {
+    for &(id, k) in TWANG.drawn {
         if let Some(w) = TWANG_KINDS.iter().position(|x| x.0 == id).filter(|&i| i > 0).and_then(|i| weights.get_mut(i)) {
             *w = TWANG.share * k / total * lean_of(data::table_named(TWANG.kind_vibes, id), v);
         }
@@ -934,9 +937,21 @@ pub fn twang_of(seed: u32, may: bool, v: Option<&Vibes>, p: &Pins) -> u8 {
         }
         at -= w;
     }
+    let drawn = played_twang(drawn);
     let kind = p.word("twang.kind").map_or(drawn, |k| TWANG_KINDS.iter().position(|x| x.0 == k).unwrap_or(0));
     #[allow(clippy::cast_possible_truncation)] // four versions
     if may { kind as u8 } else { 0 }
+}
+
+/// The version a loop plays for the version its draw landed on (Mikey's
+/// Batch 6 Album, 2026-11-17: soft alone): itself where `[setting twang]`'s
+/// `kinds` names it, else the first of `kinds`; 0 (none) stays none.
+fn played_twang(drawn: usize) -> usize {
+    let id = TWANG_KINDS.get(drawn).map_or("today", |k| k.0);
+    if drawn == 0 || TWANG.kinds.iter().any(|k| k.0 == id) {
+        return drawn;
+    }
+    TWANG.kinds.first().and_then(|k| TWANG_KINDS.iter().position(|x| x.0 == k.0)).unwrap_or(0)
 }
 
 /// `bassLiftOf(tracks)`: the bass layer's level in dB (queue item 76c), the

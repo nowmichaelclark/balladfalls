@@ -191,7 +191,7 @@ class NativeTestActivity : Activity() {
             append("loop: ").append(NativeCore.name().ifEmpty { "-" }).append("  seed ").append(f.seed)
             append("  state ").append(f.state).append('\n')
             append("played: ").append("%.1f".format(minutes)).append(" min, ").append(f.callbacks).append(" callbacks\n")
-            append("mean block: ").append("%.2f".format(f.meanShare * 100)).append("% of its deadline\n")
+            append("audio thread busy: ").append("%.2f".format(f.meanShare * 100)).append("% of the time\n")
             append("stream: ").append(if (f.running) "running" else "stopped").append(", ").append(f.rate).append(" Hz, ")
             append(f.channels).append(" ch, burst ").append(f.burst).append(", buffer ").append(f.buffer).append(" of ").append(f.capacity).append('\n')
             append("performance mode ").append(f.performance).append(if (f.performance == 12) " (low latency)" else "")

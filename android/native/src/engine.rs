@@ -79,13 +79,22 @@ pub struct Counts {
     pub callbacks: AtomicU64,
     pub frames: AtomicU64,
     /// The busiest callback since the start (or the last reset): its share
-    /// of its deadline in millionths, its time in nanoseconds, its frames.
+    /// of its block's deadline in millionths, its time in nanoseconds, its
+    /// frames. A block is the frames it asked for, or the stream's burst if
+    /// that is more (`Engine::set_block`): a device that tops its buffer up
+    /// with a few frames between bursts gives that callback a burst's time
+    /// all the same, and a share of a few frames' time would be its fixed
+    /// cost, not its load (the CI emulator asks for 8 or 56 at times).
     pub busiest_ppm: AtomicU64,
     pub busiest_ns: AtomicU64,
     pub busiest_frames: AtomicU64,
-    /// Every callback's time and deadline, summed, for the mean share.
+    /// Every callback's time and its frames' own time, summed, for the mean
+    /// share: the share of real time the audio thread spends rendering.
     pub spent_ns: AtomicU64,
     pub deadline_ns: AtomicU64,
+    /// The stream's burst, in frames: the least a block's deadline is
+    /// counted as (0 offline).
+    pub block: AtomicU64,
     /// The player's state (0 idle, 1 loading, 2 wandering, 3 playing, as
     /// `dl_player_state`), and the seed of the loop heard last (its `Loop`
     /// event).
@@ -304,13 +313,16 @@ impl Engine {
         c.frames.fetch_add(frames as u64, Ordering::Relaxed);
 
         // The callback's time against its deadline: the frames it was asked
-        // for, at the rate, are how long the device takes to play them.
+        // for, at the rate, are how long the device takes to play them (the
+        // mean's); a block is at least a burst (the busiest's, `Counts`).
         let spent = u64::try_from(began.elapsed().as_nanos()).unwrap_or(u64::MAX);
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss, reason = "a callback's deadline in ns, far inside u64")]
-        let deadline = ((frames as f64) * 1e9 / self.rate) as u64;
+        let time = |frames: u64| ((frames as f64) * 1e9 / self.rate) as u64;
+        let deadline = time(frames as u64);
+        let block = time((frames as u64).max(c.block.load(Ordering::Relaxed)));
         c.spent_ns.fetch_add(spent, Ordering::Relaxed);
         c.deadline_ns.fetch_add(deadline, Ordering::Relaxed);
-        if let Some(ppm) = spent.saturating_mul(1_000_000).checked_div(deadline)
+        if let Some(ppm) = spent.saturating_mul(1_000_000).checked_div(block)
             && ppm > c.busiest_ppm.load(Ordering::Relaxed)
         {
             c.busiest_ppm.store(ppm, Ordering::Relaxed);

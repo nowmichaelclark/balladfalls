@@ -76,10 +76,13 @@ class Figures(private val v: DoubleArray) {
     val underruns get() = at(3).toLong()
     val callbacks get() = at(4).toLong()
     val frames get() = at(5).toLong()
-    /** The busiest callback: its time, and as a share of its deadline (the time its frames take to play). */
+    /**
+     * The busiest callback: its time, and as a share of its block's deadline: the time its frames take to
+     * play, or a burst's if it asked for fewer (a few frames topping the buffer up still have a burst's time).
+     */
     val busiestMs get() = at(6)
     val busiestShare get() = at(7)
-    /** All the callbacks' time over all their deadlines. */
+    /** All the callbacks' time over the time their frames play: the share of real time the audio thread renders. */
     val meanShare get() = at(8)
     val rate get() = at(9).toInt()
     val burst get() = at(10).toInt()
@@ -114,7 +117,7 @@ class Figures(private val v: DoubleArray) {
     /** Every figure on one line, for the logs and the tests' reports. */
     override fun toString(): String =
         "underruns=$underruns late=$late missed=$missed dropped=$dropped " +
-            "busiest=${"%.3f".format(busiestMs)}ms (${"%.1f".format(busiestShare * 100)}% of ${busiestFrames} frames' deadline) " +
+            "busiest=${"%.3f".format(busiestMs)}ms (${"%.1f".format(busiestShare * 100)}% of its block's deadline, $busiestFrames frames asked) " +
             "mean=${"%.2f".format(meanShare * 100)}% callbacks=$callbacks frames=$frames " +
             "rate=$rate burst=$burst buffer=$buffer/$capacity channels=$channels performance=$performance sharing=$sharing " +
             "thread=$policyName/$priority reopens=$reopens state=$state seed=$seed refused=$refused collisions=$collisions"

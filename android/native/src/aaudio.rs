@@ -291,6 +291,7 @@ fn open_and_start(c: &mut Control, full: bool) -> Result<(), String> {
     }
     let i = info(stream);
     CHANNELS.store(usize::try_from(i.channels).unwrap_or(2).max(1), Ordering::Relaxed);
+    engine.counts.block.store(u64::try_from(i.burst).unwrap_or(0), Ordering::Relaxed);
     CURRENT.store(std::ptr::from_ref(engine).cast_mut(), Ordering::Release);
     FIRST.store(true, Ordering::Relaxed);
     // SAFETY: as above.

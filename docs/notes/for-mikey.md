@@ -133,12 +133,14 @@ the points where the next step is yours.
 
 ## Decisions
 
-- **Codes, version 2 (#412, session 22): nothing to decide now, one thing to
-  know.** From 1.0 a code never changes, and the format that will freeze is in
-  `core/README.md`, "Share codes, version 2". A code carries no app name, so
-  the "needs a newer version" line is shown with the app's name by the app.
-  Codes no longer carry a loop's custom name or the length slider's setting
-  (version 1 did); say if you want either back before 1.0.
+- **A shared loop's name (codes, version 2, session 22, #412):** the new
+  codes carry what a loop sounds like, not the name you gave it, nor the
+  length slider's setting (version 1's codes carried both). So a friend who
+  opens your code sees its own generated name. Say if you want a renamed
+  loop's name to travel with its code; a field can still be added before
+  1.0 (the brain's B4 looks at the format closely before it freezes). A code
+  carries no app name either: the app shows "needs a newer version" with its
+  own name, so a rename never touches a code.
 
 (The long pieces' first picks were all kept, 2026-11-14, `docs/DECISIONS.md`.
 How many changes a loop gets, and twang's picks, were decided 2026-11-17 and

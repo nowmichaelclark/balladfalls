@@ -128,6 +128,23 @@ the points where the next step is yours.
   samples as the web's"; if it says DIFFERS, send that line. Next and Pause
   work too; the stream's line at the bottom says whether the phone gave the
   low-latency path (performance mode 12) and a real-time thread (SCHED_FIFO).
+- **The app plays on the native core (item 107c, session 27, #420):** the
+  page now drives the core natively, on Android's own audio, and the WebView
+  plays nothing of its own (no more keepalive). Get
+  `driftloom-universal-debug.apk` as for 107a, from #420's `android` run (it
+  installs over the last; your loops stay). On the Moto and the tablet,
+  headphones on: Play, a few Nexts and a Previous, re-roll a layer, a mute,
+  the tempo and Sound sliders, the Mono switch, and a vibe in the New loops
+  panel then N (the next loop leans on it); then a long piece (the Bars
+  picker at 256 or Endless, and a jump if session 18's screens are in), and
+  the length slider at a minute (the next loop takes over at its line). Then
+  lock the phone and unlock it, and switch "lighter on processor" on and off
+  (a fade, then the loop from its top). Listen for clicks and gaps, and that
+  the cursor keeps time with the music. Send back Advanced, Diagnostics'
+  `engine:` line (late, missed, dropped and underruns: all 0 hoped for) and
+  its `stream:` line (the rate, the burst, `low latency`, `thread
+  SCHED_FIFO`, the busiest callback's %). The screen off and the
+  notification are session 28's: with the screen off it may stop.
 - **Audio export (item 104b, session 20, #416):** on the Moto and the
   tablet, in the browser: play a loop, then Save, the Share tab, Audio.
   Pick 30 min and **export audio**; let the music play on, turn the screen

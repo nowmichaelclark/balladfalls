@@ -524,9 +524,13 @@ async function appRows({ ev, diag, clickId, level, probe }) {
     // Item 100's too-slow line can't show in the app: on lite, a minute of
     // reports with every quarter-second behind (in a browser, the line
     // after twenty seconds), handed to the page as the core hands them.
-    await clickId('liteMode');
-    await sleep(3000);
-    const lite = await ev(() => document.getElementById('liteMode').getAttribute('aria-checked'));
+    const isLite = () => ev(() => document.getElementById('liteMode').getAttribute('aria-checked'));
+    const was = await isLite();
+    if (was !== 'true') {
+      await clickId('liteMode');
+      await sleep(3000);
+    }
+    const lite = await isLite();
     await ev(() => {
       const busy = { max: 1.5, behind: 8, windows: 8, seconds: 2 };
       for (let i = 0; i < 30; i++) window.__rows.inject([{ type: 'cost', ms: [0, 0], seconds: [0, 0], busy }]);
@@ -535,8 +539,10 @@ async function appRows({ ev, diag, clickId, level, probe }) {
     const shown = await ev(() => !document.getElementById('plainLine').hidden);
     const slow = line(await diag(), 'slow');
     row('app: the too-slow line can\'t show (lite, a minute of reports every quarter-second behind)', lite === 'true' && !shown && slow === 'slow: no', `lite ${lite}, line ${shown ? 'shown' : 'hidden'}, ${slow}`);
-    await clickId('liteMode');
-    await sleep(3000);
+    if (was !== 'true') {
+      await clickId('liteMode');
+      await sleep(3000);
+    }
     row('app: and the music plays on', (await level(1500)) > 1e-4);
   }
 }

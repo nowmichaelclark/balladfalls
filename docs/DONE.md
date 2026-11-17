@@ -429,3 +429,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   nulls against a straight render (`tools/export.mjs`, in the gate);
   `tools/rows.mjs` has the export's rows and `tools/export-long.mjs` the
   three-hour run (the `export` workflow). The app's module grew 23 KB.
+- #419, long pieces on screen (item 106b, session 18, v182), preview URL:
+  <https://claude-suspicious-raman-f88179-driftloom.nowmichaelclark.workers.dev>:
+  nothing that plays moved (the module grew 124 bytes: `dl_play_journey`, the
+  one core addition, so the page can ask a journey). Now Playing for a piece
+  past 32 bars or Endless: the line of its sections with the map's markers
+  (a second theme, the peak, the return, the close, a wander's turns), bar 812
+  of 3,072, the time played and left (Endless: played), a tap or drag on the
+  line to jump and a key each way to the section before or after. The Bars
+  picker has the journey (arc, wander) beside the ∞ and any, shown as a pill
+  beside the bars, sent as the request's journey; the Library's lists end in
+  each loop's length. Listen to a jump into the middle of a piece: it should
+  come in on a phrase line within a blink, nothing ringing from before.

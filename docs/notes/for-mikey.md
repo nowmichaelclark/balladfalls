@@ -137,6 +137,20 @@ the points where the next step is yours.
   how long the export took (the progress line says), whether anything
   stuttered, and Diagnostics' `engine:` line (should read `late: 0  missed:
   0  dropped: 0`). Optional: Cancel one halfway; nothing should be saved.
+- **Long pieces on screen (item 106b, session 18, #419, v182):** on the phone
+  (and the tablet if you can), in the browser. Vibe, then the bars line, then
+  set 3,072 bars; **arc** or **wander** is a key between the ∞ and any (it
+  dims under 33 bars). Done, Next, Play: Now Playing has the piece's line
+  where the rail was, with bar 812 of 3,072, the time played and left (for
+  Endless, played only), and a key each way. Press the line anywhere (drag to
+  see where, let go to jump) and press the keys. A jump should come in on a
+  phrase line within a blink, the old place fading under it, never waiting
+  for its opening or opening its width again; a long chord that was ringing
+  before the jump isn't there after. Look too at the Library (an album's
+  rows end in each loop's length: "4 bars · 7s", "3,072 bars · 2h 48m",
+  "endless"), and the Bars picker at your phone's height: nothing should
+  scroll. Screenshots at 360 px and a tablet's width, dark and light, are on
+  the branch `s18-shots` (linked in the PR).
 
 ## Accounts
 
@@ -180,6 +194,18 @@ the points where the next step is yours.
   the Mono switch); after the track's end what is sounding rings out until
   quiet, at most 12 s, the last 2 s faded. Say if the end should be shorter
   or longer.
+- **The long pieces' words (item 106b, session 18, #419):** approve or change
+  them (`ROLE_WORDS` in `js/piece.js`; the line's second row is "1:12:03
+  played · 2:10:00 left", Endless "1:12:03 played"). What the playhead is in:
+  the opening, the theme, building, a second theme, developing, the peak,
+  easing, the return, the close, a breath, a lift, holding, turning. The
+  journey keys read "arc" and "wander"; the pills beside the bars say the
+  same. A piece past a day shows hours ("32,768 bars · 30h") in the Library.
+- **A journey is not in a share code yet (#419):** the pick is kept with a
+  loop in the Library, but a version-1 code (what the app still writes) has
+  no room for it; codes version 2 carry it (`core/src/code.rs`), so session 23
+  writes `askJourney` (the spec's field) into them. Until then a pasted code
+  of a long piece draws the journey its seed and vibes lean to.
 
 (The long pieces' first picks were all kept, 2026-11-14, `docs/DECISIONS.md`.
 How many changes a loop gets, and twang's picks, were decided 2026-11-17 and

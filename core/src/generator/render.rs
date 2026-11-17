@@ -33,8 +33,9 @@ pub fn layer_bars(cx: &Cx, layer: Layer) -> f64 {
 /// The chords layer's events.
 pub type Chords = List<ChordEvent, CHORD_EVENTS_MAX>;
 
-/// The most choices there can be.
-const CHOICES_MAX: usize = 16;
+/// The most choices there can be: room past today's sixteen (queue item
+/// 105), so a seventeenth is a line of data.
+const CHOICES_MAX: usize = 32;
 
 /// `Render::forced`'s mark for a choice nothing forces: zero, so that a render
 /// of nothing is all zero bytes (queue item 93); a forced option is stored
@@ -676,9 +677,12 @@ impl Render {
         // in their order, as dottedPulse's eligibility reads tripletKit's.
         // No choice in the list reads one of them.
         let mut alone = 0;
+        // A choice that joined after the loop's version is never drawn, nor
+        // counted against its changes (queue item 105).
+        let there = |c: &data::Choice| data::there(data::CODE_CHOICES, c.id, spec.version);
         for (i, c) in CHOICES.iter().enumerate() {
             let Some(share) = c.alone else { continue };
-            if !self.eligible(cx, c.id) {
+            if !there(c) || !self.eligible(cx, c.id) {
                 continue;
             }
             #[allow(clippy::cast_possible_truncation)] // a choice's place, under CHOICES_MAX
@@ -700,7 +704,7 @@ impl Render {
         let count = r.weighted(data::CHANGE_COUNTS).unwrap_or(0.0) - js::num(alone) - js::num(self.settings_changes(cx));
         let mut pool: List<(usize, f64), CHOICES_MAX> = List::new();
         for (i, c) in CHOICES.iter().enumerate() {
-            if c.alone.is_none() && self.eligible(cx, c.id) {
+            if c.alone.is_none() && there(c) && self.eligible(cx, c.id) {
                 pool.push((i, c.weight.unwrap_or(1.0) * lean_of(c.vibes, v)));
             }
         }
@@ -709,14 +713,14 @@ impl Render {
             let Some(i) = r.weighted(&pool) else { break };
             pool.retain(|x| x.0 != i);
             let c = &CHOICES[i];
-            let others = c.options.get(1..).unwrap_or(&[]);
+            let others = options_at(c, spec.version);
             let pick = if c.own_stream {
                 self.own_option(cx, i)
             } else if others.len() == 1 {
                 others[0].0
             } else {
                 let mut leaned: List<(&'static str, f64), 8> = List::new();
-                for &(o, w) in others {
+                for &(o, w) in others.iter() {
                     leaned.push((o, w * lean_of(data::table_named(c.option_vibes, o), v)));
                 }
                 r.weighted(&leaned).unwrap_or("")
@@ -800,7 +804,7 @@ impl Render {
     fn own_option(&self, cx: &Cx, i: usize) -> &'static str {
         let c = &CHOICES[i];
         let v = cx.spec.vibes.as_ref();
-        let others = c.options.get(1..).unwrap_or(&[]);
+        let others = options_at(c, cx.spec.version);
         let mut leaned: List<(&'static str, f64), 8> = List::new();
         for &(o, w) in others.iter().filter(|&&(o, _)| self.option_eligible(c.id, o)) {
             leaned.push((o, w * lean_of(data::table_named(c.option_vibes, o), v)));
@@ -1270,11 +1274,15 @@ impl Render {
         w.end_obj();
     }
 
-    /// `choices`' text.
-    pub fn write_choices<S: Sink>(&self, w: &mut Writer<S>) {
+    /// `choices`' text: the choices there at the loop's `version` (queue
+    /// item 105; a choice that joined later is no part of an older code's
+    /// loop).
+    pub fn write_choices<S: Sink>(&self, w: &mut Writer<S>, version: u32) {
         let mut order: List<usize, CHOICES_MAX> = List::new();
         for i in 0..self.choices.len() {
-            order.push(i);
+            if CHOICES.get(i).is_some_and(|c| data::there(data::CODE_CHOICES, c.id, version)) {
+                order.push(i);
+            }
         }
         order.sort_stable_by(|&a, &b| CHOICES[a].id < CHOICES[b].id);
         w.obj();
@@ -1284,6 +1292,18 @@ impl Render {
         }
         w.end_obj();
     }
+}
+
+/// Choice `c`'s options other than today's that had joined by `version`
+/// (queue item 105), in their order: an option added later moves no older
+/// code's draw.
+fn options_at(c: &data::Choice, version: u32) -> List<(&'static str, f64), 8> {
+    let list = data::CODE_OPTIONS.iter().find(|e| e.0 == c.id).map_or(&[][..], |e| e.1);
+    let mut out = List::new();
+    for &o in c.options.get(1..).unwrap_or(&[]).iter().filter(|o| data::there(list, o.0, version)) {
+        out.push(o);
+    }
+    out
 }
 
 impl Default for Render {

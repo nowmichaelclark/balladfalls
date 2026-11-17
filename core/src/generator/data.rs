@@ -555,7 +555,7 @@ pub struct VoiceCosts {
 mod tables {
     use super::{
         Arc, ArcPeriods, BassLift, Character, Choice, ColorTone, Degree, Dotted, Echo, Energy, FloorDrop, Gait, Joins, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
-        Longform, LowBellDraw, Progression, Progressions, SubDuck, SweepRanges, Tuning, TwangDraw, Vibe, VoiceCosts, Wow, f,
+        Ids, Longform, LowBellDraw, Progression, Progressions, SubDuck, SweepRanges, Tuning, TwangDraw, Vibe, VoiceCosts, Wow, f,
     };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));
 }
@@ -610,4 +610,33 @@ impl super::list::Empty for Gait {
 
 impl super::list::Empty for Degree {
     const EMPTY: Self = Degree::plain(0);
+}
+
+/// A share code's list (`data/codes.txt`, queue item 105): each member's
+/// name, its id in a code (forever its own) and the version it joined.
+pub type Ids = &'static [(&'static str, u32, u32)];
+
+/// The version `name` joined in `list`, or `None` for a name the list does
+/// not hold.
+#[must_use]
+pub fn since(list: Ids, name: &str) -> Option<u32> {
+    list.iter().find(|e| e.0 == name).map(|e| e.2)
+}
+
+/// Whether a member that joined at `since` is there for a loop drawn at
+/// `version` (queue item 105: a code's draws see only what existed at its
+/// version). `version` 0 is this build's newest, a loop no code asked for:
+/// every member is.
+#[must_use]
+pub const fn joined(since: u32, version: u32) -> bool {
+    version == 0 || since <= version
+}
+
+/// Whether member `name` of `list` is there for a loop drawn at `version`:
+/// every member is at the newest (no lookup), and a name the list does not
+/// hold (one the core writes in Rust, as the bass's drone) is there from the
+/// first version.
+#[must_use]
+pub fn there(list: Ids, name: &str, version: u32) -> bool {
+    version == 0 || version >= CODE_NEWEST || joined(since(list, name).unwrap_or(2), version)
 }

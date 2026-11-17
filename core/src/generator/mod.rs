@@ -551,7 +551,7 @@ impl Generator {
             let cx = plan::Cx::new(&self.spec);
             own.cell.filter(|_| !own.motif.is_empty()).map(|cell| (melody::answer_figure(&cx, &own.motif, &mut rng::Rng::new(want.seed), false).0, cell))
         } else {
-            melody::theme_tune(&spec::new_spec(want.seed, &request::Request::new()))
+            melody::theme_tune(&spec::new_spec(want.seed, &self.request.nothing_at()))
         };
         // A loop with no tune of its own has none beside it.
         let tune = tune.filter(|_| !self.render.melody.is_empty());
@@ -652,7 +652,7 @@ impl Generator {
             Part::Form => self.render.write_form(&mut w, &cx, &self.plan),
             Part::Layer(l) => self.render.write_layer(&mut w, l),
             Part::Meta => self.render.write_meta(&mut w, &cx, &self.plan),
-            Part::Choices => self.render.write_choices(&mut w),
+            Part::Choices => self.render.write_choices(&mut w, self.spec.version),
             Part::Load => self.settings.write(&mut w),
             Part::Pass(_) => self.pass.write(&mut w, &cx, &self.plan, &self.render, self.second(self.pass.heard.second)),
         }

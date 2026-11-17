@@ -28,7 +28,8 @@
 //! key (`key=D`, `key=D|G`) and the mode (`scale=dorian`,
 //! `scale=dorian|aeolian`), the style (`style=tide`, `style=tide|shrine`),
 //! a layer's voices (`voice.melody=kalimba|marimba`) and a layer on or off
-//! (`layer.drums=off`, `layer.melody=on`); empty or `-` for nothing. The generation goldens, `dlrender --request` and the
+//! (`layer.drums=off`, `layer.melody=on`) and the version it is drawn at
+//! (`version=2`; queue item 105, a share code's); empty or `-` for nothing. The generation goldens, `dlrender --request` and the
 //! wasm hosts write it so.
 //!
 //! **A code's edits** (queue item 94a, `Edits`): what a listener changed in a
@@ -88,6 +89,15 @@ pub const BAD_SEED: &str = "a bad seed";
 pub const BAD_TONE: &str = "a bad tone";
 /// The line for an edit the core does not know.
 pub const NO_SUCH_EDIT: &str = "no such edit";
+
+/// The first version of the share codes (queue item 105): version 1 was the
+/// old `DL1-` codes, which nothing reads now.
+pub const FIRST_VERSION: u32 = 2;
+/// The line for a code, or a version asked, from a newer build than this
+/// one. The host says whose build: no app's name is written here.
+pub const NEEDS_NEWER: &str = "needs a newer version";
+/// The line for a version before the first.
+pub const BAD_VERSION: &str = "a bad version";
 
 /// The tone's three parts in the spec's order (`Spec::tone`), as the edits
 /// name them.
@@ -329,13 +339,50 @@ pub struct Request {
     edits: Edits,
     /// The journey asked of a long piece (queue item 102).
     journey: Option<Journey>,
+    /// The version the loop is drawn at (queue item 105): a share code's,
+    /// whose draws see only what existed then (`data::joined`); 0, this
+    /// build's newest, for a loop no code asked for.
+    version: u32,
 }
 
 impl Request {
     /// Nothing asked for: the loop the seed makes.
     #[must_use]
     pub const fn new() -> Self {
-        Request { asked: [false; VIBE_COUNT], weights: [0.0; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None, keys: 0, scales: 0, styles: 0, voices: [0; 5], layers_on: 0, layers_off: 0, edits: Edits::NONE, journey: None }
+        Request { asked: [false; VIBE_COUNT], weights: [0.0; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None, keys: 0, scales: 0, styles: 0, voices: [0; 5], layers_on: 0, layers_off: 0, edits: Edits::NONE, journey: None, version: 0 }
+    }
+
+    /// The same, drawn at `version` (queue item 105): what a share code of
+    /// that version plays, its pools holding only what had joined by then
+    /// (`data/codes.txt`). A code's own reading sets it; a host need not.
+    ///
+    /// # Errors
+    /// `NEEDS_NEWER` for a version past this build's newest
+    /// (`data::CODE_NEWEST`), `BAD_VERSION` for one before the first (2).
+    pub fn with_version(mut self, version: u32) -> Result<Self, &'static str> {
+        if version > data::CODE_NEWEST {
+            return Err(NEEDS_NEWER);
+        }
+        if version < FIRST_VERSION {
+            return Err(BAD_VERSION);
+        }
+        self.version = version;
+        Ok(self)
+    }
+
+    /// The version the loop is drawn at: 0 for this build's newest.
+    #[must_use]
+    pub fn version(&self) -> u32 {
+        self.version
+    }
+
+    /// A request of nothing, drawn at the same version: a theme's own loop,
+    /// held to what its code could draw.
+    #[must_use]
+    pub const fn nothing_at(&self) -> Self {
+        let mut r = Request::new();
+        r.version = self.version;
+        r
     }
 
     /// The same, with pin number `number` (`Pins`) at `value` (a word by its
@@ -685,7 +732,7 @@ impl Request {
     /// `drawNew` leaves a request out and keeps the moods.
     #[must_use]
     pub fn vibes_only(&self) -> Self {
-        Request { asked: self.asked, weights: self.weights, ..Request::new() }
+        Request { asked: self.asked, weights: self.weights, version: self.version, ..Request::new() }
     }
 
     /// A request read from its text (the module's doc says how it is
@@ -742,6 +789,11 @@ impl Request {
                     _ => return Err(BAD_LAYER),
                 };
                 out = out.with_layer(i, ask)?;
+            } else if name == "version" {
+                let v = value.and_then(whole).filter(|&x| x <= f64::from(u32::MAX)).ok_or(BAD_VERSION)?;
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a whole number, checked in range
+                let v = v as u32;
+                out = out.with_version(v)?;
             } else if name == "theme" {
                 let seed = value.and_then(whole).filter(|&x| x <= f64::from(u32::MAX)).ok_or(BAD_THEME)?;
                 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a whole number, checked in range
@@ -1050,6 +1102,37 @@ impl Pins {
             "lowBell.drops" => Allowed::Words(super::choices::SPOTLIGHT_KINDS),
             _ => return None,
         })
+    }
+
+    /// The words pin `number` takes, by place (a choice's options, or a
+    /// setting's words), or `None` for a pin that takes a number or no pin:
+    /// a share code names the word by its id (queue item 105).
+    #[must_use]
+    pub fn words(number: usize) -> Option<data::Pool> {
+        match Self::allowed(number)? {
+            Allowed::Words(w) => Some(w),
+            _ => None,
+        }
+    }
+
+    /// The range pin `number` takes, and whether only whole numbers in it,
+    /// or `None` for a pin of words or of listed numbers (or no pin).
+    #[must_use]
+    pub fn range(number: usize) -> Option<([f64; 2], bool)> {
+        match Self::allowed(number)? {
+            Allowed::Range(r, whole) => Some((r, whole)),
+            _ => None,
+        }
+    }
+
+    /// The numbers pin `number` takes, where it takes one of a list (the
+    /// echo's beats), or `None`.
+    #[must_use]
+    pub fn values(number: usize) -> Option<data::NumPool> {
+        match Self::allowed(number)? {
+            Allowed::Values(v) => Some(v),
+            _ => None,
+        }
     }
 
     /// The same, with pin `number` at `value` (a word by its place).

@@ -601,7 +601,7 @@ async function longRows(browser, port, errors) {
   const lines = await ev(() => [...document.querySelectorAll('#libPane .lrow-meta')].map((x) => x.textContent.replace(/\u00a0/g, ' ')));
   const has = (re) => lines.some((t) => re.test(t));
   row('Library: a list\'s line says a loop\'s length: 4 bars and its time, 3,072 bars and hours, 32,768 bars and about a day, endless, a plain loop\'s own bars',
-    has(/ bpm · 4 bars · \d+s$/) && has(/ bpm · 3,072 bars · \d+h( \d+m)?$/) && has(/ bpm · 32,768 bars · (\d+h( \d+m)?|\d+d( \d+h)?)$/) && has(/ bpm · endless$/) && has(/ bpm · \d+ bars$/), lines.join(' | '));
+    has(/ bpm · 4 bars · \d+s$/) && has(/ bpm · 3,072 bars · \d+h( \d+m)?$/) && has(/ bpm · 32,768 bars · \d+h( \d+m)?$/) && has(/ bpm · endless$/) && has(/ bpm · \d+ bars$/), lines.join(' | '));
   row('long piece: no page errors in its page', errors.length === 0, errors.join('; '));
   await page.close();
 }

@@ -146,11 +146,12 @@ console.log('\nThe markers on their pixels');
 
 console.log('\nThe Library\'s line');
 {
-  const at = (length, bars = 16, bpm = 74) => lengthLine({ length, bars, bpm, stepsPerBar: 16 });
-  check('a loop with no length asked: its own bars', lengthLine({ length: null, bars: 16, bpm: 74, stepsPerBar: 16 }) === '16 bars' && lengthLine({ bars: 1, bpm: 74 }) === '1 bar');
+  // (A space that does not break between the number and its unit.)
+  const at = (length, bars = 16, bpm = 74) => lengthLine({ length, bars, bpm, stepsPerBar: 16 }).replace(/\u00a0/g, ' ');
+  check('a loop with no length asked: its own bars', at(null) === '16 bars' && lengthLine({ bars: 1, bpm: 74 }).replace(/\u00a0/g, ' ') === '1 bar');
   check('4 bars, with its time', at(4) === '4 bars · 13s', at(4));
   check('a long one: bars and hours', at(3072) === '3,072 bars · 1h 3m' || /^3,072 bars · \d+h \d+m$/.test(at(3072)), at(3072));
-  check('the longest: 32,768 bars, about a day', /^32,768 bars · \d+h( \d+m)?$/.test(at(32768, 16, 88)) || /^32,768 bars · \d+d/.test(at(32768, 16, 88)), at(32768, 16, 88));
+  check('the longest: 32,768 bars, about a day, in hours', /^32,768 bars · \d+h( \d+m)?$/.test(at(32768, 16, 88)) && at(32768, 16, 70) === '32,768 bars · 31h', at(32768, 16, 88) + ' / ' + at(32768, 16, 70));
   check('Endless', at('endless') === 'endless');
 }
 

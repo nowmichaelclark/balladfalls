@@ -169,8 +169,11 @@ export function lengthLine(spec) {
   if (!spec) return '';
   const n = loopBars(spec);
   if (!Number.isFinite(n)) return 'endless';
-  const bars = `${String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} ${n === 1 ? 'bar' : 'bars'}`;
-  return spec.length != null ? `${bars} · ${formatTime(passSeconds(spec))}` : bars;
+  const bars = `${String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}\u00a0${n === 1 ? 'bar' : 'bars'}`;
+  if (spec.length == null) return bars;
+  // Past a day it stays in hours ("30h"): a 32,768-bar piece is about a day.
+  const secs = passSeconds(spec);
+  return `${bars} · ${secs >= 86400 ? `${Math.round(secs / 3600)}h` : formatTime(secs)}`;
 }
 
 // One pass of the loop, in seconds: every bar it is (a long loop's every

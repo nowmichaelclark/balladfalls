@@ -257,7 +257,7 @@ export function paintLine(canvas, model) {
   const quiet = css.getPropertyValue('--piece-tick').trim() || css.color;
   const loud = css.getPropertyValue('--piece-mark').trim() || css.color;
   // The rail the ticks stand on.
-  ctx.globalAlpha = 0.3;
+  ctx.globalAlpha = 0.4;
   ctx.fillStyle = quiet;
   ctx.fillRect(0, h - 3, w, 2);
   const { heights, roles } = columns(model, w);
@@ -266,7 +266,7 @@ export function paintLine(canvas, model) {
     if (!hh) continue;
     const role = roles[x];
     const mark = role === 'peak' || role === 'close' || role === 'return';
-    ctx.globalAlpha = role === 'opening' ? 0.34 : mark ? 0.95 : 0.6;
+    ctx.globalAlpha = role === 'opening' ? 0.5 : mark ? 1 : 0.75;
     ctx.fillStyle = mark ? loud : quiet;
     const th = Math.max(3, Math.round((h - 4) * hh));
     ctx.fillRect(x, h - 3 - th, 1.5, th);
@@ -411,9 +411,12 @@ export function updatePiece() {
     }
   }
   const width = Math.round(line.clientWidth);
-  if (width && width !== view.drawnWidth) {
+  // Painted again when the line's width or the theme (a class of the app) changes.
+  const theme = document.getElementById('app').className;
+  if (width && (width !== view.drawnWidth || theme !== view.theme)) {
     paintLine(document.getElementById('pieceCanvas'), view.model);
     view.drawnWidth = width;
+    view.theme = theme;
   }
   if (place) view.place = place;
   const at = place || view.place;

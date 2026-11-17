@@ -997,13 +997,109 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
     let _ = writeln!(out, "/// Each voice's loudness in the mix over a note's life (`data/longform.txt`, `[longform loudness]`), by layer.\npub static LOUDNESS: [&[(&str, [f64; 6])]; 5] = {table};");
 }
 
+/// The dummy build's additions laid over a file's blocks: a block the file
+/// has gains the additions' keys, a key it has gains their rows (a row of
+/// words, `[order vibes] ids` and `newest`, gains their words), and a block
+/// it lacks is added at its end, as a later version adds a member last.
+fn laid_over(blocks: &mut Vec<Block>, more: Vec<Block>) {
+    for add in more {
+        let Some(b) = blocks.iter_mut().find(|b| b.kind == add.kind && b.name == add.name) else {
+            blocks.push(add);
+            continue;
+        };
+        let words = b.kind == "order";
+        for e in add.entries {
+            match b.entries.iter_mut().find(|x| x.key == e.key) {
+                Some(x) if words || x.key == "newest" => x.rows.iter_mut().take(1).for_each(|r| r.extend(e.rows.iter().flatten().cloned())),
+                Some(x) => x.rows.extend(e.rows),
+                None => b.entries.push(e),
+            }
+        }
+    }
+}
+
+/// The share codes' names, ids and versions (`data/codes.txt`, queue item
+/// 105): each list as `(name, id, since)` rows, the version a new code
+/// writes, and the checks that keep them forever: an id or a name once in a
+/// list, every `since` from the first version (2) to `newest`.
+fn codes(out: &mut String, blocks: &[Block]) {
+    let file = "data/codes.txt";
+    let version = blocks.iter().find(|b| b.kind == "code" && b.name == "version").expect("data/codes.txt has no [code version]");
+    let r = Reader { file, block: version };
+    r.only(&["newest"]);
+    // The dummy build's additions raise it: the newest is the most named.
+    let newest = r.words("newest").expect("[code version] has no newest").iter().map(|t| t.parse::<u32>().unwrap_or_else(|_| panic!("{file}: newest is a whole number"))).max().expect("[code version] newest");
+    assert!(newest >= 2, "{file}: newest is 2 or more");
+    let _ = writeln!(out, "/// The version a new share code writes (`[code version] newest`).\npub const CODE_NEWEST: u32 = {newest};");
+    let list = |b: &Block| {
+        let r = Reader { file, block: b };
+        r.only(&["ids"]);
+        let rows = r.rows("ids").unwrap_or_else(|| panic!("{file}: [{} {}] has no ids", b.kind, b.name));
+        let mut s = String::from("&[");
+        let (mut names, mut ids) = (BTreeSet::new(), BTreeSet::new());
+        for row in rows {
+            let at = r.at("ids");
+            assert!(row.len() == 3, "{at}: each row is a name, its id and its version");
+            let id: u32 = row[1].parse().unwrap_or_else(|_| panic!("{at}: '{}' is not an id", row[1]));
+            let since: u32 = row[2].parse().unwrap_or_else(|_| panic!("{at}: '{}' is not a version", row[2]));
+            assert!((2..=newest).contains(&since), "{at}: {} joined at {since}, outside 2 to {newest}", row[0]);
+            assert!(names.insert(row[0].clone()), "{at}: '{}' twice", row[0]);
+            assert!(ids.insert(id), "{at}: id {id} twice");
+            let _ = write!(s, "({}, {id}, {since}),", quote(&row[0]));
+        }
+        s.push(']');
+        s
+    };
+    let one = |kind: &str, name: &str| {
+        let b = blocks.iter().find(|b| b.kind == kind && b.name == name).unwrap_or_else(|| panic!("{file} has no [{kind} {name}]"));
+        list(b)
+    };
+    for (name, konst, doc) in [
+        ("vibes", "CODE_VIBES", "The vibes"),
+        ("profiles", "CODE_PROFILES", "The profiles"),
+        ("moods", "CODE_MOODS", "The moods"),
+        ("scales", "CODE_SCALES", "The modes"),
+        ("layers", "CODE_LAYERS", "The layers"),
+        ("journeys", "CODE_JOURNEYS", "The journeys"),
+        ("tones", "CODE_TONES", "The tone's parts"),
+        ("bassStyles", "CODE_BASS_STYLES", "The bass's styles"),
+        ("choices", "CODE_CHOICES", "The choices"),
+        ("settings", "CODE_SETTINGS", "The settings a pin names"),
+    ] {
+        let _ = writeln!(out, "/// {doc} a share code names (`[code {name}]`): name, id, version joined.\npub static {konst}: Ids = {};", one("code", name));
+    }
+    out.push_str("/// Each layer's voices a share code names (`[voices LAYER]`), in the core's layer order.\npub static CODE_VOICES: [Ids; 5] = [\n");
+    for layer in ["drums", "bass", "chords", "melody", "texture"] {
+        let _ = writeln!(out, "{},", one("voices", layer));
+    }
+    out.push_str("];\n");
+    for (kind, konst, doc) in [("options", "CODE_OPTIONS", "Each choice's options"), ("words", "CODE_WORDS", "Each setting's words")] {
+        let _ = writeln!(out, "/// {doc} a share code names (`[{kind} NAME]`).\npub static {konst}: &[(&str, Ids)] = &[");
+        for b in blocks.iter().filter(|b| b.kind == kind) {
+            let _ = writeln!(out, "({}, {}),", quote(&b.name), list(b));
+        }
+        out.push_str("];\n");
+    }
+}
+
 fn main() {
-    let root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("cargo sets CARGO_MANIFEST_DIR")).join("..").join("data");
+    let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("cargo sets CARGO_MANIFEST_DIR"));
+    let root = manifest.join("..").join("data");
+    // The dummy build (the `dummy` feature, `tests/dummy.rs`): each file's
+    // additions from `tests/dummy/` laid over it, as a later version would add
+    // them. Never in any other build.
+    let dummy = env::var_os("CARGO_FEATURE_DUMMY").is_some();
     let read = |name: &str| {
         let path = root.join(format!("{name}.txt"));
         println!("cargo::rerun-if-changed={}", path.display());
         let text = fs::read_to_string(&path).unwrap_or_else(|e| panic!("data/{name}.txt: {e}"));
-        parse(&text, &format!("data/{name}.txt"))
+        let mut blocks = parse(&text, &format!("data/{name}.txt"));
+        let extra = manifest.join("tests").join("dummy").join(format!("{name}.txt"));
+        println!("cargo::rerun-if-changed={}", extra.display());
+        if dummy && let Ok(more) = fs::read_to_string(&extra) {
+            laid_over(&mut blocks, parse(&more, &format!("core/tests/dummy/{name}.txt")));
+        }
+        blocks
     };
     let mut out = String::from("// Written by core/build.rs from data/*.txt. Do not edit.\n");
     let _ = characters(&mut out, &read("characters"));
@@ -1014,6 +1110,7 @@ fn main() {
     choices(&mut out, &read("choices"));
     voices(&mut out, &read("voices"));
     longform(&mut out, &read("longform"), &vibe_names);
+    codes(&mut out, &read("codes"));
     let dest = PathBuf::from(env::var("OUT_DIR").expect("cargo sets OUT_DIR")).join("gen_data.rs");
     fs::write(dest, out).expect("can write the generated tables");
     println!("cargo::rerun-if-changed=build.rs");

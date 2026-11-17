@@ -27,3 +27,10 @@ the session that needs one:
    (a second range for choices), so no existing number moves.
 
 Nothing here was changed in #396.
+
+**Since 105a (session 22, 2026-11-17):** share codes, version 2, name choices,
+options and settings by their ids in `data/codes.txt`, never by pin number,
+and `CHOICES_MAX` is 32, so a seventeenth choice is a line of data and a row
+of ids. Only the hosts' pin numbers (`dl_play_pin`, `js/pins.js`) still stop
+at sixteen choices: a seventeenth that must be pinned by number takes path 2
+above.

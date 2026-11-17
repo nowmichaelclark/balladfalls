@@ -1,0 +1,27 @@
+# Share codes, version 2 (queue item 105): the format held to its bytes.
+# core/tests/codes.rs (natively) and test/codes.test.mjs (the tools' wasm)
+# write each and read it back. From 1.0 on a line here never changes: a
+# change that moves one is a change to the format, which codes can't have.
+#
+#   loop SEED REQUEST MUTES SALT CODE         (REQUEST "-" for nothing)
+#   album TITLE CODE,CODE,... CODE            (TITLE "-" for none)
+#   seed-album SEED COUNT REQUEST TITLE CODE
+loop 20261009 - 0 0 ERiSNBA2k
+loop 0 - 0 0 EAAAAAAUP
+loop 4294967295 - 0 0 E_____DyO
+loop 4000000000 glacial,cozy,bars=64,bpm=72 0 0 EAgyauDBNBbDoBF_Bga
+loop 77 glacial=0.7,misty 0 0 ENBAAAABuBCbOBh4
+loop 77 bpm=70-85 0 0 ENBAAAAEmBO_7
+loop 77 bars=endless,journey=wander 0 0 ENBAAAAGHB-x
+loop 77 bars=3072,journey=arc 0 0 ENBAAAAF__CHANC
+loop 77 key=D|G,scale=dorian|aeolian 0 0 ENBAAAAICCEJCAA5f
+loop 77 style=tide|shrine 0 0 ENBAAAAKCLBJW
+loop 77 voice.melody=kalimba|marimba,layer.drums=off,layer.texture=on 0 0 ENBAAAALDCTAMBENBAVG
+loop 77 theme=1234 0 0 ENBAAAAOSTAAAAEv
+loop 77 organ=on,tunedKick=long,arc.shape=dip,space.room=0.8,tuning.cents=-12.5 0 0 ENBAAAAPCBPFCQABQS5HBQZQBKr
+loop 77 edit.seed.drums=99,edit.roll.bass=7,edit.warmth=0.6,edit.space=0.25,edit.bpm=88.5 5 123456 ENBAAAARAjBAAAARDHAAAAASAMBSByBDTq3BBUCABVAJeAAAmV
+loop 77 version=2,cozy 0 0 ENBAAAABN3P
+album - ERiSNBA2k,EAAAAAAUP,E_____DyO,EAgyauDBNBbDoBF_Bga,ENBAAAABuBCbOBh4 FAFGRiSNBAGAAAAAAG_____DQAgyauDBNBbDoBF_BNNBAAAABuBCbOB59
+album Rain EAgyauDBNBbDoBF_Bga,ENBAAAABuBCbOBh4,ENBAAAAEmBO_7,ENBAAAAGHB-x,ENBAAAAF__CHANC FAFQAgyauDBNBbDoBF_BNNBAAAABuBCbOBKNBAAAAEmBOJNBAAAAGHBMNBAAAAF__CHAeEZQZM4lf
+seed-album 424242 12 glacial,cozy,bars=3072 - FByknBAAMBNBbF__CL8
+seed-album 7 3 cozy,bpm=80 Night FBHAAAAADBNDwBeFXSY8ioUe

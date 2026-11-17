@@ -382,6 +382,31 @@ int dl_flac_finish(dl_flac *encoder);
    has been called. 0, or -1 for a null encoder or `out`. */
 int dl_flac_header(dl_flac *encoder, uint8_t *out);
 
+/* Share codes, version 2 (queue item 105; core/README.md, "Share codes"):
+   a loop or an album as a short run of A-Z a-z 0-9 - _, the same on every
+   host. Each returns NULL, or a static plain line saying why not: "needs a
+   newer version" (the host adds its app's name), "not a code", "no room for
+   the code". Codes written are NUL-terminated in `out` (`room` bytes; a
+   loop's is at most 4096 characters, a plain one 9). */
+/* A loop's code: what it asks becomes what the next dl_player_load asks for;
+   its seed, the layers it mutes (a bit each, drums lowest) and the wander's
+   salt (0 for none) come back for the host to load, mute and salt. */
+const char *dl_code_read(dl_player *player, const char *code, uint32_t *seed, uint32_t *mutes, uint32_t *salt);
+/* The code of the loop of `seed` as asked since the last load (the request
+   is kept), with `mutes` and `salt`. */
+const char *dl_code_write(dl_player *player, uint32_t seed, uint32_t mutes, uint32_t salt, char *out, size_t room);
+/* An album's code: its tracks' count, its seed if drawn from one
+   (`from_seed` 1), its title (empty for none). Any pointer may be NULL. */
+const char *dl_album_read(const char *code, size_t *count, uint32_t *seed, int *from_seed, char *title, size_t title_room);
+/* Track `index` (from 0) of an album, as its own loop's code. */
+const char *dl_album_track(const char *code, size_t index, char *out, size_t room);
+/* The album of `count` loops' codes, in order, titled (`title` may be NULL;
+   at most 40 printable ASCII characters). */
+const char *dl_album_write(const char *const *codes, size_t count, const char *title, char *out, size_t room);
+/* The album of `count` tracks drawn from `seed`, each asked what the next
+   load asks for (its edits left out). */
+const char *dl_album_seed(dl_player *player, uint32_t seed, size_t count, const char *title, char *out, size_t room);
+
 #ifdef __cplusplus
 }
 #endif

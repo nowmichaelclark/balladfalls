@@ -422,10 +422,11 @@ pub fn gen_drums(cx: &Cx, bars: f64, out: &mut Drums) -> DrumsOut {
     if !spec.forced(Layer::Drums) && !r.chance(c.drums.unwrap_or(f64::NAN)) && !asked::on(spec, Layer::Drums) {
         return DrumsOut { kit: Word::new("none"), written: 0 };
     }
-    let (kit, pool) = match c.kits {
-        Some(p) => (r.weighted(p), p),
-        None => (r.weighted(&KITS), &KITS[..]),
-    };
+    // A profile with no kits of its own draws the core's, those that had
+    // joined by the loop's version (queue item 105).
+    let fallback = super::character::kept(&KITS, data::CODE_VOICES[0], spec.version);
+    let pool = c.kits.as_ref().map_or(&fallback[..], |p| &p[..]);
+    let kit = r.weighted(pool);
     let kit = asked::voice(spec, Layer::Drums, kit.unwrap_or("tape"), pool);
     if c.groove == Some("travel") {
         travel_groove(cx, bars, &mut r, kit, out);
@@ -727,9 +728,10 @@ pub fn gen_texture(cx: &Cx, bars: f64, slots: &[Slot], cycle_steps: f64, out: &m
     let mut r = Rng::new(spec.layer_seed(Layer::Texture));
     let spb = cx.spb;
     let total = bars * spb;
+    let fallback = super::character::kept(&TEXTURES, data::CODE_VOICES[4], spec.version);
     let all = match &cx.c.textures {
         Some(p) => &p[..],
-        None => &TEXTURES[..],
+        None => &fallback[..],
     };
     // A texture re-rolled (queue item 94a) never draws none.
     let kept = asked::without(all, "none");

@@ -161,6 +161,13 @@ fn line(refused: &'static str) -> *const c_char {
         NO_SUCH_VOICE => c"no such voice",
         BAD_LAYER => c"a bad layer",
         ALL_LAYERS_OFF => c"all layers off",
+        crate::code::NEEDS_NEWER => c"needs a newer version",
+        crate::code::NOT_A_CODE => c"not a code",
+        crate::code::NO_ROOM => c"no room for the code",
+        crate::code::NOT_AT_VERSION => c"asks for something its version does not have",
+        crate::code::BAD_TITLE => c"a bad title",
+        crate::code::BAD_ALBUM => c"a bad album",
+        crate::generator::request::BAD_VERSION => c"a bad version",
         _ => c"can't do that",
     };
     c.as_ptr()
@@ -953,4 +960,187 @@ pub unsafe extern "C" fn dl_flac_header(encoder: *mut Flac, out: *mut u8) -> c_i
     // SAFETY: 42 writable bytes (the caller's promise), not null.
     unsafe { ptr::copy_nonoverlapping(head.as_ptr(), out, head.len()) };
     0
+}
+
+// ------------------------------------------------------------- share codes
+
+/// `code`'s bytes (null is none).
+///
+/// # Safety
+///
+/// `code` is a NUL-terminated string, or null.
+unsafe fn bytes<'a>(code: *const c_char) -> &'a [u8] {
+    if code.is_null() {
+        return &[];
+    }
+    // SAFETY: NUL-terminated (the caller's promise).
+    unsafe { CStr::from_ptr(code) }.to_bytes()
+}
+
+/// Write a code with `write` into `out` (`room` bytes), NUL-terminated: null,
+/// or the line saying why not.
+///
+/// # Safety
+///
+/// `out` is `room` writable bytes, or null.
+unsafe fn written(out: *mut c_char, room: usize, write: impl FnOnce(&mut [u8]) -> Result<usize, &'static str>) -> *const c_char {
+    if out.is_null() || room == 0 {
+        return line(crate::code::NO_ROOM);
+    }
+    // SAFETY: `room` writable bytes (the caller's promise), not null.
+    let buf = unsafe { core::slice::from_raw_parts_mut(out.cast::<u8>(), room) };
+    let (text, _) = buf.split_at_mut(room - 1);
+    match write(text) {
+        Ok(n) => {
+            buf[n] = 0;
+            ptr::null()
+        }
+        Err(why) => {
+            buf[0] = 0;
+            line(why)
+        }
+    }
+}
+
+/// Read a loop's share code (queue item 105; `code::read_loop`): what it
+/// asks becomes what the next `dl_player_load` asks for, and its seed, the
+/// layers it mutes (a bit each, drums lowest) and the wander's salt (0 for
+/// none) are written to `seed`, `mutes` and `salt` (each may be null) for
+/// the host to load, mute (`dl_player_mute`) and salt
+/// (`dl_player_wander_salt`). Null if it is a loop's code; else the line
+/// saying why not ("needs a newer version", "not a code"), the request left
+/// as it was.
+///
+/// # Safety
+///
+/// `code` is a NUL-terminated string, or null; `seed`, `mutes` and `salt`
+/// each a writable `uint32_t`, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_code_read(player: *mut Engine, code: *const c_char, seed: *mut u32, mutes: *mut u32, salt: *mut u32) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    // SAFETY: the caller's promise, passed on.
+    match crate::code::read_loop(unsafe { bytes(code) }) {
+        Ok(l) => {
+            e.request = l.request;
+            for (to, value) in [(seed, l.seed), (mutes, u32::from(l.mutes)), (salt, l.salt)] {
+                if !to.is_null() {
+                    // SAFETY: a writable `uint32_t` (the caller's promise).
+                    unsafe { *to = value };
+                }
+            }
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Write the share code of the loop of `seed` as asked since the last load
+/// (the request is kept: the host may then load it), with the layers in
+/// `mutes` muted (a bit each) and the wander's `salt` (0 for none), into
+/// `out` (`room` bytes, NUL-terminated). Null, or the line saying why not.
+///
+/// # Safety
+///
+/// `out` is `room` writable bytes, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_code_write(player: *mut Engine, seed: u32, mutes: u32, salt: u32, out: *mut c_char, room: usize) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    #[allow(clippy::cast_possible_truncation)] // five bits
+    let l = crate::code::Loop { seed, request: e.request, mutes: (mutes & 31) as u8, salt };
+    // SAFETY: the caller's promise, passed on.
+    unsafe { written(out, room, |buf| crate::code::write_loop(&l, buf)) }
+}
+
+/// Read an album's share code: how many tracks into `count`, and for an
+/// album drawn from one seed that seed into `seed` and 1 into `from_seed`
+/// (0 for a list of loops); its title into `title` (`title_room` bytes,
+/// NUL-terminated; empty for none). Each pointer may be null. Null, or the
+/// line saying why not.
+///
+/// # Safety
+///
+/// `code` is a NUL-terminated string, or null; the rest writable, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_album_read(code: *const c_char, count: *mut usize, seed: *mut u32, from_seed: *mut c_int, title: *mut c_char, title_room: usize) -> *const c_char {
+    // SAFETY: the caller's promise, passed on.
+    match crate::code::read_album(unsafe { bytes(code) }) {
+        Ok(a) => {
+            // SAFETY: each writable, or null (the caller's promise).
+            unsafe {
+                if !count.is_null() {
+                    *count = a.count;
+                }
+                if !seed.is_null() {
+                    *seed = a.seed.unwrap_or(0);
+                }
+                if !from_seed.is_null() {
+                    *from_seed = c_int::from(a.seed.is_some());
+                }
+                if !title.is_null() && title_room > 0 {
+                    let _ = written(title, title_room, |buf| {
+                        let t = a.title.text();
+                        buf.get_mut(..t.len()).ok_or(crate::code::NO_ROOM)?.copy_from_slice(t);
+                        Ok(t.len())
+                    });
+                }
+            }
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Write track `index` (from 0) of the album `code` as its own loop's code
+/// into `out` (`room` bytes, NUL-terminated). Null, or the line saying why
+/// not.
+///
+/// # Safety
+///
+/// `code` is a NUL-terminated string, or null; `out` `room` writable bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_album_track(code: *const c_char, index: usize, out: *mut c_char, room: usize) -> *const c_char {
+    // SAFETY: the caller's promise, passed on.
+    let code = unsafe { bytes(code) };
+    // SAFETY: as above.
+    unsafe { written(out, room, |buf| crate::code::album_track(code, index, buf)) }
+}
+
+/// Write the album of the `count` loops' codes at `codes`, in their order,
+/// with `title` (null for none), into `out`. Null, or the line saying why
+/// not.
+///
+/// # Safety
+///
+/// `codes` is `count` NUL-terminated strings; `title` one, or null; `out`
+/// `room` writable bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_album_write(codes: *const *const c_char, count: usize, title: *const c_char, out: *mut c_char, room: usize) -> *const c_char {
+    if codes.is_null() {
+        return line(crate::code::BAD_ALBUM);
+    }
+    // SAFETY: `count` pointers (the caller's promise).
+    let list = unsafe { core::slice::from_raw_parts(codes, count) };
+    // SAFETY: each NUL-terminated (the caller's promise).
+    let tracks = list.iter().map(|&c| unsafe { bytes(c) });
+    // SAFETY: the caller's promise.
+    let Ok(title) = crate::code::Title::new(unsafe { bytes(title) }) else { return line(crate::code::BAD_TITLE) };
+    // SAFETY: the caller's promise, passed on.
+    unsafe { written(out, room, |buf| crate::code::write_album(tracks, &title, buf)) }
+}
+
+/// Write the album of `count` tracks drawn from `seed`, each asked what the
+/// next load asks for (its edits left out), with `title` (null for none),
+/// into `out`. Null, or the line saying why not.
+///
+/// # Safety
+///
+/// `title` is a NUL-terminated string, or null; `out` `room` writable bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_album_seed(player: *mut Engine, seed: u32, count: usize, title: *const c_char, out: *mut c_char, room: usize) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    // SAFETY: the caller's promise.
+    let Ok(title) = crate::code::Title::new(unsafe { bytes(title) }) else { return line(crate::code::BAD_TITLE) };
+    let picks = e.request;
+    // SAFETY: the caller's promise, passed on.
+    unsafe { written(out, room, |buf| crate::code::write_seed_album(seed, count, &picks, &title, buf)) }
 }

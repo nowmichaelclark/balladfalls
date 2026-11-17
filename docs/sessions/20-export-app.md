@@ -1,7 +1,9 @@
 # Session 20: audio export in the app: lossless, safe first (104b)
 
+**Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" was "sessions 18 and 19": the export needs 19's FLAC writer, not 18's screens (a long piece is exported whole from its seed and request, with no jump).
+
 - **Model:** Opus 5.5. **Effort:** high.
-- **Start after:** sessions 18 and 19.
+- **Start after:** brain B2, with session 19 in (it is: #390). It may run alongside 17, 18, 22, 24 and 26; never beside 23 (the same actions in `js/main.js`) or 27 (both change "lighter on processor").
 - **Queue item:** item 104.
 
 Paste everything in the block as the session's first message.

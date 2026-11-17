@@ -1,11 +1,13 @@
 # Session 22: codes, version 2, in the core (105a)
 
+**Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" was "session 21": a code carries the seed, the request, the length, the journey and the edits, all in the core since 102 and batch 6; no jump (17, 18) and no export (20, 21) goes into a code, so nothing from 17 to 21 is needed.
+
 **Changed by brain B2 (2026-11-17):** batch 6 and 84b are in, so the prompt names what they added to a request (the full choice room, six settings, the space's widePad settings) and two couplings the version rule must keep (batch 6's draws count against a loop's changes; a pin to today frees a change); and docs/notes/101e-choice-room.md is read first.
 
 **Changed by brain B1 (2026-11-11):** no app name in the frozen format (the app is renamed at 1.0: docs/DECISIONS.md, 2026-11-11); the wander's salt (item 92) added to what a code carries.
 
 - **Model:** Opus 5.5. **Effort:** high.
-- **Start after:** session 21 (everything 1.0's codes must carry is in by then: batch 6, 84b, the journeys). Session 16 should be merged first if Mikey's notes have arrived; it need not wait for them.
+- **Start after:** brain B2 (batch 6, 84b and the journeys are in). It may run alongside 17, 18, 20, 21, 26, 27, 28 and 29: it changes the core, `data/` and the tools, and the app keeps version 1 until 23.
 - **Queue item:** item 105.
 
 Paste everything in the block as the session's first message.

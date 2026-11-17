@@ -1,9 +1,11 @@
 # Session 29: the Android app: F-Droid's metadata, recipe and icons (107e)
 
+**Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" unchanged after 28; what may run beside it is new.
+
 **Changed by brain B1 (2026-11-11):** the recipe's id and name are filled in by session 31a (the new name at 1.0), and the submission waits until after 1.0, since fdroiddata's merge request is public.
 
 - **Model:** Sonnet 5.5. **Effort:** high.
-- **Start after:** session 28.
+- **Start after:** session 28. It may run alongside 18, 22, 23 and 24.
 - **Queue item:** item 107.
 
 Paste everything in the block as the session's first message.

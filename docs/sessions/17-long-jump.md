@@ -1,9 +1,11 @@
 # Session 17: long pieces: the core's jump, and the map for the page (106a)
 
+**Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" was "session 15"; it now names B2, which was the last row before the chains.
+
 **Changed by brain B2 (2026-11-17):** batch 6 gave what plays time and memory (an opening that waits, a width that opens, slow LFOs, strings and bells that ring on, a color's level read from the chords before it), so the jump's bullet now says what each must do at a jump, and the yardstick says what "bit for bit" is held to.
 
 - **Model:** Opus 5.5. **Effort:** high.
-- **Start after:** session 15 (it does not wait for session 16).
+- **Start after:** brain B2 (batch 6 and 84b checked). It may run alongside 20, 21, 22, 24 and 26 (the README's chains); 18 and 27 wait for it.
 - **Queue item:** item 106.
 
 Paste everything in the block as the session's first message.

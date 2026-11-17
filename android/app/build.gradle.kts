@@ -8,6 +8,11 @@ plugins {
 val appId = providers.gradleProperty("driftloom.applicationId").get()
 val appName = providers.gradleProperty("driftloom.appName").get()
 
+// The ABIs the core is built for (session 26): phones and tablets (arm64-v8a,
+// armeabi-v7a) and the emulator (x86_64). -Pdriftloom.abis=x86_64 builds one,
+// for a quicker local build.
+val abis = providers.gradleProperty("driftloom.abis").get().split(',').map { it.trim() }.filter { it.isNotEmpty() }
+
 base.archivesName.set(appName.lowercase())
 
 android {
@@ -15,6 +20,9 @@ android {
     // id changes at the rename (session 31a).
     namespace = "app.loops"
     compileSdk = 36
+    // The NDK the core's libraries are linked with (android/native/build.sh),
+    // pinned: the same version builds the same bytes.
+    ndkVersion = providers.gradleProperty("driftloom.ndkVersion").get()
 
     defaultConfig {
         applicationId = appId
@@ -26,6 +34,30 @@ android {
         targetSdk = 36
         versionCode = providers.gradleProperty("driftloom.versionCode").get().toInt()
         versionName = providers.gradleProperty("driftloom.versionName").get()
+
+        // The instrumented tests (src/androidTest): the core native, on the
+        // emulator (session 26).
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // The golden loop the debug screen and the tests render again: the
+        // first line of core/golden/seeds.hashes, which every target makes
+        // and tools/seeds.sh holds to js/dlplayer.wasm. Read from the file,
+        // so a sound change that moves it moves this too.
+        buildConfigField("String", "GOLDEN_LINE", "\"${goldenLine()}\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    // One APK for each ABI, and a universal one with all three (the one to
+    // install when unsure). Each carries only its own libdriftloom.so.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include(*abis.toTypedArray())
+            isUniversalApk = true
+        }
     }
 
     // Test builds are debug-signed. The key is a throwaway one, kept as text
@@ -67,6 +99,8 @@ android {
 
     // The app's own files, as assets: see bundleApp below.
     sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/bundled-site"))
+    // The core's libraries, built from source: see buildNative below.
+    sourceSets.getByName("main").jniLibs.srcDir(layout.buildDirectory.dir("generated/native"))
 }
 
 kotlin {
@@ -78,6 +112,13 @@ dependencies {
     // local https origin, so ES modules, the worklet and the .wasm load.
     // Apache-2.0, from Google's Maven; nothing else is depended on.
     implementation("androidx.webkit:webkit:1.14.0")
+
+    // The instrumented tests only (never in the APK): AndroidX Test's runner
+    // and JUnit 4 (Apache-2.0 and EPL-1.0, from Google's Maven and Maven
+    // Central).
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("junit:junit:4.13.2")
 }
 
 // ---- The app's files, from the repo, not committed twice -------------------
@@ -122,4 +163,48 @@ val bundleApp by tasks.registering(Sync::class) {
 
 tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.configureEach {
     dependsOn(bundleApp)
+}
+
+// ---- The core, native, from the same source as the web's module ----------
+//
+// Session 26 (queue item 107b): android/native is a small crate over the core
+// (core/, as a path dependency) that holds what Android needs: the AAudio
+// stream, the lock-free queue and the JNI bridge. build.sh builds it with
+// cargo for each ABI with the pinned NDK's linkers, into generated/native,
+// which the APK's jniLibs come from. Nothing prebuilt is in the tree.
+val nativeDir: File = File(siteRoot, "android/native")
+val nativeOut = layout.buildDirectory.dir("generated/native")
+
+val buildNative by tasks.registering(Exec::class) {
+    group = "driftloom"
+    description = "Builds libdriftloom.so for each ABI (android/native/build.sh)."
+    val ndk = androidComponents.sdkComponents.ndkDirectory
+    inputs.dir(File(siteRoot, "core/src"))
+    inputs.dir(File(siteRoot, "data"))
+    inputs.files(File(siteRoot, "core/Cargo.toml"), File(siteRoot, "core/Cargo.lock"), File(siteRoot, "core/build.rs"))
+    inputs.dir(File(nativeDir, "src"))
+    inputs.files(
+        File(nativeDir, "Cargo.toml"), File(nativeDir, "Cargo.lock"), File(nativeDir, "rust-toolchain.toml"),
+        File(nativeDir, "build.sh"), File(nativeDir, "abi-check.c"),
+    )
+    inputs.property("abis", abis)
+    outputs.dir(nativeOut)
+    workingDir(nativeDir)
+    doFirst {
+        delete(nativeOut)
+        commandLine(listOf("sh", "build.sh", nativeOut.get().asFile.path, ndk.get().asFile.path) + abis)
+    }
+}
+
+tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders") }.configureEach {
+    dependsOn(buildNative)
+}
+
+// The golden line (BuildConfig.GOLDEN_LINE): the first loop of
+// core/golden/seeds.hashes, without its number.
+fun goldenLine(): String {
+    // From the repo root itself: this runs while `android {}` is read, before
+    // siteRoot below is set.
+    val line = File(rootProject.projectDir.parentFile, "core/golden/seeds.hashes").readLines().first { it.isNotBlank() && !it.startsWith("#") }
+    return line.substringAfter(' ')
 }

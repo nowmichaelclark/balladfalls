@@ -86,6 +86,8 @@ that changes how it sounds.
   controls on the player, a check each: `node tools/rows.mjs` (`--long`
   adds the length slider's minute).
 - Docs: `node tools/check-docs.mjs`.
-- Android (item 107): `cd android && ./gradlew assembleDebug`; `android/README.md`
-  says the rest. CI builds it on PRs that touch `android/` or the app's files
+- Android (item 107): `cd android && ./gradlew assembleDebug` (needs the NDK
+  `android/gradle.properties` pins and rustup; the core is built native by
+  `android/native/build.sh`); `cd android/native && cargo test`;
+  `android/README.md` says the rest. CI builds it on PRs that touch `android/` or the app's files
   (`.github/workflows/android.yml`, not part of the gate yet).

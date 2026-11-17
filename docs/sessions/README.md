@@ -90,7 +90,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 24 | `24-codes-links.md` | 105c: links, an album from one seed, the plain lines | Sonnet 5.5, medium | 23 | 17, 18, 20, 21, 26, 27, 28, 29 | |
 | B4 | `brain-4-codes.md` | Brain: check 16 to 24; the albums again in the new codes | Opus 5.5, high | 18, 21, 24 | 26 to 29 | |
 | | | **Android** | | | | |
-| 26 | `26-android-audio.md` | 107b: the core native, on Android's audio | Opus 5.5, high | 25 | 17, 18, 20, 21, 22, 23, 24 | |
+| 26 | `26-android-audio.md` | 107b: the core native, on Android's audio | Opus 5.5, high | 25 | 17, 18, 20, 21, 22, 23, 24 | yes, 2026-11-17 (#411; no app change) |
 | 27 | `27-android-bridge.md` | 107c: the page talks to the native core | Opus 5.5, high | 26, 17 | 18, 21, 22, 23, 24 | |
 | | **you** | Install the APK from 27's PR on the Moto and the tablet; say what you hear. The work goes on meanwhile. | | 27 | | |
 | 28 | `28-android-background.md` | 107d: the screen off, the notification, saving an export | Sonnet 5.5, high | 27, 21 | 18, 22, 23, 24 | |

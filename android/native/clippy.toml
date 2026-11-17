@@ -1,0 +1,2 @@
+# Names the docs use as words, not code.
+doc-valid-idents = ["AAudio", "OpenSL", "CMake", ".."]

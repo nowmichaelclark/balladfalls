@@ -1,0 +1,7 @@
+# The core's compiler (core/rust-toolchain.toml), with Android's targets:
+# the same compiler builds the web's module and the app's libraries.
+[toolchain]
+channel = "1.99.0"
+targets = ["aarch64-linux-android", "armv7-linux-androideabi", "x86_64-linux-android"]
+profile = "minimal"
+components = ["clippy"]

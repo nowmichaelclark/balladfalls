@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only (session 26): the native audio test, with its own
+     launcher icon, so a test build can play the core natively with no page.
+     A release build has none of this. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name=".NativeTestActivity"
+            android:exported="true"
+            android:label="@string/native_test_label"
+            android:taskAffinity="app.loops.nativetest"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode|density|layoutDirection|fontScale">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

@@ -48,6 +48,11 @@ pub const REST: Settings = Settings { depth: 0.0, rate: 0.0 };
 pub const DEPTH: usize = 0;
 /// The rate.
 pub const RATE: usize = 1;
+/// Where its swings are (session 17, a jump within a piece): the seconds
+/// the wow has swung at the setting's time, as playing from the loop's first
+/// step would have it (both phases from where `apply` starts them), so a
+/// jump lands on the phase playing would have reached. Nothing else moves.
+pub const AGE: usize = 2;
 
 /// The slower swing: its share of the depth and of the rate.
 const SLOW_DEPTH: f64 = 0.33;
@@ -75,6 +80,9 @@ const FADE: f64 = 0.02;
 const GLIDE: f64 = 0.5;
 
 /// The wow: its line, where its swings are, and the change it is making.
+// Its flags are each a state of its own (running, going out, settings
+// waiting, an age waiting), not one state spelled in bools.
+#[allow(clippy::struct_excessive_bools)]
 pub struct PadWow {
     line: [f32; LINE],
     write: usize,
@@ -104,6 +112,11 @@ pub struct PadWow {
     /// The settings in force.
     depth: f64,
     rate: f64,
+    /// An age waiting for its frame (`AGE`): whether one is, the seconds,
+    /// and the frame.
+    aging: bool,
+    age: f64,
+    age_at: u64,
 }
 
 impl PadWow {
@@ -131,6 +144,9 @@ impl PadWow {
             at: 0,
             depth: 0.0,
             rate: 0.0,
+            aging: false,
+            age: 0.0,
+            age_at: 0,
         }
     }
 
@@ -211,7 +227,9 @@ impl Block for PadWow {
 
     // The kit sets each to a value a listener would hear differ: the
     // deepest, and the fastest.
-    const SETTINGS: &'static [Setting] = &[Setting { name: "depth", probe: DEPTH_MAX }, Setting { name: "rate", probe: RATE_MAX }];
+    // The age moves only where the swings are, which a probe from still
+    // cannot hear as a change.
+    const SETTINGS: &'static [Setting] = &[Setting { name: "depth", probe: DEPTH_MAX }, Setting { name: "rate", probe: RATE_MAX }, Setting { name: "age", probe: f64::NAN }];
 
     /// Started on, it plays at once, as the sketch did from the loop's start.
     fn start(&mut self, s: &Settings, cx: &Context) {
@@ -228,6 +246,12 @@ impl Block for PadWow {
     /// A new setting takes hold at `time` (the host sets both at a loop's
     /// first step, together).
     fn set(&mut self, setting: usize, value: f64, time: f64, cx: &Context) {
+        if setting == AGE {
+            self.aging = true;
+            self.age = value.max(0.0);
+            self.age_at = (time.max(0.0) * cx.rate) as u64;
+            return;
+        }
         if !self.waiting {
             self.next = [self.depth, self.rate];
         }
@@ -244,6 +268,15 @@ impl Block for PadWow {
     fn render(&mut self, block: u64, cx: &Context, signal: &mut Signal) {
         if !(self.on || self.waiting && self.at < block + QUANTUM as u64) {
             return;
+        }
+        // An age (a jump): the phases at this block's first frame, as the
+        // swings would stand that many frames after `apply` set them going.
+        if self.aging && self.age_at < block + QUANTUM as u64 {
+            self.aging = false;
+            if self.on {
+                let frames = self.age * cx.rate - (self.age_at as f64 - block as f64);
+                self.phase = [frames * self.step[0], 0.25 + frames * self.step[1]].map(|p| p - math::floor(p));
+            }
         }
         let tau = core::f64::consts::TAU;
         for (i, x) in signal.iter_mut().enumerate() {

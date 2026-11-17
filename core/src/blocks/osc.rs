@@ -105,6 +105,9 @@ pub struct TableOsc {
     start: u64,
     stop: u64,
     at: f64,
+    /// Where its wave starts, in cycles (0 to 1): 0, the top of the table,
+    /// but for an LFO set going part way through its swing (`turn`).
+    turn: f64,
 }
 
 impl TableOsc {
@@ -117,6 +120,7 @@ impl TableOsc {
             start: 0,
             stop: 0,
             at: 0.0,
+            turn: 0.0,
         }
     }
 
@@ -127,6 +131,16 @@ impl TableOsc {
         self.stop = frame_at(stop, rate);
         self.at = start * rate;
         self.index = 0.0;
+        self.turn = 0.0;
+    }
+
+    /// Start `cycles` (0 to 1) into the wave rather than at its top, after
+    /// `schedule` (session 17: a sweep's LFO, at the phase a jump within a
+    /// piece lands on). Read where the wave's place is first set (`lead`),
+    /// so only for a start past the context's first block, as every
+    /// loop's is. At 0, the place is exactly what it was.
+    pub fn turn(&mut self, cycles: f64) {
+        self.turn = cycles - math::floor(cycles);
     }
 
     /// Where the oscillator is in the table, in table samples.
@@ -144,10 +158,10 @@ impl TableOsc {
     /// Where a steady wave starts, in the block it starts in: where it
     /// would have been at its first sample had it begun on its start time,
     /// between frames. Not in the very first block a context renders.
-    fn lead(&mut self, f: f32, rate_scale: f32) {
+    fn lead(&mut self, f: f32, rate_scale: f32, size: f64) {
         if self.start >= QUANTUM as u64 {
             let first = self.start + u64::from(self.at > self.start as f64);
-            self.index = (first as f64 - self.at) * f64::from(f) * f64::from(rate_scale);
+            self.index = self.turn * size + (first as f64 - self.at) * f64::from(f) * f64::from(rate_scale);
         }
     }
 
@@ -206,7 +220,7 @@ impl TableOsc {
                 && lo == end
                 && let Pitch::Steady { freq, detune } = pitch
             {
-                self.lead(within(freq * math::exp2f(detune / 1200.0), nyquist), rate_scale);
+                self.lead(within(freq * math::exp2f(detune / 1200.0), nyquist), rate_scale, size);
             }
             return (0, 0);
         }
@@ -217,7 +231,7 @@ impl TableOsc {
                 let f = within(freq * math::exp2f(detune / 1200.0), nyquist);
                 let incr = f * rate_scale;
                 if first {
-                    self.lead(f, rate_scale);
+                    self.lead(f, rate_scale, size);
                 }
                 let pick = wave.pick(f);
                 let mut index = self.index;
@@ -286,12 +300,12 @@ impl TableOsc {
         let rate_scale = wave.rate_scale();
         if lo >= hi {
             if skip == 1 && lo == end {
-                self.lead(f, rate_scale);
+                self.lead(f, rate_scale, wave.size() as f64);
             }
             return;
         }
         if first {
-            self.lead(f, rate_scale);
+            self.lead(f, rate_scale, wave.size() as f64);
         }
         let n = (hi - lo) as f32;
         self.index = wrap_to(self.index + f64::from(n * (f * rate_scale)), wave.size() as f64);
@@ -433,6 +447,11 @@ impl<const N: usize> Oscillator<N> {
         self.detune = detune;
         self.osc.schedule(start, stop, rate);
         self.played = (0, 0);
+    }
+
+    /// Start `cycles` into the wave, after `set` (`TableOsc::turn`).
+    pub fn turn(&mut self, cycles: f64) {
+        self.osc.turn(cycles);
     }
 
     /// Its frequency, to automate after `set` (a slur, a slide).

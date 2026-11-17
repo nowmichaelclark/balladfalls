@@ -49,6 +49,13 @@
 //!                                           speed (queue item 88,
 //!                                           `endless.rs`): no drift, no
 //!                                           growth, a line an hour
+//! cargo run --release --example dlrender -- --jumps [--seed N,...] [--request TEXT]
+//!     [--at 240] [--settle 8] [--length 20] [--rate 44100]
+//!                                           jumps within a piece (session
+//!                                           17, `jump.rs`): played, played on
+//!                                           a later core, and jumped, heard
+//!                                           from the line, and the jump's
+//!                                           cost
 //! cargo run --release --example dlrender -- --seed N | --corpus SEED:N | LIST
 //!     --flac OUT.flac [--bits 16|24] [the same options]
 //!                                           the render as FLAC, by the
@@ -79,6 +86,7 @@ mod clip;
 mod endless;
 mod fades;
 mod flac;
+mod jump;
 mod notelist;
 mod seed;
 
@@ -89,7 +97,8 @@ use dlcore::blocks::{Visit, each};
 use dlcore::Core;
 use notelist::{Blocks, Fnv, line, parse, read_wav, render, render_blocks, render_flushing, signals, wav, wav_channels};
 
-const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--request TEXT] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--salt N] [--wav OUT] [--calls OUT] [--costs | --fades]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] [--space NAME=V|LO:HI] [--route sketch[.N]=LAYER] (the last six: --features sketch)\n       dlrender --changes N [--from-corpus SEED] [--moment now|beat|bar|phrase|pass] [--crossfade S | --ring] [--rate HZ] [--lite] [--wander A] [--each] [--runs N] [--change I [--wav-to DIR]]\n       dlrender --endless HOURS [--seed N] [--request TEXT] [--rate HZ] [--stereo] [--full] [--wander A]\n       dlrender --seed N | --corpus SEED:N | LIST --flac OUT.flac [--bits 16|24] [the options above]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
+const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--request TEXT] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--salt N] [--wav OUT] [--calls OUT] [--costs | --fades]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] [--space NAME=V|LO:HI] [--route sketch[.N]=LAYER] (the last six: --features sketch)\n       dlrender --changes N [--from-corpus SEED] [--moment now|beat|bar|phrase|pass] [--crossfade S | --ring] [--rate HZ] [--lite] [--wander A] [--each] [--runs N] [--change I [--wav-to DIR]]\n       dlrender --jumps [--seed N,...] [--request TEXT] [--at S] [--settle S] [--length S] [--rate HZ]
+       dlrender --endless HOURS [--seed N] [--request TEXT] [--rate HZ] [--stereo] [--full] [--wander A]\n       dlrender --seed N | --corpus SEED:N | LIST --flac OUT.flac [--bits 16|24] [the options above]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
 
 fn main() -> ExitCode {
     match run(std::env::args().skip(1).collect()) {
@@ -109,10 +118,11 @@ fn run(args: Vec<String>) -> Result<(), String> {
     let mut by_seed = BySeed::default();
     let mut changes = Changes::default();
     let mut endless: Option<f64> = None;
+    let mut jumps = jump::Options::default();
     let (mut flac_to, mut bits) = (None, 24u32);
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
-        if changes.take(&arg, &mut args)? || by_seed.take(&arg, &mut args)? {
+        if changes.take(&arg, &mut args)? || by_seed.take(&arg, &mut args)? || jumps.take(&arg, &mut args)? {
             continue;
         }
         match arg.as_str() {
@@ -146,6 +156,9 @@ fn run(args: Vec<String>) -> Result<(), String> {
     }
     if let Some(name) = block {
         return solo_block(&name, rate.unwrap_or(48_000.0), wav_to.as_deref());
+    }
+    if jumps.on {
+        return jump::from_options(&jumps, by_seed.seeds.iter().map(|s| s.1).collect(), by_seed.request.clone(), rate);
     }
     if let Some(hours) = endless {
         return by_seed.endless(hours, rate, layout);

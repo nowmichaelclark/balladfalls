@@ -18,6 +18,8 @@
 //                            page's record of it (js/request.js)
 //   render(spec)             that record's notes, layer by layer, as the
 //                            grid and the MIDI export read them
+//   pieceMarks(spec, opts)   a long piece's marks: where its movements and
+//                            its roles, themes and keys begin (session 17)
 //
 // In Node the module is read from disk (the tests and the tools).
 
@@ -213,4 +215,44 @@ export function render(spec) {
     form: d.airy === '1',
     choir: d.choir === '1',
   };
+}
+
+// A long piece's plan, by the numbers the core gives (core/src/generator/
+// longform.rs, in its enums' order): a unit's role, its theme, its key's
+// relation to home, and its movement's kind.
+export const ROLES = ['opening', 'theme', 'build', 'second', 'development', 'peak', 'release', 'return', 'close', 'breath', 'lift', 'holding', 'turning'];
+export const THEMES = ['rest', 'A', 'B', 'recall'];
+export const RELATIONS = ['home', 'fifthAbove', 'fifthBelow', 'relative', 'parallel'];
+export const MOVEMENTS = ['full', 'gentle', 'light', 'interlude'];
+const MARK = 8;
+// The most marks one call gives (`dl_play_marks`): ask again from the
+// section after the last for more.
+export const MARKS_MOST = 2048;
+
+// A long piece's marks for the page (session 17, queue item 106a): the
+// units of `count` sections from section `from` where something a listener
+// would see marked begins, read straight from the piece's plan, nothing
+// before them walked: the first unit, then each where its role, theme, key
+// or movement changes ({ bar, section, role, theme, root, relation,
+// energy, movement }, `bar` from the piece's start, `root` 0 for C to 11,
+// `energy` 0 to 1). With `coarse`, a movement's start alone: a 32,768-bar
+// piece's whole run of movements costs a few milliseconds, so the page can
+// draw the whole piece's movements and ask a window of roles around the
+// playhead; Endless is asked a window at a time (`count` sections, 64
+// unless asked; a finite piece's whole round unless asked). Null for a loop
+// that is no long piece. At most MARKS_MOST a call.
+export function pieceMarks(spec, { from = 0, count = null, coarse = false } = {}) {
+  make(spec.seed, askOf(spec));
+  // A piece's sections, once round (the core gives a round at most); for
+  // Endless, a window: 64 sections unless asked.
+  const sections = Number.isFinite(spec.length) && spec.bars > 0 ? Math.ceil(spec.length / spec.bars) : 64;
+  const n = x.dl_play_marks(from, count == null ? sections : count, coarse ? 1 : 0);
+  if (!n) return null;
+  const f = new Float64Array(x.memory.buffer, x.dl_play_marks_at(), n * MARK);
+  const marks = [];
+  for (let i = 0; i < n; i++) {
+    const [bar, section, role, theme, root, relation, energy, movement] = f.subarray(i * MARK, (i + 1) * MARK);
+    marks.push({ bar, section, role: ROLES[role], theme: THEMES[theme], root, relation: RELATIONS[relation], energy, movement: MOVEMENTS[movement] });
+  }
+  return marks;
 }

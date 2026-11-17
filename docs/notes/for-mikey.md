@@ -77,6 +77,12 @@ the points where the next step is yours.
   export offers 16 bits and a very quiet fade-out ever sounds grainy on
   headphones, say so and a seeded dither is a small change.
 
+- **twang soft only (v179, #414, session 17):** as you asked on the Batch 6
+  Album, every loop that played twang plays the soft one, and the same loops
+  play it. he-rosk (corpus #33, was bright) and tom-wen (#172, was slow) are
+  the album's two that changed: the same picks, a beat apart, in the soft
+  voice. If either still sounds off, say which.
+
 ## Ears
 
 (none yet)

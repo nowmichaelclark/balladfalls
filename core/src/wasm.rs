@@ -1226,6 +1226,95 @@ mod player {
     pub extern "C" fn dl_play_time() -> f64 {
         player().position().2
     }
+
+    /// Go on from somewhere else in the loop playing (session 17,
+    /// `Player::jump`): `kind` 0 a section (`at`, a whole number), 1 a bar,
+    /// 2 a time in seconds, from the piece's start. 1 if it was asked; 0 with
+    /// nothing playing, for no such kind, or a place that is not a number.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a whole section number, saturating
+    pub extern "C" fn dl_play_jump(kind: u32, at: f64) -> u32 {
+        let to = match kind {
+            0 if at.is_finite() && at >= 0.0 => crate::player::Jump::Section(at as u64),
+            1 => crate::player::Jump::Bar(at),
+            2 => crate::player::Jump::Seconds(at),
+            _ => return 0,
+        };
+        u32::from(player().jump(to))
+    }
+
+    /// Where the loop playing is (`dl_play_place`): bar, bars, played, left,
+    /// section.
+    static PLACE: Floats<5> = Floats(UnsafeCell::new([0.0; 5]));
+
+    /// Where the loop playing is as heard now (`Player::place`), at
+    /// `dl_play_place_at`: the bar from the piece's start, the piece's bars
+    /// (-1 for Endless), the seconds played and left (-1 for none), and the
+    /// section. 1, or 0 with nothing playing.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_precision_loss)] // a section, far below 2^53
+    pub extern "C" fn dl_play_place() -> u32 {
+        let Some(p) = player().place(core()) else { return 0 };
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let out = unsafe { &mut *PLACE.0.get() };
+        *out = [p.bar, p.bars.unwrap_or(-1.0), p.played, p.left.unwrap_or(-1.0), p.section as f64];
+        1
+    }
+
+    /// Where `dl_play_place` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_place_at() -> *const f64 {
+        PLACE.0.get().cast()
+    }
+
+    /// The numbers a mark takes (`dl_play_marks`).
+    const MARK: usize = 8;
+    /// The most marks a call writes: more than a 32,768-bar piece's
+    /// movements, and than a window of its roles any page draws.
+    const MARKS_MAX: usize = 2048;
+    static MARKS: Floats<{ MARK * MARKS_MAX }> = Floats(UnsafeCell::new([0.0; MARK * MARKS_MAX]));
+
+    /// A long piece's marks for the page (session 17, `Player::marks`), of
+    /// the loop made (js/gen.js's instance makes it; the one that plays has
+    /// it too), at `dl_play_marks_at`: for `count` sections from section
+    /// `from` (whole numbers, as doubles), each unit where a role, theme,
+    /// key or movement begins (with `coarse` not 0, a movement only), as
+    /// eight numbers: its first bar from the piece's start, its section, its
+    /// role, theme (0 a rest, 1 A, 2 B, 3 an earlier movement's B), key
+    /// (its root, 0 C to 11) and the key's relation to home
+    /// (`longform::Relation`, 0 home), its energy (0 to 1), and its
+    /// movement's kind (`longform::Kind`, 0 full). Returns how many (at most
+    /// 2,048: ask again from the section after the last); 0 for a loop that
+    /// is no long piece.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole sections, below 2^53
+    pub extern "C" fn dl_play_marks(from: f64, count: f64, coarse: u32) -> u32 {
+        use crate::generator::longform::Theme;
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let out = unsafe { &mut *MARKS.0.get() };
+        let from = if from >= 0.0 { from as u64 } else { 0 };
+        let count = if count >= 0.0 { count as u64 } else { 0 };
+        let mut n = 0;
+        let _ = player().marks(from, count, coarse != 0, |bar, section, span| {
+            let Some(m) = out.get_mut(n * MARK..(n + 1) * MARK) else { return false };
+            let theme = match span.theme {
+                Theme::Rest => 0.0,
+                Theme::A => 1.0,
+                Theme::B => 2.0,
+                Theme::Recall(_) => 3.0,
+            };
+            m.copy_from_slice(&[bar, section as f64, f64::from(span.role as u8), theme, f64::from(span.key.root), f64::from(span.key.relation as u8), span.energy, f64::from(span.kind as u8)]);
+            n += 1;
+            n < MARKS_MAX
+        });
+        u32::try_from(n).unwrap_or(0)
+    }
+
+    /// Where `dl_play_marks` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_marks_at() -> *const f64 {
+        MARKS.0.get().cast()
+    }
 }
 
 /// The measuring tools' exports (queue item 96; the `tools` feature, a build

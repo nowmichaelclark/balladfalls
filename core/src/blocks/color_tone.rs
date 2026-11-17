@@ -51,6 +51,10 @@ pub const REST: Settings = Settings { level: 0.02, rel: 1.2, start: f64::NAN, on
 
 /// Its setting a host sets, by number: whether the loop plays colors.
 pub const ON: usize = 0;
+/// Forget the chords' level it has followed (session 17, a jump within a
+/// piece): it reads the level afresh from the chords that play after, as at
+/// a loop's start on a new core, not the ones the jump left.
+pub const FORGET: usize = 1;
 
 /// The loudest it plays.
 const MOST: f64 = 0.08;
@@ -155,7 +159,7 @@ impl Block for ColorTone {
 
     // Off lets the color go before it has swelled: silence, which a probe
     // cannot hear as a change (the tests below hold it).
-    const SETTINGS: &'static [Setting] = &[Setting { name: "on", probe: f64::NAN }];
+    const SETTINGS: &'static [Setting] = &[Setting { name: "on", probe: f64::NAN }, Setting { name: "forget", probe: f64::NAN }];
 
     fn start(&mut self, s: &Settings, cx: &Context) {
         *self = ColorTone::new();
@@ -183,6 +187,8 @@ impl Block for ColorTone {
             if !self.active {
                 self.let_go();
             }
+        } else if setting == FORGET {
+            self.heard = 0.0;
         }
     }
 

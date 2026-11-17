@@ -399,7 +399,7 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   2", frozen by `core/golden/share-codes.txt`; `node tools/codes.mjs` makes and
   opens codes and albums from the command line. The app's module grew 10 KB.
 - #416, audio export in the app, lossless, safe first (item 104b, session
-  20, v179); preview URL: the branch's preview (no hash kept). Nothing that
+  20, v180); preview URL: the branch's preview (no hash kept). Nothing that
   plays moved. Save, the Share tab, Audio: a loop or a piece exported as a
   FLAC by its own instance of the core in a Worker (`js/export-worker.js`,
   `js/export-render.js`), written as it is made (the save picker, else the

@@ -98,7 +98,7 @@ export const LOWBELL = setting('lowbell', {
 // twang's draw (queue item 101h): how often a loop that may play it does,
 // its versions, drawn per loop outside the list of choices, as the low bell
 // is. The page reads its versions for the pin's words.
-export const TWANG = setting('twang', { share: 'num', kinds: 'pool', 'kindVibes.*': 'table', regap: 'num', spread: 'num', kitMost: 'num' });
+export const TWANG = setting('twang', { share: 'num', kinds: 'pool', drawn: 'pool', 'kindVibes.*': 'table', regap: 'num', spread: 'num', kitMost: 'num' });
 // Every choice, in the file's order (the pins' order): its id and its
 // options, today's first.
 export const CHOICES = Object.keys(CHOICE_DATA).map((id) => ({ id, ...CHOICE_DATA[id] }));

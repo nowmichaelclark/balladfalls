@@ -3,8 +3,9 @@
 //! (`choices::twang_of`), picked by the player (`Sequencer::twang`), sounded
 //! by its voice (`blocks::twang`). What it holds to (the batch's yardstick):
 //! it goes only to loops that play a chord and have no kit busier than a
-//! soft one, to about its share of them, a third each version, each leaned
-//! by its own vibes; a pin plays a version or keeps it off, and nothing the
+//! soft one, to about its share of them, every one soft (Mikey's Batch 6 Album,
+//! 2026-11-17; the draw weighs the three versions as before, each leaned
+//! by its own vibes); a pin plays a version or keeps it off, and nothing the
 //! generator decides but twang moves; in the player, at each chord whose
 //! lowest note changes (or the same after `regap` seconds) that note's pitch
 //! class between E2 and D#3, its fifth and its tenth (`spread` beats apart:
@@ -75,7 +76,7 @@ fn versions(g: &mut Generator, request: &Request, n: usize) -> (usize, [usize; 3
 }
 
 #[test]
-fn it_goes_to_its_share_of_the_loops_it_may_play_in_a_third_each() {
+fn it_goes_to_its_share_of_the_loops_it_may_play_in_all_soft() {
     roomy(|| {
         let mut g = Box::new(Generator::new());
         let (of, on) = versions(&mut g, &Request::new(), 2000);
@@ -83,29 +84,30 @@ fn it_goes_to_its_share_of_the_loops_it_may_play_in_a_third_each() {
         let f = all as f64 / of as f64;
         println!("twang on 2000 corpus loops: {on:?} (soft, slow, bright) of {of} that may play it ({f:.3}); {:.3} of all", all as f64 / 2000.0);
         assert!(of > 600 && (f - TWANG.share).abs() < 0.03, "{f:.3} of the loops, not near {}", TWANG.share);
-        // A third each before the vibes; the corpus's own vibes lean them
-        // (each version by its row), but none is starved.
-        for &n in &on {
-            assert!((0.12..=0.55).contains(&(n as f64 / all as f64)), "{on:?}: a version starved or taking all");
-        }
+        // Soft alone (Mikey's Batch 6 Album, 2026-11-17): the draw still
+        // weighs the three as the batch did, so the share is as it was, and
+        // every loop it lands on plays soft.
+        assert!(all > 0 && on[1] == 0 && on[2] == 0, "{on:?}: a loop playing slow or bright");
     });
 }
 
 #[test]
-fn each_version_is_leaned_by_its_own_vibes_never_to_none() {
+fn the_vibes_lean_its_share_never_to_none() {
     roomy(|| {
         let mut g = Box::new(Generator::new());
         let mut of = |vibe: &str| {
             let (n, on) = versions(&mut g, &ask(vibe), 1500);
-            on.map(|x| x as f64 / n as f64)
+            assert!(on[1] == 0 && on[2] == 0, "{vibe} {on:?}: a loop playing slow or bright");
+            on[0] as f64 / n as f64
         };
         let (wistful, meditative, cruising, zany) = (of("wistful"), of("meditative"), of("cruising"), of("zany"));
-        let third = TWANG.share / 3.0;
-        println!("soft/slow/bright: wistful {wistful:.3?}, meditative {meditative:.3?}, cruising {cruising:.3?}, zany {zany:.3?}");
-        assert!(wistful[0] > third * 1.15 && wistful[0] > wistful[1] && wistful[0] > wistful[2], "wistful leans to soft");
-        assert!(meditative[1] > third * 1.15 && meditative[1] > meditative[0] && meditative[1] > meditative[2], "meditative leans to slow");
-        assert!(cruising[2] > third * 1.15 && cruising[2] > cruising[1], "cruising leans to bright");
-        assert!(zany.iter().all(|&x| x < third) && zany.iter().sum::<f64>() > 0.0, "zany away from all three, never none");
+        println!("soft: wistful {wistful:.3}, meditative {meditative:.3}, cruising {cruising:.3}, zany {zany:.3}");
+        // Each drawn version's row still leans the draw: toward twang for
+        // the vibes that leaned to any of the three, away for zany.
+        for (vibe, x) in [("wistful", wistful), ("meditative", meditative), ("cruising", cruising)] {
+            assert!(x > TWANG.share * 1.05, "{vibe} leans toward twang: {x:.3}");
+        }
+        assert!(zany < TWANG.share * 0.6 && zany > 0.0, "zany away from it, never none: {zany:.3}");
     });
 }
 

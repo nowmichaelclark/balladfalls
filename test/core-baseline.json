@@ -160,20 +160,20 @@
     "seed": 3095568220,
     "profile": "thaw",
     "seconds": 45,
-    "out": "16c40146",
+    "out": "2fdbd4d1",
     "layers": {
      "drums": "2ba3f5d5",
      "bass": "12c9046a",
-     "chords": "6290e96e",
+     "chords": "3ba4cc2e",
      "melody": "3b80185f",
      "texture": "4814c1e3"
     },
-    "lufs": -28.86,
+    "lufs": -28.91,
     "peakDb": -13.19,
     "layerLufs": {
      "drums": null,
      "bass": -30.4,
-     "chords": -37.23,
+     "chords": -37.19,
      "melody": -31.08,
      "texture": -33.94
     }
@@ -578,20 +578,20 @@
     "seed": 1266456452,
     "profile": "shatter",
     "seconds": 45,
-    "out": "c897a9d9",
+    "out": "d80cbdaf",
     "layers": {
      "drums": "2ba3f5d5",
      "bass": "0bd070a0",
-     "chords": "4fb78736",
+     "chords": "128c4886",
      "melody": "2ba3f5d5",
      "texture": "2ba3f5d5"
     },
-    "lufs": -32.87,
-    "peakDb": -14.06,
+    "lufs": -32.77,
+    "peakDb": -13.91,
     "layerLufs": {
      "drums": null,
      "bass": -34.09,
-     "chords": -37.51,
+     "chords": -37.26,
      "melody": null,
      "texture": null
     }
@@ -1042,11 +1042,11 @@
     "seed": 3095568220,
     "profile": "thaw",
     "seconds": 45,
-    "out": "10ae4f9f",
+    "out": "9e6fa93f",
     "layers": {
      "drums": "2ba3f5d5",
      "bass": "12c9046a",
-     "chords": "f566cdfe",
+     "chords": "c1848d3a",
      "melody": "d3231cc1",
      "texture": "08f2cb40"
     },
@@ -1055,7 +1055,7 @@
     "layerLufs": {
      "drums": null,
      "bass": -30.4,
-     "chords": -41.62,
+     "chords": -41.41,
      "melody": -31.08,
      "texture": -33.6
     }
@@ -1460,20 +1460,20 @@
     "seed": 1266456452,
     "profile": "shatter",
     "seconds": 45,
-    "out": "67e6737d",
+    "out": "621df960",
     "layers": {
      "drums": "2ba3f5d5",
      "bass": "a8ce9e8d",
-     "chords": "f3e155f8",
+     "chords": "ce82f52a",
      "melody": "2ba3f5d5",
      "texture": "2ba3f5d5"
     },
-    "lufs": -33.34,
-    "peakDb": -14.18,
+    "lufs": -33.22,
+    "peakDb": -14.04,
     "layerLufs": {
      "drums": null,
      "bass": -34.09,
-     "chords": -38.79,
+     "chords": -38.47,
      "melody": null,
      "texture": null
     }
@@ -1825,12 +1825,12 @@
     "sideMidDb": -23.7
    },
    "dith-shuisk": {
-    "left": "24653f29",
-    "right": "1ec79c3f",
+    "left": "d6719fa0",
+    "right": "e4ed5cc7",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -84.86,
-    "sideMidDb": -26.92
+    "foldResidDb": -84.68,
+    "sideMidDb": -26.89
    },
    "neir-luin": {
     "left": "c1d1ed8e",
@@ -1977,12 +1977,12 @@
     "sideMidDb": -12.13
    },
    "tei-har": {
-    "left": "10e617ac",
-    "right": "9f825ce3",
+    "left": "7639813a",
+    "right": "c5f71116",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -82.49,
-    "sideMidDb": -16.83
+    "foldResidDb": -82.33,
+    "sideMidDb": -16.77
    },
    "war-bri": {
     "left": "b05c2979",
@@ -2147,12 +2147,12 @@
     "sideMidDb": -25.92
    },
    "dith-shuisk": {
-    "left": "f7ba4e83",
-    "right": "df3501b1",
+    "left": "8d110a0d",
+    "right": "261d5631",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -84.53,
-    "sideMidDb": -28.96
+    "foldResidDb": -84.54,
+    "sideMidDb": -28.92
    },
    "neir-luin": {
     "left": "fbe0ec91",
@@ -2299,12 +2299,12 @@
     "sideMidDb": -12.59
    },
    "tei-har": {
-    "left": "9cecbb67",
-    "right": "6f3bee8c",
+    "left": "2892365a",
+    "right": "8ecf87fd",
     "monoOnEachSide": false,
     "foldLU": 0,
-    "foldResidDb": -83.35,
-    "sideMidDb": -17.64
+    "foldResidDb": -83.44,
+    "sideMidDb": -17.55
    },
    "war-bri": {
     "left": "89ecfc18",
@@ -2460,9 +2460,9 @@
    },
    "dith-shuisk": {
     "seed": 3095568220,
-    "out": "16c40146",
-    "left": "24653f29",
-    "right": "1ec79c3f"
+    "out": "2fdbd4d1",
+    "left": "d6719fa0",
+    "right": "e4ed5cc7"
    },
    "neir-luin": {
     "seed": 1828783984,
@@ -2574,9 +2574,9 @@
    },
    "tei-har": {
     "seed": 1266456452,
-    "out": "c897a9d9",
-    "left": "10e617ac",
-    "right": "9f825ce3"
+    "out": "d80cbdaf",
+    "left": "7639813a",
+    "right": "c5f71116"
    },
    "war-bri": {
     "seed": 882486014,
@@ -2702,9 +2702,9 @@
    },
    "dith-shuisk": {
     "seed": 3095568220,
-    "out": "10ae4f9f",
-    "left": "f7ba4e83",
-    "right": "df3501b1"
+    "out": "9e6fa93f",
+    "left": "8d110a0d",
+    "right": "261d5631"
    },
    "neir-luin": {
     "seed": 1828783984,
@@ -2816,9 +2816,9 @@
    },
    "tei-har": {
     "seed": 1266456452,
-    "out": "67e6737d",
-    "left": "9cecbb67",
-    "right": "6f3bee8c"
+    "out": "621df960",
+    "left": "2892365a",
+    "right": "8ecf87fd"
    },
    "war-bri": {
     "seed": 882486014,

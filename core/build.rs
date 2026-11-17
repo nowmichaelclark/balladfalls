@@ -794,12 +794,13 @@ fn choices(out: &mut String, blocks: &[Block]) {
         bell.need_num("spotlightLeast")
     );
     let twang = find("setting", "twang");
-    twang.only(&["share", "kinds", "kindVibes.*", "regap", "spread", "kitMost"]);
+    twang.only(&["share", "kinds", "drawn", "kindVibes.*", "regap", "spread", "kitMost"]);
     let _ = writeln!(
         out,
-        "/// twang's per-loop draw (`[setting twang]`).\npub static TWANG: TwangDraw = TwangDraw {{ share: {}, kinds: {}, kind_vibes: {}, regap: {}, spread: {}, kit_most: {} }};",
+        "/// twang's per-loop draw (`[setting twang]`).\npub static TWANG: TwangDraw = TwangDraw {{ share: {}, kinds: {}, drawn: {}, kind_vibes: {}, regap: {}, spread: {}, kit_most: {} }};",
         twang.need_num("share"),
         twang.need_pool("kinds"),
+        twang.need_pool("drawn"),
         twang.tables_by_name("kindVibes"),
         twang.need_num("regap"),
         twang.need_num("spread"),

@@ -13,6 +13,10 @@
 // time the player hands over is compared as it handed it over.
 #![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss, clippy::float_cmp)]
 
+use std::alloc::{GlobalAlloc, Layout, System};
+use std::cell::Cell;
+
+use dlcore::Core;
 use dlcore::block::Event;
 use dlcore::player::host::Host;
 use dlcore::player::{JUMP_FADE, Jump, Kind, Player, Request, START, State};
@@ -20,8 +24,31 @@ use dlcore::{EXTRA, Key, QUANTUM, Tap};
 
 const RATE: f64 = 44_100.0;
 
+struct Counting;
+
+thread_local! {
+    static ALLOCATIONS: Cell<usize> = const { Cell::new(0) };
+}
+
+fn allocations() -> usize {
+    ALLOCATIONS.with(Cell::get)
+}
+
+unsafe impl GlobalAlloc for Counting {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        ALLOCATIONS.with(|n| n.set(n.get() + 1));
+        unsafe { System.alloc(layout) }
+    }
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        unsafe { System.dealloc(ptr, layout) }
+    }
+}
+
+#[global_allocator]
+static COUNTING: Counting = Counting;
+
 fn roomy(f: impl FnOnce() + Send + 'static) {
-    let stack = std::mem::size_of::<Player>() * 4 + (16 << 20);
+    let stack = (std::mem::size_of::<Core>() + std::mem::size_of::<Player>()) * 4 + (16 << 20);
     std::thread::Builder::new().stack_size(stack).spawn(f).expect("a thread").join().expect("the test");
 }
 
@@ -298,5 +325,28 @@ fn jumping_back_and_forth_leaves_nothing_ringing() {
             block(&mut p, &mut h);
         }
         assert!(h.notes.len() > n);
+    });
+}
+
+#[test]
+fn a_jump_on_a_core_allocates_nothing() {
+    roomy(|| {
+        let mut core = Box::new(Core::new());
+        let mut player = Box::new(Player::new());
+        player.start(&mut core, RATE, 2, true).expect("a player");
+        player.load(LOOPS[1], &Request::parse(PIECE).expect("a request"));
+        player.ready(&mut *core);
+        let mut left = [0.0f32; QUANTUM];
+        let mut right = [0.0f32; QUANTUM];
+        let before = allocations();
+        for i in 0..400u32 {
+            if i % 40 == 10 {
+                assert!(player.jump(if i % 80 == 10 { Jump::Seconds(f64::from(i) * 9.0) } else { Jump::Section(u64::from(i)) }));
+            }
+            player.render(&mut core, &mut [&mut left, &mut right]).expect("a render");
+            while player.event().is_some() {}
+            let _ = player.place(&*core);
+        }
+        assert_eq!(allocations(), before, "a jump allocated");
     });
 }

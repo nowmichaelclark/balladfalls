@@ -944,14 +944,17 @@ impl Player {
     /// from the piece's start, its section, and the plan's unit,
     /// `longform::Span`): the window's first unit, and each unit whose role,
     /// theme, key or movement differs from the one before; with `coarse`,
-    /// only where a movement begins (an arc, or a wander's hold). Straight
+    /// only where a movement begins (an arc, or a kind of movement; a wander
+    /// journey is one movement, its holds its roles). Straight
     /// from the numbers (`Form::at`, a microsecond or two a unit), nothing
     /// kept, so a 32,768-bar piece's movements cost a few milliseconds, and
-    /// Endless is asked a window at a time. `each` returns false to stop
+    /// Endless is asked a window at a time; a round's sections at most a
+    /// call. `each` returns false to stop
     /// (a host's room full). None for a loop that is no long piece.
     #[must_use]
     #[allow(clippy::cast_precision_loss)] // sections and bars, far below 2^53
     pub fn marks(&self, from: u64, count: u64, coarse: bool, mut each: impl FnMut(f64, u64, &crate::generator::longform::Span) -> bool) -> Option<()> {
+        use crate::generator::longform::Role;
         let g = &self.generator;
         let form = g.form()?;
         let piece = Piece::of(g.spec())?;
@@ -959,13 +962,19 @@ impl Player {
             Some((sections, last)) => (n / sections) as f64 * ((sections - 1) as f64 * piece.bars + last) + (n % sections) as f64 * piece.bars,
             None => n as f64 * piece.bars,
         };
+        // A round at most: the rounds after it are the same plan again.
+        let count = piece.end.map_or(count, |(sections, _)| count.min(sections));
         let mut before: Option<crate::generator::longform::Span> = None;
         for n in from..from.saturating_add(count) {
             let mut bar = section_bar(n);
             for p in 0..form.units_in(n) {
                 let span = form.at(n, p);
                 let marked = before.is_none_or(|b| {
-                    let movement = b.part != span.part || b.kind != span.kind;
+                    // A movement begins: an arc, or a kind of movement. A
+                    // wander's hold (a wander journey's, or an interlude's)
+                    // is no movement of its own: a wander journey is one.
+                    let wanders = |s: &crate::generator::longform::Span| matches!(s.role, Role::Holding | Role::Turning);
+                    let movement = b.kind != span.kind || (b.part != span.part && !(wanders(&b) && wanders(&span)));
                     movement || (!coarse && (b.role != span.role || b.theme != span.theme || b.key.root != span.key.root || b.key.relation != span.key.relation))
                 });
                 if marked && !each(bar, n, &span) {

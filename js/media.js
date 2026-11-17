@@ -59,6 +59,13 @@ export class MediaBridge {
     // The synth already reaches the speakers on its own. Nothing is
     // re-routed here any more; re-routing was the mistake.
     this.source = sourceNode;
+    // The Android app (session 27): the core plays natively, and the WebView
+    // plays no audio of its own, the keepalive included. The lock screen's
+    // controls there are the app's own (session 28).
+    if (this.ctx && this.ctx.native) {
+      this.mode = 'native';
+      return;
+    }
 
     try {
       this.audio = document.createElement('audio');

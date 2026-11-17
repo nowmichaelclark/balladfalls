@@ -7,15 +7,22 @@
 //!   commands come by, and the audio thread's `fill`.
 //! - `aaudio`: the `AAudio` stream that calls `fill` (Android only; elsewhere
 //!   a stand-in says there is no device, so the tests run on any machine).
+//! - `bridge`: the page's side (session 27): the worklet's messages from
+//!   `js/core.js` as the engine's commands, and the engine's reports back
+//!   as the worklet's messages, with `json`, the little reader they need.
 //! - `jni`: the five JVM calls the bridge below makes.
 //!
 //! The bridge is `app.loops.NativeCore` (Kotlin), a function each:
 //! start and stop the stream, load a seed with a request, play, pause,
 //! next, volume, the counts, and an offline render through the same path
-//! that the tests hold to the web's hash. The page doesn't use it yet
-//! (session 27's).
+//! that the tests hold to the web's hash (session 26's, for the debug
+//! screen and the tests); and the page's three (session 27): `send` a
+//! message from the page, `drain` what is due back to it, and `pageGone`
+//! when it goes.
 
+mod bridge;
 mod engine;
+mod json;
 mod jni;
 mod ring;
 
@@ -67,9 +74,12 @@ mod output {
 
 use std::ptr;
 use std::sync::atomic::Ordering;
+use std::sync::{Mutex, PoisonError};
+use std::time::Instant;
 
 use dlcore::player::Request;
 
+use crate::bridge::{Bridge, Figures};
 use crate::engine::{Command, Engine, render_line, render_of};
 use crate::jni::{Boolean, Double, Env, Int, Long, Object};
 
@@ -309,4 +319,114 @@ pub unsafe extern "system" fn Java_app_loops_NativeCore_renderLine(env: Env, _cl
     };
     // SAFETY: the call's env.
     unsafe { jni::new_string(env, &out) }
+}
+
+/// The page's side of the bridge (session 27): its refusals and what waits
+/// to be posted to it. Only the app's bridge thread calls in, one call at a
+/// time; the mutex is never the audio thread's.
+static BRIDGE: Mutex<Bridge> = Mutex::new(Bridge::new());
+
+/// The stream's figures, for the page's `native` message.
+fn figures(e: &Engine) -> Figures {
+    let s = output::stream();
+    let c = &e.counts;
+    #[allow(clippy::cast_precision_loss, reason = "nanoseconds summed, far under 2^53")]
+    let mean = {
+        let deadline = c.deadline_ns.load(Ordering::Relaxed) as f64;
+        if deadline > 0.0 { c.spent_ns.load(Ordering::Relaxed) as f64 / deadline } else { 0.0 }
+    };
+    #[allow(clippy::cast_precision_loss, reason = "millionths, far under 2^53")]
+    let busiest = c.busiest_ppm.load(Ordering::Relaxed) as f64 / 1e6;
+    Figures {
+        running: s.running,
+        rate: e.rate(),
+        underruns: s.underruns,
+        burst: s.info.burst,
+        buffer: s.info.buffer,
+        capacity: s.info.capacity,
+        channels: s.info.channels,
+        performance: s.info.performance,
+        sharing: s.info.sharing,
+        policy: s.policy,
+        priority: s.priority,
+        reopens: s.reopens,
+        busiest,
+        mean,
+        callbacks: c.callbacks.load(Ordering::Relaxed),
+        refused: c.refused.load(Ordering::Relaxed),
+        lost: c.out_lost.load(Ordering::Relaxed),
+    }
+}
+
+/// `NativeCore.send(message)`: a message from the page (`js/native.js`), as
+/// the worklet takes it. `init` starts the stream first (the engine too, the
+/// first time) and starts the page's player on it. Null, or a batch to post
+/// back at once: the `failed` message when the stream can't start, or the
+/// text is no message.
+///
+/// # Safety
+///
+/// The JVM's call, with its own `env` (and a string or null).
+#[unsafe(no_mangle)]
+pub unsafe extern "system" fn Java_app_loops_NativeCore_send(env: Env, _class: Object, text: Object) -> Object {
+    // SAFETY: the call's env and its string.
+    let text = unsafe { jni::string(env, text) }.unwrap_or_default();
+    let answer = match bridge::read(&text) {
+        Err(why) => Some(bridge::failed(&format!("the page's message: {why}"))),
+        Ok(m) => {
+            let mut b = BRIDGE.lock().unwrap_or_else(PoisonError::into_inner);
+            if m.get("type").str() == Some("init") {
+                let (full, layout) = bridge::init_of(&m);
+                match output::start(full) {
+                    Err(why) => Some(bridge::failed(&why)),
+                    Ok(()) => match output::engine() {
+                        None => Some(bridge::failed("no engine")),
+                        Some(e) => {
+                            b.begin();
+                            if e.send(&Command::Init { full, layout }) { None } else { Some(bridge::failed("the command queue is full")) }
+                        }
+                    },
+                }
+            } else {
+                if let Some(e) = output::engine() {
+                    b.receive(e, &m);
+                }
+                None
+            }
+        }
+    };
+    match answer {
+        None => ptr::null_mut(),
+        // SAFETY: the call's env.
+        Some(a) => unsafe { jni::new_string(env, &a) },
+    }
+}
+
+/// `NativeCore.drain()`: what is due to the page now (a JSON array of the
+/// worklet's messages and the `native` one), or null. The app's bridge
+/// thread calls it every 25 ms.
+///
+/// # Safety
+///
+/// The JVM's call, with its own `env`.
+#[unsafe(no_mangle)]
+pub unsafe extern "system" fn Java_app_loops_NativeCore_drain(env: Env, _class: Object) -> Object {
+    let Some(e) = output::engine() else { return ptr::null_mut() };
+    let batch = BRIDGE.lock().unwrap_or_else(PoisonError::into_inner).drain(e, &figures(e), Instant::now());
+    match batch {
+        None => ptr::null_mut(),
+        // SAFETY: the call's env.
+        Some(text) => unsafe { jni::new_string(env, &text) },
+    }
+}
+
+/// `NativeCore.pageGone()`: the page went (a reload, a link, the activity
+/// closing): its player let go, as a closed tab's worklet is, so a loop
+/// doesn't play on under a page that knows nothing of it.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_app_loops_NativeCore_pageGone(_env: Env, _class: Object) {
+    if let Some(e) = output::engine() {
+        e.send(&Command::Dispose);
+    }
+    BRIDGE.lock().unwrap_or_else(PoisonError::into_inner).begin();
 }

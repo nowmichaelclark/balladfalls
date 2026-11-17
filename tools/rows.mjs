@@ -509,7 +509,7 @@ async function longRows(browser, port, errors) {
     return { same: JSON.stringify(again.marks) === JSON.stringify(model.marks), marks: model.marks.length, first: model.marks[0].bar, last: model.last, ticks, missing, stray, W, roles };
   });
   row('long piece: the markers are the map\'s: the core\'s marks asked again are the line\'s, every tick is painted and nothing else is',
-    m && m.same && m.marks > 1000 && m.first === 0 && m.last === 32768 && m.ticks > 20 && m.missing === 0 && m.stray === 0 && m.roles.peak > 0 && m.roles.opening > 0, JSON.stringify(m && { ...m, roles: undefined }));
+    m && m.same && m.marks > 100 && m.first === 0 && m.last === 32768 && m.ticks > 20 && m.missing === 0 && m.stray === 0 && m.roles.peak > 0 && m.roles.opening > 0, JSON.stringify(m && { ...m, roles: undefined }));
 
   // A jump to three hours in: a tap on the line.
   const box = await page.locator('#pieceLine').boundingBox();

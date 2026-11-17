@@ -1430,8 +1430,8 @@ mod tools {
 }
 
 // FLAC, the lossless export (queue item 104a; `crate::flac`), with the `flac`
-// feature: not in js/dlplayer.wasm until the app exports (session 20), and in
-// the tools' build (`tools/flac.mjs` holds its bytes to the native encoder's).
+// feature: in js/dlplayer.wasm since the app exports (session 20, item 104b;
+// js/export-worker.js drives it), and in the tools' build (`tools/flac.mjs` holds its bytes to the native encoder's).
 // One encoder an instance, in static memory like the core: a host writes up to
 // `BLOCK` frames a channel at `dl_flac_input` (left, then right), calls
 // `dl_flac_write`, and appends the bytes at `dl_flac_out` to its file.

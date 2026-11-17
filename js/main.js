@@ -5,13 +5,14 @@ import { loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES } from '.
 import * as quality from './quality.js';
 import { picksAsk, PlayerEngine } from './player.js';
 import { patternToMidi } from './midi.js';
+import { AudioExport } from './export.js';
 import { MediaBridge } from './media.js';
 import * as share from './share.js';
 
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v180';
+const BUILD = 'v181';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -133,6 +134,8 @@ const state = {
   // never in a share code or a backup. Off plays the stereo render.
   mono: false,
   media: null,
+  // The audio export's sheet and its Worker (queue item 104b, js/export.js).
+  audioExport: null,
   // The Rust core for this context, once loaded (js/core.js), and when
   // (ms since the page began).
   core: null,
@@ -295,6 +298,13 @@ function buildAudio() {
 function onBusy(output, report) {
   if (output !== state.output || state.switching) return;
   const playing = !!(state.engine && state.engine.playing);
+  // An audio export running (queue item 104b): the report is the export's
+  // (a busy audio thread slows it), and never moves the app to lite: the
+  // export's load is not the device's.
+  if (state.audioExport && state.audioExport.watchBusy(report)) {
+    state.busyPlaying = false;
+    return;
+  }
   state.busy.add(report, playing && state.busyPlaying, performance.now() / 1000, fillIns());
   state.busyPlaying = playing;
   if (!output.core || output.core.failed) return;
@@ -1704,6 +1714,14 @@ function wire() {
 
   ui.el('playBtn').addEventListener('click', togglePlay);
   ui.el('exportMidi').addEventListener('click', () => exportMidi());
+  // Exporting audio (queue item 104b): the sheet in the Share tab, the loop
+  // playing as the core plays it, "lighter on processor" its speed.
+  state.audioExport = new AudioExport({
+    spec: () => state.spec,
+    engine: () => state.engine,
+    mono: () => state.mono,
+    lite: () => state.lite,
+  });
   ui.el('prevBtn').addEventListener('click', goBack);
   ui.el('nextBtn').addEventListener('click', goForward);
 
@@ -1772,6 +1790,8 @@ function wire() {
     store.setPrefs({ lite: state.lite });
     showLiteSource();
     if (state.output) buildAudio();
+    // An export running takes the new speed.
+    if (state.audioExport) state.audioExport.setPace();
   });
 
   // Mono or stereo, while a loop plays: the core fades from one to the
@@ -1781,6 +1801,7 @@ function wire() {
     setSwitch('monoMode', state.mono);
     store.setPrefs({ mono: state.mono });
     if (state.output) state.output.setLayout(state.mono ? 1 : 2);
+    if (state.audioExport) state.audioExport.setPace();
   });
 
   ui.el('exportJson').addEventListener('click', () => {

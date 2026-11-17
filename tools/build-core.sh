@@ -69,10 +69,12 @@ if [ "$tools" = yes ]; then
   exit 0
 fi
 # The app's module (queue item 82: the `player` feature, the generator and
-# the player with their exports). Until item 97 a second one, js/dlcore.wasm
-# (the `web` feature alone), played the page's own engine.
+# the player with their exports; and since session 20, queue item 104b, the
+# `flac` feature: the lossless export's encoder, `dl_flac_*`, which the
+# export's Worker drives, js/export-worker.js). Until item 97 a second one,
+# js/dlcore.wasm (the `web` feature alone), played the page's own engine.
 status=0
-for module in dlplayer:player; do
+for module in dlplayer:player,flac; do
   name=${module%%:*}
   feature=${module#*:}
   cargo rustc --release --locked --target wasm32-unknown-unknown --no-default-features --features "$feature" --crate-type cdylib,rlib

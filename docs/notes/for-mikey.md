@@ -128,6 +128,15 @@ the points where the next step is yours.
   samples as the web's"; if it says DIFFERS, send that line. Next and Pause
   work too; the stream's line at the bottom says whether the phone gave the
   low-latency path (performance mode 12) and a real-time thread (SCHED_FIFO).
+- **Audio export (item 104b, session 20, #416):** on the Moto and the
+  tablet, in the browser: play a loop, then Save, the Share tab, Audio.
+  Pick 30 min and **export audio**; let the music play on, turn the screen
+  off for a few minutes, come back. It should finish while the music never
+  stutters, and download a `.flac` (the Files app plays it; so does VLC).
+  Then once with "lighter on processor" off. Send back, for each device:
+  how long the export took (the progress line says), whether anything
+  stuttered, and Diagnostics' `engine:` line (should read `late: 0  missed:
+  0  dropped: 0`). Optional: Cancel one halfway; nothing should be saved.
 
 ## Accounts
 
@@ -147,6 +156,30 @@ the points where the next step is yours.
   1.0 (the brain's B4 looks at the format closely before it freezes). A code
   carries no app name either: the app shows "needs a newer version" with its
   own name, so a rename never touches a code.
+
+- **The export sheet's words (item 104b, session 20, #416):** approve or
+  change them (all in one place, `WORDS` in `js/export.js`). Choosing:
+  "Save what plays as an audio file, to keep or to play anywhere." /
+  "Lossless: full quality, as a FLAC file." / "How much" (1, 5, 10, 30 min,
+  1, 2, 3 h; "as it plays" where the length slider is set; "The whole
+  piece, …" for a finite piece) / "About 39 MB." / "You choose where it
+  goes." or "It downloads when it is done." / "Lighter on processor is on,
+  so it goes gently: slower, and the music never stutters." or "It goes as
+  fast as this device safely can." While it runs: "40% done, about 3 min
+  left." / "It keeps going in the background while the music plays.
+  Closing Driftloom stops it, and nothing is saved." Done: "Saved: NAME.flac,
+  12 MB, 10 min." with save, open, share. Failed: "There isn't enough free
+  space for this: it needs about 1.2 GB, and this device has about 800 MB. A
+  shorter length would fit." / "This device ran out of space before the
+  export finished, so nothing was saved. Free some space, or try a shorter
+  length. The music wasn't touched." / "Cancelled. Nothing was saved." /
+  "Something went wrong making the file, so nothing was saved. The music
+  wasn't touched; you can try again."
+- **The export's sound, for your ears (#416):** always full quality
+  whatever "lighter on processor" says; 44.1 kHz, 16-bit, stereo (mono with
+  the Mono switch); after the track's end what is sounding rings out until
+  quiet, at most 12 s, the last 2 s faded. Say if the end should be shorter
+  or longer.
 
 (The long pieces' first picks were all kept, 2026-11-14, `docs/DECISIONS.md`.
 How many changes a loop gets, and twang's picks, were decided 2026-11-17 and

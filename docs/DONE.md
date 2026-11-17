@@ -417,3 +417,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   page reads the piece's map (`pieceMarks`: a whole piece's movements in about
   10 ms). The PR's table has the commands and the measures
   (`dlrender --jumps`).
+- #416, audio export in the app, lossless, safe first (item 104b, session
+  20, v181); preview URL: the branch's preview (no hash kept). Nothing that
+  plays moved. Save, the Share tab, Audio: a loop or a piece exported as a
+  FLAC by its own instance of the core in a Worker (`js/export-worker.js`,
+  `js/export-render.js`), written as it is made (the save picker, else the
+  site's private file system and a download, else memory to 10 minutes),
+  free space checked first, Cancel leaving no file, "lighter on processor"
+  making it gentle. Check on the Moto and the tablet (`for-mikey.md`): a
+  30-minute export while the music plays, nothing stuttering. Every file
+  nulls against a straight render (`tools/export.mjs`, in the gate);
+  `tools/rows.mjs` has the export's rows and `tools/export-long.mjs` the
+  three-hour run (the `export` workflow). The app's module grew 23 KB.

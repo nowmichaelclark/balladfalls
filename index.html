@@ -172,6 +172,53 @@
                 <button id="exportMidi" type="button" class="vkey">export midi</button>
               </div>
             </section>
+            <!-- Exporting audio (queue item 104b; js/export.js): the sheet's
+                 four states, one showing at a time. -->
+            <section class="adv-sec" id="exportSheet" aria-label="Export audio">
+              <h2 class="sec">Audio</h2>
+              <div id="exportChoose">
+                <p class="hint" id="exportIntro"></p>
+                <div class="keys2" role="radiogroup" aria-label="Format">
+                  <button type="button" class="vkey" role="radio" aria-checked="true" data-format="lossless">lossless</button>
+                  <!-- Small (session 21) shows once it is built. -->
+                  <button type="button" class="vkey" role="radio" aria-checked="false" data-format="small" hidden>small</button>
+                </div>
+                <p class="hint" id="exportFormat"></p>
+                <div id="exportLengthRow" hidden>
+                  <span class="setrow-name" id="exportLengthName">How much</span>
+                  <div id="exportLengths" class="keys3 export-lengths" role="radiogroup" aria-labelledby="exportLengthName"></div>
+                </div>
+                <p class="hint" id="exportAbout"></p>
+                <div class="keys2">
+                  <button id="exportAudio" type="button" class="vkey">export audio</button>
+                </div>
+              </div>
+              <div id="exportRun" hidden>
+                <div class="export-bar" role="progressbar" aria-label="Export"><span id="exportFill"></span></div>
+                <p class="hint" id="exportProgress" aria-live="polite"></p>
+                <p class="hint" id="exportNote"></p>
+                <div class="keys2">
+                  <button id="exportCancel" type="button" class="vkey">cancel</button>
+                </div>
+              </div>
+              <div id="exportDone" hidden>
+                <p class="hint" id="exportSaved" aria-live="polite"></p>
+                <div class="keys3">
+                  <button id="exportSave" type="button" class="vkey">save</button>
+                  <button id="exportOpen" type="button" class="vkey">open</button>
+                  <button id="exportShare" type="button" class="vkey">share</button>
+                </div>
+                <div class="keys2 export-end">
+                  <button id="exportDoneBtn" type="button" class="vkey">done</button>
+                </div>
+              </div>
+              <div id="exportFailed" hidden>
+                <p class="hint" id="exportWhy" aria-live="polite"></p>
+                <div class="keys2">
+                  <button id="exportOk" type="button" class="vkey">ok</button>
+                </div>
+              </div>
+            </section>
             <section class="adv-sec">
               <h2 class="sec">Bring one in</h2>
               <p class="hint">A loop code lands in Imported Loops; an album code

@@ -148,7 +148,7 @@ const HOOK = `(() => {
   };
   const post = MessagePort.prototype.postMessage;
   MessagePort.prototype.postMessage = function (m, ...rest) {
-    if (m && typeof m.type === 'string' && /^play|^layout/.test(m.type)) R.posts.push({ ...m, at: R.ctx ? R.ctx.currentTime : 0 });
+    if (m && typeof m.type === 'string' && /^play|^layout/.test(m.type)) R.posts.push({ ...m, at: R.ctx ? R.ctx.currentTime : 0, msg: m });
     return post.call(this, m, ...rest);
   };
   const connect = AudioNode.prototype.connect;
@@ -501,7 +501,7 @@ async function longRows(browser, port, errors) {
     let stray = 0;
     let ticks = 0;
     for (let x = 0; x < W; x++) {
-      const alpha = row[Math.min(canvas.width - 1, Math.round((x + 0.5) * dpr)) * 4 + 3];
+      const alpha = row[Math.min(canvas.width - 1, Math.floor((x + 0.5) * dpr)) * 4 + 3];
       if (heights[x] > 0) { ticks++; if (alpha < 40) missing++; } else if (!(x > 0 && heights[x - 1] > 0) && alpha > 10) stray++;
     }
     const roles = {};
@@ -522,7 +522,7 @@ async function longRows(browser, port, errors) {
   const pl = await place();
   const pixel = 32768 / box.width;
   row('long piece: a tap three hours in starts there within a second (the core\'s Jump event, its place three hours in)',
-    hit && hit.after < 1 && sent && sent.kind === 1 && Math.abs(sent.at - target) <= pixel + 1 && pl && Math.abs(pl.played - 10800) < 120 + pixel * perBar, `after ${hit && hit.after.toFixed(2)} s, jump to bar ${sent && sent.at}, place ${pl && Math.round(pl.played)} s`);
+    hit && hit.after < 1 && sent && sent.kind === 1 && Math.abs(sent.msg.at - target) <= pixel + 1 && pl && Math.abs(pl.played - 10800) < 120 + pixel * perBar, `after ${hit && hit.after.toFixed(2)} s, jump to bar ${sent && sent.msg.at}, place ${pl && Math.round(pl.played)} s`);
   w = await words();
   const now = await place();
   const shownBar = Number((/^bar ([\d,]+)/.exec(w.bars) || [])[1] && /^bar ([\d,]+)/.exec(w.bars)[1].replace(/,/g, ''));
@@ -546,7 +546,7 @@ async function longRows(browser, port, errors) {
   await sleep(1500);
   const after = await place();
   const sent2 = (await jumps())[1];
-  row('long piece: the next-section key goes to the map\'s next section, on its line', want && second && sent2 && sent2.at === want.bar && after && after.bar >= want.bar - 0.1 && after.bar < want.bar + 12, `to ${sent2 && sent2.at} (${want && want.role}), place ${after && after.bar.toFixed(1)}`);
+  row('long piece: the next-section key goes to the map\'s next section, on its line', want && second && sent2 && sent2.msg.at === want.bar && after && after.bar >= want.bar - 0.1 && after.bar < want.bar + 12, `to ${sent2 && sent2.msg.at} (${want && want.role}), place ${after && after.bar.toFixed(1)}`);
 
   // The journey pick reaches the core with the picks (through the Bars
   // picker, as a listener sets it), and is held whole.

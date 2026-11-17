@@ -376,6 +376,17 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   `longform-table` artifact), and a PR's run held to it (`--against`:
   "kept every check main kept"). The rule: the gate and the long pieces
   read from CI, never run side by side at home.
+- #411, the core native on Android's own audio (item 107b, session 26, no
+  app change; `android/`, its workflow and docs): nothing changes on the site.
+  The APK carries the core built for each ABI from the same source
+  (`android/native`, AAudio straight from Rust, a lock-free queue, JNI), and
+  debug builds get a second icon, **Native audio test**. On CI's emulator a
+  seed played five minutes with 0 underruns and 0 late, missed or dropped
+  notes; the golden loop and a 48 kHz stereo render hash the same as
+  `js/dlplayer.wasm`'s; the busiest callback took 2.09 ms, 10.5% of a
+  960-frame block's deadline (the emulator's, no fast path). APKs: arm64-v8a
+  3.4 MB, armeabi-v7a 3.1 MB, universal 6.2 MB. What to try on the Moto and
+  the tablet: `docs/notes/for-mikey.md`.
 - #412, codes, version 2, in the core (item 105a, session 22, v178),
   preview URL: the branch's preview (no hash kept). Nothing to hear: the app
   still writes version 1 codes until session 23, and nothing that plays

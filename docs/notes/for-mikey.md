@@ -110,6 +110,18 @@ the points where the next step is yours.
   so your loops stay. Check: it starts, Play plays, rotating the phone keeps
   the music going; Diagnostics' `sw: failed` and `mediaSession: false` are
   expected for now (sessions 27 and 28). A launcher icon is a placeholder.
+- **The core native on Android's own audio (item 107b, session 26, #411):**
+  no page yet, a debug screen. Get the APK as for 107a, from #411's `android`
+  run: `driftloom-debug-apk` holds `driftloom-universal-debug.apk` (fits both
+  devices; it installs over 107a's). A second icon appears, **Native audio
+  test**. Open it, headphones on, press **Play the test**, and let it play
+  five minutes (the screen stays on). Send back the two numbers at the top
+  for each device: **Underruns** (should be 0) and **Busiest block** (its %
+  and ms). Also listen: the golden loop (reisk-waith) should sound as on the
+  site, with no clicks. Optional: **Check the samples** should say "same
+  samples as the web's"; if it says DIFFERS, send that line. Next and Pause
+  work too; the stream's line at the bottom says whether the phone gave the
+  low-latency path (performance mode 12) and a real-time thread (SCHED_FIFO).
 
 ## Accounts
 

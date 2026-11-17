@@ -52,7 +52,10 @@ a note list and writes a WAV:
 cargo run --release --example dlrender -- --wav out.wav golden/03-tide.dlnotes
 ```
 
-The web host is `js/worklet.js`, through the exports in `src/wasm.rs`.
+The web host is `js/worklet.js`, through the exports in `src/wasm.rs`. The
+Android host is `android/native` (queue item 107b), a crate of its own that
+links this one: an AAudio stream whose callback renders the player, its
+commands through a lock-free queue (`android/native/src/engine.rs`).
 
 ## How the sound is built: blocks
 

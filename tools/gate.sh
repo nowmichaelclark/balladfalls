@@ -17,7 +17,10 @@
 #                                 them, so CI can run them side by side
 #   tools/gate.sh flac            the FLAC writer on real renders against
 #                                 the reference decoder (queue item 104a,
-#                                 tools/flac.mjs; needs flac or ffmpeg)
+#                                 tools/flac.mjs; needs flac or ffmpeg), and
+#                                 the app's audio export (item 104b,
+#                                 tools/export.mjs: its files decode and null
+#                                 against straight renders, and its sizes)
 #   tools/gate.sh docs            the live docs' sizes
 #
 # What is not here runs nightly (.github/workflows/nightly.yml) and never
@@ -78,6 +81,7 @@ docs() {
 
 flac_part() {
   node tools/flac.mjs
+  node tools/export.mjs
 }
 
 case "${1:-all}" in

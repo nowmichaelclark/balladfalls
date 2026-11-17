@@ -54,8 +54,8 @@ tools = ["generator", "player", "flac", "codes"]
 # FLAC, the lossless export (`src/flac/`, queue item 104a) and its
 # WebAssembly exports (`src/wasm.rs`, `dl_flac_*`). Natively the encoder is
 # always there (the C face's `dl_flac_*` too); in a web build only with this
-# feature, so js/dlplayer.wasm stays the bytes it was until the app exports
-# (session 20 adds it to tools/build-core.sh's player build). The tools'
+# feature, which tools/build-core.sh's player build turns on since the app
+# exports (session 20, queue item 104b: js/export-worker.js). The tools'
 # build has it.
 flac = []
 

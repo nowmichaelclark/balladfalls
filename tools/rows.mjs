@@ -37,6 +37,21 @@
 //                       core's own and leaning on it; held again after a
 //                       reload
 //   export MIDI         a MIDI file
+//   export audio        (queue item 104b) the sheet: Lossless, Small hidden,
+//                       the lengths for a loop that plays on; a minute
+//                       exported to the file chosen (the save picker,
+//                       answered here with a file in the site's private
+//                       file system), written as it is made: a FLAC that
+//                       ends where the core says, the music playing on with
+//                       nothing late; both speeds ("lighter on processor"
+//                       off and on), measured; Cancel leaves no file and
+//                       nothing broken; the free space checked first (the
+//                       quota made small: the plain message, nothing
+//                       started); a disk that fills mid-export (the quota
+//                       made small while it runs) ends with the plain
+//                       message, no file, the music playing; and where
+//                       there is no save picker, the private file and a
+//                       download at the end
 //   share code          the code decodes to the loop the core plays
 //   lighter on processor  a new core at the other quality, the same loop
 //   Diagnostics         the core's player, nothing late, nothing lost
@@ -152,6 +167,43 @@ const HOOK = `(() => {
   });
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
     writeText: async (t) => { R.clip = t; }, readText: async () => R.clip || '' } });
+  // The audio export's Worker (queue item 104b): what the page starts it
+  // with, and what it says (progress counted, the rest kept). The save
+  // picker answers with a file in the site's private file system, unless a
+  // tab takes the picker away (then the export writes there itself).
+  R.exports = [];
+  R.exportProgress = 0;
+  const RealWorker = window.Worker;
+  window.Worker = class extends RealWorker {
+    constructor(url, options) {
+      super(url, options);
+      if (!String(url).includes('export-worker')) return;
+      this.addEventListener('message', (e) => {
+        const m = e.data;
+        if (m && m.type === 'progress') R.exportProgress++;
+        else if (m) R.exports.push({ type: m.type, why: m.why, bytes: m.bytes, frames: m.frames, seconds: m.seconds, took: m.took, counts: m.counts, private: m.private });
+      });
+      const post = this.postMessage;
+      this.postMessage = (m, t) => {
+        if (m && m.type === 'start') R.exportStart = { job: m.job, sink: m.sink, pace: m.pace, name: m.name };
+        return t ? post.call(this, m, t) : post.call(this, m);
+      };
+    }
+  };
+  window.showSaveFilePicker = async () => {
+    const d = await navigator.storage.getDirectory();
+    R.picked = await d.getFileHandle('picked.flac', { create: true });
+    return R.picked;
+  };
+  R.opfs = async () => {
+    const root = await navigator.storage.getDirectory();
+    const out = [];
+    for await (const [k, h] of root.entries()) {
+      if (h.kind === 'file') out.push(k);
+      else for await (const k2 of h.keys()) out.push(k + '/' + k2);
+    }
+    return out;
+  };
   const make = URL.createObjectURL;
   URL.createObjectURL = function (b) { if (b instanceof Blob) R.blobs.push(b); return make.call(this, b); };
 })();`;
@@ -164,6 +216,195 @@ function row(name, ok, detail = '') {
 }
 
 const about = (text) => (text ? Object.fromEntries(text.split('\n').filter(Boolean).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)])) : null);
+
+// FLAC's STREAMINFO from a file's first 42 bytes.
+function streaminfo(b) {
+  if (String.fromCharCode(...b.slice(0, 4)) !== 'fLaC') return null;
+  const si = b.slice(8);
+  return {
+    rate: (si[10] << 12) | (si[11] << 4) | (si[12] >> 4),
+    channels: ((si[12] >> 1) & 7) + 1,
+    bits: (((si[12] & 1) << 4) | (si[13] >> 4)) + 1,
+    total: (si[13] & 0x0f) * 2 ** 32 + ((si[14] << 24) >>> 0) + (si[15] << 16) + (si[16] << 8) + si[17],
+  };
+}
+
+// The audio export's rows (queue item 104b), on the page playing.
+async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
+  const origin = `http://127.0.0.1:${PORT}`;
+  const cdp = await page.context().newCDPSession(page);
+  const share = () => ev(() => {
+    if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+    document.querySelector('[data-stab="share"]').click();
+  });
+  const sheet = () => ev(() => ({
+    choose: !document.getElementById('exportChoose').hidden,
+    run: !document.getElementById('exportRun').hidden,
+    done: !document.getElementById('exportDone').hidden,
+    failed: !document.getElementById('exportFailed').hidden,
+    why: document.getElementById('exportWhy').textContent,
+    saved: document.getElementById('exportSaved').textContent,
+    about: document.getElementById('exportAbout').textContent,
+    lengths: [...document.querySelectorAll('#exportLengths .vkey')].map((b) => `${b.dataset.length}${b.getAttribute('aria-checked') === 'true' ? '*' : ''}`),
+    lossless: !document.querySelector('[data-format="lossless"]').hidden,
+    small: !document.querySelector('[data-format="small"]').hidden,
+  }));
+  // The Worker's next word of `types` after `from`, or null after `ms`.
+  const said = async (types, from, ms) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < ms) {
+      const m = await ev((n) => window.__rows.exports.slice(n), from);
+      const hit = m.find((x) => types.includes(x.type));
+      if (hit) return hit;
+      await sleep(250);
+    }
+    return null;
+  };
+  const count = () => ev(() => window.__rows.exports.length);
+  const lateLine = async () => (await diag()).split('\n').find((l) => l.startsWith('engine:')) || '';
+  const nothingLate = (line) => /late: 0\s+missed: 0\s+dropped: 0/.test(line);
+  const playing = async () => {
+    const p = await probe();
+    return p && p.player.state === 3 && (await level(1500)) > 1e-4;
+  };
+  const setLite = async (on) => {
+    const now = await ev(() => document.getElementById('liteMode').getAttribute('aria-checked') === 'true');
+    if (now !== on) {
+      await clickId('liteMode');
+      await sleep(3500);
+    }
+  };
+
+  console.log('\n  export audio (queue item 104b)');
+  await share();
+  await sleep(1200);
+  let s = await sheet();
+  row('export audio: the sheet offers Lossless, Small hidden, and the lengths for a loop that plays on', s.choose && s.lossless && !s.small && s.lengths.length === 7 && s.lengths.includes('600*') && /^About \d+ MB\./.test(s.about), `${s.lengths.join(' ')}; ${s.about}`);
+
+  // A minute, both speeds.
+  const speeds = {};
+  for (const lite of [false, true]) {
+    await setLite(lite);
+    await share();
+    await ev(() => document.querySelector('#exportLengths [data-length="60"]').click());
+    const from = await count();
+    const progress = await ev(() => window.__rows.exportProgress);
+    await clickId('exportAudio');
+    const done = await said(['done', 'failed', 'cancelled'], from, 240000);
+    const meanwhile = await playing();
+    const start = await ev(() => window.__rows.exportStart);
+    const file = await ev(async () => {
+      const f = await window.__rows.picked.getFile();
+      return { size: f.size, head: [...new Uint8Array(await f.slice(0, 42).arrayBuffer())] };
+    });
+    const si = streaminfo(file.head);
+    s = await sheet();
+    const moved = (await ev(() => window.__rows.exportProgress)) - progress;
+    const line = await lateLine();
+    const pace = lite ? 'gentle' : 'fast';
+    speeds[pace] = done && done.took ? done.seconds / done.took : 0;
+    row(`export audio (${pace}): a minute to the file chosen, written as it went, a FLAC of the loop playing that ends where the core says, the music on and nothing late`,
+      done && done.type === 'done' && start.pace === pace && start.sink === 'handle' && file.size === done.bytes && si && si.rate === 44100 && si.bits === 16 && si.total === done.frames
+      && done.seconds >= 60 && done.seconds < 60 + 30 && moved >= 2 && !done.counts.late && !done.counts.missed && !done.counts.dropped && s.done && meanwhile && nothingLate(line),
+      `${done && done.type} ${done && done.why || ''}, ${file.size} bytes, ${si && si.total} frames, ${done && done.seconds && done.seconds.toFixed(1)} s in ${done && done.took && done.took.toFixed(1)} s (${speeds[pace].toFixed(1)}x), ${moved} progress reports; ${s.saved}; ${line}`);
+    await clickId('exportDoneBtn');
+  }
+  row('export audio: gentle ("lighter on processor" on) is slower than fast, and both faster than real time', speeds.fast > speeds.gentle && speeds.gentle > 1, `fast ${speeds.fast.toFixed(1)}x, gentle ${speeds.gentle.toFixed(1)}x real time`);
+  await setLite(false);
+
+  // Cancel.
+  await share();
+  await ev(() => document.querySelector('#exportLengths [data-length="600"]').click());
+  let from = await count();
+  await clickId('exportAudio');
+  await sleep(1500);
+  await clickId('exportCancel');
+  let m = await said(['cancelled', 'done', 'failed'], from, 30000);
+  s = await sheet();
+  let files = await ev(() => window.__rows.opfs());
+  row('export audio: Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && /Nothing was saved/.test(s.why) && !files.includes('picked.flac') && (await playing()) && nothingLate(await lateLine()),
+    `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}`);
+  await clickId('exportOk');
+
+  // The free space checked first.
+  const usage = await ev(async () => (await navigator.storage.estimate()).usage);
+  await cdp.send('Storage.overrideQuotaForOrigin', { origin, quotaSize: usage + 1e6 });
+  await ev(() => document.querySelector('#exportLengths [data-length="3600"]').click());
+  from = await count();
+  const before = await ev(() => window.__rows.exportStart);
+  await clickId('exportAudio');
+  await sleep(1500);
+  s = await sheet();
+  const after = await ev(() => window.__rows.exportStart);
+  row('export audio: free space checked first: too little says so plainly, and nothing starts', s.failed && /^There isn't enough free space for this/.test(s.why) && JSON.stringify(before) === JSON.stringify(after) && (await count()) === from,
+    s.why);
+  await cdp.send('Storage.overrideQuotaForOrigin', { origin });
+  await clickId('exportOk');
+  await probe();
+
+  // The private file, and a disk that fills while it is written: another
+  // tab, with no save picker (as Android's Chrome and Safari have none).
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  const bad = [];
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(HOOK);
+  await tab.addInitScript(() => { window.showSaveFilePicker = undefined; });
+  await tab.goto(`${origin}/`);
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  await tev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
+  await tev(() => document.getElementById('pasteCode').click());
+  await sleep(3000);
+  await tev(() => {
+    if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+    document.querySelector('[data-stab="share"]').click();
+  });
+  await sleep(1200);
+  await tev(() => document.querySelector('#exportLengths [data-length="60"]').click());
+  const blobs = await tev(() => window.__rows.blobs.length);
+  await tev(() => document.getElementById('exportAudio').click());
+  let t0 = Date.now();
+  let done = null;
+  while (Date.now() - t0 < 240000 && !done) {
+    await sleep(500);
+    done = (await tev(() => window.__rows.exports)).find((x) => x.type === 'done' || x.type === 'failed');
+  }
+  const got = await tev(async (n) => {
+    const b = window.__rows.blobs[n];
+    return b ? { size: b.size, head: [...new Uint8Array(await b.slice(0, 42).arrayBuffer())] } : null;
+  }, blobs);
+  const start = await tev(() => window.__rows.exportStart);
+  const si = got && streaminfo(got.head);
+  row('export audio, with no save picker: written to the private file as it went, a download at the end', done && done.type === 'done' && start.sink === 'private' && got && got.size === done.bytes && si && si.total === done.frames,
+    `${done && done.type} ${done && done.why || ''}, ${got && got.size} bytes`);
+  await tev(() => document.getElementById('exportDoneBtn').click());
+
+  // A disk that fills mid-export: the quota made small once it is writing.
+  const tcdp = await tab.context().newCDPSession(tab);
+  await tev(() => document.querySelector('#exportLengths [data-length="1800"]').click());
+  const n0 = (await tev(() => window.__rows.exports)).length;
+  await tev(() => document.getElementById('exportAudio').click());
+  t0 = Date.now();
+  while (Date.now() - t0 < 30000 && (await tev(() => window.__rows.exportProgress)) < 3) await sleep(250);
+  const used = await tev(async () => (await navigator.storage.estimate()).usage);
+  await tcdp.send('Storage.overrideQuotaForOrigin', { origin, quotaSize: used + 256 * 1024 });
+  t0 = Date.now();
+  let end = null;
+  while (Date.now() - t0 < 120000 && !end) {
+    await sleep(500);
+    end = (await tev(() => window.__rows.exports)).slice(n0).find((x) => ['done', 'failed', 'cancelled'].includes(x.type));
+  }
+  await tcdp.send('Storage.overrideQuotaForOrigin', { origin });
+  files = await tev(() => window.__rows.opfs());
+  const why = await tev(() => document.getElementById('exportWhy').textContent);
+  const tp = await tev(() => window.__rows.probe());
+  const tl = await tev(async () => { let w = 0; for (let i = 0; i < 15; i++) { w = Math.max(w, window.__rows.level()); await new Promise((r) => setTimeout(r, 100)); } return w; });
+  row('export audio: a disk that fills mid-export ends with the plain message, no file left, the music playing', end && end.type === 'failed' && end.why === 'space' && /ran out of space/.test(why) && !files.some((f) => f.startsWith('exports/') && f.endsWith('.flac')) && tp && tp.player.state === 3 && tl > 1e-4,
+    `${end && end.type} ${end && end.why || ''}; ${why}; files ${files.join(',') || 'none'}`);
+  row('export audio: no page errors in the tab with no save picker', bad.length === 0, bad.join('; '));
+  await tab.close();
+}
 
 async function main() {
   const { chromium } = loadPlaywright();
@@ -417,6 +658,7 @@ async function main() {
       return String.fromCharCode(...t.slice(0, 4));
     });
     row('export MIDI: a MIDI file', midi === 'MThd', String(midi));
+    await exportRows({ page, ev, probe, level, diag, clickId, browser });
     await clickId('copySong');
     await sleep(500);
     const code = await ev(() => window.__rows.clip);

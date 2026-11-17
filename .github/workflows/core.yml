@@ -21,7 +21,9 @@
 #             and twenty corpus loops, every way, against the reference
 #             decoder (the runner's `flac`, dev-only): it decodes, nulls
 #             against the WAV of the same render, carries the right MD5, and
-#             the wasm and the C host write the same bytes
+#             the wasm and the C host write the same bytes; and the app's
+#             audio export (queue item 104b, tools/export.mjs): its files
+#             decode and null against straight renders, and its sizes
 #
 # Everything slower is in nightly.yml and never holds a merge: every target's
 # golden renders, Emscripten, Endless for 24 hours, rendering ahead's sweep

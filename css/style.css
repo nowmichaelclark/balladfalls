@@ -1829,6 +1829,19 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
   line-height: 1.3; color: var(--text-primary);
 }
 .setrow .hint { margin: 2px 0 0; }
+/* Exporting audio (queue item 104b): the length chosen is pressed in
+   with a ring, as a lit choice; the progress is a groove filled with
+   the theme's mark. */
+.export-lengths { margin: 6px 0 4px; }
+.export-lengths .vkey { font-size: min(0.6875rem, 18px); }
+.vkey[role="radio"][aria-checked="true"] { box-shadow: inset 0 0 0 2px var(--text-primary); color: var(--text-primary); }
+.vkey:disabled { opacity: 0.55; }
+.export-bar {
+  height: 10px; margin: 8px 0 4px; border-radius: 5px; overflow: hidden;
+  background: var(--groove-bg); box-shadow: inset 0 1px 3px var(--groove-shade);
+}
+.export-bar span { display: block; height: 100%; width: 0; background: var(--np-fill, var(--mark)); transition: width 240ms linear; }
+.export-end { margin-top: 6px; }
 .diag {
   margin: 0 0 8px; padding: 8px 10px; border-radius: 8px;
   background: var(--groove-bg);

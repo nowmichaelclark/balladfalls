@@ -1,10 +1,14 @@
 # The Android app's CI build (queue item 107a): a debug APK on every PR that
-# touches android/ or the app's files, uploaded for Mikey to install, and a
-# smoke test of it on a headless emulator. Not part of the merge gate yet
-# (docs/QUEUE.md, "Merge policy"); it is run, and read, before a merge.
+# touches android/, the app's files or the core, uploaded for Mikey to
+# install, and a smoke test of it on a headless emulator. Since session 26
+# (107b) the APK carries the core, native (android/native, built by cargo
+# for each ABI with the pinned NDK), and the `native` job plays it on the
+# emulator's own audio. Not part of the merge gate yet (docs/QUEUE.md,
+# "Merge policy"); it is run, and read, before a merge.
 #
 # The app's files are the list sw.js keeps (android/app/build.gradle.kts
-# copies them into the APK), so the paths below are that list's folders.
+# copies them into the APK), so the paths below are that list's folders;
+# the core's are those its libraries are built from.
 name: android
 
 on:
@@ -21,6 +25,10 @@ on:
       - 'fonts/**'
       - 'audio/**'
       - 'icons/**'
+      - 'core/src/**'
+      - 'core/build.rs'
+      - 'core/Cargo.*'
+      - 'core/golden/seeds.hashes'
   workflow_dispatch:
 
 permissions:
@@ -48,25 +56,71 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The NDK the gradle.properties pins (driftloom.ndkVersion).
       - name: the Android SDK pieces
         run: |
+          ndk=$(sed -n 's/^driftloom\.ndkVersion=//p' android/gradle.properties)
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" >/dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "ndk;$ndk" >/dev/null
+          ls "$ANDROID_HOME/ndk"
+
+      # The compiler android/native/rust-toolchain.toml pins (the core's),
+      # with Android's three targets.
+      - name: the Rust toolchain
+        working-directory: android/native
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal --component clippy \
+            --target aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+          rustc --version
+
+      # The native crate on this machine: its queue, the engine's path held
+      # to the golden loops and to the web's module (a stereo render at a
+      # device's 48 kHz, made by js/dlplayer.wasm in Node), and nothing
+      # allocated in the audio thread's call. Then clippy, pedantic, for an
+      # Android target and this one.
+      - name: the native crate's tests and clippy
+        working-directory: android/native
+        run: |
+          export DL_WASM_LINE="$(node ../../tools/player-wasm.mjs --seed 2693262067 --seconds 45 --rate 48000 --stereo)"
+          echo "the web's line: $DL_WASM_LINE"
+          echo "$DL_WASM_LINE" > "$RUNNER_TEMP/wasm-line.txt"
+          cargo test --locked
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo clippy --locked --all-targets --target aarch64-linux-android -- -D warnings
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wasm-line
+          path: ${{ runner.temp }}/wasm-line.txt
+          retention-days: 14
 
       # The run number is the version code, so each build installs over the
       # one before it (they share the test signing key,
       # android/test-signing/README.md).
       - name: build the debug APK
         working-directory: android
-        run: ./gradlew --no-daemon --console=plain assembleDebug -Pdriftloom.versionCode=${{ github.run_number }}
+        run: ./gradlew --no-daemon --console=plain assembleDebug assembleDebugAndroidTest -Pdriftloom.versionCode=${{ github.run_number }}
 
-      - name: the APK
+      # One APK for each ABI and a universal one (all three); the size of
+      # each, and of the core's library inside it.
+      - name: the APKs
         run: |
-          apk=$(ls android/app/build/outputs/apk/debug/*-debug.apk)
-          ls -l "$apk"
-          echo "### The APK" >> "$GITHUB_STEP_SUMMARY"
-          echo "$(basename "$apk"): $(stat -c %s "$apk") bytes, version code ${{ github.run_number }}" >> "$GITHUB_STEP_SUMMARY"
-          unzip -l "$apk" | tail -1 >> "$GITHUB_STEP_SUMMARY"
+          echo "### The APKs (version code ${{ github.run_number }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| APK | bytes | libdriftloom.so (bytes, in the APK) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          for apk in android/app/build/outputs/apk/debug/*-debug.apk; do
+            libs=$(unzip -v "$apk" 'lib/*' 2>/dev/null | awk '/libdriftloom.so/ { printf "%s%s: %s (%s stored)", sep, $8, $1, $3; sep="; " }')
+            echo "| $(basename "$apk") | $(stat -c %s "$apk") | $libs |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          ls -l android/app/build/outputs/apk/debug/ android/app/build/outputs/apk/androidTest/debug/
+          for so in android/app/build/generated/native/*/libdriftloom.so; do
+            echo "$so: $(stat -c %s "$so") bytes"
+          done
 
       - uses: actions/upload-artifact@v4
         with:
@@ -74,6 +128,13 @@ jobs:
           path: android/app/build/outputs/apk/debug/*-debug.apk
           if-no-files-found: error
           retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: driftloom-test-apk
+          path: android/app/build/outputs/apk/androidTest/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
 
   smoke:
     name: the APK installs, starts and plays on an emulator
@@ -101,7 +162,7 @@ jobs:
           ls -l /dev/kvm
 
       - name: smoke test
-        run: sh android/emulator-smoke.sh "$(ls apk/*-debug.apk)" "$RUNNER_TEMP/smoke.png"
+        run: sh android/emulator-smoke.sh "$(ls apk/*-universal-debug.apk)" "$RUNNER_TEMP/smoke.png"
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -110,3 +171,50 @@ jobs:
           path: ${{ runner.temp }}/smoke.png
           if-no-files-found: ignore
           retention-days: 14
+
+  native:
+    name: the core plays natively on the emulator's audio
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: driftloom-debug-apk
+          path: apk
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: driftloom-test-apk
+          path: test-apk
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: wasm-line
+          path: wasm-line
+
+      - name: KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      # The runner has no sound card: PulseAudio with a null sink takes the
+      # emulator's audio at the real rate, so AAudio's stream runs as on a
+      # device and its underruns mean something.
+      - name: a sound server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pulseaudio >/dev/null
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=driftloom
+          pactl set-default-sink driftloom
+          pactl info | grep -E 'Server|Default Sink'
+
+      - name: the native tests
+        run: |
+          WASM_LINE="$(cat wasm-line/wasm-line.txt)" sh android/emulator-native.sh \
+            "$(ls apk/*-x86_64-debug.apk)" "$(ls test-apk/*.apk)" "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The debug builds' native audio test (session 26): no app name in it,
+         so the rename (session 31a) has nothing here to change. -->
+    <string name="native_test_label">Native audio test</string>
+</resources>

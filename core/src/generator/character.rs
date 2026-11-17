@@ -247,7 +247,7 @@ pub struct Char {
     pub polymeter: Option<bool>,
     pub micro_loop: Option<bool>,
     pub gaits: Option<List<Gait, 4>>,
-    pub kits: Option<Pool>,
+    pub kits: Option<Names>,
     pub progressions: Option<Progressions>,
     pub drone: Option<f64>,
     pub ornament: Option<f64>,
@@ -293,7 +293,7 @@ impl Char {
             polymeter: c.polymeter,
             micro_loop: c.micro_loop,
             gaits: c.gaits.map(List::from_slice),
-            kits: c.kits,
+            kits: names(c.kits),
             progressions: c.progressions,
             drone: c.drone,
             ornament: c.ornament,
@@ -442,7 +442,7 @@ pub fn blend(mix: &[(usize, f64)]) -> Char {
         polymeter: Some(l.polymeter.unwrap_or(false)),
         micro_loop: Some(l.micro_loop.unwrap_or(false)),
         gaits: l.gaits.map(List::from_slice),
-        kits: l.kits,
+        kits: names(l.kits),
         progressions: l.progressions,
         drone: l.drone,
         ornament: l.ornament,
@@ -518,8 +518,44 @@ pub fn vibed(mut c: Char, v: Option<&Vibes>) -> Char {
     c
 }
 
-/// `characterOf`: the loop's profile from its mix and its vibes.
+/// `characterOf`: the loop's profile from its mix and its vibes, its pools
+/// holding only what had joined by `version` (queue item 105; 0, the newest:
+/// every member).
 #[must_use]
-pub fn character_of(mix: &[(usize, f64)], v: Option<&Vibes>) -> Char {
-    vibed(blend(mix), v)
+pub fn character_of(mix: &[(usize, f64)], v: Option<&Vibes>, version: u32) -> Char {
+    vibed(at_version(blend(mix), version), v)
+}
+
+/// A pool the core writes in Rust (the kits and textures of a profile that
+/// names none), less what joined after `version`, in its order.
+#[must_use]
+pub fn kept(pool: &[(&'static str, f64)], list: data::Ids, version: u32) -> Names {
+    let mut out: Names = List::new();
+    for &e in pool.iter().filter(|e| data::there(list, e.0, version)) {
+        out.push(e);
+    }
+    out
+}
+
+/// The blend's pools without the modes, voices and bass styles that joined
+/// after `version` (`data/codes.txt`): each pool is filtered before any
+/// draw, in its order, so a member added later moves no older code's pick.
+#[must_use]
+pub fn at_version(mut c: Char, version: u32) -> Char {
+    if version == 0 || version >= data::CODE_NEWEST {
+        return c;
+    }
+    let keep = |p: &mut Option<Names>, list: data::Ids| {
+        if let Some(p) = p {
+            p.retain(|e| data::there(list, e.0, version));
+        }
+    };
+    keep(&mut c.scales, data::CODE_SCALES);
+    keep(&mut c.kits, data::CODE_VOICES[0]);
+    keep(&mut c.bass_voices, data::CODE_VOICES[1]);
+    keep(&mut c.chord_voices, data::CODE_VOICES[2]);
+    keep(&mut c.melody_voices, data::CODE_VOICES[3]);
+    keep(&mut c.textures, data::CODE_VOICES[4]);
+    keep(&mut c.bass_styles, data::CODE_BASS_STYLES);
+    c
 }

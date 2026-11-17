@@ -1,0 +1,7 @@
+# A vibe that joins at version 3.
+[order vibes]
+ids = dummyvibe
+
+[vibe dummyvibe]
+feel = lift 0.6
+profiles = dummyland 3

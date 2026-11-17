@@ -1,0 +1,31 @@
+# A voice that joins dust's melody pool at version 3, heavily weighted so a
+# newer loop meets it.
+[character dust]
+melodyVoices = dummyvoice 40
+
+# A profile that joins at version 3, heavily weighted.
+[character dummyland]
+label = Dummyland
+weight = 60
+level = 1
+bpm = 61 88
+stepsPerBar = 16 1
+bars = 4 7, 2 2, 8 3
+airy = 0.25
+swing = 0.04 0.3
+scales = dorian 3, aeolian 3
+drums = 0.9
+hatDensity = 0.15 0.85
+chordVoices = keys 5, pad 3
+melodyVoices = dummyvoice 3, pluck 1
+bassStyles = held 3, pulse 3
+bassVoices = sub 3, round 2
+textures = bells 3, none 2
+restBar = 0.22
+chordSize = 3 3, 4 4
+tone.warmth = 0.35 0.9
+tone.space = 0.25 0.8
+tone.wobble = 0.1 0.7
+feel.lift = 0.2 0.8
+feel.energy = 0.3 0.7
+feel.warmth = 0.5 0.95

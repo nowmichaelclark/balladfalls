@@ -44,6 +44,8 @@ pub mod delay;
 // (js/dlplayer.wasm, queue item 82).
 #[cfg(any(not(feature = "web"), feature = "generator", feature = "player"))]
 pub mod generator;
+#[cfg(any(not(feature = "web"), feature = "generator", feature = "player"))]
+pub mod code;
 pub mod master;
 pub mod math;
 pub mod mix;

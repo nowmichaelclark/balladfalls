@@ -488,6 +488,96 @@ OUT [--bits 16|24]` writes one from a seed (streamed) or a note list, and
 `node tools/flac.mjs` (CI's `flac` job) holds real renders to the reference
 decoder.
 
+## Share codes, version 2 (queue item 105)
+
+A loop or an album as a short run of the 64 link-safe characters, written and
+read by `src/code.rs` (natively; `dl_code_*` and `dl_album_*` in the C header;
+`dl_code_*` in the tools' wasm, and the app's from session 23;
+`node tools/codes.mjs` from the command line). **Frozen from 1.0:**
+`golden/share-codes.txt` holds it to its bytes, natively and on the web.
+
+**Characters.** `A`-`Z` `a`-`z` `0`-`9` `-` `_` are the values 0 to 63, a
+*sextet* each. Spaces around a code are let be; anything else outside the
+alphabet is no code. A code is at least 9 characters.
+
+**Numbers.** A *number* is five bits a character, the lowest first, 32 added to
+every character but the last, in as few characters as it needs (a last
+character of 0 after another is refused): 0 to 31 one character, to 1,023 two,
+to 32,767 three. A *seed* is a 32-bit number in exactly six characters, the
+lowest six bits first. A *decimal* is the shortest decimal that reads back to
+the double exactly (Rust's `{:e}`): its digits as a whole number with no
+trailing zero, zigzagged (`2m` for `m >= 0`, `-2m - 1` below), then its power of
+ten, zigzagged; zero is `0 0` and minus zero `0 1`. A *set* of ids is how many
+(at least one), the first, then each gap less one, ascending.
+
+**A loop:** *head* (a number, `2 * version`), *seed*, *fields*, *check*.
+
+**The check:** two characters, `h & 63` then `h >> 6`, where `h` starts at 0 and
+for each character before it becomes `(h * 64 + value + 1) mod 4093`. Any one
+character changed, or two side by side swapped, is caught.
+
+**Versions.** Codes start at 2 (`data/codes.txt`, `newest`). A version past the
+build's is refused, "needs a newer version" (the host adds its app's name). A
+code's loop is drawn at its version: every pool the generator draws from is
+filtered first to what had joined by then (`data::there`), so a member added
+later never moves an older code's picks; a deliberate change to a sound that
+exists still moves them, and the release notes say so.
+
+**Fields:** each a *tag* (a number) and what follows it, the tags ascending; a
+tag marked *keyed* may repeat with its key (the number after it) ascending.
+Every name is its *id* in `data/codes.txt`, never its place in a list. A tag,
+or an id, this build lacks is "needs a newer version"; anything else out of
+place is "not a code".
+
+| Tag | Field | What follows |
+|---|---|---|
+| 0 | the track's own version (album tracks only, first) | number |
+| 1 | a vibe, keyed | its id |
+| 2 | a vibe with a weight, keyed | its id, decimal |
+| 3 | the tempo pinned | bpm - 32 |
+| 4 | a tempo range | low - 32, high - low - 1 |
+| 5 | the length | bars - 1 (to 2^53 - 2) |
+| 6 | Endless | nothing |
+| 7 | the journey | its id |
+| 8 | the keys | a set of notes, C 0 to B 11 |
+| 9 | the modes | a set of ids |
+| 10 | the styles | a set of profile ids |
+| 11 | a layer's voices, keyed | layer id, a set of voice ids |
+| 12, 13 | the layers asked on, off | a set of layer ids |
+| 14 | the theme | seed |
+| 15 | a choice pinned, keyed | choice id, option id |
+| 16 | a setting pinned, keyed | setting id, word id or decimal |
+| 17 | a layer's seed (an edit), keyed | `2 * layer id + re-rolled`, seed |
+| 18 | a part of the tone (an edit), keyed | part id, decimal |
+| 19 | the tempo the slider set (an edit) | decimal |
+| 20 | the layers muted | a set of layer ids |
+| 21 | the wander's salt (item 92) | seed, not 0 |
+| 30 | an album's title | how many characters (1 to 40), then each as seven bits (character - 32), packed six to a sextet, highest first, the last sextet's spare bits 0 |
+
+**An album:** *head* (`2 * version + 1`), a number for its kind, then:
+
+- **0, a list of loops:** how many (1 to 1,024); each track as how many
+  characters it takes, then its *seed* and *fields* (a loop's code less head
+  and check; tag 0 first where its version is older than the album's, which is
+  its newest track's); then a title field or nothing; *check*.
+- **1, drawn from one seed:** the album's *seed*, how many tracks, the picks
+  they share (fields 1 to 16) and a title field or nothing; *check*. Track `i`
+  (from 0) is the loop of the `i + 1`th `seed32` of the generator's stream of
+  the album's seed (`code::track_seed`), asked the picks, at the album's
+  version.
+
+A plain loop is 9 characters; with a few picks (two vibes, 64 bars, a tempo)
+19; eight plain loops as an album 61; twelve tracks of 3,072 bars drawn from
+one seed with two vibes, 19.
+
+**Adding to it.** A new vibe, profile, voice, choice, option, setting or word
+takes the next free id of its list in `data/codes.txt`, `since` the newest plus
+one, and `newest` rises with it. A pool the core writes in Rust (a fallback
+kit, a setting's kinds) filters by `data::there` where it draws. A new field
+takes a new tag, with the version raised. `tests/dummy.rs` (the `dummy`
+feature, in the gate) adds a member of each kind at version 3 and shows every
+generation golden drawn at version 2 bit for bit as it was.
+
 ## Sketches (queue item 83)
 
 `core/sketch/` is where an ears or brain session drops one block file and one

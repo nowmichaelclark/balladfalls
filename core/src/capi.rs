@@ -686,6 +686,54 @@ pub extern "C" fn dl_player_track_end(player: *mut Engine) -> i64 {
     engine(player).and_then(|e| e.player.track_end()).and_then(|s| i64::try_from(s).ok()).unwrap_or(-1)
 }
 
+/// Go on from somewhere else in the loop playing (session 17,
+/// `Player::jump`): `kind` 0 a section (`at`, a whole number), 1 a bar, 2 a
+/// time in seconds, each from the piece's start, landing on the phrase line
+/// at or before it. 1 if it was asked; 0 with nothing playing, for no such
+/// kind, or a place that is not a number.
+#[unsafe(no_mangle)]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a whole section number, saturating
+pub extern "C" fn dl_player_jump(player: *mut Engine, kind: u32, at: f64) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    let to = match kind {
+        0 if at.is_finite() && at >= 0.0 => crate::player::Jump::Section(at as u64),
+        1 => crate::player::Jump::Bar(at),
+        2 => crate::player::Jump::Seconds(at),
+        _ => return 0,
+    };
+    c_int::from(e.player.jump(to))
+}
+
+/// Where the loop playing is, as heard (`Player::place`), as C sees it
+/// (`dl_place`): -1 for a figure there is none of.
+#[repr(C)]
+pub struct CPlace {
+    bar: f64,
+    bars: f64,
+    played: f64,
+    left: f64,
+    section: u64,
+}
+
+/// Where the loop playing is as heard now into `out` (`Player::place`): 1,
+/// or 0 with nothing playing.
+///
+/// # Safety
+///
+/// `out` is a writable `dl_place`, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_place(player: *mut Engine, out: *mut CPlace) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    if out.is_null() {
+        return 0;
+    }
+    let Some(p) = e.player.place(&e.core) else { return 0 };
+    let place = CPlace { bar: p.bar, bars: p.bars.unwrap_or(-1.0), played: p.played, left: p.left.unwrap_or(-1.0), section: p.section };
+    // SAFETY: a writable `dl_place` (the caller's promise), checked not null.
+    unsafe { out.write(place) };
+    1
+}
+
 /// An event as C sees it (`dl_event`).
 #[repr(C)]
 pub struct CEvent {

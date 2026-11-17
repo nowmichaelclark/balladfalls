@@ -53,6 +53,11 @@ pub const OCT: usize = 1;
 pub const PERIOD: usize = 2;
 /// Its Q.
 pub const Q: usize = 3;
+/// Where its swing is (session 17, a jump within a piece): the seconds it
+/// has swung at the setting's time, as playing from the loop's first step
+/// would have it. The sweep starts again there (gliding from where it was,
+/// as a change does), that far into its swing.
+pub const AGE: usize = 4;
 
 /// How long the cutoff glides across a load, in seconds.
 const GLIDE: f64 = 0.5;
@@ -154,6 +159,8 @@ impl Block for PadSweep {
         Setting { name: "oct", probe: 4.0 },
         Setting { name: "period", probe: 0.5 },
         Setting { name: "q", probe: 6.0 },
+        // Where the swing is, which a probe from its start cannot hear.
+        Setting { name: "age", probe: f64::NAN },
     ];
 
     fn start(&mut self, s: &Settings, cx: &Context) {
@@ -178,6 +185,14 @@ impl Block for PadSweep {
             OCT => self.oct = v.max(0.0),
             PERIOD => self.period = v,
             Q => self.q = v,
+            AGE => {
+                self.begin(time, cx);
+                // The LFO's rate as `begin` sets it, half a swing a period.
+                if self.period > 0.0 {
+                    self.lfo.turn(f64::from(0.5 / self.period) * value.max(0.0));
+                }
+                return;
+            }
             _ => return,
         }
         self.begin(time, cx);

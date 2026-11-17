@@ -413,6 +413,9 @@ pub struct Sequencer {
     /// Whether the listener set the tone while the loop plays (the Sound
     /// panel): a long piece's plan no longer moves it.
     pub tone_held: bool,
+    /// Whether the next step is a jump's first (session 17): a long piece's
+    /// plan sends its levels and tone there, wherever in its unit it is.
+    replan: bool,
 }
 
 impl Sequencer {
@@ -471,6 +474,7 @@ impl Sequencer {
             choir: false,
             kick_kind: None,
             tone_held: false,
+            replan: false,
         }
     }
 
@@ -621,10 +625,11 @@ impl Sequencer {
     /// each beat, gliding to where the unit will be a beat on. Nothing is
     /// sent where nothing moved (`Synth::set_plan_level`, `glide_tone`).
     #[allow(clippy::too_many_arguments)] // the step's own place and times
-    fn hear<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, u: &heard::Unit, step: f64, time: f64, sd: f64) {
+    fn hear<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, u: &heard::Unit, [step, time, sd]: [f64; 3], first: bool) {
         const BEAT: f64 = 4.0;
         let glides = u.glides();
-        if step != u.from && !(glides && (step - u.from) % BEAT == 0.0) {
+        // A jump's first step hears the unit wherever in it it lands.
+        if !first && step != u.from && !(glides && (step - u.from) % BEAT == 0.0) {
             return;
         }
         let (ahead, tau) = if glides { (js::min(u.to, step + BEAT), BEAT * sd / 3.0) } else { (step, 0.05) };
@@ -719,6 +724,100 @@ impl Sequencer {
         }
     }
 
+    /// Where step `target` from the load falls in the loop of `spec` (session
+    /// 17): its pass (a piece's section, from the piece's first), the step in
+    /// it, the step the round it is in began on (`origin`: 0 but in a piece
+    /// with a section cut short), and the steps that pass takes; as playing
+    /// from the load would count them, straight from the number.
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole steps, far below 2^53
+    pub fn place_of(spec: &Spec, target: u64) -> (u64, u64, u64, f64) {
+        let spb = spec.steps_per_bar;
+        let section = ((spec.bars * spb) as u64).max(1);
+        match Piece::of(spec) {
+            Some(p) => match (p.end, super::track::round_steps(spec)) {
+                (Some((sections, _)), Some(round)) => {
+                    let (k, into) = (target / round, target % round);
+                    let i = (into / section).min(sections.saturating_sub(1));
+                    let n = k * sections + i;
+                    let origin = if p.cut() { k * round } else { 0 };
+                    (n, into - i * section, origin, p.bars_of(n) * spb)
+                }
+                _ => (target / section, target % section, 0, p.bars * spb),
+            },
+            None => (target / section, target % section, 0, section as f64),
+        }
+    }
+
+    /// Move to step `target` from the load (session 17, a jump), as playing
+    /// would have reached it (`place_of`): the step, the pass, the round's
+    /// origin and the pass's steps. Its time is the caller's.
+    pub fn move_to(&mut self, spec: &Spec, target: u64) {
+        let (n, step, origin, steps) = Self::place_of(spec, target);
+        self.abs_step = target;
+        self.step = step;
+        self.loop_count = crate::generator::piece::pass_number(n);
+        self.origin = origin;
+        self.pass_steps = steps;
+    }
+
+    /// A jump within the loop playing lands (session 17, `Player::jump`), its
+    /// first step at `start` (the sequencer `move_to`'d it): what rang
+    /// before it lets go over `fade`, as at a new loop (the organ's chord,
+    /// the color, the low bell and its spotlight's drop, twang's strings:
+    /// every note is falling already, `Core::fade_all`); what counts from the
+    /// loop's first step stands where playing would have it (twang's
+    /// tremolo, the blocks' swings, `Synth::aged`; the lateFloor and
+    /// slowOpening count in steps, already right); what the bar before
+    /// decided is read from it (the room's tails, the floor out there); and
+    /// a long piece's plan is sent at the first step.
+    #[allow(clippy::cast_precision_loss)] // steps, far below 2^53
+    pub fn jumped<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, start: f64, fade: f64) {
+        let s = lp.settings;
+        let spb = lp.spec.steps_per_bar;
+        let (abs, step) = (self.abs_step as f64, self.step as f64);
+        let rel = (self.abs_step - self.origin) as f64;
+        let age = abs * self.step_dur();
+        if self.hold.on {
+            Synth::organ_off(host, start, fade);
+        }
+        self.hold = NO_HOLD;
+        self.let_color_go(host, start);
+        if self.bell_until > start {
+            Synth::low_bell_off(host, start, fade);
+        }
+        self.bell_until = 0.0;
+        self.bell_pc = 0;
+        self.bell_drop = 0.0;
+        // The floor has played once the lateFloor let it in; whether it was
+        // out in the bar before, and so whether a drop is under way (its
+        // first strike rang before the jump: the drop goes on without it).
+        self.bell_floor = s.late.is_none_or(|l| abs >= js::max(l.drums, l.bass));
+        self.bell_was_out = step >= spb && Self::floor_out_from(lp, step - spb, abs - spb) > 0.0;
+        if s.spotlight && self.bell_floor && self.bell_was_out {
+            let more = Self::floor_out_from(lp, step, abs);
+            if more > 0.0 {
+                self.bell_drop = abs + more;
+            }
+        }
+        if self.twang_until > start {
+            Synth::twang_let_go(host, start, start, fade);
+        }
+        self.twang_until = 0.0;
+        self.twang_pc = 0;
+        self.twang_next = 0;
+        self.twang_zero = start - age;
+        let quiet = step >= spb && Self::is_silent_bar(lp, abs - spb, rel - spb);
+        if quiet {
+            Synth::fade_tails(host, start);
+        } else {
+            Synth::restore_tails(host, start);
+        }
+        self.tails_ducked = quiet;
+        self.replan = true;
+        synth.aged(host, s.arc.as_ref(), self.had_color, age, start);
+    }
+
     /// A new pass begins (`_advance`'s wrap, and the load's first): the
     /// tuned kick it plays, its own on a pass as composed, else the swap a
     /// wandering pass may draw (`_kickOn`, `kickKindOf`, by the pass's
@@ -797,8 +896,9 @@ impl Sequencer {
         synth.set_tuning(s.tuning);
         // A long piece's plan at this step: its levels and its tone (queue
         // item 102b).
+        let first = core::mem::take(&mut self.replan);
         if let Some(u) = lp.pass.and_then(|p| p.heard.unit(stepf)) {
-            self.hear(host, synth, lp, u, stepf, time, self.step_dur());
+            self.hear(host, synth, lp, u, [stepf, time, self.step_dur()], first);
         }
         // A new loop's setups, from its first step decided.
         if self.organ_change {

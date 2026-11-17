@@ -69,6 +69,31 @@ pub fn phrase_line(spec: &Spec, at: u64) -> u64 {
     (start + k * section + js::min(js::ceil(into / unit) * unit, length)) as u64
 }
 
+/// The phrase line at or before step `at` from the load (session 17: where
+/// a jump lands), on `phrase_line`'s grid: the line `phrase_line` gives
+/// where `at` is on one, else the one before it.
+#[must_use]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole steps, far below 2^53
+pub fn phrase_before(spec: &Spec, at: u64) -> u64 {
+    let spb = spec.steps_per_bar;
+    let section = spec.bars * spb;
+    if !(section >= 1.0) {
+        return at;
+    }
+    let unit = if section % (PHRASE_BARS * spb) == 0.0 {
+        PHRASE_BARS * spb
+    } else if section % (2.0 * spb) == 0.0 {
+        2.0 * spb
+    } else {
+        section
+    };
+    let at = at as f64;
+    let start = round_steps(spec).map_or(0.0, |r| at - at % r as f64);
+    let k = js::floor((at - start) / section);
+    let into = at - start - k * section;
+    (start + k * section + js::floor(into / unit) * unit) as u64
+}
+
 impl Track {
     /// The step from the load the track ends at, counted from `from`
     /// (`endStep`), or none while it plays on.

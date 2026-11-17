@@ -295,10 +295,11 @@ int64_t dl_player_track_end(dl_player *player);
    (DL_PASS; in a piece, its round), the section (DL_SECTION, a piece's), the
    seed (DL_LOOP: a new loop's first step; DL_REVISED: the loop made again
    in place), or 0 (DL_TRACK_END: the track's end), or the picks' tag (DL_OWN:
-   the loop whose DL_LOOP comes next is the core's own); `step` is from the
-   loop's load.
+   the loop whose DL_LOOP comes next is the core's own), or the step it goes
+   on from (DL_JUMPED: dl_player_jump landed); `step` is from the loop's
+   load.
    256 wait at most; dl_player_events_lost counts the ones lost. */
-enum { DL_STEP = 0, DL_PASS_BEGINS = 1, DL_SECTION = 2, DL_PHRASE_LINE = 3, DL_LOOP = 4, DL_REVISED = 5, DL_TRACK_END = 6, DL_OWN = 7 };
+enum { DL_STEP = 0, DL_PASS_BEGINS = 1, DL_SECTION = 2, DL_PHRASE_LINE = 3, DL_LOOP = 4, DL_REVISED = 5, DL_TRACK_END = 6, DL_OWN = 7, DL_JUMPED = 8 };
 typedef struct dl_event {
     double time;
     uint32_t kind;
@@ -307,6 +308,33 @@ typedef struct dl_event {
 } dl_event;
 int dl_player_event(dl_player *player, dl_event *out);
 uint32_t dl_player_events_lost(dl_player *player);
+
+/* Go on from somewhere else in the loop playing (a long piece's sections,
+   reached straight from the seed and the number, nothing before made): a
+   section (DL_TO_SECTION, `at` a whole number), a bar (DL_TO_BAR) or a time
+   in seconds (DL_TO_TIME), from the piece's start, landing on the phrase
+   line at or before it (a piece's last line at most). Made over a few
+   blocks, then heard START (0.05 s) on, what played before falling to
+   nothing over DL_JUMP_FADE; a DL_JUMPED event says where. What plays is
+   what playing would have reached there. 1 if asked; 0 with nothing
+   playing, or a place that is not a number. */
+enum { DL_TO_SECTION = 0, DL_TO_BAR = 1, DL_TO_TIME = 2 };
+#define DL_JUMP_FADE 0.25
+int dl_player_jump(dl_player *player, uint32_t kind, double at);
+
+/* Where the loop playing is as heard now: the bar (from the piece's start,
+   the step in it as a fraction) of `bars` (-1 for Endless), the seconds
+   played and left (-1 for Endless; to the track's end where it is
+   sooner), and the section. In a piece that comes round, in the round
+   playing. 1, or 0 with nothing playing. */
+typedef struct dl_place {
+    double bar;
+    double bars;
+    double played;
+    double left;
+    uint64_t section;
+} dl_place;
+int dl_player_place(dl_player *player, dl_place *out);
 
 /* Layer `layer`'s grid, of the pass being decided (read it when a pass or a
    section begins, and show it from that event's time): the loudest note on

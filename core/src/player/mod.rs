@@ -97,6 +97,45 @@ pub const LOOKAHEAD: f64 = 0.25;
 /// seconds (the measure harness's 0.05).
 pub const START: f64 = 0.05;
 
+/// How long a jump's old notes take to fall to nothing, in seconds (session
+/// 17): a short fade, from the jump's first step, under the place it lands.
+pub const JUMP_FADE: f64 = 0.25;
+
+/// Where a jump within the loop playing goes (session 17, queue item 106a;
+/// `Player::jump`), straight from the seed and the number (promise 11):
+/// nothing before it is made or walked.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Jump {
+    /// The first step of a section of a piece (of a pass, for a loop with
+    /// no length), from the piece's first (0).
+    Section(u64),
+    /// A bar from the piece's start (0), on the phrase line at or before it.
+    Bar(f64),
+    /// A time from the piece's start, in seconds at the tempo playing, on
+    /// the phrase line at or before it.
+    Seconds(f64),
+}
+
+/// Where the loop playing is, as a listener hears it (session 17,
+/// `Player::place`): for a piece, in the round playing.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Place {
+    /// The bar heard, from the piece's start (0): whole bars, and the step
+    /// in the bar as a fraction.
+    pub bar: f64,
+    /// The piece's bars (a round's); none for Endless. A loop with no
+    /// length has its own bars.
+    pub bars: Option<f64>,
+    /// The time played from the piece's start, in seconds at the tempo
+    /// playing.
+    pub played: f64,
+    /// The time left: to the track's end where the length slider ends it
+    /// sooner, else to the round's end; none for Endless played on.
+    pub left: Option<f64>,
+    /// The section heard (a loop's pass), from the piece's first.
+    pub section: u64,
+}
+
 /// What a host asks for, beside the seed (promise 11's request, queue item
 /// 85: the vibes with or without weights, and the tempo): the generator's
 /// own, `generator::request::Request`, which says how to build one.
@@ -224,6 +263,12 @@ pub struct Player {
     own_tag: u32,
     /// What the player tells the host (`event`).
     events: Events,
+    /// A jump under way (session 17, `jump`): the step from the load it
+    /// lands on, and its stage (0: none; 1, the section's second tune made,
+    /// a stage a block; 2, its pass drawn; 3, the sequencer moved and the
+    /// pass heard; 4, it lands), one a block, as a load is spread.
+    jump_to: u64,
+    jumping: u8,
 }
 
 impl Player {
@@ -274,6 +319,8 @@ impl Player {
             own: false,
             own_tag: 0,
             events: Events::new(),
+            jump_to: 0,
+            jumping: 0,
         }
     }
 
@@ -328,6 +375,7 @@ impl Player {
         self.drawn = 0;
         self.own = false;
         self.events.clear();
+        self.jumping = 0;
         let now = self.now(host);
         self.synth.start(host, rate, !full, now);
     }
@@ -363,6 +411,7 @@ impl Player {
         self.tempo = None;
         self.resumed = false;
         self.own = false;
+        self.jumping = 0;
     }
 
     /// `load_at` for a loop that was already playing on another core (queue
@@ -670,6 +719,7 @@ impl Player {
     /// dropped.
     pub fn stop(&mut self) {
         self.pending = [Maybe::NONE; SLOTS];
+        self.jumping = 0;
         if self.state == State::Loading || self.state == State::Wandering {
             self.state = State::Idle;
             self.was_playing = false;
@@ -725,6 +775,204 @@ impl Player {
     #[must_use]
     pub fn position(&self) -> (u64, u32, f64) {
         (self.seq.step, self.seq.loop_count, self.seq.next_step_time)
+    }
+
+    /// Go on from somewhere else in the loop playing (session 17, queue item
+    /// 106a): a section, a bar or a time of a piece (`Jump`), landing on the
+    /// phrase line at or before it (a round's last line at most, in a piece
+    /// that comes round), reached straight from the seed and the section's
+    /// number (promise 11). Its section is made a stage a block, as a load
+    /// is (its second tune, its pass drawn, the pass heard), and from the
+    /// next block on nothing more is decided where it was: what was handed
+    /// over plays out, falling to nothing over `JUMP_FADE` from the jump's
+    /// first step, `START` after the block it lands in, so it is heard a few
+    /// blocks after it is asked. What plays there is what playing would have
+    /// reached (`Sequencer::jumped` says what that takes); it is told as
+    /// `Kind::Jump`. A change waiting waits on, worked out from the new
+    /// place; the track counts as it did, from the load. False, and nothing
+    /// moves, with no loop playing or for a place that is not a number.
+    pub fn jump(&mut self, to: Jump) -> bool {
+        if self.state != State::Playing {
+            return false;
+        }
+        let spec = self.generator.spec();
+        let spb = spec.steps_per_bar;
+        let sd = self.seq.step_dur();
+        if !(spb >= 1.0 && sd.is_finite() && sd > 0.0) {
+            return false;
+        }
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole steps, below 2^53 (a u64 saturates past it)
+        let target = match to {
+            Jump::Section(n) => Self::section_start(spec, n),
+            Jump::Bar(b) if b.is_finite() && b >= 0.0 => track::phrase_before(spec, (js::floor(b) * spb) as u64),
+            Jump::Seconds(t) if t.is_finite() && t >= 0.0 => track::phrase_before(spec, js::floor(t / sd) as u64),
+            _ => return false,
+        };
+        // A piece that comes round: within its round, its last line at most.
+        let target = match (Piece::of(spec).and_then(|p| p.end), track::round_steps(spec)) {
+            (Some(_), Some(round)) if target >= round => track::phrase_before(spec, round - 1),
+            _ => target,
+        };
+        self.jump_to = target;
+        self.jumping = 1;
+        true
+    }
+
+    /// The first step of section `n` (a loop's pass) from the piece's start.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // whole steps, below 2^53
+    fn section_start(spec: &crate::generator::spec::Spec, n: u64) -> u64 {
+        let section = ((spec.bars * spec.steps_per_bar) as u64).max(1);
+        match (Piece::of(spec).and_then(|p| p.end), track::round_steps(spec)) {
+            (Some((sections, _)), Some(round)) => (n / sections).saturating_mul(round).saturating_add((n % sections) * section),
+            _ => n.saturating_mul(section),
+        }
+    }
+
+    /// A stage of the jump under way (`jump`), one a block.
+    fn jump_stage<H: Host>(&mut self, host: &mut H) {
+        let (n, _, _, _) = Sequencer::place_of(self.generator.spec(), self.jump_to);
+        let number = crate::generator::piece::pass_number(n);
+        let wanders = self.wander.get() > 0.0 || self.journeyed;
+        let slot = 1 - self.current;
+        match self.jumping {
+            1 => {
+                if !self.journeyed || self.generator.prepare(n) {
+                    self.jumping = 2;
+                }
+            }
+            2 => {
+                if wanders {
+                    self.draw_unheard(slot, number);
+                }
+                self.jumping = 3;
+            }
+            3 => {
+                self.seq.move_to(self.generator.spec(), self.jump_to);
+                if self.journeyed {
+                    self.hear_pass(slot, number);
+                }
+                self.jumping = 4;
+            }
+            _ => {
+                self.land(host, wanders.then_some(slot));
+                self.jumping = 0;
+            }
+        }
+    }
+
+    /// The jump lands (`jump`): the old place's notes fall, the sequencer
+    /// takes the jump's first step `START` from now, playing pass
+    /// `passes[slot]` (none for the loop as composed).
+    fn land<H: Host>(&mut self, host: &mut H, slot: Option<usize>) {
+        let now = self.now(host);
+        // Between frames where playing from a load would have it: a loop's
+        // first step falls `START` after a block's start, a whole number of
+        // frames at the rates the app plays, and step `n` that many step
+        // lengths on, so its notes start the same fraction of a frame in.
+        let at = self.jump_to as f64 * self.seq.step_dur() * self.rate;
+        let start = now + START + (at - js::floor(at)) / self.rate;
+        host.fade_all(start, start + JUMP_FADE);
+        self.synth.budget.end_by(start);
+        if let Some(slot) = slot {
+            self.current = slot;
+        }
+        self.wandering = slot.is_some();
+        let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
+        self.seq.jumped(host, &mut self.synth, &lp, start, JUMP_FADE);
+        self.seq.next_step_time = start;
+        self.seq.pass_begins(&lp);
+        self.next_drawn = false;
+        self.next_unheard = false;
+        self.lead_in = false;
+        self.pass_held = self.synth.budget.held();
+        self.pass_from = start;
+        self.units.set(-1.0);
+        for c in self.pending.iter_mut().filter_map(Maybe::as_mut) {
+            c.target = None;
+        }
+        // Back before the track's end, it ends again when it comes.
+        let abs = self.seq.abs_step;
+        if self.track.end_step(self.generator.spec(), self.count_from).is_some_and(|end| abs < end) {
+            self.ended = false;
+        }
+        self.events.push(Event { time: start, kind: Kind::Jump, number: abs, step: abs });
+    }
+
+    /// Where the loop playing is as heard now (`Place`), on the core's
+    /// clock; none with nothing playing. The steps decided ahead
+    /// (`LOOKAHEAD`) are not yet heard: it counts back from the next.
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole steps, far below 2^53
+    pub fn place<H: Host>(&self, host: &H) -> Option<Place> {
+        if self.state != State::Playing {
+            return None;
+        }
+        let spec = self.generator.spec();
+        let spb = spec.steps_per_bar;
+        let sd = self.seq.step_dur();
+        if !(spb >= 1.0 && sd.is_finite() && sd > 0.0) {
+            return None;
+        }
+        let ahead = js::ceil((self.seq.next_step_time - self.now(host)) / sd).max(0.0) as u64;
+        let heard = self.seq.abs_step.saturating_sub(ahead);
+        let endless = Piece::of(spec).is_some_and(|p| p.end.is_none());
+        let round = if endless { None } else { track::round_steps(spec) };
+        let into = round.map_or(heard, |r| heard % r);
+        let (n, _, _, _) = Sequencer::place_of(spec, heard);
+        let end = self.track.end_step(spec, self.count_from).filter(|&e| e > heard).map(|e| e - heard);
+        let left = match (end, round) {
+            (Some(e), Some(r)) => Some(e.min(r - into)),
+            (Some(e), None) => Some(e),
+            (None, Some(r)) => Some(r - into),
+            (None, None) => None,
+        };
+        Some(Place {
+            bar: into as f64 / spb,
+            bars: round.map(|r| r as f64 / spb),
+            played: into as f64 * sd,
+            left: left.map(|l| l as f64 * sd),
+            section: n,
+        })
+    }
+
+    /// A long piece's marks for the page (session 17, queue item 106a): the
+    /// units of `count` sections from section `from` where something a
+    /// listener would see marked begins (`each`, with the unit's first bar
+    /// from the piece's start, its section, and the plan's unit,
+    /// `longform::Span`): the window's first unit, and each unit whose role,
+    /// theme, key or movement differs from the one before; with `coarse`,
+    /// only where a movement begins (an arc, or a wander's hold). Straight
+    /// from the numbers (`Form::at`, a microsecond or two a unit), nothing
+    /// kept, so a 32,768-bar piece's movements cost a few milliseconds, and
+    /// Endless is asked a window at a time. `each` returns false to stop
+    /// (a host's room full). None for a loop that is no long piece.
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)] // sections and bars, far below 2^53
+    pub fn marks(&self, from: u64, count: u64, coarse: bool, mut each: impl FnMut(f64, u64, &crate::generator::longform::Span) -> bool) -> Option<()> {
+        let g = &self.generator;
+        let form = g.form()?;
+        let piece = Piece::of(g.spec())?;
+        let section_bar = |n: u64| match piece.end {
+            Some((sections, last)) => (n / sections) as f64 * ((sections - 1) as f64 * piece.bars + last) + (n % sections) as f64 * piece.bars,
+            None => n as f64 * piece.bars,
+        };
+        let mut before: Option<crate::generator::longform::Span> = None;
+        for n in from..from.saturating_add(count) {
+            let mut bar = section_bar(n);
+            for p in 0..form.units_in(n) {
+                let span = form.at(n, p);
+                let marked = before.is_none_or(|b| {
+                    let movement = b.part != span.part || b.kind != span.kind;
+                    movement || (!coarse && (b.role != span.role || b.theme != span.theme || b.key.root != span.key.root || b.key.relation != span.key.relation))
+                });
+                if marked && !each(bar, n, &span) {
+                    return Some(());
+                }
+                bar += span.bars;
+                before = Some(span);
+            }
+        }
+        Some(())
     }
 
     /// The piece of the loop playing (queue item 88: a length asked), or none
@@ -1244,6 +1492,12 @@ impl Player {
         }
         if self.state != State::Playing {
             return Work::None;
+        }
+        // A jump under way: a stage a block; the place it leaves decides
+        // nothing more (what it handed over plays out, and falls).
+        if self.jumping != 0 {
+            self.jump_stage(host);
+            return Work::Load;
         }
         if let Some(n) = self.arm(host, now) {
             return Work::Steps(n);

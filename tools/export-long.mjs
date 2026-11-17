@@ -22,7 +22,9 @@
 // file the app downloaded is checked by tools/export.mjs --file: it decodes
 // and nulls against a straight render of the job the page sent.
 //
-// Passes when: the export finishes; memory is flat (the last quarter's mean
+// The browser runs on a profile on disk, as a phone's does (an incognito
+// profile keeps the private file in memory). Passes when: the export
+// finishes; memory is flat (the last quarter's mean
 // within 32 MB of the second quarter's, and no sample 96 MB over the
 // second quarter's mean); nothing late, missed, dropped, filled in or
 // behind; and the file nulls. Linux only (it reads /proc). Chromium from
@@ -140,14 +142,23 @@ async function main() {
   const server = await serve(PORT);
   const out = KEEP || fs.mkdtempSync(path.join(os.tmpdir(), 'dlexport-long-'));
   fs.mkdirSync(out, { recursive: true });
-  const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required', '--mute-audio'] });
+  // A profile on disk (a persistent context): an incognito one, which
+  // `newContext()` makes, keeps the site's storage in memory, so the private
+  // file the export writes would count as the browser's memory (the first
+  // CI run grew by exactly the file's 653 MB that way). A phone writes it
+  // to disk.
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'dlexport-profile-'));
+  const context = await chromium.launchPersistentContext(profile, {
+    args: ['--autoplay-policy=no-user-gesture-required', '--mute-audio'],
+    acceptDownloads: true,
+    viewport: { width: 412, height: 915 },
+  });
   let failures = 0;
   const check = (label, ok, detail = '') => {
     console.log(`  ${ok ? 'pass' : 'FAIL'}  ${label}${detail ? `  (${detail})` : ''}`);
     if (!ok) failures++;
   };
   try {
-    const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 412, height: 915 } });
     await context.addInitScript(HOOK);
     await context.addInitScript((lite) => { if (!localStorage.getItem('driftloom.prefs.v1')) localStorage.setItem('driftloom.prefs.v1', JSON.stringify({ lite })); }, LITE);
     const page = await context.newPage();
@@ -224,8 +235,9 @@ async function main() {
       if (!KEEP) fs.rmSync(out, { recursive: true, force: true });
     }
   } finally {
-    await browser.close();
+    await context.close();
     server.close();
+    fs.rmSync(profile, { recursive: true, force: true });
   }
   console.log(failures ? `\nexport-long: ${failures} failed` : '\nexport-long: every check passed');
   process.exit(failures ? 1 : 0);

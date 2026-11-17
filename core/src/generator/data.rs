@@ -353,9 +353,13 @@ pub struct TwangDraw {
     /// The share of the loops it may play in that play it, before the vibes
     /// lean it.
     pub share: f64,
-    /// Its versions (`soft`, `slow`, `bright`), by weight.
+    /// The versions a loop plays (`soft` alone since Mikey's Batch 6 Album,
+    /// 2026-11-17); a draw landing on another plays the first of these.
     pub kinds: Pool,
-    /// The vibes that lean each version's share.
+    /// The versions drawn, by weight (`soft`, `slow`, `bright`): the batch's
+    /// draw kept whole, so the loops that play twang stay the ones that did.
+    pub drawn: Pool,
+    /// The vibes that lean each drawn version's share.
     pub kind_vibes: &'static [(&'static str, Table)],
     /// The same root picked again after this many seconds.
     pub regap: f64,

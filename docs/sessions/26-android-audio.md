@@ -1,5 +1,27 @@
 # Session 26: the Android app: the core native, on Android's own audio (107b)
 
+**Left (the first session 26, 2026-11-17, stopped at its usage limit):** the
+work is written and pushed on `claude/s26-android-audio-1a3c98`, draft PR
+#411 (android/native: the engine, the lock-free queue, AAudio, JNI; the
+Kotlin bridge, the debug screen "Native audio test", the instrumented tests;
+the workflow's Rust, NDK r28c and `native` emulator job). Host tests pass
+(golden hashes through the engine's path, the web's stereo 48 kHz line,
+nothing allocated in `fill`); clippy pedantic clean for aarch64-linux-android
+and the host. Not yet seen: CI's `android` run on #411 (the first ever build
+with the NDK and the emulator with audio). Still to do:
+1. Read #411's `android` run; fix what fails (likely spots: AGP's
+   `androidComponents.sdkComponents.ndkDirectory`, the emulator's audio with
+   PulseAudio's null sink, underruns on the emulator's stream).
+2. Take the yardsticks from the run's summary (underruns over five minutes,
+   late notes, the busiest and mean callback share, the APK and library size
+   per ABI) into the PR body; merge the latest `main` in, CI green, merge.
+3. DONE.md's line, the queue's status line, this row ticked in
+   `docs/sessions/README.md`, and `docs/notes/for-mikey.md`'s line: the
+   universal APK from #411's artifacts on the Moto and the tablet, open
+   "Native audio test", press "Play the test", five minutes, send back
+   Underruns and Busiest block (and "Check the samples" if it says DIFFERS).
+Then delete this list.
+
 **Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" unchanged after 25; 22 is no longer named (Android doesn't read the codes), and what may run beside it is new.
 
 - **Model:** Opus 5.5. **Effort:** high.

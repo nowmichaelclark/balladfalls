@@ -1,0 +1,23 @@
+[code version]
+newest = 3
+
+[code vibes]
+ids = dummyvibe 88 3
+
+[code profiles]
+ids = dummyland 16 3
+
+[code moods]
+ids = dummymood 8 3
+
+[voices melody]
+ids = dummyvoice 28 3
+
+[options glass]
+ids = dummy 2 3
+
+[code choices]
+ids = dummyAlone 16 3
+
+[options dummyAlone]
+ids = today 0 3, on 1 3

@@ -108,8 +108,9 @@ const SETTINGS = [
   { name: 'lowBell.drops', words: ['today', 'on'] },
   // twang's version (item 101h): none, soft, slow or bright, for a loop that
   // plays a chord and has no kit busier than a soft one
-  // (core/src/blocks/twang.rs).
-  { name: 'twang.kind', words: ['today', ...ids(TWANG.kinds)] },
+  // (core/src/blocks/twang.rs). The core numbers them by place, so every
+  // version drawn stays a word (`drawn`), though a loop plays soft alone.
+  { name: 'twang.kind', words: ['today', ...ids(TWANG.drawn)] },
 ];
 if (CHOICES.length > CHOICE_PINS || SETTING_PINS + SETTINGS.length > SPACE_PINS) throw new Error('js/pins.js: a block of pins is full');
 export const PINS = [

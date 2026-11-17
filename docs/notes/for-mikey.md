@@ -138,7 +138,9 @@ the points where the next step is yours.
   length slider's setting (version 1's codes carried both). So a friend who
   opens your code sees its own generated name. Say if you want a renamed
   loop's name to travel with its code; a field can still be added before
-  1.0 (the brain's B4 looks at the format closely before it freezes).
+  1.0 (the brain's B4 looks at the format closely before it freezes). A code
+  carries no app name either: the app shows "needs a newer version" with its
+  own name, so a rename never touches a code.
 
 (The long pieces' first picks were all kept, 2026-11-14, `docs/DECISIONS.md`.
 How many changes a loop gets, and twang's picks, were decided 2026-11-17 and

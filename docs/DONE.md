@@ -387,3 +387,14 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   960-frame block's deadline (the emulator's, no fast path). APKs: arm64-v8a
   3.4 MB, armeabi-v7a 3.1 MB, universal 6.2 MB. What to try on the Moto and
   the tablet: `docs/notes/for-mikey.md`.
+- #412, codes, version 2, in the core (item 105a, session 22, v178),
+  preview URL: the branch's preview (no hash kept). Nothing to hear: the app
+  still writes version 1 codes until session 23, and nothing that plays
+  moved (every generation golden as it was). New: `core/src/code.rs` reads
+  and writes loops and albums as short codes of `A-Z a-z 0-9 - _` (a plain
+  loop 9 characters, a 12-track album from one seed with two vibes 19),
+  every name by its id in `data/codes.txt` with the version it joined, and
+  a code's loop drawn at its version so later additions never move it
+  (`tests/dummy.rs`). The format is `core/README.md`, "Share codes, version
+  2", frozen by `core/golden/share-codes.txt`; `node tools/codes.mjs` makes and
+  opens codes and albums from the command line. The app's module grew 10 KB.

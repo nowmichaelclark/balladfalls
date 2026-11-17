@@ -99,6 +99,10 @@ pub struct Spec {
     /// Each layer's own cycle in steps, or `None` (null); `None` overall
     /// for a loop without cycles.
     pub cycles: Cycles,
+    /// The version the loop is drawn at (queue item 105; `Request::version`):
+    /// its pools hold only what had joined by then. 0, the newest. Not
+    /// written among the spec's text.
+    pub version: u32,
 }
 
 /// Each layer's own cycle in steps, or none (`cycles` in the JavaScript spec,
@@ -149,6 +153,7 @@ impl Spec {
         theme: None,
         length: None,
         journey: None,
+        version: 0,
         keys: 0,
         scales: 0,
         styles: 0,
@@ -182,7 +187,7 @@ impl Spec {
     /// `characterOf(spec)`.
     #[must_use]
     pub fn character(&self) -> Char {
-        character::character_of(&self.mix, self.vibes.as_ref())
+        character::character_of(&self.mix, self.vibes.as_ref(), self.version)
     }
 
     /// The key, the layers, the modes and the styles asked (queue items 89 to
@@ -455,7 +460,7 @@ const BORROW_SALT: u32 = 0x4252_4954;
 
 /// `borrowedPool`: the bright modes a glad loop's profiles may borrow, with
 /// the share each adds (queue item 36), before the lean.
-fn borrowed_pool(mix: &[(usize, f64)], lift: f64) -> character::Names {
+fn borrowed_pool(mix: &[(usize, f64)], lift: f64, version: u32) -> character::Names {
     let glad = js::max(0.0, lift - GLAD_FROM) / (1.0 - GLAD_FROM);
     let mut extra: character::Names = List::new();
     if glad != 0.0 {
@@ -472,7 +477,7 @@ fn borrowed_pool(mix: &[(usize, f64)], lift: f64) -> character::Names {
                 if !(w > 0.0) {
                     continue;
                 }
-                for &mode in bb {
+                for &mode in bb.iter().filter(|&&m| data::there(data::CODE_SCALES, m, version)) {
                     let add = BORROW * glad * (w / total);
                     if let Some(e) = extra.iter_mut().find(|e| e.0 == mode) {
                         e.1 += add;
@@ -563,12 +568,13 @@ fn ask_key(seed: u32, root: f64, keys: u32) -> f64 {
 /// weighted by how much the profile mix and the vibes lean toward each (the
 /// pool the mode would have come from, borrowed modes too), a mode the mix
 /// never draws at the floor: no pair is forbidden.
-fn ask_scale(seed: u32, c: &Char, mix: &[(usize, f64)], lift: f64, v: Option<&Vibes>, scale: usize, wanted: u32) -> usize {
+#[allow(clippy::too_many_arguments)] // the draw's own inputs, as askedScale takes them, and the version
+fn ask_scale(seed: u32, c: &Char, mix: &[(usize, f64)], lift: f64, v: Option<&Vibes>, scale: usize, wanted: u32, version: u32) -> usize {
     if wanted & (1 << scale) != 0 {
         return scale;
     }
     let lean = |k: &str, w: f64| theory::mood_weighted(w, theory::brightness(k), lift) * character::lean_in(v, |x| x.modes, k);
-    let extra = borrowed_pool(mix, lift);
+    let extra = borrowed_pool(mix, lift, version);
     let weight = |k: usize| {
         let id = SCALES[k].id;
         let mut have = 0.0;
@@ -591,7 +597,7 @@ fn ask_scale(seed: u32, c: &Char, mix: &[(usize, f64)], lift: f64, v: Option<&Vi
 }
 
 /// `drawScale`.
-fn draw_scale(r: &mut Rng, seed: u32, c: &Char, mix: &[(usize, f64)], lift: f64, v: Option<&Vibes>) -> usize {
+fn draw_scale(r: &mut Rng, seed: u32, c: &Char, mix: &[(usize, f64)], lift: f64, v: Option<&Vibes>, version: u32) -> usize {
     let lean = |k: &str, w: f64| theory::mood_weighted(w, theory::brightness(k), lift) * character::lean_in(v, |x| x.modes, k);
     let mut own: character::Names = List::new();
     for &(k, w) in c.scales.as_ref().map_or(&[][..], |p| &p[..]) {
@@ -599,7 +605,7 @@ fn draw_scale(r: &mut Rng, seed: u32, c: &Char, mix: &[(usize, f64)], lift: f64,
     }
     let drawn = r.weighted(&own).unwrap_or("dorian");
     let mut chosen = drawn;
-    let mut extra = borrowed_pool(mix, lift);
+    let mut extra = borrowed_pool(mix, lift, version);
     if !extra.is_empty() {
         for e in extra.iter_mut() {
             e.1 = lean(e.0, e.1);
@@ -631,11 +637,16 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     // A theme asked (queue item 85d): its own loop, nothing asked, gives what
     // it holds (the mix, the key and mode, the metre, the tune). Every draw
     // below is still made, so nothing else moves.
-    let held = request.theme().map(|th| new_spec(th, &Request::new()));
+    let held = request.theme().map(|th| new_spec(th, &request.nothing_at()));
 
     let drive = math::pow(r.f(), 0.82) * 1.8 - 0.5;
     let mut pool: List<(usize, f64), { data::CHARACTER_COUNT }> = List::new();
     for (i, c) in CHARACTERS.iter().enumerate() {
+        // A profile that joined after the loop's version is not in its pool
+        // (queue item 105).
+        if !data::there(data::CODE_PROFILES, c.id, request.version()) {
+            continue;
+        }
         let fe = c.feel[1];
         let mid = (fe[0] + fe[1]) / 2.0;
         let wt = c.weight.unwrap_or(f64::NAN);
@@ -676,7 +687,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         mix = ask_mix(seed, &mix, request.styles(), &pool_all);
     }
 
-    let c = character::character_of(&mix, v);
+    let c = character::character_of(&mix, v, request.version());
 
     let fit = |m: &data::Mood| {
         let mut d = 0.0;
@@ -691,7 +702,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         1.0 / (1.0 + d * 3.5)
     };
     let mut moods: List<(usize, f64), { data::MOOD_COUNT }> = List::new();
-    for (i, m) in MOODS.iter().enumerate() {
+    for (i, m) in MOODS.iter().enumerate().filter(|(_, m)| data::there(data::CODE_MOODS, m.id, request.version())) {
         moods.push((i, fit(m) * js::max(0.08, 1.0 + drive * (m.energy - 0.47) * 2.4)));
     }
     let mood_count = r.weighted(&[(1, 2.0), (2, 4.0), (3, 2.4)]).unwrap_or(1);
@@ -743,7 +754,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     };
     // A theme keeps its own gait and metre; a tempo asked then plays in it.
     let gait = match (request.theme(), &held) {
-        (Some(th), Some(_)) => theme_gait(th, &mix),
+        (Some(th), Some(_)) => theme_gait(th, &mix, request.version()),
         _ => gait_in(seed, &c, t),
     };
     if let Some(g) = gait {
@@ -766,7 +777,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         (None, None) => js::max(32.0, js::min(190.0, tempo)),
     };
     let root = r.int(0.0, 11.0);
-    let scale = draw_scale(&mut r, seed, &c, &mix, feel.lift, v);
+    let scale = draw_scale(&mut r, seed, &c, &mix, feel.lift, v, request.version());
     // The theme's key and mode, over the draws.
     let (mut root, mut scale) = held.as_ref().map_or((root, scale), |h| (h.root, h.scale));
     // The key and the mode asked (queue item 89), over the theme's too: the
@@ -775,7 +786,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         root = ask_key(seed, root, request.keys());
     }
     if request.scales() != 0 {
-        scale = ask_scale(seed, &c, &mix, feel.lift, v, scale, request.scales());
+        scale = ask_scale(seed, &c, &mix, feel.lift, v, scale, request.scales(), request.version());
     }
     let swing_band = c.swing.unwrap_or([f64::NAN, f64::NAN]);
     let swing_draw = character::pull(v, |rec| rec.swing, r.f());
@@ -839,6 +850,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         theme: request.theme(),
         length: request.length(),
         journey: request.journey(),
+        version: request.version(),
         keys: request.keys(),
         scales: request.scales(),
         styles: request.styles(),
@@ -872,8 +884,8 @@ fn write_length<S: Sink>(w: &mut Writer<S>, length: Option<Length>) {
 
 /// `themeGait(theme, mix)`: a theme's gait (queue item 85d), the one its own
 /// loop plays, from its seed and the mix it holds, whatever the vibes lean.
-fn theme_gait(theme: u32, mix: &[(usize, f64)]) -> Option<data::Gait> {
-    gait_for(theme, &character::character_of(mix, None))
+fn theme_gait(theme: u32, mix: &[(usize, f64)], version: u32) -> Option<data::Gait> {
+    gait_for(theme, &character::character_of(mix, None, version))
 }
 
 /// How a bar is counted (`metreOf`): twelve steps are 6/8, or 3/4 when the
@@ -906,7 +918,7 @@ impl Spec {
     pub fn metre(&self, c: &Char) -> Metre {
         if self.steps_per_bar == 12.0 {
             let gait = match self.theme {
-                Some(th) => theme_gait(th, &self.mix),
+                Some(th) => theme_gait(th, &self.mix, self.version),
                 None => gait_in(self.seed, c, self.tempo),
             };
             match gait {

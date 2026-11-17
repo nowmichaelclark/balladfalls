@@ -49,7 +49,7 @@ player = ["web"]
 # encoder's (`dl_flac_*`, tools/flac.mjs), which tools/build-core.sh --tools
 # writes to core/target/dltools.wasm. Never shipped: the app's modules stay
 # the bytes they were.
-tools = ["generator", "player", "flac"]
+tools = ["generator", "player", "flac", "codes"]
 
 # FLAC, the lossless export (`src/flac/`, queue item 104a) and its
 # WebAssembly exports (`src/wasm.rs`, `dl_flac_*`). Natively the encoder is
@@ -66,6 +66,19 @@ flac = []
 # that build turns it on: a program linking the library alongside `std` would
 # have two panic handlers.
 capi = []
+
+# The share codes' WebAssembly exports (`src/wasm.rs`, `dl_code_*`; queue
+# item 105): in the tools' build, and not in js/dlplayer.wasm until the app
+# reads version 2 codes (session 23 adds it to tools/build-core.sh's player
+# build), so the app's module stays the bytes it was. Natively the codes are
+# always there, the C face's `dl_code_*` and `dl_album_*` too.
+codes = ["player"]
+
+# The dummy build (queue item 105): `build.rs` lays `tests/dummy/*.txt` over
+# `data/`, members that join at a later version, so `tests/dummy.rs` can show
+# they move no older code (`cargo test --features dummy --test dummy`; the
+# gate's core part runs it). Never in any other build.
+dummy = []
 
 # Sketch blocks (queue item 83): `core/sketch/` holds one block file and one
 # line of data that an ears or brain session drops in, the registry plays it

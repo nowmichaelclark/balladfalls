@@ -1,0 +1,7 @@
+# A mood that joins at version 3, in the middle of the feeling space.
+[mood dummymood]
+code = 8
+word = dummy
+lift = 0.5
+energy = 0.5
+warmth = 0.6

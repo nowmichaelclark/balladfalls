@@ -1,0 +1,9 @@
+# An option of glass that joins at version 3, and a choice drawn alone that
+# joins with it: it counts against a loop's changes, so it must not change an
+# older code's fill.
+[choice glass]
+options = dummy 5
+
+[choice dummyAlone]
+options = today 1, on 1
+alone = 0.9

@@ -591,7 +591,7 @@ impl Pass {
     pub fn write<S: Sink>(&self, w: &mut Writer<S>, cx: &Cx, plan: &Plan, base: &Render, second: Option<&super::melody::Melody>) {
         w.obj();
         w.key("choices");
-        base.write_choices(w);
+        base.write_choices(w, cx.spec.version);
         w.key("cycles");
         render::write_cycles(w, cx);
         if let Some(d) = self.floor_drop.as_ref() {

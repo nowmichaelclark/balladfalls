@@ -9,8 +9,9 @@
 //! ringing; where it is (`place`) reads the bar and the time; and nothing
 //! allocates. The audio, rendered both ways, is `dlrender --jumps`'s.
 
-// Steps, blocks and seconds of a few minutes' play, as floats and back.
-#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)]
+// Steps, blocks and seconds of a few minutes' play, as floats and back; a
+// time the player hands over is compared as it handed it over.
+#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss, clippy::float_cmp)]
 
 use dlcore::block::Event;
 use dlcore::player::host::Host;
@@ -235,7 +236,7 @@ fn a_jump_lands_on_a_phrase_line_within_a_second_and_three_hours_in() {
                 assert!((e.step as f64 * sd - 3.0 * 3600.0).abs() < 4.0 * 16.0 * sd + 1e-9 && e.step as f64 * sd <= 3.0 * 3600.0, "three hours in: {}", e.step as f64 * sd);
                 let heard = e.time - asked;
                 println!("seed {seed} {request}: landed {blocks} blocks after, heard {heard:.3} s after asked");
-                assert!(heard < 1.0 && heard >= START, "heard {heard} s after");
+                assert!((START..1.0).contains(&heard), "heard {heard} s after");
                 // Every note before the jump falls from its first step.
                 assert_eq!(h.fades.last().copied(), Some((e.time, e.time + JUMP_FADE)));
                 // Where it is: three hours in, and (Endless) no end.

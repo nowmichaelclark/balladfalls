@@ -778,10 +778,16 @@ impl Sequencer {
         let (abs, step) = (self.abs_step as f64, self.step as f64);
         let rel = (self.abs_step - self.origin) as f64;
         let age = abs * self.step_dur();
-        if self.hold.on {
-            Synth::organ_off(host, start, fade);
+        // The organ holds the chord playing would have it hold there, moving
+        // to it from the one it held (a note the two share sounding on), or
+        // lets go.
+        let organ = self.organ_reached(lp);
+        match organ.key.filter(|_| organ.on) {
+            Some(chord) => synth.organ_chord(host, &chord.notes()[..chord.len.min(NOTES)], start),
+            None if self.hold.on => Synth::organ_off(host, start, fade),
+            None => {}
         }
-        self.hold = NO_HOLD;
+        self.hold = organ;
         self.let_color_go(host, start);
         if self.bell_until > start {
             Synth::low_bell_off(host, start, fade);
@@ -806,7 +812,17 @@ impl Sequencer {
         self.twang_until = 0.0;
         self.twang_pc = 0;
         self.twang_next = 0;
-        self.twang_zero = start - age;
+        // The six strings start fresh, as on a new core: their saws' phases
+        // run on from every pick before (`twang::string_phases`), which a
+        // jump does not walk, so what it plays is the same wherever it came
+        // from.
+        self.twang_rings = [0.0; TWANG_STRINGS];
+        self.twang_strings = [([0.0; 2], 0.0); TWANG_STRINGS];
+        self.twang_place = 0;
+        self.twang_count = 0;
+        // As a load counts it: from the block the loop began in, `START`
+        // before its first step.
+        self.twang_zero = start - age - super::START;
         let quiet = step >= spb && Self::is_silent_bar(lp, abs - spb, rel - spb);
         if quiet {
             Synth::fade_tails(host, start);
@@ -1302,6 +1318,19 @@ impl Sequencer {
     /// bars, lets go.
     #[allow(clippy::too_many_arguments)] // the step's own place and times
     fn organ<H: Host>(&mut self, host: &mut H, synth: &Synth, lp: &Loop, s: f64, t: f64, sd: f64, abs: f64) {
+        self.hold = Self::organ_moves(lp, self.hold, s, abs, |chord, off| {
+            synth.organ_chord(host, &chord.notes()[..chord.len.min(NOTES)], t);
+            if let Some(off) = off {
+                Synth::organ_off(host, t + off * sd, 0.6);
+            }
+        });
+    }
+
+    /// The organ's moves at chords step `s` (`abs` from the load) from
+    /// `hold` (`organ`'s rules): for each chord struck there that moves it,
+    /// `each` with the chord and, where it lets go after, how many steps
+    /// on; the hold after.
+    fn organ_moves(lp: &Loop, mut hold: Hold, s: f64, abs: f64, mut each: impl FnMut(Chord, Option<f64>)) -> Hold {
         let spb = lp.spec.steps_per_bar;
         let len = lp.cycle(Layer::Chords);
         for (i, e) in lp.base.chords.iter().enumerate() {
@@ -1309,7 +1338,7 @@ impl Sequencer {
             if e.step != s || !truthy(vel) || chord.len == 0 {
                 continue;
             }
-            let h = self.hold;
+            let h = hold;
             if h.key == Some(chord) && abs < h.until {
                 continue;
             }
@@ -1333,17 +1362,47 @@ impl Sequencer {
                     continue;
                 }
             }
-            let mut hold = Hold { key: Some(chord), until: abs + (next - s), held: Some(chord.sorted()), last: Biased::of(abs), on: true };
-            synth.organ_chord(host, &chord.notes()[..chord.len.min(NOTES)], t);
+            let mut moved = Hold { key: Some(chord), until: abs + (next - s), held: Some(chord.sorted()), last: Biased::of(abs), on: true };
+            let mut off = None;
             if next_any - s > 2.0 * spb {
-                let off = js::max(if truthy(e.dur) { e.dur } else { 0.0 }, spb);
-                Synth::organ_off(host, t + off * sd, 0.6);
-                hold.until = abs + off;
+                let o = js::max(if truthy(e.dur) { e.dur } else { 0.0 }, spb);
+                off = Some(o);
+                moved.until = abs + o;
                 // Let go, it holds nothing a passing chord could keep.
-                hold.held = None;
+                moved.held = None;
             }
-            self.hold = hold;
+            each(chord, off);
+            hold = moved;
         }
+        hold
+    }
+
+    /// What the organ holds at the step playing (session 17, a jump), as
+    /// playing the pass from its first step would have left it (`organ`'s
+    /// moves, a bar the loop leaves silent letting it go), and whether it
+    /// still sounds there; nothing where it has let go. The pass before is
+    /// not walked: a hold carried across the section's line is let go.
+    #[allow(clippy::cast_precision_loss)] // steps, far below 2^53
+    fn organ_reached(&self, lp: &Loop) -> Hold {
+        if lp.settings.organ.is_none() || self.mutes[Layer::Chords as usize] || lp.rests(Layer::Chords) {
+            return NO_HOLD;
+        }
+        let spb = lp.spec.steps_per_bar;
+        let (total, len) = (lp.total(), lp.cycle(Layer::Chords));
+        let first = self.abs_step - self.step;
+        let mut hold = NO_HOLD;
+        let mut off_at = f64::INFINITY;
+        for k in 0..self.step {
+            let abs = (first + k) as f64;
+            let rel = (first + k - self.origin) as f64;
+            if abs % spb == 0.0 && Self::is_silent_bar(lp, abs, rel) {
+                hold = NO_HOLD;
+                off_at = f64::INFINITY;
+            }
+            let at = if len == total { k as f64 } else { ((abs % len) + len) % len };
+            hold = Self::organ_moves(lp, hold, at, abs, |_, off| off_at = off.map_or(f64::INFINITY, |o| abs + o));
+        }
+        if hold.on && (self.abs_step as f64) < off_at { hold } else { NO_HOLD }
     }
 
     /// colorTone's colors that start at chords step `s` (queue item 101e):

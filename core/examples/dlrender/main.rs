@@ -118,11 +118,11 @@ fn run(args: Vec<String>) -> Result<(), String> {
     let mut by_seed = BySeed::default();
     let mut changes = Changes::default();
     let mut endless: Option<f64> = None;
-    let (mut jumps, mut jump_at, mut settle, mut length) = (false, 240.0, 8.0, 20.0);
+    let mut jumps = jump::Options::default();
     let (mut flac_to, mut bits) = (None, 24u32);
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
-        if changes.take(&arg, &mut args)? || by_seed.take(&arg, &mut args)? {
+        if changes.take(&arg, &mut args)? || by_seed.take(&arg, &mut args)? || jumps.take(&arg, &mut args)? {
             continue;
         }
         match arg.as_str() {
@@ -131,10 +131,6 @@ fn run(args: Vec<String>) -> Result<(), String> {
             "--flush" => flush = true,
             "--compare" => compare = true,
             "--endless" => endless = Some(args.next().ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE)?),
-            "--jumps" => jumps = true,
-            "--at" => jump_at = args.next().ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE)?,
-            "--settle" => settle = args.next().ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE)?,
-            "--length" => length = args.next().ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE)?,
             "--block" => block = Some(args.next().ok_or(USAGE)?),
             "--wav" => wav_to = Some(args.next().ok_or(USAGE)?),
             "--flac" => flac_to = Some(args.next().ok_or(USAGE)?),
@@ -161,10 +157,8 @@ fn run(args: Vec<String>) -> Result<(), String> {
     if let Some(name) = block {
         return solo_block(&name, rate.unwrap_or(48_000.0), wav_to.as_deref());
     }
-    if jumps {
-        let seeds = if by_seed.seeds.is_empty() { jump::LOOPS.to_vec() } else { by_seed.seeds.iter().map(|s| s.1).collect() };
-        let request = by_seed.request.clone().unwrap_or_else(|| "bars=32768".to_string());
-        return jump::run(&jump::Way { seeds, request, rate: rate.unwrap_or(44_100.0), at: jump_at, settle, length });
+    if jumps.on {
+        return jump::from_options(&jumps, by_seed.seeds.iter().map(|s| s.1).collect(), by_seed.request.clone(), rate);
     }
     if let Some(hours) = endless {
         return by_seed.endless(hours, rate, layout);

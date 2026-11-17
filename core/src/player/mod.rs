@@ -863,14 +863,17 @@ impl Player {
     /// The jump lands (`jump`): the old place's notes fall, the sequencer
     /// takes the jump's first step `START` from now, playing pass
     /// `passes[slot]` (none for the loop as composed).
+    #[allow(clippy::cast_precision_loss)] // a step and a block's frames, far below 2^53
     fn land<H: Host>(&mut self, host: &mut H, slot: Option<usize>) {
         let now = self.now(host);
-        // Between frames where playing from a load would have it: a loop's
-        // first step falls `START` after a block's start, a whole number of
-        // frames at the rates the app plays, and step `n` that many step
-        // lengths on, so its notes start the same fraction of a frame in.
+        // Where in the core's block playing from a load would have it, to the
+        // fraction of a frame: a loop's first step falls `START` after a
+        // block's start, and step `n` that many step lengths on. The core
+        // works some things a block at a time (a param's automation, a
+        // route's signal), so the jump's notes meet them as playing's do.
+        let quantum = crate::QUANTUM as f64;
         let at = self.jump_to as f64 * self.seq.step_dur() * self.rate;
-        let start = now + START + (at - js::floor(at)) / self.rate;
+        let start = now + START + (at - js::floor(at / quantum) * quantum) / self.rate;
         host.fade_all(start, start + JUMP_FADE);
         self.synth.budget.end_by(start);
         if let Some(slot) = slot {

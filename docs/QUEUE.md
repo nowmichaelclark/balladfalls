@@ -590,6 +590,17 @@ at a later version and shows every golden code renders bit for bit the
 same, while a new code can draw them; a code from a "newer" version is
 refused plainly.
 
+**105e, before the freeze (brain B4, 2026-11-18; session 24c, after 30c):** the
+format's bytes stay; four things settled against Mikey's "no code rot"
+(2026-11-17). A removed member keeps its row marked gone and plays a stand-in
+or goes without, so an id with a row is this build's and one with none a
+newer build's (no longer code); a field past today's range plays the nearest;
+twang's slow and bright are the first removed. Every draw is filtered by
+version, a drawn setting's words and a new drawn setting too (today they are
+not). The dummy build covers the rest of the lists and the removals. And one
+version a release (`released` in `data/codes.txt`), since the head is one
+character only up to version 15.
+
 ## 107. The Android app, on F-Droid
 
 **Hands:** Fable, high. Alongside 104 to 106 (B-parallel, 2026-11-17:

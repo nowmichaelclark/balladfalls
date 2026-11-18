@@ -292,6 +292,39 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 
 ### Start here (for the next brain)
 
+- **Brain B4 (Opus 5.5, 2026-11-18, a cloud thread of the project): export,
+  the screens and the codes checked; the albums again.** On main (c5b2862,
+  v189), measured here: `cargo test --test codes` 26 of 26 and `--features
+  dummy --test dummy` 4 of 4; the jump heard 0.059 to 0.060 s after asked on
+  32,768 bars and Endless, three hours in, lite and full
+  (`test/jump.test.mjs`); `node tools/export.mjs`: 12 of 12 exports decode
+  (ffmpeg) and null against a straight render, lossless and the small
+  format's samples; `--hours 1`, Endless: memory flat (238.2 to
+  238.4 MB resident, the core 17.7 MB throughout; the tool wrote 0.75 h,
+  158.8 MB, at 14.8x); a long piece from a link in Chromium at phone size: the
+  piece line, "bar 3 of 256 - the opening", nothing scrolls but the
+  Library, Advanced and the Vibes list (the last is older than 106, the
+  Painter's), no page error. 102's tuning: B3 checked #385 against his
+  notes; nothing has moved it since. Cancel and a full disk are
+  `tools/rows.mjs`'s rows in CI's export workflow (green on #438's last
+  commit, de59304).
+  **The code format** (105, the dummy test read closely): the bytes are
+  right and stay; four gaps, all fixed without a longer code, written as
+  **session 24c** (105e, after 30c, before 30): removal has no path (an id
+  gone reads as "needs newer"; the test forbids a row naming nothing), so a
+  gone member keeps its row and plays a stand-in, and no row means newer;
+  a drawn setting's words (twang, lowBell, progression) and a new drawn
+  setting escape the version filter; the dummy build lacks scales, bass
+  styles, other layers' voices, words and removals; the head is one
+  character only to version 15 and `newest` rises per change, so one
+  version a release (Mikey agreed, 2026-11-18). Twang's slow and bright
+  (only a pin reaches them) are 24c's first removal. **Albums:** batch 6
+  (15), the nearer chords (6), the long pieces (10) as app links
+  (`docs/ALBUMS.md`); every older album code there still reads. **Android:**
+  25 to 29 all merged; no Android prompt is left before 31a; Google's
+  developer verification (Thailand since 2026-09-30, not F-Droid, worldwide
+  2027) noted in for-mikey. **Next:** 24c when 30c merges (B-par2 starts
+  it); B5 after 30.
 - **Brain B-parallel 2 (Opus 5.5, 2026-11-18 on, in a Claude Code cloud
   thread of the claude.ai project; running).** The hands sessions are cloud
   threads the project's coordinator starts on the brain's word, at most two
@@ -308,9 +341,17 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   repo itself" (`docs/DECISIONS.md`). **Merged:** #436 (docs), 24b (#438,
   v189: checked, `cargo test --test codes` 26 of 26 here, the old share-code
   fixtures unchanged, every check green on de59304; its first push had a
-  stale module, rebuilt). B4 may start (18, 21, 24, 24b in). **Running
-  (2026-11-18, 17:55 UTC):** 29 (draft #437) and 30b; briefs in the
-  project's files, `brain/<row>-brief.md`. **Next:** 30d, 30a, 30c.
+  stale module, rebuilt; Mikey: the album link with lengths works), 29
+  (#437, no app change: F-Droid's build and two machines' the same bytes,
+  lint green). B4 may start (18, 21, 24, 24b in). **Running (2026-11-18,
+  22:15 UTC):** 30b (#440, v190; the brain checked its render hashes:
+  golden mono and stereo --strict on x86_64, seeds 80 of 80) and 30a;
+  briefs in the project's files, `brain/<row>-brief.md`. **Next:** 30d,
+  then 30c, once #440 merges (neither may run beside 30b); the nightly
+  after #440.
+  **Brain B4** started 2026-11-18, 22:14 UTC, as a thread of the same
+  project (Mikey), not a claude.ai chat; the two-hands-at-once limit holds
+  across both brains.
 - **Brain B-parallel (Opus 5.5, 2026-11-17 to 18, in Claude Code): the
   chains run two at a time; ended at Mikey's request (long session).** The
   plan made parallel (#409: four chains, an After and an Alongside for every

@@ -12,11 +12,33 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## Brain B4 (2026-11-18): three albums to play
+
+- **Listen when you like (nothing waits on it):** batch 6, the nearer chords
+  and the long pieces, as links the app plays (`docs/ALBUMS.md`, "Three
+  albums in the app"). You heard them all as clips; this is them on your
+  own devices. One word a track only if something sounds wrong.
+- **Removed sounds:** after 24c, a code naming something since taken out
+  (first: twang's slow and bright) plays something close (soft) instead of
+  "needs a newer version". No code gets longer.
+
 ## The Android app on F-Droid (item 107e, session 29): choose the signing, then submit after 31
 
 Nothing here is submitted or signed yet and no account was made. Two choices
 are yours; the submission itself waits until after session 31, because the
 merge request to F-Droid is public and carries the app's new name.
+
+**Google's developer verification (brain B4, 2026-11-18; read before you
+submit):** since 2026-09-30 certified Android phones in Thailand, Brazil,
+Indonesia and Singapore require apps from seven big stores (Play, Samsung's,
+Xiaomi's and others) to come from a developer verified by Google. F-Droid is
+not one of them, and an APK installed by hand is not checked yet, so nothing
+changes for 1.0. Google plans to cover every install worldwide in 2027 (no
+date yet); then an unregistered app needs a one-time "advanced" setting on
+the phone (with a 24-hour wait), and adb still works. F-Droid advises
+developers not to register, and Google lets a store that signs apps itself
+register its key. Nothing to do now; it matters for Play later, and it is
+one more reason to keep the app's id yours (31a).
 
 **1. Who signs the app (decide before 31; it can wait until you submit).**
 
@@ -136,11 +158,6 @@ the last one (same key). On the **Moto** and on the **tablet**:
 
 ## An album's code carries each track's length (item 105d, v189, PR #438)
 
-- **Check it once:** set Track length (Sounds) on two or three loops of an
-  album, share the album's link from the Library, and open it on another
-  device (or a private window). Each track should play its length, then the
-  next. Albums whose tracks play on cost nothing extra; twelve tracks of two
-  passes are two characters longer.
 - **Left out on purpose:** a single loop's code carries no length (it sounds
   the same however long it plays; when your app moves on is yours), nor does
   an album from one seed (its tracks are drawn, and a slider's passes would

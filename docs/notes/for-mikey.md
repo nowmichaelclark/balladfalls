@@ -121,6 +121,19 @@ the last one (same key). On the **Moto** and on the **tablet**:
 - Not tested without a device (the emulator can't say): that another app's short
   sound ducks the music (the system does it for this stream; tell me if it
   doesn't), and Bluetooth buttons.
+## Previous in an album (item 109, v190, session 30a)
+
+- **Check it once, on your phone and in the Android app:** play an album and
+  press Previous (the key on the screen, then the headset's or the lock
+  screen's, and Android's notification). From the first track it goes round
+  to the last, from any other to the track before, and the track plays its own
+  length again. It was the key that did nothing: it stayed off wherever the
+  history was at its start, which an album always is.
+- **For Mikey's ears:** Previous a few seconds into a track still goes to the
+  track before, not back to the start of the one playing (what Next and
+  Previous did before; the conservative choice). Say if you want the
+  "restart first" way.
+
 ## An album's code carries each track's length (item 105d, v189, PR #438)
 
 - **Check it once:** set Track length (Sounds) on two or three loops of an

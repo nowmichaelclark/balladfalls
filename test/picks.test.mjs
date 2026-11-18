@@ -25,13 +25,13 @@ check('length with grouping', lengthText(4096) === '4,096 bars');
 check('one bar', lengthText(1) === '1 bar');
 check('endless', lengthText('endless') === 'endless');
 check('clamped to 1..32,768', clampBars(0) === 1 && clampBars(99999) === 32768 && clampBars(24.4) === 24);
-check('clean prefs', JSON.stringify(cleanPicks({ tempo: [85, 70], length: '16' })) === '{"tempo":null,"length":16,"key":null,"scale":null,"style":null,"voices":null,"layers":null}');
+check('clean prefs', JSON.stringify(cleanPicks({ tempo: [85, 70], length: '16' })) === '{"tempo":null,"length":16,"key":null,"scale":null,"style":null,"voices":null,"layers":null,"journey":null}');
 check('clean endless', cleanPicks({ length: 'endless' }).length === 'endless');
-check('clean nothing', JSON.stringify(cleanPicks(undefined)) === '{"tempo":null,"length":null,"key":null,"scale":null,"style":null,"voices":null,"layers":null}');
+check('clean nothing', JSON.stringify(cleanPicks(undefined)) === '{"tempo":null,"length":null,"key":null,"scale":null,"style":null,"voices":null,"layers":null,"journey":null}');
 check('the key line\'s words', keyText([2], ['dorian']) === 'D dorian' && keyText([2, 7], null) === 'D or G' && keyText(null, ['dorian', 'minorPent']) === 'dorian or minor pentatonic'
   && keyText(null, null) === '');
 check('clean key and scale: sorted, once each, only what the core takes',
-  JSON.stringify(cleanPicks({ key: [7, 2, 2, 12, -1, 1.5, 'D'], scale: ['aeolian', 'nope', 'dorian'] })) === '{"tempo":null,"length":null,"key":[2,7],"scale":["dorian","aeolian"],"style":null,"voices":null,"layers":null}'
+  JSON.stringify(cleanPicks({ key: [7, 2, 2, 12, -1, 1.5, 'D'], scale: ['aeolian', 'nope', 'dorian'] })) === '{"tempo":null,"length":null,"key":[2,7],"scale":["dorian","aeolian"],"style":null,"voices":null,"layers":null,"journey":null}'
   && cleanPicks({ key: [], scale: 'dorian' }).key === null && cleanPicks({ scale: 'dorian' }).scale === null);
 
 check('the style line\'s words, and what is cleaned: frozen order, once each, only profiles', styleText(['tide']) === 'tide' && styleText(['dust', 'shrine']) === 'dust or shrine' && styleText(null) === ''
@@ -42,7 +42,7 @@ check('the voices line\'s words: the voices, the layers left out, the layers alw
   && voicesText({ chords: ['marimba'], melody: ['marimba'] }, { bass: 'off' }) === 'marimba, no bass' && voicesText(null, null) === '');
 check('clean voices and layers: frozen order, once each, only what the core takes, never all five off',
   JSON.stringify(cleanPicks({ voices: { melody: ['x', 'marimba', 'kalimba', 'kalimba'], drums: [], nope: ['a'] }, layers: { drums: 'off', bass: 'maybe' } }))
-    === '{"tempo":null,"length":null,"key":null,"scale":null,"style":null,"voices":{"melody":["kalimba","marimba"]},"layers":{"drums":"off"}}'
+    === '{"tempo":null,"length":null,"key":null,"scale":null,"style":null,"voices":{"melody":["kalimba","marimba"]},"layers":{"drums":"off"},"journey":null}'
   && cleanPicks({ layers: { drums: 'off', bass: 'off', chords: 'off', melody: 'off', texture: 'off' } }).layers === null && cleanPicks({ voices: 'x' }).voices === null);
 
 console.log('\nThe request (queue items 85 and 88)');

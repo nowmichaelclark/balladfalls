@@ -12,7 +12,7 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
-## Small audio export (item 104c, v183, PR #424)
+## Small audio export (item 104c, v184, PR #424)
 
 - **Listen to a Small export.** Save, Share, Audio: pick **small**, a few
   minutes of a loop you know, and play the file (`.opus`) in the player you
@@ -118,46 +118,6 @@ the points where the next step is yours.
 - **The friend's Pixel 9 on GrapheneOS (item 100):** with JIT off for the
   site the line should show within about a minute of playing; send its
   `slow:` and `busiest:` lines either way.
-
-- **The first Android APK (item 107a, session 25, #389):** the shell only: the
-  page in a WebView, playing as in a browser (the native audio is session 26,
-  so a stutter there is no news). To try it on the Moto: open the PR's checks
-  on GitHub (signed in), the `android` run, and under Artifacts download
-  `driftloom-debug-apk` (a zip; the Files app opens it), then tap the `.apk`
-  (Android asks once to let that app install apps). Each later build installs
-  over this one (they share a throwaway test key, `android/test-signing/`),
-  so your loops stay. Check: it starts, Play plays, rotating the phone keeps
-  the music going; Diagnostics' `sw: failed` and `mediaSession: false` are
-  expected for now (sessions 27 and 28). A launcher icon is a placeholder.
-- **The core native on Android's own audio (item 107b, session 26, #411):**
-  no page yet, a debug screen. Get the APK as for 107a, from #411's `android`
-  run: `driftloom-debug-apk` holds `driftloom-universal-debug.apk` (fits both
-  devices; it installs over 107a's). A second icon appears, **Native audio
-  test**. Open it, headphones on, press **Play the test**, and let it play
-  five minutes (the screen stays on). Send back the two numbers at the top
-  for each device: **Underruns** (should be 0) and **Busiest block** (its %
-  and ms). Also listen: the golden loop (reisk-waith) should sound as on the
-  site, with no clicks. Optional: **Check the samples** should say "same
-  samples as the web's"; if it says DIFFERS, send that line. Next and Pause
-  work too; the stream's line at the bottom says whether the phone gave the
-  low-latency path (performance mode 12) and a real-time thread (SCHED_FIFO).
-- **The app plays on the native core (item 107c, session 27, #420):** the
-  page now drives the core natively, on Android's own audio, and the WebView
-  plays nothing of its own (no more keepalive). Get
-  `driftloom-universal-debug.apk` as for 107a, from #420's `android` run (it
-  installs over the last; your loops stay). On the Moto and the tablet,
-  headphones on: Play, a few Nexts and a Previous, re-roll a layer, a mute,
-  the tempo and Sound sliders, the Mono switch, and a vibe in the New loops
-  panel then N (the next loop leans on it); then a long piece (the Bars
-  picker at 256 or Endless, and a jump if session 18's screens are in), and
-  the length slider at a minute (the next loop takes over at its line). Then
-  lock the phone and unlock it, and switch "lighter on processor" on and off
-  (a fade, then the loop from its top). Listen for clicks and gaps, and that
-  the cursor keeps time with the music. Send back Advanced, Diagnostics'
-  `engine:` line (late, missed, dropped and underruns: all 0 hoped for) and
-  its `stream:` line (the rate, the burst, `low latency`, `thread
-  SCHED_FIFO`, the busiest callback's %). The screen off and the
-  notification are session 28's: with the screen off it may stop.
 - **Audio export (item 104b, session 20, #416):** on the Moto and the
   tablet, in the browser: play a loop, then Save, the Share tab, Audio.
   Pick 30 min and **export audio**; let the music play on, turn the screen
@@ -167,6 +127,20 @@ the points where the next step is yours.
   how long the export took (the progress line says), whether anything
   stuttered, and Diagnostics' `engine:` line (should read `late: 0  missed:
   0  dropped: 0`). Optional: Cancel one halfway; nothing should be saved.
+- **Long pieces on screen (item 106b, session 18, #419, v183):** on the phone
+  (and the tablet if you can), in the browser. Vibe, then the bars line, then
+  set 3,072 bars; **arc** or **wander** is a key between the ∞ and any (it
+  dims under 33 bars). Done, Next, Play: Now Playing has the piece's line
+  where the rail was, with bar 812 of 3,072, the time played and left (for
+  Endless, played only), and a key each way. Press the line anywhere (drag to
+  see where, let go to jump) and press the keys. A jump should come in on a
+  phrase line within a blink, the old place fading under it, never waiting
+  for its opening or opening its width again; a long chord that was ringing
+  before the jump isn't there after. Look too at the Library (an album's
+  rows end in each loop's length: "4 bars · 7s", "3,072 bars · 2h 48m",
+  "endless"), and the Bars picker at your phone's height: nothing should
+  scroll. Screenshots at 360 px and a tablet's width, dark and light, are on
+  the branch `s18-shots` (linked in the PR).
 
 ## Accounts
 
@@ -177,6 +151,19 @@ the points where the next step is yours.
   needs both; nothing before it does.
 
 ## Decisions
+
+- **The long pieces' words (item 106b, session 18, #419):** approve or change
+  them (`ROLE_WORDS` in `js/piece.js`; the line's second row is "1:12:03
+  played · 2:10:00 left", Endless "1:12:03 played"). What the playhead is in:
+  the opening, the theme, building, a second theme, developing, the peak,
+  easing, the return, the close, a breath, a lift, holding, turning. The
+  journey keys read "arc" and "wander"; the pills beside the bars say the
+  same. A piece past a day shows hours ("32,768 bars · 30h") in the Library.
+- **A journey is not in a share code yet (#419):** the pick is kept with a
+  loop in the Library, but a version-1 code (what the app still writes) has
+  no room for it; codes version 2 carry it (`core/src/code.rs`), so session 23
+  writes `askJourney` (the spec's field) into them. Until then a pasted code
+  of a long piece draws the journey its seed and vibes lean to.
 
 (A shared loop's name, the export sheet's words and the export's ending
 were decided 2026-11-17, `docs/DECISIONS.md`, "Share codes, requests and

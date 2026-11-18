@@ -74,6 +74,7 @@ function ask(a) {
   for (const [i, v] of a.pins || []) take(x.dl_play_pin(i, v));
   if (a.theme != null) x.dl_play_theme(a.theme >>> 0);
   if (a.length != null) take(x.dl_play_length(a.length === 'endless' ? Infinity : a.length));
+  if (a.journey) take(x.dl_play_journey(a.journey));
   if (a.keys) take(x.dl_play_keys(a.keys));
   if (a.scales) take(x.dl_play_scales(a.scales));
   if (a.styles) take(x.dl_play_styles(a.styles));
@@ -158,6 +159,7 @@ export function newSpec(seed = randomSeed(), request = null) {
   if (asked.pins) spec.pins = { ...asked.pins };
   if (asked.length != null) spec.length = asked.length;
   if (asked.theme != null) spec.theme = asked.theme;
+  if (asked.journey) spec.askJourney = asked.journey;
   if (asked.style) spec.askStyle = asked.style.slice();
   if (asked.voices) spec.askVoices = Object.fromEntries(Object.entries(asked.voices).map(([l, v]) => [l, v.slice()]));
   if (asked.layers) {

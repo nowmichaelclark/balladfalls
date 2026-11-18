@@ -442,7 +442,19 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   (`android/cdp.mjs`) and passed ten fresh emulators at once. Diagnostics in
   the app: `engine: native (...) underruns` and a `stream:` line. Check on
   the Moto and the tablet (`for-mikey.md`).
-- #424, audio export: the Small format (item 104c, session 21, v183): the
+- #419, long pieces on screen (item 106b, session 18, v183), preview URL:
+  <https://claude-suspicious-raman-f88179-driftloom.nowmichaelclark.workers.dev>:
+  nothing that plays moved (the module grew 124 bytes: `dl_play_journey`, the
+  one core addition, so the page can ask a journey). Now Playing for a piece
+  past 32 bars or Endless: the line of its sections with the map's markers
+  (a second theme, the peak, the return, the close, a wander's turns), bar 812
+  of 3,072, the time played and left (Endless: played), a tap or drag on the
+  line to jump and a key each way to the section before or after. The Bars
+  picker has the journey (arc, wander) beside the ∞ and any, shown as a pill
+  beside the bars, sent as the request's journey; the Library's lists end in
+  each loop's length. Listen to a jump into the middle of a piece: it should
+  come in on a phrase line within a blink, nothing ringing from before.
+- #424, audio export: the Small format (item 104c, session 21, v184): the
   export sheet's Small choice makes an Opus file (`.opus`, Ogg) through the
   browser's own encoder (WebCodecs `AudioEncoder`, in the export's Worker),
   muxed by a small tested Ogg writer (`js/ogg.js`, `test/ogg.test.mjs`: the

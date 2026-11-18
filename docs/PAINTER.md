@@ -75,6 +75,13 @@ code ("a peaceful, zany loop at 77 bpm, 16 bars, when the sun rises").
 
 ## 2. Long pieces (after the generator moves to the core)
 
+**Built plain (session 18, v183, `js/piece.js`, `design/` untouched):** on Now Playing the
+rail becomes the piece's line (ticks for the map, a bead for you), under it
+"bar 812 of 3,072 · the peak" and the time played and left, with a key each way
+for the section before or after; press the line to jump. The journey (arc,
+wander) sits beside the Bars picker's ∞ and any. The Library's lists end in each
+loop's length. A Painter session may restyle all of it.
+
 - **Where you are.** For a long piece: bar 812 of 3,072, time played
   and time left; something calm that fits the info card.
 - **Moving within a piece.** Jumping or scrubbing to any point of a long

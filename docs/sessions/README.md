@@ -80,7 +80,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | B-par | `brain-parallel.md` | Brain, in Claude Code: makes this plan parallel, then starts and oversees the hands sessions two at a time, up to B4 (Mikey, 2026-11-17) | Opus 5.5, high | B2 | every row to B4 | |
 | | | **Long pieces** | | | | |
 | 17 | `17-long-jump.md` | 106a: the core's jump and the piece map for the page | Opus 5.5, high | B2 | 20, 21, 22, 24, 26 | yes, 2026-11-18 (#414 twang soft only, #417) |
-| 18 | `18-long-screens.md` | 106b: long pieces on screen | Sonnet 5.5, high | 17 | 20, 21, 22, 24, 26, 27, 28, 29 | |
+| 18 | `18-long-screens.md` | 106b: long pieces on screen | Sonnet 5.5, high | 17 | 20, 21, 22, 24, 26, 27, 28, 29 | yes, 2026-11-18 (#419) |
 | | | **Export** | | | | |
 | 20 | `20-export-app.md` | 104b: export in the app, lossless, safe first | Opus 5.5, high | B2 (19 is in) | 17, 18, 22, 24, 26 | yes, 2026-11-18 (#416) |
 | 21 | `21-export-small.md` | 104c: the small format | Sonnet 5.5, high | 20 | 17, 18, 22, 23, 24, 26, 27  yes, 2026-11-18 (#424) |
@@ -92,7 +92,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | | | **Android** | | | | |
 | 26 | `26-android-audio.md` | 107b: the core native, on Android's audio | Opus 5.5, high | 25 | 17, 18, 20, 21, 22, 23, 24 | yes, 2026-11-17 (#411; no app change) |
 | 27 | `27-android-bridge.md` | 107c: the page talks to the native core | Opus 5.5, high | 26, 17 | 18, 21, 22, 23, 24 | yes, 2026-11-18 (#420) |
-| | **you** | Install the APK from 27's PR on the Moto and the tablet; say what you hear. The work goes on meanwhile. | | 27 | | |
+| | **you** | Install the APK from 27's PR on the Moto and the tablet; say what you hear. The work goes on meanwhile. | | 27 | | yes, 2026-11-18: "it works perfectly" |
 | 28 | `28-android-background.md` | 107d: the screen off, the notification, saving an export | Sonnet 5.5, high | 27, 21 | 18, 22, 23, 24 | |
 | 29 | `29-android-fdroid.md` | 107e: F-Droid's metadata, recipe and icons | Sonnet 5.5, high | 28 | 18, 22, 23, 24 | |
 | | | **Then in order, one at a time** | | | | |

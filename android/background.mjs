@@ -381,6 +381,11 @@ try {
         await probe('a classic Worker of the same file', "() => new Worker(new URL('js/rng.js', location.href))");
         await probe('a Worker from a Blob', "() => new Worker(URL.createObjectURL(new Blob(['onmessage = () => postMessage(\\'blob ok\\')'])))");
         await probe('a module Worker from a Blob importing a file by its address', "() => new Worker(URL.createObjectURL(new Blob([`import * as r from '${location.origin}/js/rng.js'; onmessage = () => postMessage('imported ' + Object.keys(r).length)`], { type: 'text/javascript' })), { type: 'module' })");
+        await probe('a module Worker from a Blob with no import', "() => new Worker(URL.createObjectURL(new Blob(['onmessage = () => postMessage(\\'module blob ok\\')'], { type: 'text/javascript' })), { type: 'module' })");
+        await probe('a module Worker of a file with no import (js/rng.js)', "() => new Worker(new URL('js/rng.js', location.href), { type: 'module' })");
+        await probe('a classic Worker that fetches a file', "() => new Worker(URL.createObjectURL(new Blob([`onmessage = async () => { try { const r = await fetch('${location.origin}/js/rng.js'); postMessage('fetch ' + r.status + ' ' + r.headers.get('content-type')); } catch (e) { postMessage('fetch failed ' + e); } }`])))");
+        await probe('a classic Worker that imports by dynamic import()', "() => new Worker(URL.createObjectURL(new Blob([`onmessage = async () => { try { const m = await import('${location.origin}/js/rng.js'); postMessage('import ok ' + Object.keys(m).length); } catch (e) { postMessage('import failed ' + e); } }`])))");
+        fact('the WebView', String(await ask(() => navigator.userAgent)));
         for (const m of ['export-render', 'export-opus', 'ogg', 'app', 'request', 'player']) {
           fact(`import of js/${m}.js in the page`, String(await ask((n) => import(new URL(`js/${n}.js`, location.href).href).then(() => 'ok', (e) => `failed: ${e}`), m)));
         }

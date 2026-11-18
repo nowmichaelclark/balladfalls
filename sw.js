@@ -27,6 +27,7 @@ const FILES = [
   './js/characters.js',
   './js/media.js',
   './js/app.js',
+  './js/worker-blob.js',
   './js/share.js',
   './js/cover.js',
   // Covers are drawn on a thread of their own (queue item 41).

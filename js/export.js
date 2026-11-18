@@ -28,6 +28,7 @@ import { newSpec } from './gen.js';
 import * as ui from './ui.js';
 import { TAIL_MAX } from './export-render.js';
 import { appLink } from './app.js';
+import { moduleWorkerUrl } from './worker-blob.js';
 
 // The lengths the sheet offers for a loop that plays on and on and for
 // Endless, in seconds; the default; and the most a browser with no file to
@@ -197,28 +198,33 @@ export class AudioExport {
   }
 
   // The Worker, started once; it says whether the private file system works.
+  // In the Android app its imports are loaded by the page (js/worker-blob.js).
   boot() {
-    if (this.worker || this.mode === false) return;
-    try {
-      this.worker = new Worker(new URL('./export-worker.js', import.meta.url), { type: 'module' });
-    } catch {
+    if (this.worker || this.booting || this.mode === false) return;
+    this.booting = true;
+    const address = new URL('./export-worker.js', import.meta.url).href;
+    Promise.resolve(this.app ? moduleWorkerUrl(address) : address).then((url) => {
+      this.booting = false;
+      this.worker = new Worker(url, { type: 'module' });
+      this.worker.onmessage = (e) => this.receive(e.data);
+      this.worker.onerror = (e) => {
+        // A Worker that won't start (no module workers) or that died.
+        e.preventDefault?.();
+        console.error(`export worker: ${e.message || 'would not start'} ${e.filename || ''}:${e.lineno || 0}`);
+        if (this.running) this.fail('write', String(e.message || 'the export stopped'));
+        else {
+          this.mode = false;
+          this.worker = null;
+          this.refresh();
+        }
+      };
+      this.worker.postMessage({ type: 'hello' });
+    }).catch((err) => {
+      this.booting = false;
+      console.error(`export worker: ${err && err.message}`);
       this.mode = false;
       this.refresh();
-      return;
-    }
-    this.worker.onmessage = (e) => this.receive(e.data);
-    this.worker.onerror = (e) => {
-      // A Worker that won't start (no module workers) or that died.
-      e.preventDefault?.();
-      console.error(`export worker: ${e.message || 'would not start'} ${e.filename || ''}:${e.lineno || 0}`);
-      if (this.running) this.fail('write', String(e.message || 'the export stopped'));
-      else {
-        this.mode = false;
-        this.worker = null;
-        this.refresh();
-      }
-    };
-    this.worker.postMessage({ type: 'hello' });
+    });
   }
 
   receive(m) {

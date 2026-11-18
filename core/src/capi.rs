@@ -165,7 +165,7 @@ fn line(refused: &'static str) -> *const c_char {
         crate::code::NOT_A_CODE => c"not a code",
         crate::code::NO_ROOM => c"no room for the code",
         crate::code::NOT_AT_VERSION => c"asks for something its version does not have",
-        crate::code::BAD_TITLE => c"a bad title",
+        crate::code::BAD_NAME => c"a name a code can't carry",
         crate::code::BAD_ALBUM => c"a bad album",
         crate::generator::request::BAD_VERSION => c"a bad version",
         _ => c"can't do that",
@@ -1055,16 +1055,18 @@ unsafe fn written(out: *mut c_char, room: usize, write: impl FnOnce(&mut [u8]) -
 /// layers it mutes (a bit each, drums lowest) and the wander's salt (0 for
 /// none) are written to `seed`, `mutes` and `salt` (each may be null) for
 /// the host to load, mute (`dl_player_mute`) and salt
-/// (`dl_player_wander_salt`). Null if it is a loop's code; else the line
-/// saying why not ("needs a newer version", "not a code"), the request left
-/// as it was.
+/// (`dl_player_wander_salt`), and its own name (UTF-8, empty for none) to
+/// `name` (`name_room` bytes, NUL-terminated; may be null). Null if it is a
+/// loop's code; else the line saying why not ("needs a newer version", "not
+/// a code"), the request left as it was.
 ///
 /// # Safety
 ///
 /// `code` is a NUL-terminated string, or null; `seed`, `mutes` and `salt`
-/// each a writable `uint32_t`, or null.
+/// each a writable `uint32_t`, or null; `name` `name_room` writable bytes,
+/// or null.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn dl_code_read(player: *mut Engine, code: *const c_char, seed: *mut u32, mutes: *mut u32, salt: *mut u32) -> *const c_char {
+pub unsafe extern "C" fn dl_code_read(player: *mut Engine, code: *const c_char, seed: *mut u32, mutes: *mut u32, salt: *mut u32, name: *mut c_char, name_room: usize) -> *const c_char {
     let Some(e) = engine(player) else { return line("") };
     // SAFETY: the caller's promise, passed on.
     match crate::code::read_loop(unsafe { bytes(code) }) {
@@ -1076,6 +1078,8 @@ pub unsafe extern "C" fn dl_code_read(player: *mut Engine, code: *const c_char, 
                     unsafe { *to = value };
                 }
             }
+            // SAFETY: `name_room` writable bytes, or null (the caller's promise).
+            unsafe { name_into(&l.name, name, name_room) };
             ptr::null()
         }
         Err(why) => line(why),
@@ -1084,32 +1088,36 @@ pub unsafe extern "C" fn dl_code_read(player: *mut Engine, code: *const c_char, 
 
 /// Write the share code of the loop of `seed` as asked since the last load
 /// (the request is kept: the host may then load it), with the layers in
-/// `mutes` muted (a bit each) and the wander's `salt` (0 for none), into
-/// `out` (`room` bytes, NUL-terminated). Null, or the line saying why not.
+/// `mutes` muted (a bit each), the wander's `salt` (0 for none) and its
+/// own `name` (UTF-8; null or empty for none), into `out` (`room` bytes,
+/// NUL-terminated). Null, or the line saying why not.
 ///
 /// # Safety
 ///
-/// `out` is `room` writable bytes, or null.
+/// `name` is a NUL-terminated string, or null; `out` `room` writable
+/// bytes, or null.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn dl_code_write(player: *mut Engine, seed: u32, mutes: u32, salt: u32, out: *mut c_char, room: usize) -> *const c_char {
+pub unsafe extern "C" fn dl_code_write(player: *mut Engine, seed: u32, mutes: u32, salt: u32, name: *const c_char, out: *mut c_char, room: usize) -> *const c_char {
     let Some(e) = engine(player) else { return line("") };
+    // SAFETY: the caller's promise.
+    let Ok(name) = crate::code::Name::new(unsafe { bytes(name) }) else { return line(crate::code::BAD_NAME) };
     #[allow(clippy::cast_possible_truncation)] // five bits
-    let l = crate::code::Loop { seed, request: e.request, mutes: (mutes & 31) as u8, salt };
+    let l = crate::code::Loop { seed, request: e.request, mutes: (mutes & 31) as u8, salt, name };
     // SAFETY: the caller's promise, passed on.
     unsafe { written(out, room, |buf| crate::code::write_loop(&l, buf)) }
 }
 
 /// Read an album's share code: how many tracks into `count`, and for an
 /// album drawn from one seed that seed into `seed` and 1 into `from_seed`
-/// (0 for a list of loops); its title into `title` (`title_room` bytes,
-/// NUL-terminated; empty for none). Each pointer may be null. Null, or the
-/// line saying why not.
+/// (0 for a list of loops); its name (UTF-8) into `name` (`name_room`
+/// bytes, NUL-terminated; empty for none). Each pointer may be null. Null,
+/// or the line saying why not.
 ///
 /// # Safety
 ///
 /// `code` is a NUL-terminated string, or null; the rest writable, or null.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn dl_album_read(code: *const c_char, count: *mut usize, seed: *mut u32, from_seed: *mut c_int, title: *mut c_char, title_room: usize) -> *const c_char {
+pub unsafe extern "C" fn dl_album_read(code: *const c_char, count: *mut usize, seed: *mut u32, from_seed: *mut c_int, name: *mut c_char, name_room: usize) -> *const c_char {
     // SAFETY: the caller's promise, passed on.
     match crate::code::read_album(unsafe { bytes(code) }) {
         Ok(a) => {
@@ -1124,13 +1132,7 @@ pub unsafe extern "C" fn dl_album_read(code: *const c_char, count: *mut usize, s
                 if !from_seed.is_null() {
                     *from_seed = c_int::from(a.seed.is_some());
                 }
-                if !title.is_null() && title_room > 0 {
-                    let _ = written(title, title_room, |buf| {
-                        let t = a.title.text();
-                        buf.get_mut(..t.len()).ok_or(crate::code::NO_ROOM)?.copy_from_slice(t);
-                        Ok(t.len())
-                    });
-                }
+                name_into(&a.name, name, name_room);
             }
             ptr::null()
         }
@@ -1154,15 +1156,15 @@ pub unsafe extern "C" fn dl_album_track(code: *const c_char, index: usize, out: 
 }
 
 /// Write the album of the `count` loops' codes at `codes`, in their order,
-/// with `title` (null for none), into `out`. Null, or the line saying why
-/// not.
+/// named `name` (UTF-8; null for none), into `out`. Null, or the line
+/// saying why not.
 ///
 /// # Safety
 ///
-/// `codes` is `count` NUL-terminated strings; `title` one, or null; `out`
+/// `codes` is `count` NUL-terminated strings; `name` one, or null; `out`
 /// `room` writable bytes.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn dl_album_write(codes: *const *const c_char, count: usize, title: *const c_char, out: *mut c_char, room: usize) -> *const c_char {
+pub unsafe extern "C" fn dl_album_write(codes: *const *const c_char, count: usize, name: *const c_char, out: *mut c_char, room: usize) -> *const c_char {
     if codes.is_null() {
         return line(crate::code::BAD_ALBUM);
     }
@@ -1171,24 +1173,63 @@ pub unsafe extern "C" fn dl_album_write(codes: *const *const c_char, count: usiz
     // SAFETY: each NUL-terminated (the caller's promise).
     let tracks = list.iter().map(|&c| unsafe { bytes(c) });
     // SAFETY: the caller's promise.
-    let Ok(title) = crate::code::Title::new(unsafe { bytes(title) }) else { return line(crate::code::BAD_TITLE) };
+    let Ok(name) = crate::code::Name::new(unsafe { bytes(name) }) else { return line(crate::code::BAD_NAME) };
     // SAFETY: the caller's promise, passed on.
-    unsafe { written(out, room, |buf| crate::code::write_album(tracks, &title, buf)) }
+    unsafe { written(out, room, |buf| crate::code::write_album(tracks, &name, buf)) }
 }
 
 /// Write the album of `count` tracks drawn from `seed`, each asked what the
-/// next load asks for (its edits left out), with `title` (null for none),
-/// into `out`. Null, or the line saying why not.
+/// next load asks for (its edits left out), named `name` (UTF-8; null for
+/// none), into `out`. Null, or the line saying why not.
 ///
 /// # Safety
 ///
-/// `title` is a NUL-terminated string, or null; `out` `room` writable bytes.
+/// `name` is a NUL-terminated string, or null; `out` `room` writable bytes.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn dl_album_seed(player: *mut Engine, seed: u32, count: usize, title: *const c_char, out: *mut c_char, room: usize) -> *const c_char {
+pub unsafe extern "C" fn dl_album_seed(player: *mut Engine, seed: u32, count: usize, name: *const c_char, out: *mut c_char, room: usize) -> *const c_char {
     let Some(e) = engine(player) else { return line("") };
     // SAFETY: the caller's promise.
-    let Ok(title) = crate::code::Title::new(unsafe { bytes(title) }) else { return line(crate::code::BAD_TITLE) };
+    let Ok(name) = crate::code::Name::new(unsafe { bytes(name) }) else { return line(crate::code::BAD_NAME) };
     let picks = e.request;
     // SAFETY: the caller's promise, passed on.
-    unsafe { written(out, room, |buf| crate::code::write_seed_album(seed, count, &picks, &title, buf)) }
+    unsafe { written(out, room, |buf| crate::code::write_seed_album(seed, count, &picks, &name, buf)) }
+}
+
+/// Whether `name` (UTF-8, NUL-terminated) is a name a code carries
+/// (`code::Name::new`: at most 60 bytes; no controls, invisible or
+/// direction characters; no piled-up marks): null, or the line saying why
+/// not. A host's rename box asks it, so a name is held to one rule.
+///
+/// # Safety
+///
+/// `name` is a NUL-terminated string, or null (none, which is one).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_code_name_ok(name: *const c_char) -> *const c_char {
+    // SAFETY: the caller's promise.
+    match crate::code::Name::new(unsafe { bytes(name) }) {
+        Ok(_) => ptr::null(),
+        Err(why) => line(why),
+    }
+}
+
+/// A name into `out` (`room` bytes, NUL-terminated; cut to fit, at a
+/// character's edge), if `out` is not null.
+///
+/// # Safety
+///
+/// `out` is `room` writable bytes, or null.
+unsafe fn name_into(name: &crate::code::Name, out: *mut c_char, room: usize) {
+    if out.is_null() || room == 0 {
+        return;
+    }
+    // SAFETY: `room` writable bytes (the caller's promise), not null.
+    let buf = unsafe { core::slice::from_raw_parts_mut(out.cast::<u8>(), room) };
+    let t = name.text();
+    let mut n = t.len().min(room - 1);
+    // Never half a character.
+    while n > 0 && n < t.len() && t[n] & 0xC0 == 0x80 {
+        n -= 1;
+    }
+    buf[..n].copy_from_slice(&t[..n]);
+    buf[n] = 0;
 }

@@ -53,7 +53,7 @@ fn every_golden_as_a_version_2_code_is_as_it_was() {
             let fields: Vec<&str> = line.split(' ').collect();
             let seed: u32 = fields[1].parse().expect("a seed");
             let request = Request::parse(fields[2]).and_then(|r| r.with_version(2)).expect("a request");
-            let back = coded(&Loop { seed, request, mutes: 0, salt: 0 });
+            let back = coded(&Loop { request, ..Loop::of(seed) });
             assert_eq!(back.request.version(), 2);
             g.load_with(back.seed, &back.request);
             for part in Part::ALL {

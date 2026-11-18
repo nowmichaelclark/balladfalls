@@ -5,10 +5,12 @@
 //! thousand random requests); every generation golden's case written as a
 //! code and read back generates its same hashes; codes from a newer build,
 //! or naming what this build lacks, are refused plainly; and corrupt or
-//! truncated codes never panic. The dummy build's test (`tests/dummy.rs`)
-//! holds the version rule: what joins later moves no older code.
+//! truncated codes never panic. A name travels with its code in any script
+//! and with emoji, capped in bytes, and what a name refuses is refused
+//! (session 23). The dummy build's test (`tests/dummy.rs`) holds the
+//! version rule: what joins later moves no older code.
 
-use dlcore::code::{self, ALPHABET, Album, Kind, Loop, NEEDS_NEWER, NOT_A_CODE, Title};
+use dlcore::code::{self, ALPHABET, Album, BAD_NAME, Kind, Loop, MARKS_MOST, NAME_MOST, NEEDS_NEWER, NOT_A_CODE, Name};
 use dlcore::generator::data::{self, CHARACTERS, CHOICES, Ids, MOODS, VIBES};
 use dlcore::generator::request::{self, Journey, LAYER_NAMES, LENGTH_MOST, LayerAsk, Length, PROFILE_ORDER, Pins, Request, VOICE_ORDER};
 use dlcore::generator::rng::{Rng, seed_name};
@@ -40,7 +42,7 @@ fn round_trip(g: Option<&mut Generator>, l: &Loop) -> String {
     assert!(text.bytes().all(|b| ALPHABET.contains(&b)), "{text}: the alphabet only");
     let back = code::read_loop(text.as_bytes()).unwrap_or_else(|e| panic!("{text}: {e}"));
     assert_eq!(write(&back), text, "read and written again");
-    assert_eq!((back.seed, back.mutes, back.salt), (l.seed, l.mutes, l.salt), "{text}");
+    assert_eq!((back.seed, back.mutes, back.salt, back.name), (l.seed, l.mutes, l.salt, l.name), "{text}");
     assert_eq!(back.request.version(), data::CODE_NEWEST, "{text}: a code's loop is drawn at its version");
     if let Some(g) = g {
         let want = hashes(g, l);
@@ -368,7 +370,8 @@ fn random_loop(r: &mut Rng) -> Loop {
     maybe(&mut q, 0.1, &mut |x| x.with_bpm(bpm));
     let mutes = if u.f() < 0.1 { u8::try_from(u.seed32() & 31).unwrap() } else { 0 };
     let salt = if u.f() < 0.1 { u.seed32() | 1 } else { 0 };
-    Loop { seed: u.seed32(), request: q, mutes, salt }
+    let name = if u.f() < 0.1 { Name::new(NAMES[pick(NAMES.len())].as_bytes()).expect("a name") } else { Name::NONE };
+    Loop { seed: u.seed32(), request: q, mutes, salt, name }
 }
 
 fn js_floor(x: f64) -> f64 {
@@ -403,7 +406,7 @@ fn every_golden_case_as_a_code_makes_its_hashes() {
             let fields: Vec<&str> = line.split(' ').collect();
             let seed: u32 = fields[1].parse().expect("a seed");
             let request = Request::parse(fields[2]).expect("a request");
-            let code = write(&Loop { seed, request, mutes: 0, salt: 0 });
+            let code = write(&Loop { request, ..Loop::of(seed) });
             let back = code::read_loop(code.as_bytes()).unwrap_or_else(|e| panic!("{}: {code}: {e}", fields[0]));
             g.load_with(back.seed, &back.request);
             for part in Part::ALL {
@@ -433,30 +436,30 @@ fn album_tracks(album: &str) -> Vec<String> {
 fn an_album_of_loops_holds_each_as_it_was() {
     let mut r = Rng::new(9);
     let tracks: Vec<String> = (0..12).map(|_| write(&random_loop(&mut r))).collect();
-    let title = Title::new(b"Rainy Sunday, side A").expect("a title");
+    let title = name("ฝนตกวันอาทิตย์ side A 🌧️");
     let mut out = vec![0u8; 8192];
     let n = code::write_album(tracks.iter().map(String::as_bytes), &title, &mut out).expect("an album");
     let album = String::from_utf8(out[..n].to_vec()).expect("ASCII");
     assert_eq!(code::kind(album.as_bytes()), Some(Kind::Album));
     let a = code::read_album(album.as_bytes()).expect("an album");
-    assert_eq!((a.count, a.seed, a.title.text()), (12, None, &b"Rainy Sunday, side A"[..]));
+    assert_eq!((a.count, a.seed, a.name), (12, None, title));
     assert_eq!(album_tracks(&album), tracks);
     // Eight plain loops: about 60 characters (promise 8).
     let plain: Vec<String> = (0..8).map(|s| write(&Loop::of(s * 1_000_003))).collect();
-    let n = code::write_album(plain.iter().map(String::as_bytes), &Title::NONE, &mut out).expect("an album");
+    let n = code::write_album(plain.iter().map(String::as_bytes), &Name::NONE, &mut out).expect("an album");
     assert!(n <= 64, "eight plain loops: {n} characters");
     assert_eq!(album_tracks(core::str::from_utf8(&out[..n]).unwrap()), plain);
     // A loop's code is no album's, nor an album's a loop's.
     assert_eq!(code::read_album(tracks[0].as_bytes()).err(), Some(NOT_A_CODE));
     assert_eq!(code::read_loop(album.as_bytes()).err(), Some(NOT_A_CODE));
-    assert_eq!(code::write_album(core::iter::empty(), &Title::NONE, &mut out).err(), Some(code::BAD_ALBUM));
+    assert_eq!(code::write_album(core::iter::empty(), &Name::NONE, &mut out).err(), Some(code::BAD_ALBUM));
 }
 
 #[test]
 fn an_album_from_one_seed_is_one_short_code() {
     let picks = Request::parse("glacial,cozy,bars=3072").expect("picks");
     let mut out = [0u8; 256];
-    let n = code::write_seed_album(424_242, 12, &picks, &Title::NONE, &mut out).expect("an album");
+    let n = code::write_seed_album(424_242, 12, &picks, &Name::NONE, &mut out).expect("an album");
     let album = String::from_utf8(out[..n].to_vec()).expect("ASCII");
     // A 24-hour, 12-track album in under 20 characters (Painter, item 4).
     assert!(album.len() < 20, "{album}");
@@ -466,18 +469,20 @@ fn an_album_from_one_seed_is_one_short_code() {
     for (i, t) in tracks.iter().enumerate() {
         let l = code::read_loop(t.as_bytes()).expect("a track");
         assert_eq!(l.seed, code::track_seed(424_242, i));
-        assert_eq!(write(&Loop { seed: l.seed, request: picks, mutes: 0, salt: 0 }), *t, "track {i} shares the picks");
+        assert_eq!(write(&Loop { request: picks, ..Loop::of(l.seed) }), *t, "track {i} shares the picks");
     }
     let distinct: std::collections::BTreeSet<_> = tracks.iter().collect();
     assert_eq!(distinct.len(), 12);
-    // A title, and the edits left out (an album shares picks, not edits).
+    // A name, and the edits left out (an album shares picks, not edits);
+    // the album's name is no track's.
     let edited = picks.with_bpm(99.0).expect("an edit");
-    let title = Title::new(b"Night drive").expect("a title");
+    let title = name("Night drive 🌙");
     let n = code::write_seed_album(7, 3, &edited, &title, &mut out).expect("an album");
     let a = code::read_album(&out[..n]).expect("an album");
-    assert_eq!(a, Album { count: 3, version: data::CODE_NEWEST, seed: Some(7), title });
+    assert_eq!(a, Album { count: 3, version: data::CODE_NEWEST, seed: Some(7), name: title });
     let first = code::read_loop(album_tracks(core::str::from_utf8(&out[..n]).unwrap())[0].as_bytes()).expect("a track");
     assert!(first.request.edits().bpm().is_none());
+    assert!(first.name.is_none());
 }
 
 // ------------------------------------------------------------- refusals
@@ -568,9 +573,9 @@ fn corrupt_and_truncated_codes_never_panic() {
     let mut seeds = Rng::new(1);
     let codes: Vec<String> = (0..200).map(|_| write(&random_loop(&mut seeds))).collect();
     let mut out = vec![0u8; 8192];
-    let n = code::write_album(codes[..10].iter().map(String::as_bytes), &Title::new(b"x").unwrap(), &mut out).expect("an album");
+    let n = code::write_album(codes[..10].iter().map(String::as_bytes), &name("x"), &mut out).expect("an album");
     let album = String::from_utf8(out[..n].to_vec()).unwrap();
-    let n = code::write_seed_album(3, 5, &Request::parse("cozy,bars=8").unwrap(), &Title::NONE, &mut out).expect("an album");
+    let n = code::write_seed_album(3, 5, &Request::parse("cozy,bars=8").unwrap(), &Name::NONE, &mut out).expect("an album");
     let seeded = String::from_utf8(out[..n].to_vec()).unwrap();
     let mut all = codes.clone();
     all.push(album);
@@ -648,16 +653,16 @@ fn the_formats_fixtures_are_its_bytes() {
     // test/codes.test.mjs holds the web build to. From 1.0 on none changes.
     let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/golden/share-codes.txt")).expect("the fixtures");
     let req = |r: &str| if r == "-" { Request::new() } else { Request::parse(r).expect("a request") };
-    let title = |t: &str| if t == "-" { Title::NONE } else { Title::new(t.as_bytes()).expect("a title") };
+    let title = |t: &str| if t == "-" { Name::NONE } else { name(&unescape(t)) };
     let mut out = vec![0u8; 8192];
     let mut lines = 0;
     for line in text.lines().filter(|l| !l.is_empty() && !l.starts_with('#')) {
         let f: Vec<&str> = line.split(' ').collect();
         match f[0] {
             "loop" => {
-                let l = Loop { seed: f[1].parse().unwrap(), request: req(f[2]), mutes: f[3].parse().unwrap(), salt: f[4].parse().unwrap() };
-                assert_eq!(write(&l), f[5], "{line}");
-                assert_eq!(write(&code::read_loop(f[5].as_bytes()).expect("reads")), f[5]);
+                let l = Loop { seed: f[1].parse().unwrap(), request: req(f[2]), mutes: f[3].parse().unwrap(), salt: f[4].parse().unwrap(), name: title(f[5]) };
+                assert_eq!(write(&l), f[6], "{line}");
+                assert_eq!(write(&code::read_loop(f[6].as_bytes()).expect("reads")), f[6]);
             }
             "album" => {
                 let codes: Vec<&str> = f[2].split(',').collect();
@@ -674,4 +679,285 @@ fn the_formats_fixtures_are_its_bytes() {
         lines += 1;
     }
     assert!(lines >= 19);
+}
+
+// ---------------------------------------------------------------- names
+
+/// Names in many scripts, with emoji: each a name a code carries.
+const NAMES: [&str; 18] = [
+    "Rainy Sunday",
+    "x",
+    "ฝนตกที่กรุงเทพ",
+    "ที่นี่",
+    "เพลงรักริมทะเล",
+    "日本語の夜",
+    "비 오는 날",
+    "Café ☕",
+    "🌧️🎶",
+    "👩🏽‍💻 late",
+    "👨‍👩‍👧‍👦",
+    "🏳️‍🌈",
+    "1️⃣ 2️⃣",
+    "🏴\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F} glen",
+    "می‌خواهم",
+    "שָׁלוֹם",
+    "Tiếng Việt",
+    "Привет, мир!",
+];
+
+fn name(s: &str) -> Name {
+    Name::new(s.as_bytes()).unwrap_or_else(|e| panic!("{s:?}: {e}"))
+}
+
+/// The fixtures' names: `%` and two hex digits for a byte (a space is `%20`).
+fn unescape(t: &str) -> String {
+    let b = t.as_bytes();
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%' {
+            out.push(u8::from_str_radix(&t[i + 1..i + 3], 16).expect("hex"));
+            i += 3;
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).expect("UTF-8")
+}
+
+/// A name's field as the format writes it: its tag, its length, its bytes
+/// eight bits each, packed six to a character.
+fn name_field(bytes: &[u8]) -> String {
+    let mut s = uv(30) + &uv(bytes.len() as u64);
+    let (mut acc, mut bits) = (0u32, 0);
+    for &b in bytes {
+        acc = (acc << 8) | u32::from(b);
+        bits += 8;
+        while bits >= 6 {
+            bits -= 6;
+            s.push(ALPHABET[((acc >> bits) & 63) as usize] as char);
+        }
+        acc &= (1 << bits) - 1;
+    }
+    if bits > 0 {
+        s.push(ALPHABET[((acc << (6 - bits)) & 63) as usize] as char);
+    }
+    s
+}
+
+#[test]
+fn a_name_travels_with_its_code_in_any_script() {
+    roomy(|| {
+        let mut g = Generator::new();
+        let plain = write(&Loop::of(77));
+        for s in NAMES {
+            let l = Loop { name: name(s), ..Loop::of(77) };
+            let text = round_trip(Some(&mut g), &l);
+            assert_eq!(code::read_loop(text.as_bytes()).expect("reads").name.text(), s.as_bytes(), "{s}");
+            // The name is its own field, last: the code without it is the
+            // plain loop's.
+            assert_eq!(text.len(), plain.len() + name_field(s.as_bytes()).len(), "{s}");
+            // The name changes nothing the loop plays.
+            assert_eq!(hashes(&mut g, &l), hashes(&mut g, &Loop::of(77)), "{s}");
+        }
+    });
+    // None costs nothing: nine characters.
+    assert_eq!(write(&Loop::of(77)).len(), 9);
+    assert_eq!(write(&Loop { name: Name::NONE, ..Loop::of(77) }), write(&Loop::of(77)));
+    assert!(Name::new(b"").expect("none").is_none());
+    // About 1.3 characters an English letter, 4 a Thai one, 5 or 6 an emoji.
+    let cost = |s: &str| write(&Loop { name: name(s), ..Loop::of(77) }).len() - 9 - 2;
+    assert_eq!(cost("Rainy Sunday"), 16);
+    assert_eq!(cost("ฝนตก"), 16);
+    assert_eq!(cost("🌧"), 6);
+    // An album's track keeps its own name; the album has its own.
+    let tracks: Vec<String> = NAMES.iter().take(4).enumerate().map(|(i, s)| write(&Loop { name: name(s), ..Loop::of(u32::try_from(i).unwrap()) })).collect();
+    let mut out = vec![0u8; 4096];
+    let n = code::write_album(tracks.iter().map(String::as_bytes), &name("อัลบั้ม 🎧"), &mut out).expect("an album");
+    let album = core::str::from_utf8(&out[..n]).unwrap();
+    assert_eq!(album_tracks(album), tracks);
+    assert_eq!(code::read_album(album.as_bytes()).expect("an album").name, name("อัลบั้ม 🎧"));
+}
+
+#[test]
+fn a_name_is_capped_in_bytes() {
+    assert_eq!(NAME_MOST, 60);
+    let cases: [(&str, usize); 4] = [("a", 60), ("ก", 20), ("🌧", 15), ("é", 30)];
+    for (c, most) in cases {
+        let at = c.repeat(most);
+        assert_eq!(at.len(), NAME_MOST, "{c}");
+        let l = Loop { name: name(&at), ..Loop::of(5) };
+        let text = round_trip(None, &l);
+        // The longest name: 80 characters of bytes, its tag and its length.
+        assert_eq!(text.len(), 9 + 1 + 2 + 80, "{c}");
+        assert_eq!(Name::new(c.repeat(most + 1).as_bytes()).err(), Some(BAD_NAME), "{c}");
+    }
+    // A code whose name says more bytes than the cap is no code's.
+    let head = &write(&Loop::of(5))[..7];
+    let mut field = name_field("a".repeat(61).as_bytes());
+    assert_eq!(code::read_loop(sealed(&format!("{head}{field}")).as_bytes()).err(), Some(NOT_A_CODE));
+    // Nor one of no bytes, nor one cut short, nor one with spare bits set.
+    field = uv(30) + &uv(0);
+    assert_eq!(code::read_loop(sealed(&format!("{head}{field}")).as_bytes()).err(), Some(NOT_A_CODE));
+    field = name_field(b"abc");
+    field.pop();
+    assert_eq!(code::read_loop(sealed(&format!("{head}{field}")).as_bytes()).err(), Some(NOT_A_CODE));
+    field = name_field(b"ab");
+    let last = field.pop().unwrap();
+    field.push(ALPHABET[ALPHABET.iter().position(|&a| a == last as u8).unwrap() | 1] as char);
+    assert_eq!(code::read_loop(sealed(&format!("{head}{field}")).as_bytes()).err(), Some(NOT_A_CODE));
+}
+
+#[test]
+fn what_a_name_refuses() {
+    let marks = |n: usize| format!("a{}", "\u{301}".repeat(n));
+    assert!(Name::new(marks(MARKS_MOST).as_bytes()).is_ok());
+    let piled = marks(MARKS_MOST + 1);
+    let zalgo = "z\u{30d}\u{352}\u{31a}\u{344}\u{35b}\u{300}\u{346}a\u{335}\u{317}lgo";
+    let refused: [&str; 40] = [
+        " lead",
+        "trail ",
+        "two  spaces",
+        " ",
+        "tab\there",
+        "line\nbreak",
+        "bell\u{7}",
+        "del\u{7f}",
+        "c1\u{85}",
+        "\u{200B}zero width",
+        "zero\u{200B}width",
+        "\u{202E}evil",
+        "a\u{2066}b\u{2069}",
+        "mark\u{200F}",
+        "bom\u{FEFF}",
+        "soft\u{AD}hyphen",
+        "\u{3164}",
+        "\u{115F}x",
+        "\u{2800}",
+        "pua\u{E000}",
+        "non\u{FFFF}",
+        "non\u{FDD0}",
+        "a\u{200D}",
+        "\u{200D}a",
+        "a\u{200D}\u{200D}b",
+        "a \u{200D}b",
+        "\u{301}a",
+        "a \u{301}",
+        &piled,
+        zalgo,
+        "\u{E0067}",
+        "a\u{E0067}\u{E007F}",
+        "🏴\u{E0067}\u{E0062}",
+        "🏴\u{E007F}",
+        "🏴\u{E0067}\u{E0062}\u{E0067}\u{E0062}\u{E0067}\u{E0062}\u{E0067}\u{E0062}\u{E0067}\u{E007F}",
+        "\u{3000}ideographic",
+        "no\u{A0}break",
+        "sep\u{2028}",
+        "cgj\u{34F}",
+        "mvs\u{180E}",
+    ];
+    for bad in refused {
+        assert_eq!(Name::new(bad.as_bytes()).err(), Some(BAD_NAME), "{bad:?}");
+    }
+    // Bytes that are no UTF-8: cut, overlong, a surrogate, past U+10FFFF.
+    for bad in [&b"\xff"[..], b"\xc0\x80", b"\xed\xa0\x80", b"\xf4\x90\x80\x80", b"ab\xe0\xb8"] {
+        assert_eq!(Name::new(bad).err(), Some(BAD_NAME), "{bad:?}");
+    }
+    // A code carrying one, built by hand, is no code's.
+    let head = &write(&Loop::of(5))[..7];
+    for bad in [" lead", "\u{202E}evil", piled.as_str(), "a\u{200D}"] {
+        let field = name_field(bad.as_bytes());
+        assert_eq!(code::read_loop(sealed(&format!("{head}{field}")).as_bytes()).err(), Some(NOT_A_CODE), "{bad:?}");
+    }
+    assert_eq!(code::read_loop(sealed(&format!("{head}{}", name_field(b"\xff"))).as_bytes()).err(), Some(NOT_A_CODE));
+}
+
+#[test]
+fn names_fuzzed() {
+    // Random text from the scripts and the characters a name refuses: each
+    // is carried exactly or refused, never changed, and never panics.
+    let pools: [(u32, u32); 12] = [
+        (0x20, 0x7e),
+        (0x0, 0x1f),
+        (0x300, 0x36f),
+        (0xe00, 0xe5b),
+        (0x5d0, 0x5ea),
+        (0x600, 0x6ff),
+        (0x200b, 0x206f),
+        (0x3040, 0x30ff),
+        (0xfe00, 0xfe0f),
+        (0x1f300, 0x1f6ff),
+        (0xe0000, 0xe007f),
+        (0x0, 0x0010_ffff),
+    ];
+    let mut r = Rng::new(2026);
+    let (mut carried, mut refused) = (0, 0);
+    for _ in 0..30_000 {
+        let mut s = String::new();
+        for _ in 0..r.pick_index(24) {
+            let (lo, hi) = pools[r.pick_index(pools.len())];
+            if let Some(c) = char::from_u32(lo + r.seed32() % (hi - lo + 1)) {
+                s.push(c);
+            }
+        }
+        match Name::new(s.as_bytes()) {
+            Ok(n) => {
+                let l = Loop { name: n, ..Loop::of(r.seed32()) };
+                let text = write(&l);
+                let back = code::read_loop(text.as_bytes()).expect("a code");
+                assert_eq!(back.name.text(), s.as_bytes(), "{s:?}");
+                carried += 1;
+            }
+            Err(why) => {
+                assert_eq!(why, BAD_NAME);
+                refused += 1;
+            }
+        }
+    }
+    assert!(carried > 1000 && refused > 1000, "{carried} carried, {refused} refused");
+    // Random bytes: the same.
+    for _ in 0..30_000 {
+        let b: Vec<u8> = (0..r.pick_index(NAME_MOST + 4)).map(|_| u8::try_from(r.seed32() & 255).unwrap()).collect();
+        if let Ok(n) = Name::new(&b) {
+            let text = write(&Loop { name: n, ..Loop::of(1) });
+            assert_eq!(code::read_loop(text.as_bytes()).expect("a code").name.text(), &b[..]);
+        }
+    }
+    // A name field of random characters, sealed: read or refused, never a
+    // panic, and what reads writes back the same.
+    let head = &write(&Loop::of(5))[..7];
+    for _ in 0..30_000 {
+        let mut field = uv(30) + &uv(r.pick_index(NAME_MOST + 2) as u64);
+        for _ in 0..r.pick_index(84) {
+            field.push(ALPHABET[r.pick_index(64)] as char);
+        }
+        let text = sealed(&format!("{head}{field}"));
+        if let Ok(l) = code::read_loop(text.as_bytes()) {
+            assert_eq!(write(&l), text);
+        }
+    }
+}
+
+#[test]
+fn a_request_reads_back_from_its_text() {
+    // What a code asks, written as text (`code::request_text`), reads back
+    // to the same request: the same code, every part and every edit.
+    let mut r = Rng::new(424);
+    for i in 0..3000 {
+        let l = if i == 0 { Loop::of(1) } else { random_loop(&mut r) };
+        let mut text = String::new();
+        code::request_text(&l.request, &mut text).expect("text");
+        let back = Request::parse(&text).unwrap_or_else(|e| panic!("{text}: {e}"));
+        assert_eq!(write(&Loop { request: back, ..l }), write(&l), "{text}");
+    }
+    let mut text = String::new();
+    let asked = Request::parse("glacial=0.7,misty,bpm=70-85,bars=3072,journey=arc,key=C#|G,scale=dorian,style=tide,voice.melody=kalimba|marimba,layer.drums=off,theme=1234,organ=on,tuning.cents=-12.5,edit.roll.bass=7,edit.warmth=0.6,edit.bpm=88.5").expect("a request");
+    code::request_text(&asked, &mut text).expect("text");
+    assert_eq!(text, "glacial=0.7,misty,bpm=70-85,bars=3072,journey=arc,key=C#|G,scale=dorian,style=tide,voice.melody=kalimba|marimba,layer.drums=off,theme=1234,organ=on,tuning.cents=-12.5,edit.roll.bass=7,edit.warmth=0.6,edit.bpm=88.5");
+    // A code's loop says its version.
+    let read = code::read_loop(write(&Loop::of(5)).as_bytes()).expect("a code");
+    text.clear();
+    code::request_text(&read.request, &mut text).expect("text");
+    assert_eq!(text, format!("version={}", data::CODE_NEWEST));
 }

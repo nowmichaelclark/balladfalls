@@ -552,23 +552,54 @@ place is "not a code".
 | 19 | the tempo the slider set (an edit) | decimal |
 | 20 | the layers muted | a set of layer ids |
 | 21 | the wander's salt (item 92) | seed, not 0 |
-| 30 | an album's title | how many characters (1 to 40), then each as seven bits (character - 32), packed six to a sextet, highest first, the last sextet's spare bits 0 |
+| 30 | a name of its own (a loop's, a track's, an album's) | how many bytes of UTF-8 (1 to 60), then the bytes, eight bits each packed six to a sextet, highest first, the last sextet's spare bits 0 (base64url, no padding) |
+
+**A name** (session 23; Mikey, 2026-11-17: a renamed loop's name travels
+with its code, "all characters and emojis"): a loop's own name, written only
+when it was renamed, so a loop with none costs nothing; an album track's
+own, in its body; an album's, after its tracks or in its picks. The core
+carries it as the host gave it (UTF-8 in, UTF-8 out: the listener's text,
+not the core's, which stays ASCII); the code stays the 64 characters. At most
+**60 bytes** (`code::NAME_MOST`: sixty letters of English, twenty of Thai,
+fifteen emoji; in a code about 1.3 characters an English letter, 4 a Thai
+one). `code::Name::new` refuses ("a name a code can't carry"), and a code
+holding such a name is no code: bytes that are no UTF-8; a space at either
+end or two in a row; any control, format character (the direction overrides
+and isolates, the zero-width and invisible characters), separator but the
+plain space, private use, noncharacter or default-ignorable; a combining mark
+or variation selector not after a visible character, or more than four in a
+row (Thai's vowel and tone pass, piled-up marks don't); ZWNJ or ZWJ not
+between two visible characters (an emoji's sequence and a Persian word pass);
+tag letters outside a black flag's run ended by its cancel tag (England's and
+Scotland's flags pass). The classes are `src/code/classes.rs`, Unicode 17.0,
+written by `node tools/name-table.mjs` and frozen with the format. A host's
+rename box asks the same rule (`dl_code_name_ok`), so a name a listener can
+type is one a code can carry.
+
+**A code's request as text.** `code::request_text` (`dl_code_request` after
+`dl_code_read`) writes what a loop's code asks as the text `Request::parse`
+reads: its asks, its edits (`edit.seed.drums=…`, `edit.warmth=…`) and its
+version. A host that keeps a loop as a record of its request, as the app's
+Library does, reads a code back into that record from it.
 
 **An album:** *head* (`2 * version + 1`), a number for its kind, then:
 
 - **0, a list of loops:** how many (1 to 1,024); each track as how many
   characters it takes, then its *seed* and *fields* (a loop's code less head
   and check; tag 0 first where its version is older than the album's, which is
-  its newest track's); then a title field or nothing; *check*.
+  its newest track's; its name last, if it has one); then the album's name
+  field or nothing; *check*.
 - **1, drawn from one seed:** the album's *seed*, how many tracks, the picks
-  they share (fields 1 to 16) and a title field or nothing; *check*. Track `i`
+  they share (fields 1 to 16) and the album's name field or nothing;
+  *check*. Track `i`
   (from 0) is the loop of the `i + 1`th `seed32` of the generator's stream of
   the album's seed (`code::track_seed`), asked the picks, at the album's
   version.
 
 A plain loop is 9 characters; with a few picks (two vibes, 64 bars, a tempo)
 19; eight plain loops as an album 61; twelve tracks of 3,072 bars drawn from
-one seed with two vibes, 19.
+one seed with two vibes, 19; a plain loop renamed "Rainy Sunday" 27, renamed
+"ฝนตกที่กรุงเทพ" 68.
 
 **Adding to it.** A new vibe, profile, voice, choice, option, setting or word
 takes the next free id of its list in `data/codes.txt`, `since` the newest plus

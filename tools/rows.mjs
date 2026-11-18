@@ -1519,9 +1519,10 @@ async function linkRows(browser) {
   await share.evaluate(() => document.getElementById('seedAlbumLink').click());
   await sleep(600);
   const seedLink = await share.evaluate(() => window.__rows.clip);
-  row('links: its link is the address with the code after #c=, and "Link copied" says so', seedLink === `${ORIGIN}/#c=${seedCode}` && /^Link copied/.test(await share.evaluate(() => document.getElementById('toast').textContent)), seedLink);
+  const linkCode = String(seedLink).slice(`${ORIGIN}/#c=`.length);
+  row('links: its link is the address with the code after #c= (a fresh seed each press), and "Link copied" says so', String(seedLink).startsWith(`${ORIGIN}/#c=`) && /^[A-Za-z0-9_-]{5,19}$/.test(linkCode) && /^Link copied/.test(await share.evaluate(() => document.getElementById('toast').textContent)), seedLink);
   await share.close();
-  const want = decodeAlbum(seedCode);
+  const want = decodeAlbum(linkCode);
   const second = await fresh(seedLink);
   await library(second);
   const tracks = await second.evaluate(() => {
@@ -1530,7 +1531,7 @@ async function linkRows(browser) {
     return !!r;
   });
   await sleep(400);
-  const names = await second.evaluate(() => [...document.querySelectorAll('.lrow.track .lrow-title')].map((x) => x.textContent.trim()));
+  const names = await second.evaluate(() => [...document.querySelectorAll('.lrow.track .lrow-title')].map((x) => x.textContent.trim().replace(/^\d+\.\s*/, '').replace(/, now playing$/, '')));
   st = await state(second);
   row('links: a second fresh profile opens the album of 12 from its link, the same 12 tracks in the same order', tracks && names.length === 12 && names.every((n, i) => n === want.specs[i].name), `${names.join(' | ')} / ${want.specs.map((s) => s.name).join(' | ')}`);
   await second.evaluate(() => document.getElementById('viewLibrary').hidden || document.getElementById('saveBtn').click());

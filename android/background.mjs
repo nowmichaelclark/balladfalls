@@ -366,6 +366,18 @@ try {
           worker: typeof Worker,
         }));
         check(`${format}: the export sheet has what the run clicks`, false, `${missing}; ${JSON.stringify(sheet)}`);
+        // Why the Worker would not start: what the page's own loader serves, and what a Worker of it says.
+        fact('the export Worker\'s file', String(await ask(() => fetch(new URL('js/export-worker.js', location.href)).then((r) => `${r.status} ${r.headers.get('content-type')}`).catch((e) => `fetch failed: ${e}`))));
+        fact('a Worker of it', String(await ev(() => new Promise((resolve) => {
+          try {
+            const w = new Worker(new URL('js/export-worker.js', location.href), { type: 'module' });
+            w.onerror = (e) => resolve(`error: ${e.message} ${e.filename}:${e.lineno}`);
+            w.onmessage = (e) => resolve(`message: ${JSON.stringify(e.data)}`);
+            w.postMessage({ type: 'hello' });
+            setTimeout(() => resolve('no answer in 10 s'), 10000);
+          } catch (e) { resolve(`threw: ${e}`); }
+        }), undefined, false, 30000).catch((e) => `no answer: ${e.message}`)));
+        log(`  the page's problems: ${page.problems.slice(-5).join(' | ')}`);
         return null;
       }
       await ev("document.getElementById('exportAudio').click()", undefined, true);

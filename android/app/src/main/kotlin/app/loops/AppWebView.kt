@@ -22,7 +22,8 @@ import android.webkit.WebView
  * So while the app plays or saves ([Playback.busy]) this tells the WebView its
  * window and view are shown, whatever they are, and so the page runs as it
  * does in front. Nothing is drawn: a window not shown has no surface to draw
- * to, and the WebView draws only when asked to. Paused and idle, the page is
+ * to, and the WebView draws only when asked to (the emulator's CPU figure with
+ * the screen off is in the test's summary). Paused and idle, the page is
  * hidden as any page is (the real visibility is kept and given back).
  */
 class AppWebView(context: Context) : WebView(context) {
@@ -49,7 +50,8 @@ class AppWebView(context: Context) : WebView(context) {
         }
     }
 
-    // A window that is gone (closed) stays gone; any other is shown while there is work to do.
-    private fun shown(visibility: Int): Int =
-        if (Playback.busy && visibility != View.GONE) View.VISIBLE else visibility
+    // A window whose activity has stopped is GONE to its views (Home, the screen off): measured, the page was
+    // hidden and its timers stopped for minutes with the rule that left GONE alone. While there is work to
+    // do, every state is shown.
+    private fun shown(visibility: Int): Int = if (Playback.busy) View.VISIBLE else visibility
 }

@@ -210,6 +210,7 @@ export class AudioExport {
     this.worker.onerror = (e) => {
       // A Worker that won't start (no module workers) or that died.
       e.preventDefault?.();
+      console.error(`export worker: ${e.message || 'would not start'} ${e.filename || ''}:${e.lineno || 0}`);
       if (this.running) this.fail('write', String(e.message || 'the export stopped'));
       else {
         this.mode = false;

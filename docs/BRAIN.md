@@ -292,6 +292,39 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 
 ### Start here (for the next brain)
 
+- **Brain B4 (Opus 5.5, 2026-11-18, a cloud thread of the project): export,
+  the screens and the codes checked; the albums again.** On main (c5b2862,
+  v189), measured here: `cargo test --test codes` 26 of 26 and `--features
+  dummy --test dummy` 4 of 4; the jump heard 0.059 to 0.060 s after asked on
+  32,768 bars and Endless, three hours in, lite and full
+  (`test/jump.test.mjs`); `node tools/export.mjs`: 12 of 12 exports decode
+  (ffmpeg) and null against a straight render, lossless and the small
+  format's samples; `--hours 1`, Endless: memory flat (238.2 to
+  238.4 MB resident, the core 17.7 MB throughout; the tool wrote 0.75 h,
+  158.8 MB, at 14.8x); a long piece from a link in Chromium at phone size: the
+  piece line, "bar 3 of 256 - the opening", nothing scrolls but the
+  Library, Advanced and the Vibes list (the last is older than 106, the
+  Painter's), no page error. 102's tuning: B3 checked #385 against his
+  notes; nothing has moved it since. Cancel and a full disk are
+  `tools/rows.mjs`'s rows in CI's export workflow (green on #438's last
+  commit, de59304).
+  **The code format** (105, the dummy test read closely): the bytes are
+  right and stay; four gaps, all fixed without a longer code, written as
+  **session 24c** (105e, after 30c, before 30): removal has no path (an id
+  gone reads as "needs newer"; the test forbids a row naming nothing), so a
+  gone member keeps its row and plays a stand-in, and no row means newer;
+  a drawn setting's words (twang, lowBell, progression) and a new drawn
+  setting escape the version filter; the dummy build lacks scales, bass
+  styles, other layers' voices, words and removals; the head is one
+  character only to version 15 and `newest` rises per change, so one
+  version a release (Mikey agreed, 2026-11-18). Twang's slow and bright
+  (only a pin reaches them) are 24c's first removal. **Albums:** batch 6
+  (15), the nearer chords (6), the long pieces (10) as app links
+  (`docs/ALBUMS.md`); every older album code there still reads. **Android:**
+  25 to 29 all merged; no Android prompt is left before 31a; Google's
+  developer verification (Thailand since 2026-09-30, not F-Droid, worldwide
+  2027) noted in for-mikey. **Next:** 24c when 30c merges (B-par2 starts
+  it); B5 after 30.
 - **Brain B-parallel 2 (Opus 5.5, 2026-11-18 on, in a Claude Code cloud
   thread of the claude.ai project; running).** The hands sessions are cloud
   threads the project's coordinator starts on the brain's word, at most two

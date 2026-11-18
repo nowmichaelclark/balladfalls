@@ -12,6 +12,64 @@ Session 26 album, Phase 1 check, Heartwarming? and Joyful?) were written
 again with it, checked to play the same notes for the same passes; the
 others never set it, so their tracks play on until moved on, as they did.
 
+## Three albums in the app (brain B4, 2026-11-18, v189) -- out, labeled
+
+What Mikey heard as clips on the Batch 6 and Long Pieces pages, now as
+links the app plays (short codes, version 2), so he can hear them on his
+own devices and keep them in the Library. Labeled, nothing blind, no key.
+Each loop checked at main (c5b2862) to still draw its sound (`parts()`;
+planing from its chords); twang's loops all play soft now (#414). Each
+track plays the passes shown (about a minute, longer where the sound comes
+late), then the next; the long pieces play whole, the Endless ones until
+Next. Every code decoded back; the long pieces' link opened in the app as
+"1 of 10", bar 5 of 64. One word a track if anything sounds wrong.
+
+#### Batch 6 in the app
+
+<https://driftloom.nowmichaelclark.workers.dev/#c=FAPIKOYsYDWFI7ZatZAWbIfJIxZAWRI4c7hKCWLIu7pCOAWHGKky18BGHbNWxCIXpKi6AWFG63vuPBIxTa0wAWFGTYm7NBIH3VwoDWFI8i3bEBWLICVXKDBWNGFzdmMAWDeSQmF0Y2ggNiBpbiB0aGUgYXBwdB>
+
+1. deepDuck (vor-the), 3 passes
+2. wideSweep wide (brai-fei), 14 passes
+3. wideSweep fast (meil-broa), 9 passes
+4. slowOpening (sir-houl), 6 passes
+5. tuningOffset (wen-glui), 4 passes
+6. padWow (soath-wa), 2 passes
+7. widePad (loa-yer), 2 passes
+8. tripletKit (dun-roar), 3 passes
+9. dottedPulse pulse (ta-muin), 2 passes
+10. dottedPulse 3-3-2 (yi-yoar), 3 passes
+11. colorTone (luir-wo), 2 passes
+12. planingSevenths (muith-sei), 3 passes
+13. lowBell (weith-yo), 6 passes
+14. dropSpotlight (sei-sheim), 7 passes
+15. twang, soft (maisk-feim), 2 passes
+
+#### Nearer chords (84b)
+
+<https://driftloom.nowmichaelclark.workers.dev/#c=FAGIZIRo3DWTIWHNQHCWHGKreV6AIAgQiVBWDIem_wlDWJILMMy3AWLWBeTTmVhcmVyIGNob3JkcyAoODRiKQIz>
+
+1. shu-san, 10 passes
+2. glai-thel, 4 passes
+3. youn-ti, 1 pass
+4. theim-rem, 2 passes
+5. fum-doun, 5 passes
+6. fo-roan, 6 passes
+
+#### Long pieces in the app
+
+<https://driftloom.nowmichaelclark.workers.dev/#c=FAKO0U0niCF_BHAWgEOlG_oEBF_HHAWgQOapBrACF_HHAWgQPAcCz6BF_fHAWggCRHbNWxCCAQBF_fWggCJHAAAAAGHBJJeyuABGHBMB1tFqACmCQBGJlG_oEBGHAOxkMs_AF_BHAWgEeWTG9uZyBwaWVjZXMgaW4gdGhlIGFwcAkP>
+
+1. tha-vol 64 bars, an arc
+2. brum-yei 256 bars, an arc in two movements
+3. fei-no 256 bars, one arc
+4. moan-teil 1,024 bars, five movements
+5. loa-yer 1,024 bars, adventurous
+6. glor-ti Endless, the wander
+7. mu-meth Endless, the wander
+8. teth-hu Endless, still
+9. brum-yei Endless, arcs in turn
+10. gluith-vuisk 64 bars, an arc over the slow opening
+
 ## "Batch 6 Album" (brain B2, 2026-11-17, v177; items 101 and 84b) -- heard 2026-11-17
 
 Page: <https://claude.ai/artifact/3zgBGFPzidGMt3wr1SQwzP> (private to its

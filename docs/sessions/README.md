@@ -78,7 +78,8 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | # | File | What | Model, effort | After | Alongside | Done |
 |---|---|---|---|---|---|---|
 | B-par | `brain-parallel.md` | Brain, in Claude Code: makes this plan parallel, then starts and oversees the hands sessions two at a time, up to B4 (Mikey, 2026-11-17), and 30a to 30d as they open (2026-11-18) | Opus 5.5, high | B2 | every row to 30d | yes, 2026-11-18 (17 to 24, 26 to 28 merged; handed to B-par2) |
-| B-par2 | `brain-parallel-2.md` | Brain, in Claude Code: picks up B-parallel's chains (24b, 28, 29) and starts Mikey's 30a to 30d, two at a time; tells Mikey when B4 can start; stops when 30e is next (Mikey, 2026-11-18) | Opus 5.5, high | B-par | every row to 30d, and B4 | |
+| B-par2 | `brain-parallel-2.md` | Brain, in Claude Code: picks up B-parallel's chains (24b, 28, 29) and starts Mikey's 30a to 30d, two at a time; tells Mikey when B4 can start; stops when 30e is next (Mikey, 2026-11-18) | Opus 5.5, high | B-par | every row to 30d, and B4 | yes, 2026-11-18 (24b, 29, 30b, 30a merged; 30d left as draft #446; handed to B-par3) |
+| B-par3 | `brain-parallel-3.md` | Brain: resumes 30d, runs 30c, 24c and 30e, two at a time; stops when 30e is in (or Mikey's usage runs low) | Opus 5.5, high | B-par2 | every row to 30e | |
 | | | **Long pieces** | | | | |
 | 17 | `17-long-jump.md` | 106a: the core's jump and the piece map for the page | Opus 5.5, high | B2 | 20, 21, 22, 24, 26 | yes, 2026-11-18 (#414 twang soft only, #417) |
 | 18 | `18-long-screens.md` | 106b: long pieces on screen | Sonnet 5.5, high | 17 | 20, 21, 22, 24, 26, 27, 28, 29 | yes, 2026-11-18 (#419) |
@@ -99,7 +100,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 28 | `28-android-background.md` | 107d: the screen off, the notification, saving an export | Sonnet 5.5, high | 27, 21 | 18, 22, 23, 24 | yes, 2026-11-18 (#431) |
 | 29 | `29-android-fdroid.md` | 107e: F-Droid's metadata, recipe and icons | Sonnet 5.5, high | 28 | 18, 22, 23, 24, 24b, 30a, 30b, 30c, 30d, 30e | yes, 2026-11-18 (#437; no app change) |
 | | | **Mikey's seven, before the polish** (2026-11-18) | | | | |
-| 30a | `30a-album-previous.md` | 109: Previous works in an album | Sonnet 5.5, high | 24 | 21, 24c, 28, 29, 30b, 30c, 30d | |
+| 30a | `30a-album-previous.md` | 109: Previous works in an album | Sonnet 5.5, high | 24 | 21, 24c, 28, 29, 30b, 30c, 30d | yes, 2026-11-18 (#442) |
 | 30b | `30b-layers-heard.md` | 110: the layers show what is heard, in time with it | Opus 5.5, high | 27 | 21, 23, 24, 24c, 29, 30a | yes, 2026-11-18 (#440) |
 | 30c | `30c-track-length.md` | 111: Track length, its own view, to the second; out of the sliders and the export | Opus 5.5, high | 21, 24, 28 | 29, 30a, 30d | |
 | 30d | `30d-info-card.md` | 112: the info card: clean lines, the rest a tap away, a round playhead | Sonnet 5.5, high | 23 | 21, 24, 24c, 28, 29, 30a, 30c | |

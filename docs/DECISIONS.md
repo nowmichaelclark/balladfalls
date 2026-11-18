@@ -93,6 +93,7 @@ stays, marked superseded, with the date. Long reasoning goes to
 
 ## Share codes, requests and exports
 
+- 2026-11-18 -- **An album's link with track lengths, heard working (Mikey, 2026-11-18, after #438):** "Link sharing an album with track lengths set works :)" (105d's device check, v189).
 - 2026-11-18 -- **An album's code carries how each track plays (Mikey, 2026-11-18):** "Yes, an album's code should carry track lengths and all necessary info." (#427's question: version 2 left the length slider out.) Session 24b, before B4.
 - 2026-11-18 -- **The long pieces' words approved (Mikey, 2026-11-18):** "The screen words are okay" (`ROLE_WORDS` in `js/piece.js`, #419); the journey's word "arc" is still open: "I don't know how a user would read 'arc' when selected."
 - 2026-11-17 -- **A renamed loop's name travels with its code, in any language (Mikey, 2026-11-17):** "yes, a loops name should travel with its code", for loops and albums both; then "let's go with all characters and emojis", so Thai, other scripts and emoji are allowed, not only A-Z and digits. Renaming is limited to what can be shared. Built in #425; the sketch it started from: [the full text](archive/decisions-reasoning.md#a-loops-name-in-its-code-mikey-2026-11-17). This replaces version 2's "no custom name in a code" (#412).

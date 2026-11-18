@@ -308,9 +308,17 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   repo itself" (`docs/DECISIONS.md`). **Merged:** #436 (docs), 24b (#438,
   v189: checked, `cargo test --test codes` 26 of 26 here, the old share-code
   fixtures unchanged, every check green on de59304; its first push had a
-  stale module, rebuilt). B4 may start (18, 21, 24, 24b in). **Running
-  (2026-11-18, 17:55 UTC):** 29 (draft #437) and 30b; briefs in the
-  project's files, `brain/<row>-brief.md`. **Next:** 30d, 30a, 30c.
+  stale module, rebuilt; Mikey: the album link with lengths works), 29
+  (#437, no app change: F-Droid's build and two machines' the same bytes,
+  lint green). B4 may start (18, 21, 24, 24b in). **Running (2026-11-18,
+  22:15 UTC):** 30b (#440, v190; the brain checked its render hashes:
+  golden mono and stereo --strict on x86_64, seeds 80 of 80) and 30a;
+  briefs in the project's files, `brain/<row>-brief.md`. **Next:** 30d,
+  then 30c, once #440 merges (neither may run beside 30b); the nightly
+  after #440.
+  **Brain B4** started 2026-11-18, 22:14 UTC, as a thread of the same
+  project (Mikey), not a claude.ai chat; the two-hands-at-once limit holds
+  across both brains.
 - **Brain B-parallel (Opus 5.5, 2026-11-17 to 18, in Claude Code): the
   chains run two at a time; ended at Mikey's request (long session).** The
   plan made parallel (#409: four chains, an After and an Alongside for every

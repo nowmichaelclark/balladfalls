@@ -1725,7 +1725,7 @@ function applyTheme(cls, save = true) {
     sw.setAttribute('aria-checked', String(on));
     sw.tabIndex = on ? 0 : -1;
   }
-  requestAnimationFrame(() => ui.fitName());
+  requestAnimationFrame(() => ui.fitCard());
 }
 
 function initThemes() {
@@ -1842,6 +1842,8 @@ function wire() {
     else setView(state.lastEdit);
   });
 
+  // The details of the card: a tap shows the rest of them (session 30d).
+  ui.el('metaMore').addEventListener('click', () => ui.moreDetails());
   const nameEl = ui.el('loopName');
   nameEl.addEventListener('click', startRename);
   nameEl.addEventListener('keydown', (e) => {
@@ -2165,7 +2167,7 @@ function wire() {
   updateSaveButton();
 
   // The name's size depends on the card's width.
-  window.addEventListener('resize', () => ui.fitName());
+  window.addEventListener('resize', () => ui.fitCard());
 }
 
 if (noGenerator) {

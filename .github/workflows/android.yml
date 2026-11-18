@@ -123,6 +123,20 @@ jobs:
         working-directory: android
         run: ./gradlew --no-daemon --console=plain assembleDebug assembleDebugAndroidTest -Pdriftloom.versionCode=${{ github.run_number }}
 
+      # Android's lint (session 28: the app passes it with no errors). The
+      # report is kept; an error fails the build.
+      - name: Android lint
+        working-directory: android
+        run: ./gradlew --no-daemon --console=plain lintDebug -Pdriftloom.versionCode=${{ github.run_number }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-report
+          path: android/app/build/reports/lint-results-debug.*
+          if-no-files-found: ignore
+          retention-days: 14
+
       # One APK for each ABI and a universal one (all three); the size of
       # each, and of the core's library inside it.
       - name: the APKs

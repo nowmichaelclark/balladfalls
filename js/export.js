@@ -27,6 +27,7 @@ import { fetchCore } from './core.js';
 import { newSpec } from './gen.js';
 import * as ui from './ui.js';
 import { TAIL_MAX } from './export-render.js';
+import { appLink } from './app.js';
 
 // The lengths the sheet offers for a loop that plays on and on and for
 // Endless, in seconds; the default; and the most a browser with no file to
@@ -60,6 +61,8 @@ export const WORDS = {
   gentle: 'Lighter on processor is on, so it goes gently: slower, and the music never stutters.',
   fast: 'It goes as fast as this device safely can.',
   picker: 'You choose where it goes.',
+  space_app: (need, free) => `There isn't enough free space in that place: this needs about ${need}, and it has about ${free}. Pick another place, or a shorter length.`,
+  seek: "That place can't take a file as it is made. Pick one on this device, such as Downloads or Documents.",
   private: 'It downloads when it is done.',
   memory: (t) => `This browser can't write a file as it goes, so it keeps the export in memory: ${t} at most.`,
   progress: (pct, left) => `${pct}% done${left ? `, about ${left} left` : ''}.`,
@@ -147,8 +150,10 @@ export class AudioExport {
   constructor(host) {
     this.host = host;
     this.worker = null;
-    // How the file is written here: 'picker', 'private' or 'memory'; null
-    // until the Worker has said, false if it can't export at all.
+    // How the file is written here: 'app' (the Android app's own picker, its
+    // bytes handed to the app as they are made: session 28), 'picker',
+    // 'private' or 'memory'; null until the Worker has said, false if it
+    // can't export at all.
     this.mode = null;
     // The format chosen ('lossless' or 'small'), and whether this browser can
     // make Small (the Worker says: false until it has).
@@ -158,6 +163,8 @@ export class AudioExport {
     this.running = null;
     this.result = null;
     this.timer = null;
+    // The Android app's end (js/app.js), or null in a browser.
+    this.app = appLink();
     this.wire();
   }
 
@@ -215,20 +222,31 @@ export class AudioExport {
 
   receive(m) {
     if (m.type === 'hello') {
-      this.mode = typeof window.showSaveFilePicker === 'function' ? 'picker' : m.private ? 'private' : 'memory';
+      this.mode = this.app ? 'app' : typeof window.showSaveFilePicker === 'function' ? 'picker' : m.private ? 'private' : 'memory';
       this.opus = !!m.opus;
       this.refresh();
+    } else if (m.type === 'relay' && this.running) {
+      this.relay(m);
     } else if (m.type === 'progress' && this.running) {
       this.progress(m);
     } else if (m.type === 'done' && this.running) {
       this.done(m);
     } else if (m.type === 'cancelled' && this.running) {
       this.running = null;
+      if (this.app) this.app.exporting(false);
       el('exportWhy').textContent = WORDS.cancelled;
       this.show('failed');
     } else if (m.type === 'failed' && this.running) {
       this.fail(m.why, m.message);
     }
+  }
+
+  // The app's file (session 28): the Worker's bytes go to the app, which
+  // writes them where the listener chose, and the answer goes back.
+  relay(m) {
+    this.app.request({ type: `save-${m.op}`, data: m.data }).then((r) => {
+      if (this.worker) this.worker.postMessage({ type: 'ack', id: m.id, ok: !!(r && r.ok), why: r && r.why });
+    });
   }
 
   // Which states show.
@@ -296,7 +314,7 @@ export class AudioExport {
     const lines = [];
     if (list.length === 1) lines.push(WORDS.whole(words(list[0].seconds)));
     if (chosen) lines.push(`About ${size((chosen.seconds + TAIL_MAX) * FORMATS[this.format].bytes[lanes])}.`);
-    lines.push(this.mode === 'picker' ? WORDS.picker : this.mode === 'private' ? WORDS.private : this.mode === 'memory' ? WORDS.memory(words(MEMORY_SECONDS)) : '');
+    lines.push(this.mode === 'picker' || this.mode === 'app' ? WORDS.picker : this.mode === 'private' ? WORDS.private : this.mode === 'memory' ? WORDS.memory(words(MEMORY_SECONDS)) : '');
     lines.push(this.pace() === 'gentle' ? WORDS.gentle : WORDS.fast);
     about.textContent = lines.filter(Boolean).join(' ');
     go.disabled = !chosen || this.mode == null || !!this.running;
@@ -337,10 +355,10 @@ export class AudioExport {
     const lanes = this.host.mono() ? 1 : 2;
     const format = this.format === 'small' && this.opus ? 'small' : 'lossless';
     const need = (chosen.seconds + TAIL_MAX) * FORMATS[format].bytes[lanes] * MARGIN;
-    const name = fileName(spec, format);
+    let name = fileName(spec, format);
     // Free space first (the origin's share of the disk, as the browser
     // counts it; the picker's file lands outside it, but on the same disk).
-    if (this.mode !== 'memory') {
+    if (this.mode !== 'memory' && this.mode !== 'app') {
       try {
         const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null;
         const free = est && Number.isFinite(est.quota) && Number.isFinite(est.usage) ? est.quota - est.usage : null;
@@ -366,10 +384,25 @@ export class AudioExport {
         handle = null;
       }
     }
+    let saved = null;
+    if (this.mode === 'app') {
+      // Android's own picker, then the platform's free space for the place
+      // chosen; FLAC's header is written again at the end, which a place
+      // that only streams can't do (the app says so, and removes the file).
+      const r = await this.app.request({ type: 'save', name, mime: FORMATS[format].type, need: Math.ceil(need), seek: format === 'lossless' });
+      if (!r || !r.ok) {
+        if (r && r.cancelled) return;
+        el('exportWhy').textContent = r && r.why === 'space' ? WORDS.space_app(size(need), size(Math.max(0, r.free))) : r && r.why === 'seek' ? WORDS.seek : WORDS.failed;
+        this.show('failed');
+        return;
+      }
+      saved = r;
+    }
     let bytes;
     try {
       bytes = await fetchCore();
     } catch {
+      if (saved) this.app.send({ type: 'save-abort' });
       this.fail('render', 'no core');
       return;
     }
@@ -383,8 +416,11 @@ export class AudioExport {
       track: chosen.track,
       format: format === 'small' ? 'opus' : 'flac',
     };
-    const sink = handle ? 'handle' : this.mode === 'memory' ? 'memory' : 'private';
+    const sink = saved ? 'app' : handle ? 'handle' : this.mode === 'memory' ? 'memory' : 'private';
+    // The picker may have changed the name (a file of that name was there).
+    if (saved && saved.name) name = saved.name;
     this.running = { name, sink, handle, chosen, format, began: performance.now(), slowed: false, spec };
+    if (saved) this.app.exporting(true, name, 0);
     this.result = null;
     el('exportFill').style.width = '0%';
     el('exportProgress').textContent = WORDS.progress(0, null);
@@ -399,6 +435,7 @@ export class AudioExport {
     const pct = Math.floor(share * 100);
     const took = (performance.now() - r.began) / 1000;
     const left = share > 0.02 ? (took / share) * (1 - share) : null;
+    if (r.sink === 'app') this.app.exporting(true, r.name, pct);
     el('exportFill').style.width = `${pct}%`;
     el('exportProgress').textContent = WORDS.progress(pct, left != null ? words(left) : null);
     r.progress = m;
@@ -413,18 +450,21 @@ export class AudioExport {
   done(m) {
     const r = this.running;
     this.running = null;
+    if (this.app) this.app.exporting(false);
     this.result = { ...m, name: r.name, sink: r.sink, handle: r.handle, format: r.format, url: null };
     const t = words(m.seconds);
-    el('exportSaved').textContent = r.sink === 'handle' ? WORDS.savedPicked(r.name, size(m.bytes), t) : WORDS.saved(r.name, size(m.bytes), t);
-    el('exportSave').hidden = r.sink === 'handle';
+    const placed = r.sink === 'handle' || r.sink === 'app';
+    el('exportSaved').textContent = placed ? WORDS.savedPicked(r.name, size(m.bytes), t) : WORDS.saved(r.name, size(m.bytes), t);
+    el('exportSave').hidden = placed;
     this.show('done');
     el('exportShare').hidden = !this.canShare();
     // The private file and the memory's are offered as a download now.
-    if (r.sink !== 'handle') this.save();
+    if (!placed) this.save();
   }
 
   fail(why, message) {
     this.running = null;
+    if (this.app) this.app.exporting(false);
     el('exportWhy').textContent = why === 'space' ? WORDS.spaceLate : why === 'memory' ? WORDS.memoryFull : WORDS.failed;
     if (message) console.warn('export:', why, message);
     this.show('failed');
@@ -445,6 +485,10 @@ export class AudioExport {
   }
 
   async open() {
+    if (this.result && this.result.sink === 'app') {
+      this.app.send({ type: 'save-view' });
+      return;
+    }
     const f = await this.file();
     if (!f) return;
     if (this.result.url) URL.revokeObjectURL(this.result.url);
@@ -453,6 +497,7 @@ export class AudioExport {
   }
 
   canShare() {
+    if (this.result && this.result.sink === 'app') return true;
     try {
       const kind = FORMATS[(this.result && this.result.format) || 'lossless'];
       const probe = new File([new Uint8Array(4)], `x.${kind.ext}`, { type: kind.type });
@@ -463,6 +508,10 @@ export class AudioExport {
   }
 
   async share() {
+    if (this.result && this.result.sink === 'app') {
+      this.app.send({ type: 'save-share' });
+      return;
+    }
     const f = await this.file();
     if (!f) return;
     const file = f instanceof File && f.name === this.result.name ? f : new File([f], this.result.name, { type: FORMATS[this.result.format || 'lossless'].type });

@@ -325,33 +325,33 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   developer verification (Thailand since 2026-09-30, not F-Droid, worldwide
   2027) noted in for-mikey. **Next:** 24c when 30c merges (B-par2 starts
   it); B5 after 30.
-- **Brain B-parallel 2 (Opus 5.5, 2026-11-18 on, in a Claude Code cloud
-  thread of the claude.ai project; running).** The hands sessions are cloud
-  threads the project's coordinator starts on the brain's word, at most two
-  at once. Mikey: the brain merges any PR once it is green and checks out
-  against its prompt (`docs/DECISIONS.md`, 2026-11-18). **Checked at the
-  start:** main (fec8f8c, v188) green; the nightly's last green run was
-  2036e8a, before #433 and #431, so one was started by hand on fec8f8c.
-  #431's "540 s": the screen was off 600 s (CI's log, "screen off for: 600
-  s"); 540 s is the span from the first heartbeat to the tenth, and the
-  stream's own count (28,803,720 frames at 48 kHz) is 600 s with 0
-  underruns. Nothing to ask for. Session 29's Alongside caught up with the
-  rows that already named it (24b, 30a to 30e). Mikey answered B-parallel's
-  question on the new name in three public files: "It's okay if it's in the
-  repo itself" (`docs/DECISIONS.md`). **Merged:** #436 (docs), 24b (#438,
-  v189: checked, `cargo test --test codes` 26 of 26 here, the old share-code
-  fixtures unchanged, every check green on de59304; its first push had a
-  stale module, rebuilt; Mikey: the album link with lengths works), 29
-  (#437, no app change: F-Droid's build and two machines' the same bytes,
-  lint green). B4 may start (18, 21, 24, 24b in). **Running (2026-11-18,
-  22:15 UTC):** 30b (#440, v190; the brain checked its render hashes:
-  golden mono and stereo --strict on x86_64, seeds 80 of 80) and 30a;
-  briefs in the project's files, `brain/<row>-brief.md`. **Next:** 30d,
-  then 30c, once #440 merges (neither may run beside 30b); the nightly
-  after #440.
-  **Brain B4** started 2026-11-18, 22:14 UTC, as a thread of the same
-  project (Mikey), not a claude.ai chat; the two-hands-at-once limit holds
-  across both brains.
+- **Brain B-parallel 2 (Opus 5.5, 2026-11-18, a cloud thread of Mikey's
+  claude.ai project; ended when his usage ran out). Next: brain
+  B-parallel 3, `docs/sessions/brain-parallel-3.md`, from his other
+  account: the repo is the whole handover (nothing in that project, its
+  threads or its files is needed).** **Merged, each checked against its
+  prompt:** 24b (#438, v189: `cargo test --test codes` 26 of 26 here, the
+  old share-code fixtures unchanged; its first push had a stale module;
+  Mikey: "Link sharing an album with track lengths set works"); 29 (#437, no
+  app change: F-Droid's build and two machines' builds the same bytes, lint
+  green); 30b (#440, v190: the brain checked the render hashes, golden mono
+  and stereo `--strict` on x86_64 and `tools/seeds.sh` 80 of 80; the sketch
+  job's timing test flaked once, a re-run passed); 30a (#442, v191; see
+  below); docs #436, #439, #441, #444, #445. **Mikey answered** (all in
+  `docs/DECISIONS.md`): the brain merges any PR once green and checked; no
+  waiting on the export workflow's `long` job; the new name may be in the
+  repo; "keep arc". #431's "540 s" was 600 s with the screen off (540 is the
+  first heartbeat to the tenth). **Open at the end:** 30d, draft #446
+  (branch `claude/project-thread-g37m5i`), stopped partway with a "Left"
+  list at the top of its prompt file on that branch: resume it from there,
+  merging main in first (it takes the version after main's). The nightly
+  was started by hand on main after #440 (78a90e4): read it first.
+  **Not started:** 30c, then 24c (B4's row, after 30c), then 30e.
+  **Learned:** sessions in project threads end their turn while CI runs
+  and may sit idle with a green or red PR for hours: check their PRs
+  yourself and merge a green one; a session's yardsticks "in the thread"
+  belong in the PR body; two sessions took the same version twice (tell
+  the second its number up front).
 - **Brain B-parallel (Opus 5.5, 2026-11-17 to 18, in Claude Code): the
   chains run two at a time; ended at Mikey's request (long session).** The
   plan made parallel (#409: four chains, an After and an Alongside for every

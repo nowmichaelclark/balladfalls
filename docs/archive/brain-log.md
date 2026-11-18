@@ -6,6 +6,15 @@ one-line history of the early PRs, as they stood in `docs/BRAIN.md` before
 log. Nothing here is live; the live state is `docs/BRAIN.md`, "Start here".
 
 ## The log
+**Brain B-parallel 2, the chains' ends and the seven begun (Opus 5.5, a
+cloud thread of Mikey's claude.ai project, 2026-11-18).** Ran 24b, 29, 30b
+and 30a as project threads, two at a time, and checked and merged them
+(v189 to v191); caught 24b's stale module and 30b's flaky timing test in CI,
+checked 30b's render hashes itself. Recorded Mikey's answers (the brain
+merges any green PR; no waiting on the export long job; the new name may be
+in the repo; keep arc). Stopped at his usage limit with 30d as draft #446;
+handed to `docs/sessions/brain-parallel-3.md`, for his other account.
+
 **Brain B-parallel, the chains two at a time (Opus 5.5, in Claude Code,
 2026-11-17 to 18).** Made the road from 17 parallel (#409) and ran it:
 sessions 17, 18, 20 to 24, 26 to 28 started (from report turns as cards

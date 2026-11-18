@@ -106,6 +106,17 @@
 //                       Library and opened by its link in a fresh profile:
 //                       each track plays as long as its maker set it, then
 //                       the next, the card following, round to the first
+//   previous in an album (session 30a, queue item 109; `--only previous`
+//                       runs just these) a tab of its own: from the first
+//                       track Previous is on and goes round to the last; from
+//                       a middle track, by the screen's key, the keyboard's
+//                       Previous and the lock screen's and headset's
+//                       handler, it goes to the track before, the card
+//                       following; after a track's end handed over it goes
+//                       back to that track, which plays its own length and
+//                       hands over again; an album of one; after a track was
+//                       deleted it goes to the track before that one; after
+//                       leaving the album it is as the history says
 //   length (--long)     a minute: the track ends on its line and the core's
 //                       own loop starts there, with the picks (queue item
 //                       95), the card following; Now Playing counts down
@@ -137,6 +148,8 @@ const LONG = argv.includes('--long');
 const PORT = Number(flag('--port', 8771));
 const APP = argv.includes('--app');
 const CDP = flag('--cdp', '');
+// `--only previous`: just that group's rows, for working on one.
+const ONLY = flag('--only', '');
 
 function loadPlaywright() {
   const require = createRequire(import.meta.url);
@@ -1094,6 +1107,11 @@ async function main() {
   const browser = APP ? null : await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const errors = [];
   try {
+    if (ONLY === 'previous') {
+      await previousRows(browser);
+      report();
+      return;
+    }
     const page = APP ? await openApp() : await browser.newPage({ viewport: { width: 412, height: 915 } });
     page.on('pageerror', (e) => errors.push(e.message));
     const ready = async () => {
@@ -1424,6 +1442,7 @@ async function main() {
     if (!APP) await codeRows(browser);
     if (!APP) await linkRows(browser);
     if (!APP) await paceRows(browser);
+    if (!APP) await previousRows(browser);
   } finally {
     if (browser) await browser.close();
     if (server) server.close();
@@ -1833,6 +1852,183 @@ async function paceRows(browser) {
     lasted.length >= 4 && Math.abs(lasted[0] - want[0]) < 1.5 && near(1) && near(2) && Math.abs(lasted[3] - want[0]) < 0.75, `${lasted.map((x) => x.toFixed(2)).join(' s, ')} s`);
   row('album pacing: the card follows the track playing', follows, seen.map((x) => `${x.cards[0]}..${x.cards[x.cards.length - 1]}`).join(' | '));
   row('album pacing: no page errors in its tabs', !bad.length, bad.join('; '));
+}
+
+// Previous in an album (session 30a, queue item 109): from the first track,
+// a middle track, after a track's end handed over, an album of one, after a
+// track was deleted, and after leaving the album; from the on-screen key,
+// the keyboard and the lock screen and headset (the page's media session
+// handler, which Android's notification reaches the same way).
+async function previousRows(browser) {
+  console.log('\n  Previous in an album (session 30a)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  tab.on('pageerror', (e) => bad.push(e.message));
+  // The page's media session handlers, kept so a row can press the lock
+  // screen's and the headset's keys.
+  await tab.addInitScript(`(() => {
+    window.__media = {};
+    try {
+      const ms = navigator.mediaSession;
+      const real = ms.setActionHandler.bind(ms);
+      ms.setActionHandler = (a, f) => { window.__media[a] = f; return real(a, f); };
+    } catch (e) { /* none here */ }
+  })();`);
+  await tab.addInitScript(HOOK);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  await tab.goto(`${ORIGIN}/`);
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+
+  // Three tracks that play on, one alone; and three short ones (two bars
+  // at 160 beats a minute, played once: a few seconds each) that hand over.
+  const mk = (seed, bpm, short) => {
+    const s = newSpec(seed, `bars=2,bpm=${bpm}`);
+    if (short) s.playFor = 1;
+    return s;
+  };
+  const specs = [mk(4101, 160), mk(4202, 150), mk(4303, 140)];
+  const paced = [mk(4404, 160, true), mk(4505, 150, true), mk(4606, 140, true)];
+  const solo = mk(4707, 160);
+  const ids = await tev(async (all) => {
+    const store = await import('/js/storage.js');
+    const out = {};
+    for (const [k, list] of Object.entries(all)) {
+      const made = list.map((s) => store.save(s).id);
+      const a = store.createAlbum(k);
+      store.setAlbumIds(a.id, made);
+      out[k] = made;
+    }
+    return out;
+  }, { Three: specs, Paced: paced, Solo: [solo] });
+  await tab.reload();
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+
+  const seedNow = async () => {
+    const m = await tev(() => window.__rows.probe());
+    const d = m ? about(m.about) : null;
+    return d ? Number(d.seed) : NaN;
+  };
+  const prevOn = () => tev(() => !document.getElementById('prevBtn').disabled);
+  const card = () => tev(() => document.getElementById('loopName').textContent);
+  // The core plays `seed` within `ms`.
+  const reaches = async (seed, ms = 4000) => {
+    for (let t = 0; t < ms; t += 100) {
+      if (await seedNow() === seed) return true;
+      await sleep(100);
+    }
+    return false;
+  };
+  const library = () => tev(() => {
+    if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click();
+    document.querySelector('[data-tab="albums"]').click();
+  });
+  const heroKey = (word) => tev((w) => {
+    const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === w);
+    if (b) b.click();
+    return !!b;
+  }, word);
+  // The album `title` played from its first track, the Library closed.
+  const playAlbum = async (title) => {
+    await library();
+    await sleep(300);
+    await tev((t) => {
+      const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.replace(/, now playing$/, '').trim() === t);
+      if (r) r.querySelector('.lrow-main').click();
+    }, title);
+    await sleep(300);
+    await heroKey('play album');
+    await sleep(500);
+    await tev(() => { if (!document.getElementById('viewLibrary').hidden) document.getElementById('saveBtn').click(); });
+    await sleep(300);
+  };
+  const click = () => tev(() => document.getElementById('prevBtn').click());
+  const keys = () => tev(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'MediaPreviousTrack', key: 'MediaPreviousTrack', bubbles: true })));
+  const lockScreen = () => tev(() => { const f = window.__media.previoustrack; if (f) f(); return !!f; });
+  const pause = () => tev(() => { if (document.getElementById('playBtn').getAttribute('aria-label') === 'Pause') document.getElementById('playBtn').click(); });
+  const seeds = specs.map((s) => s.seed);
+
+  // From the first track: Previous is there, and goes round to the last.
+  await playAlbum('Three');
+  let first = await reaches(seeds[0]);
+  const enabled = await prevOn();
+  await click();
+  const wrapped = await reaches(seeds[2], 2500);
+  row('previous in an album: from the first track the key is there and goes to the last', first && enabled && wrapped, `first=${first} enabled=${enabled} last=${wrapped}`);
+
+  // A middle track, from each way in.
+  const via = async (name, press, from, to) => {
+    // `from` is playing; one press goes to `to`.
+    if (!(await reaches(from, 4000))) { row(`previous in an album: ${name}`, false, `never reached ${from}`); return; }
+    const ok = await press();
+    const there = await reaches(to, 2500);
+    const shown = await card();
+    row(`previous in an album: from a middle track, ${name}, goes to the track before, the card following`, ok !== false && there && shown === specs[seeds.indexOf(to)].name, `${there} ${shown}`);
+  };
+  await via('the on-screen key', click, seeds[2], seeds[1]);
+  await via('the keyboard\'s Previous', keys, seeds[1], seeds[0]);
+  // Round again to the middle, for the lock screen and the headset.
+  await click();
+  await reaches(seeds[2], 2500);
+  await via('the lock screen and the headset', lockScreen, seeds[2], seeds[1]);
+  const enabledMid = await prevOn();
+  row('previous in an album: the key stays on through the album', enabledMid, String(enabledMid));
+
+  // After a track's end handed over: the track plays its length, hands to
+  // the next, Previous goes back to it, and it plays its own length again.
+  const ps = paced.map((s) => s.seed);
+  await pause();
+  await playAlbum('Paced');
+  await reaches(ps[0]);
+  const handed = await reaches(ps[1], 6000);
+  await sleep(600);
+  await click();
+  const back = await reaches(ps[0], 2500);
+  const again = await reaches(ps[1], 6000);
+  row('previous in an album: after a track\'s end handed over, Previous goes back to it, and it plays its own length and hands over again', handed && back && again, `handed=${handed} back=${back} again=${again}`);
+
+  // An album of one.
+  await pause();
+  await playAlbum('Solo');
+  const only = await reaches(solo.seed);
+  const onlyOn = await prevOn();
+  await click();
+  await sleep(800);
+  const stayed = await seedNow() === solo.seed;
+  row('previous in an album: an album of one has the key on and Previous starts the track again', only && onlyOn && stayed, `${only} ${onlyOn} ${stayed}`);
+
+  // A track deleted out from under the album: Previous goes round it.
+  await pause();
+  await playAlbum('Three');
+  await reaches(seeds[0]);
+  await click();
+  await reaches(seeds[2], 2500);
+  await tev(async (id) => { const store = await import('/js/storage.js'); store.remove(id); }, ids.Three[1]);
+  await click();
+  const round = await reaches(seeds[0], 2500);
+  row('previous in an album: after a track was deleted, Previous goes to the track before it', round, `${round}`);
+  const goes = await seedNow();
+  await click();
+  const wrapAgain = await reaches(seeds[2], 2500);
+  row('previous in an album: and on round the album, still in its order', wrapAgain, `${goes} ${wrapAgain}`);
+
+  // After leaving the album Previous is as the history says: not there at
+  // its start, there once a new loop makes some.
+  await tev(() => document.getElementById('nowBtn').click());
+  await sleep(400);
+  const offered = await tev(() => { const a = document.getElementById('nowAction'); const ok = !!a && !a.hidden && a.textContent === 'leave album'; if (ok) a.click(); return ok; });
+  await sleep(500);
+  const left = await tev(() => document.getElementById('prevBtn').disabled);
+  row('previous in an album: after leaving the album, Previous is as the history says (off at its start)', offered && left, `${offered} ${left}`);
+  await tev(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', code: 'KeyN', bubbles: true })));
+  await sleep(2500);
+  const afterNew = await prevOn();
+  row('previous in an album: and on again once a new loop has made a history', afterNew, String(afterNew));
+  await pause();
+  row('previous in an album: no page errors', !bad.length, bad.join('; '));
+  await tab.close();
 }
 
 // The plain lines, each in a tab of its own.

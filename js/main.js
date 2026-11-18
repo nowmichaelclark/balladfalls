@@ -13,7 +13,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v190';
+const BUILD = 'v191';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -449,7 +449,11 @@ function resetHistory(spec) {
 
 function updateHistoryButtons() {
   const prev = ui.el('prevBtn');
-  if (prev) prev.disabled = state.historyIndex <= 0;
+  // In an album Previous is the album's, whatever the history says (its
+  // tracks don't enter the history): the track before, round from the first
+  // to the last. Outside one it is the history's.
+  const inAlbum = !!(state.playlist && state.playlist.ids.length);
+  if (prev) prev.disabled = !inAlbum && state.historyIndex <= 0;
   // Next is never disabled: past the end of the history it makes a new loop.
 }
 
@@ -807,6 +811,8 @@ function savedChanged() {
   // The albums' art, ready for the Library before it is opened.
   library.warmArt();
   updateSaveButton();
+  // An album deleted while it plays leaves Previous to the history.
+  updateHistoryButtons();
   if (state.view === 'now') renderNow();
 }
 
@@ -1293,6 +1299,7 @@ function leaveAlbum() {
   library.refresh();
   renderNow();
   armNext();
+  updateHistoryButtons();
   ui.toast('Left the album. Next makes new loops');
 }
 
@@ -1467,18 +1474,25 @@ function onTrackEnd() {
   }, 0);
 }
 
+// One step through the album: 1 is Next, -1 is Previous (round from the last
+// track to the first, and from the first to the last).
 function advancePlaylist(step, play = true) {
   const pl = state.playlist;
   if (!pl || !pl.ids.length) return;
   pl.index = (pl.index + step + pl.ids.length) % pl.ids.length;
-  const entry = store.loadAll().find((e) => e.id === pl.ids[pl.index]);
-  if (!entry) {
-    // A loop was deleted out from under the album; drop it and carry on.
+  const saved = new Map(store.loadAll().map((e) => [e.id, e]));
+  let entry = saved.get(pl.ids[pl.index]);
+  while (!entry) {
+    // A loop was deleted out from under the album: drop it and carry on the
+    // way the step was going (back, the track before it).
     pl.ids.splice(pl.index, 1);
-    if (!pl.ids.length) { state.playlist = null; return; }
-    pl.index %= pl.ids.length;
-    advancePlaylist(0, play);
-    return;
+    if (!pl.ids.length) {
+      state.playlist = null;
+      updateHistoryButtons();
+      return;
+    }
+    pl.index = step < 0 ? (pl.index - 1 + pl.ids.length) % pl.ids.length : pl.index % pl.ids.length;
+    entry = saved.get(pl.ids[pl.index]);
   }
   loadSpec(cloneSpec(entry.spec), { id: entry.id, pushToHistory: false });
   if (play && !state.engine.playing) togglePlay();

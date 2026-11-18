@@ -3,6 +3,7 @@ package app.loops
 import android.graphics.Bitmap
 import android.os.Handler
 import android.os.HandlerThread
+import android.util.Log
 
 /**
  * What the page has told the app about what is playing and what is being
@@ -66,7 +67,12 @@ object StreamKeeper {
     private val handler = Handler(thread.looper)
 
     @Volatile private var wanted = false
-    private val stop = Runnable { if (!wanted) NativeCore.stop() }
+    private val stop = Runnable {
+        if (!wanted) {
+            NativeCore.stop()
+            Log.i(TAG, "stream stopped (nothing plays)")
+        }
+    }
 
     /** The page plays (true) or has paused (false). */
     fun playing(on: Boolean) {
@@ -104,6 +110,11 @@ object StreamKeeper {
         if (NativeCore.figures().running) return
         // The engine exists once the page has played (its `init` makes it); before that the page's own start
         // opens the stream, and this has nothing to restart.
-        if (NativeCore.figures().engine) NativeCore.start(true)
+        if (NativeCore.figures().engine) {
+            val why = NativeCore.start(true)
+            Log.i(TAG, if (why == null) "stream started" else "stream did not start: $why")
+        }
     }
+
+    private const val TAG = "DriftloomStream"
 }

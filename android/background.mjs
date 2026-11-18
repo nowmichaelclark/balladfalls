@@ -366,17 +366,24 @@ try {
           worker: typeof Worker,
         }));
         check(`${format}: the export sheet has what the run clicks`, false, `${missing}; ${JSON.stringify(sheet)}`);
-        // Why the Worker would not start: what the page's own loader serves, and what a Worker of it says.
-        fact('the export Worker\'s file', String(await ask(() => fetch(new URL('js/export-worker.js', location.href)).then((r) => `${r.status} ${r.headers.get('content-type')}`).catch((e) => `fetch failed: ${e}`))));
-        fact('a Worker of it', String(await ev(() => new Promise((resolve) => {
+        // Why the Worker would not start: what the page's own loader serves, and what Workers say.
+        const probe = (label, make) => ev(([text]) => new Promise((resolve) => {
           try {
-            const w = new Worker(new URL('js/export-worker.js', location.href), { type: 'module' });
+            const w = (new Function('return ' + text))()();
             w.onerror = (e) => resolve(`error: ${e.message} ${e.filename}:${e.lineno}`);
-            w.onmessage = (e) => resolve(`message: ${JSON.stringify(e.data)}`);
+            w.onmessage = (e) => resolve(`message: ${JSON.stringify(e.data).slice(0, 80)}`);
             w.postMessage({ type: 'hello' });
             setTimeout(() => resolve('no answer in 10 s'), 10000);
           } catch (e) { resolve(`threw: ${e}`); }
-        }), undefined, false, 30000).catch((e) => `no answer: ${e.message}`)));
+        }), [make], false, 30000).then((r) => fact(label, r), (e) => fact(label, `no answer: ${e.message}`));
+        await probe('the export Worker (module)', "() => new Worker(new URL('js/export-worker.js', location.href), { type: 'module' })");
+        await probe('the cover Worker (module)', "() => new Worker(new URL('js/cover-worker.js', location.href), { type: 'module' })");
+        await probe('a classic Worker of the same file', "() => new Worker(new URL('js/rng.js', location.href))");
+        await probe('a Worker from a Blob', "() => new Worker(URL.createObjectURL(new Blob(['onmessage = () => postMessage(\\'blob ok\\')'])))");
+        await probe('a module Worker from a Blob importing a file by its address', "() => new Worker(URL.createObjectURL(new Blob([`import * as r from '${location.origin}/js/rng.js'; onmessage = () => postMessage('imported ' + Object.keys(r).length)`], { type: 'text/javascript' })), { type: 'module' })");
+        for (const m of ['export-render', 'export-opus', 'ogg', 'app', 'request', 'player']) {
+          fact(`import of js/${m}.js in the page`, String(await ask((n) => import(new URL(`js/${n}.js`, location.href).href).then(() => 'ok', (e) => `failed: ${e}`), m)));
+        }
         log(`  the page's problems: ${page.problems.slice(-5).join(' | ')}`);
         return null;
       }

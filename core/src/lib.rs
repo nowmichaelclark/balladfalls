@@ -3442,21 +3442,22 @@ pub mod begun {
     unsafe impl Sync for Log {}
     static LOG: Log = Log(UnsafeCell::new(([0.0; MOST * WORDS], 0)));
 
-    /// A note `w` began on frame `begin`, its channel's gain `gain`.
-    pub(crate) fn log(w: &super::Waiting, begin: u64, gain: f32) {
+    /// A note `waiting` began on frame `begin`, its channel's gain `gain`.
+    pub(crate) fn log(waiting: &super::Waiting, begin: u64, gain: f32) {
         // SAFETY: single-threaded, and no reference is kept.
-        let (buf, n) = unsafe { &mut *LOG.0.get() };
-        if *n >= MOST {
+        let (buf, count) = unsafe { &mut *LOG.0.get() };
+        if *count >= MOST {
             return;
         }
-        let (a, b) = w.fade;
+        let (from, to) = waiting.fade;
         #[allow(clippy::cast_precision_loss)] // frames, exact for millennia
-        let faded = if b > a && begin > a { b.saturating_sub(begin) as f64 / (b - a) as f64 } else { 1.0 };
-        let k = w.key;
+        let faded = if to > from && begin > from { to.saturating_sub(begin) as f64 / (to - from) as f64 } else { 1.0 };
+        let key = waiting.key;
+        let note = &waiting.note;
         #[allow(clippy::cast_precision_loss)] // the same
-        let row = [f64::from(w.note.channel), f64::from(k.seed), f64::from(k.pass), f64::from(k.step), f64::from(k.ord), begin as f64, w.note.vel, f64::from(gain), faded, f64::from(w.note.voice)];
-        buf[*n * WORDS..(*n + 1) * WORDS].copy_from_slice(&row);
-        *n += 1;
+        let row = [f64::from(note.channel), f64::from(key.seed), f64::from(key.pass), f64::from(key.step), f64::from(key.ord), begin as f64, note.vel, f64::from(gain), faded, f64::from(note.voice)];
+        buf[*count * WORDS..(*count + 1) * WORDS].copy_from_slice(&row);
+        *count += 1;
     }
 
     /// The notes logged since the last call, `WORDS` numbers each, and how

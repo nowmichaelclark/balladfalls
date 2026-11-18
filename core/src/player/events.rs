@@ -93,7 +93,7 @@ pub fn pack_heard(loud: &[f64; 5], share: &[f64; 5]) -> u64 {
 
 /// A `Kind::Heard` event's number as the five layers' loudness and share.
 #[must_use]
-#[allow(clippy::cast_precision_loss)] // ten bits a layer
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)] // ten bits a layer, five layers
 pub fn unpack_heard(number: u64) -> ([f64; 5], [f64; 5]) {
     let field = |i: usize| (number >> (HEARD_BITS * i as u32)) & ((1 << HEARD_BITS) - 1);
     let loud = core::array::from_fn(|i| (field(i) & ((1 << LOUD_BITS) - 1)) as f64 / HEARD_ONE);

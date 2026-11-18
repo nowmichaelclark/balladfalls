@@ -62,12 +62,13 @@ export function loopCode(seed, request = '', mutes = 0, salt = 0, name = '') {
   return text(n);
 }
 
-/** A loop's code read: { seed, mutes, salt, name }, or a refusal thrown. */
+/** A loop's code read: { seed, mutes, salt, name, request } (the request as text), or a refusal thrown. */
 export function readLoop(code) {
   const c = core();
   if (!c.dl_code_read(put(enc.encode(code)))) throw refused();
   const out = { seed: c.dl_code_seed() >>> 0, mutes: c.dl_code_mutes(), salt: c.dl_code_salt() >>> 0 };
   out.name = text(c.dl_code_name());
+  out.request = text(c.dl_code_request());
   return out;
 }
 

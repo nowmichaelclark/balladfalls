@@ -34,6 +34,9 @@ for (const line of lines) {
     const made = loopCode(Number(seed), req(request), Number(mutes), Number(salt), named(name));
     check(`loop ${seed} ${request} ${name}`, made === code, `${made} != ${code}`);
     const back = readLoop(code);
+    // What it asks, as text, makes the same code again.
+    const again = loopCode(Number(seed), back.request, Number(mutes), Number(salt), named(name));
+    check('  its request as text makes it again', again === code, `${back.request}: ${again}`);
     check(`  reads back`, back.seed === Number(seed) && back.mutes === Number(mutes) && back.salt === Number(salt) && back.name === named(name), JSON.stringify(back));
   } else if (f[0] === 'album') {
     const [, t, list, code] = f;

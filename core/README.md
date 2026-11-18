@@ -576,6 +576,12 @@ written by `node tools/name-table.mjs` and frozen with the format. A host's
 rename box asks the same rule (`dl_code_name_ok`), so a name a listener can
 type is one a code can carry.
 
+**A code's request as text.** `code::request_text` (`dl_code_request` after
+`dl_code_read`) writes what a loop's code asks as the text `Request::parse`
+reads: its asks, its edits (`edit.seed.drums=…`, `edit.warmth=…`) and its
+version. A host that keeps a loop as a record of its request, as the app's
+Library does, reads a code back into that record from it.
+
 **An album:** *head* (`2 * version + 1`), a number for its kind, then:
 
 - **0, a list of loops:** how many (1 to 1,024); each track as how many

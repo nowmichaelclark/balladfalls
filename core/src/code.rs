@@ -1182,3 +1182,120 @@ pub fn write_seed_album(seed: u32, count: usize, picks: &Request, name: &Name, o
     }
     w.check()
 }
+
+// ------------------------------------------------------------------- as text
+
+/// The names of a set's bits, `|` between (`request_text`).
+fn names<W: core::fmt::Write>(w: &mut W, bits: u32, names: impl Iterator<Item = &'static str>) -> core::fmt::Result {
+    let mut first = true;
+    for (i, n) in names.enumerate() {
+        if i < 32 && bits & (1 << i) != 0 {
+            if !first {
+                w.write_char('|')?;
+            }
+            w.write_str(n)?;
+            first = false;
+        }
+    }
+    Ok(())
+}
+
+/// `r` as the text `Request::parse` reads (its asks, then its edits, a comma
+/// between each, and its version where it has one): what a host that keeps
+/// a loop as a record of its request reads back from a code (`dl_code_request`,
+/// the app's js/share.js), so the record says what was asked, in the
+/// request's own words. Every request reads back to itself
+/// (`tests/codes.rs`). Nothing asked is "".
+///
+/// # Errors
+/// The writer's.
+pub fn request_text<W: core::fmt::Write>(r: &Request, w: &mut W) -> core::fmt::Result {
+    use crate::generator::longform::NOTE_NAMES;
+    let mut first = true;
+    let mut item = |w: &mut W, args: core::fmt::Arguments| -> core::fmt::Result {
+        if !first {
+            w.write_char(',')?;
+        }
+        first = false;
+        w.write_fmt(args)
+    };
+    if r.version() != 0 {
+        item(w, format_args!("version={}", r.version()))?;
+    }
+    for (i, v) in VIBES.iter().enumerate() {
+        match r.vibe(i) {
+            Some(Some(weight)) => item(w, format_args!("{}={weight}", v.id))?,
+            Some(None) => item(w, format_args!("{}", v.id))?,
+            None => {}
+        }
+    }
+    if let Some([lo, hi]) = r.tempo() {
+        #[allow(clippy::float_cmp)] // whole bpm: a tempo pinned is one number
+        let pinned = lo == hi;
+        if pinned {
+            item(w, format_args!("bpm={lo}"))?;
+        } else {
+            item(w, format_args!("bpm={lo}-{hi}"))?;
+        }
+    }
+    match r.length() {
+        Some(Length::Bars(bars)) => item(w, format_args!("bars={bars}"))?,
+        Some(Length::Endless) => item(w, format_args!("bars=endless"))?,
+        None => {}
+    }
+    if let Some(j) = r.journey() {
+        item(w, format_args!("journey={}", j.name()))?;
+    }
+    if r.keys() != 0 {
+        item(w, format_args!("key="))?;
+        names(w, r.keys(), NOTE_NAMES.iter().copied())?;
+    }
+    if r.scales() != 0 {
+        item(w, format_args!("scale="))?;
+        names(w, r.scales(), SCALES.iter().map(|s| s.id))?;
+    }
+    if r.styles() != 0 {
+        item(w, format_args!("style="))?;
+        names(w, r.styles(), PROFILE_ORDER.iter().copied())?;
+    }
+    for (layer, name) in LAYER_NAMES.iter().enumerate() {
+        if r.voices(layer) != 0 {
+            item(w, format_args!("voice.{name}="))?;
+            names(w, r.voices(layer), VOICE_ORDER[layer].iter().copied())?;
+        }
+    }
+    for (layer, name) in LAYER_NAMES.iter().enumerate() {
+        match r.layer(layer) {
+            LayerAsk::On => item(w, format_args!("layer.{name}=on"))?,
+            LayerAsk::Off => item(w, format_args!("layer.{name}=off"))?,
+            LayerAsk::Chance => {}
+        }
+    }
+    if let Some(theme) = r.theme() {
+        item(w, format_args!("theme={theme}"))?;
+    }
+    let p = r.pins();
+    for number in 0..request::PINS_MAX {
+        let (Some(x), Some((prefix, name))) = (p.at(number), Pins::name(number)) else { continue };
+        match Pins::words(number) {
+            Some(words) => item(w, format_args!("{prefix}{name}={}", words.get(crate::generator::js::index(x)).map_or("", |e| e.0)))?,
+            None => item(w, format_args!("{prefix}{name}={x}"))?,
+        }
+    }
+    let e = r.edits();
+    for (layer, name) in LAYER_NAMES.iter().enumerate() {
+        if let Some(seed) = e.seed(layer) {
+            let kind = if e.rolled() & (1 << layer) != 0 { "roll" } else { "seed" };
+            item(w, format_args!("edit.{kind}.{name}={seed}"))?;
+        }
+    }
+    for (k, name) in TONE_NAMES.iter().enumerate() {
+        if let Some(x) = e.tone(k) {
+            item(w, format_args!("edit.{name}={x}"))?;
+        }
+    }
+    if let Some(bpm) = e.bpm() {
+        item(w, format_args!("edit.bpm={bpm}"))?;
+    }
+    Ok(())
+}

@@ -938,3 +938,26 @@ fn names_fuzzed() {
         }
     }
 }
+
+#[test]
+fn a_request_reads_back_from_its_text() {
+    // What a code asks, written as text (`code::request_text`), reads back
+    // to the same request: the same code, every part and every edit.
+    let mut r = Rng::new(424);
+    for i in 0..3000 {
+        let l = if i == 0 { Loop::of(1) } else { random_loop(&mut r) };
+        let mut text = String::new();
+        code::request_text(&l.request, &mut text).expect("text");
+        let back = Request::parse(&text).unwrap_or_else(|e| panic!("{text}: {e}"));
+        assert_eq!(write(&Loop { request: back, ..l }), write(&l), "{text}");
+    }
+    let mut text = String::new();
+    let asked = Request::parse("glacial=0.7,misty,bpm=70-85,bars=3072,journey=arc,key=C#|G,scale=dorian,style=tide,voice.melody=kalimba|marimba,layer.drums=off,theme=1234,organ=on,tuning.cents=-12.5,edit.roll.bass=7,edit.warmth=0.6,edit.bpm=88.5").expect("a request");
+    code::request_text(&asked, &mut text).expect("text");
+    assert_eq!(text, "glacial=0.7,misty,bpm=70-85,bars=3072,journey=arc,key=C#|G,scale=dorian,style=tide,voice.melody=kalimba|marimba,layer.drums=off,theme=1234,organ=on,tuning.cents=-12.5,edit.roll.bass=7,edit.warmth=0.6,edit.bpm=88.5");
+    // A code's loop says its version.
+    let read = code::read_loop(write(&Loop::of(5)).as_bytes()).expect("a code");
+    text.clear();
+    code::request_text(&read.request, &mut text).expect("text");
+    assert_eq!(text, format!("version={}", data::CODE_NEWEST));
+}

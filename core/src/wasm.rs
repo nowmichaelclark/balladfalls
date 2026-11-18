@@ -1568,6 +1568,17 @@ mod codes {
     unsafe impl Sync for Last {}
     static LAST: Last = Last(UnsafeCell::new((0, 0, 0, Name::NONE)));
 
+    /// The text written at `dl_code_text`, as far as it fits.
+    struct At(usize);
+    impl core::fmt::Write for At {
+        fn write_str(&mut self, s: &str) -> core::fmt::Result {
+            let end = self.0 + s.len();
+            text().get_mut(self.0..end).ok_or(core::fmt::Error)?.copy_from_slice(s.as_bytes());
+            self.0 = end;
+            Ok(())
+        }
+    }
+
     /// Why the last call here refused, or none.
     struct Refused(UnsafeCell<Option<&'static str>>);
     // Single-threaded, as above.
@@ -1679,6 +1690,19 @@ mod codes {
     pub extern "C" fn dl_code_salt() -> u32 {
         // SAFETY: single-threaded.
         unsafe { (*LAST.0.get()).2 }
+    }
+
+    /// The request being asked (a code's, after `dl_code_read`), as the
+    /// text `Request::parse` reads (`code::request_text`: its asks, its
+    /// edits and its version), written at `dl_code_text`: its length. A host
+    /// that keeps a loop as a record of its request reads it from here.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_request() -> u32 {
+        let mut at = At(0);
+        if code::request_text(request(), &mut at).is_err() {
+            return 0;
+        }
+        u32::try_from(at.0).unwrap_or(0)
     }
 
     /// Its own name, written at `dl_code_text`: its length in bytes, 0 for

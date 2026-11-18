@@ -1540,17 +1540,18 @@ mod flac {
 }
 
 // Share codes, version 2 (queue item 105; `crate::code`), with the `codes`
-// feature: not in js/dlplayer.wasm until the app reads them (session 23), and
-// in the tools' build. A host writes a code (or an album's parts) at
-// `dl_code_input`, and reads what is written at `dl_code_text`. What a code
-// asks is the player's request being asked (`dl_play_*`), and a refusal is
-// noted where `dl_play_refusal` reads it.
+// feature: in the tools' build, and in js/dlplayer.wasm from session 23. A
+// host writes a code (or an album's parts, or a name) at `dl_code_input`,
+// and reads what is written at `dl_code_text`. What a code asks is the
+// player's request being asked (`dl_play_*`), and a refusal is noted where
+// `dl_code_refusal` reads it. A name is its UTF-8 bytes, as the host gave
+// them (`code::Name`).
 #[cfg(feature = "codes")]
 mod codes {
     use core::cell::UnsafeCell;
 
     use super::player::request;
-    use crate::code::{self, Kind, Loop, Title};
+    use crate::code::{self, Kind, Loop, Name};
 
     /// Room for a code, or an album's tracks: 64 KB each way.
     const ROOM: usize = 1 << 16;
@@ -1561,11 +1562,11 @@ mod codes {
     static INPUT: Bytes = Bytes(UnsafeCell::new([0; ROOM]));
     static TEXT: Bytes = Bytes(UnsafeCell::new([0; ROOM]));
 
-    /// The last loop read: its seed, mutes and salt.
-    struct Last(UnsafeCell<(u32, u8, u32)>);
+    /// The last loop read: its seed, mutes, salt and name.
+    struct Last(UnsafeCell<(u32, u8, u32, Name)>);
     // Single-threaded, as above.
     unsafe impl Sync for Last {}
-    static LAST: Last = Last(UnsafeCell::new((0, 0, 0)));
+    static LAST: Last = Last(UnsafeCell::new((0, 0, 0, Name::NONE)));
 
     /// Why the last call here refused, or none.
     struct Refused(UnsafeCell<Option<&'static str>>);
@@ -1622,7 +1623,7 @@ mod codes {
         INPUT.0.get().cast()
     }
 
-    /// Where a code, a track or a title is written.
+    /// Where a code, a track, a name or a refusal is written.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_code_text() -> *const u8 {
         TEXT.0.get().cast()
@@ -1641,17 +1642,17 @@ mod codes {
 
     /// Read the loop's code in the first `len` bytes at `dl_code_input`:
     /// what it asks becomes the request being asked (in place of anything
-    /// asked so far), and its seed, mutes and salt are `dl_code_seed`,
-    /// `dl_code_mutes` and `dl_code_salt`. 1 if it is one; else 0, the
-    /// request left as it was (`dl_code_refusal` says why: "needs a newer
-    /// version", "not a code").
+    /// asked so far), and its seed, mutes, salt and name are `dl_code_seed`,
+    /// `dl_code_mutes`, `dl_code_salt` and `dl_code_name`. 1 if it is one;
+    /// else 0, the request left as it was (`dl_code_refusal` says why:
+    /// "needs a newer version", "not a code").
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_code_read(len: u32) -> u32 {
         match code::read_loop(input(len)) {
             Ok(l) => {
                 *request() = l.request;
                 // SAFETY: single-threaded, and no export keeps the reference.
-                unsafe { *LAST.0.get() = (l.seed, l.mutes, l.salt) };
+                unsafe { *LAST.0.get() = (l.seed, l.mutes, l.salt, l.name) };
                 met();
                 1
             }
@@ -1680,26 +1681,56 @@ mod codes {
         unsafe { (*LAST.0.get()).2 }
     }
 
+    /// Its own name, written at `dl_code_text`: its length in bytes, 0 for
+    /// none.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_name() -> u32 {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let name = unsafe { (*LAST.0.get()).3 };
+        let t = name.text();
+        text()[..t.len()].copy_from_slice(t);
+        u32::try_from(t.len()).unwrap_or(0)
+    }
+
+    /// Whether the first `len` bytes at `dl_code_input` are a name a code
+    /// carries (`code::Name::new`; none is one): 1, or 0 with the refusal
+    /// noted. The app's rename box asks it, so a name is held to one rule.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_name_ok(len: u32) -> u32 {
+        match Name::new(input(len)) {
+            Ok(_) => {
+                met();
+                1
+            }
+            Err(why) => refuse(why),
+        }
+    }
+
     /// Write the code of the loop of `seed` as the request being asked asks
-    /// (it is kept, for a load after), with `mutes` (a bit each) and the
-    /// wander's `salt` (0 for none), at `dl_code_text`: its length, or 0
+    /// (it is kept, for a load after), with `mutes` (a bit each), the
+    /// wander's `salt` (0 for none) and the name in the first `name` bytes at
+    /// `dl_code_input` (0 for none), at `dl_code_text`: its length, or 0
     /// with the refusal noted (`dl_code_refusal`).
     #[unsafe(no_mangle)]
-    pub extern "C" fn dl_code_write(seed: u32, mutes: u32, salt: u32) -> u32 {
+    pub extern "C" fn dl_code_write(seed: u32, mutes: u32, salt: u32, name: u32) -> u32 {
+        let name = match Name::new(input(name)) {
+            Ok(n) => n,
+            Err(why) => return refuse(why),
+        };
         #[allow(clippy::cast_possible_truncation)] // five bits
-        let l = Loop { seed, request: *request(), mutes: (mutes & 31) as u8, salt };
+        let l = Loop { seed, request: *request(), mutes: (mutes & 31) as u8, salt, name };
         length(code::write_loop(&l, text()))
     }
 
     /// Read the album's code in the first `len` bytes at `dl_code_input`:
-    /// how many tracks (each then `dl_code_track`), and its title at
-    /// `dl_code_text`, NUL-terminated (empty for none); 0 with the refusal
-    /// noted if it is none.
+    /// how many tracks (each then `dl_code_track`), and its name at
+    /// `dl_code_text`, NUL-terminated (empty for none: a name holds no
+    /// NUL); 0 with the refusal noted if it is none.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_code_album(len: u32) -> u32 {
         match code::read_album(input(len)) {
             Ok(a) => {
-                let t = a.title.text();
+                let t = a.name.text();
                 text()[..t.len()].copy_from_slice(t);
                 text()[t.len()] = 0;
                 met();
@@ -1718,30 +1749,30 @@ mod codes {
     }
 
     /// Write the album of the loops' codes in the first `len` bytes at
-    /// `dl_code_input` (its title's `title` bytes first, then the codes, a
+    /// `dl_code_input` (its name's `name` bytes first, then the codes, a
     /// `.` between each), at `dl_code_text`: its length, or 0 with the
     /// refusal noted.
     #[unsafe(no_mangle)]
-    pub extern "C" fn dl_code_album_write(len: u32, title: u32) -> u32 {
+    pub extern "C" fn dl_code_album_write(len: u32, name: u32) -> u32 {
         let all = input(len);
-        let (head, codes) = all.split_at((title as usize).min(all.len()));
-        let title = match Title::new(head) {
-            Ok(t) => t,
+        let (head, codes) = all.split_at((name as usize).min(all.len()));
+        let name = match Name::new(head) {
+            Ok(n) => n,
             Err(why) => return length(Err(why)),
         };
-        length(code::write_album(codes.split(|&b| b == b'.'), &title, text()))
+        length(code::write_album(codes.split(|&b| b == b'.'), &name, text()))
     }
 
     /// Write the album of `count` tracks drawn from `seed`, each asked what
-    /// the request being asked asks (its edits left out), titled by the
-    /// first `title` bytes at `dl_code_input`, at `dl_code_text`: its
+    /// the request being asked asks (its edits left out), named by the
+    /// first `name` bytes at `dl_code_input`, at `dl_code_text`: its
     /// length, or 0 with the refusal noted (`dl_code_refusal`).
     #[unsafe(no_mangle)]
-    pub extern "C" fn dl_code_album_seed(seed: u32, count: u32, title: u32) -> u32 {
-        let title = match Title::new(input(title)) {
-            Ok(t) => t,
+    pub extern "C" fn dl_code_album_seed(seed: u32, count: u32, name: u32) -> u32 {
+        let name = match Name::new(input(name)) {
+            Ok(n) => n,
             Err(why) => return length(Err(why)),
         };
-        length(code::write_seed_album(seed, count as usize, request(), &title, text()))
+        length(code::write_seed_album(seed, count as usize, request(), &name, text()))
     }
 }

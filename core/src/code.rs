@@ -7,7 +7,8 @@
 //! asked or changed beside it (the request's vibes, tempo, length, journey,
 //! key, mode, style, voices, layers, pins and theme; a code's edits; the
 //! listener's mutes; the wander's salt of a play that wandered
-//! unrepeatably). A loop with nothing asked is nine characters.
+//! unrepeatably; a name of its own, if it was renamed: `name.rs`). A loop
+//! with nothing asked is nine characters.
 //!
 //! **Everything is named by its id** (`data/codes.txt`): a vibe, a profile, a
 //! choice or a voice by the number given it there once, never by its place
@@ -32,6 +33,10 @@ use crate::generator::rng::Rng;
 use crate::generator::theory::SCALES;
 
 pub use crate::generator::request::NEEDS_NEWER;
+pub use name::{BAD_NAME, MARKS_MOST, NAME_MOST, Name, TAGS_MOST};
+
+mod classes;
+mod name;
 
 /// The line for text that is no code: a character outside the alphabet, a
 /// typo the check catches, a code cut short or a field out of place.
@@ -41,9 +46,6 @@ pub const NO_ROOM: &str = "no room for the code";
 /// The line for a request that asks for something its own version does not
 /// have (a request built by hand at an older version).
 pub const NOT_AT_VERSION: &str = "asks for something its version does not have";
-/// The line for an album's title that is not 1 to `TITLE_MOST` printable
-/// ASCII characters.
-pub const BAD_TITLE: &str = "a bad title";
 /// The line for an album of no tracks, or more than `ALBUM_MOST`.
 pub const BAD_ALBUM: &str = "a bad album";
 
@@ -54,8 +56,6 @@ pub const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrst
 pub const LOOP_MOST: usize = 4096;
 /// The most tracks an album holds.
 pub const ALBUM_MOST: usize = 1024;
-/// The longest album title, in characters.
-pub const TITLE_MOST: usize = 40;
 
 /// The check's modulus: the largest prime below 4096, so two characters hold
 /// it, any one character changed or two side by side swapped changes it.
@@ -85,13 +85,14 @@ mod tag {
     pub const BPM: u64 = 19;
     pub const MUTES: u64 = 20;
     pub const SALT: u64 = 21;
-    pub const TITLE: u64 = 30;
+    pub const NAME: u64 = 30;
 }
 
 /// A loop as a code holds it: its seed, what was asked of it (its version
 /// among it: `Request::version`, 0 for this build's newest), the layers the
-/// listener muted (a bit each in the core's layer order) and the wander's
-/// salt of the play it was shared from (queue item 92; 0 for none).
+/// listener muted (a bit each in the core's layer order), the wander's
+/// salt of the play it was shared from (queue item 92; 0 for none) and its
+/// own name, if it was renamed (`Name::NONE` for the one its seed gives).
 #[derive(Clone, Copy)]
 pub struct Loop {
     /// The loop's seed.
@@ -102,13 +103,15 @@ pub struct Loop {
     pub mutes: u8,
     /// The wander's salt, or 0.
     pub salt: u32,
+    /// Its own name, or `Name::NONE`.
+    pub name: Name,
 }
 
 impl Loop {
     /// The loop of `seed`, nothing asked.
     #[must_use]
     pub const fn of(seed: u32) -> Self {
-        Loop { seed, request: Request::new(), mutes: 0, salt: 0 }
+        Loop { seed, request: Request::new(), mutes: 0, salt: 0, name: Name::NONE }
     }
 }
 
@@ -497,6 +500,10 @@ fn body(w: &mut Out, song: &Loop, version: u32, own_version: Option<u32>, picks_
         w.uv(tag::SALT);
         w.seed(song.salt);
     }
+    if !song.name.is_none() {
+        w.uv(tag::NAME);
+        song.name.write(w);
+    }
     Ok(())
 }
 
@@ -733,18 +740,19 @@ enum Fields {
     Loop,
     /// An album's track: a loop's, and its own version first.
     Track,
-    /// An album from one seed: the picks the tracks share, and a title.
+    /// An album from one seed: the picks the tracks share, and the album's
+    /// name.
     Picks,
 }
 
 /// A loop's seed and fields, read from `r` up to its end, at `version`
 /// (a track's own first field may change it).
 #[allow(clippy::too_many_lines)] // one field after another, in their order
-fn read_body(r: &mut In, version: u32, fields: Fields, title: &mut Title) -> Result<Loop, &'static str> {
+fn read_body(r: &mut In, version: u32, fields: Fields) -> Result<Loop, &'static str> {
     let seed = r.seed()?;
     let mut version = version;
     let mut req = Request::new();
-    let (mut mutes, mut salt) = (0u8, 0u32);
+    let (mut mutes, mut salt, mut name) = (0u8, 0u32, Name::NONE);
     // Each tag once, ascending; a keyed one (a vibe, a layer's voices, a
     // pin, a layer's seed, a tone) may repeat, its key ascending.
     let mut last: Option<(u64, u64)> = None;
@@ -753,7 +761,7 @@ fn read_body(r: &mut In, version: u32, fields: Fields, title: &mut Title) -> Res
     while !r.done() {
         let t = r.uv()?;
         // A field this build does not know is a newer build's.
-        if t > tag::SALT && t != tag::TITLE {
+        if t > tag::SALT && t != tag::NAME {
             return Err(NEEDS_NEWER);
         }
         // The key read with the tag, to hold the order.
@@ -766,11 +774,11 @@ fn read_body(r: &mut In, version: u32, fields: Fields, title: &mut Title) -> Res
             _ => {}
         }
         last = Some((t, k));
-        let picks = t != tag::VERSION && t != tag::TITLE && t <= tag::SETTING;
+        let picks = t != tag::VERSION && t <= tag::SETTING;
         let allowed = match fields {
-            Fields::Loop => t != tag::VERSION && t != tag::TITLE,
-            Fields::Track => t != tag::TITLE && (t != tag::VERSION || first),
-            Fields::Picks => picks || t == tag::TITLE,
+            Fields::Loop => t != tag::VERSION,
+            Fields::Track => t != tag::VERSION || first,
+            Fields::Picks => picks || t == tag::NAME,
         };
         first = false;
         if !allowed {
@@ -920,12 +928,12 @@ fn read_body(r: &mut In, version: u32, fields: Fields, title: &mut Title) -> Res
                     return Err(NOT_A_CODE);
                 }
             }
-            tag::TITLE => *title = Title::read(r)?,
+            tag::NAME => name = Name::read(r)?,
             _ => return Err(NEEDS_NEWER),
         }
     }
     let request = met(req.with_version(version))?;
-    Ok(Loop { seed, request, mutes, salt })
+    Ok(Loop { seed, request, mutes, salt, name })
 }
 
 /// Read a loop's code (spaces around it are let be).
@@ -940,100 +948,14 @@ pub fn read_loop(code: &[u8]) -> Result<Loop, &'static str> {
     if kind != Kind::Loop {
         return Err(NOT_A_CODE);
     }
-    let mut title = Title::NONE;
-    read_body(&mut r, version, Fields::Loop, &mut title)
+    read_body(&mut r, version, Fields::Loop)
 }
 
 // ------------------------------------------------------------------- albums
 
-/// An album's title: 1 to `TITLE_MOST` printable ASCII characters, or none.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct Title {
-    chars: [u8; TITLE_MOST],
-    len: usize,
-}
-
-impl Title {
-    /// No title.
-    pub const NONE: Title = Title { chars: [0; TITLE_MOST], len: 0 };
-
-    /// A title from its text.
-    ///
-    /// # Errors
-    /// `BAD_TITLE` for text longer than `TITLE_MOST`, or a character outside
-    /// printable ASCII (space to tilde).
-    pub fn new(text: &[u8]) -> Result<Self, &'static str> {
-        if text.len() > TITLE_MOST || text.iter().any(|&c| !(32..=126).contains(&c)) {
-            return Err(BAD_TITLE);
-        }
-        let mut t = Title::NONE;
-        t.chars[..text.len()].copy_from_slice(text);
-        t.len = text.len();
-        Ok(t)
-    }
-
-    /// The title's text (empty for none).
-    #[must_use]
-    pub fn text(&self) -> &[u8] {
-        &self.chars[..self.len]
-    }
-
-    /// Written: how many characters, then each as seven bits (less 32), the
-    /// bits packed six to a character, the first bit highest, the last
-    /// character's spare bits 0.
-    fn write(&self, w: &mut Out) {
-        w.uv(self.len as u64);
-        let (mut acc, mut bits) = (0u32, 0);
-        for &c in self.text() {
-            acc = (acc << 7) | u32::from(c - 32);
-            bits += 7;
-            while bits >= 6 {
-                bits -= 6;
-                #[allow(clippy::cast_possible_truncation)] // six bits
-                w.put(((acc >> bits) & 63) as u8);
-            }
-        }
-        if bits > 0 {
-            #[allow(clippy::cast_possible_truncation)] // six bits
-            w.put(((acc << (6 - bits)) & 63) as u8);
-        }
-    }
-
-    fn read(r: &mut In) -> Result<Self, &'static str> {
-        let len = usize::try_from(r.below(TITLE_MOST as u64 + 1)?).map_err(|_| NOT_A_CODE)?;
-        if len == 0 {
-            return Err(NOT_A_CODE);
-        }
-        let mut t = Title::NONE;
-        let (mut acc, mut bits, mut n) = (0u32, 0, 0);
-        while n < len {
-            acc = (acc << 6) | u32::from(r.take()?);
-            bits += 6;
-            if bits >= 7 {
-                bits -= 7;
-                let c = (acc >> bits) & 127;
-                if c > 94 {
-                    return Err(NOT_A_CODE);
-                }
-                #[allow(clippy::cast_possible_truncation)] // below 95
-                {
-                    t.chars[n] = c as u8 + 32;
-                }
-                n += 1;
-                acc &= (1 << bits) - 1;
-            }
-        }
-        if acc != 0 {
-            return Err(NOT_A_CODE);
-        }
-        t.len = len;
-        Ok(t)
-    }
-}
-
 /// An album as its code holds it: how many tracks, its version, the seed it
 /// is drawn from (an album from one seed) or none (a list of loops), and its
-/// title.
+/// name.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Album {
     /// How many tracks.
@@ -1042,8 +964,8 @@ pub struct Album {
     pub version: u32,
     /// The seed it is drawn from, or `None` for a list of loops.
     pub seed: Option<u32>,
-    /// Its title, or `Title::NONE`.
-    pub title: Title,
+    /// Its name, or `Name::NONE`.
+    pub name: Name,
 }
 
 /// The seed of track `index` (from 0) of an album drawn from `seed`: the
@@ -1089,8 +1011,7 @@ fn album_of(code: &[u8]) -> Result<Tracks<'_>, &'static str> {
                 let len = usize::try_from(r.below(LOOP_MOST as u64)?).map_err(|_| NOT_A_CODE)?;
                 let end = r.at.checked_add(len).filter(|&e| e <= chars.len()).ok_or(NOT_A_CODE)?;
                 let mut t = In { chars: &chars[..end], at: r.at };
-                let mut none = Title::NONE;
-                let l = read_body(&mut t, version, Fields::Track, &mut none)?;
+                let l = read_body(&mut t, version, Fields::Track)?;
                 // A track's own version is older than the album's (the
                 // album's is its newest).
                 if l.request.version() > version {
@@ -1102,17 +1023,17 @@ fn album_of(code: &[u8]) -> Result<Tracks<'_>, &'static str> {
             if newest != version {
                 return Err(NOT_A_CODE);
             }
-            let mut title = Title::NONE;
+            let mut name = Name::NONE;
             if !r.done() {
-                if r.uv()? != tag::TITLE {
+                if r.uv()? != tag::NAME {
                     return Err(NOT_A_CODE);
                 }
-                title = Title::read(&mut r)?;
+                name = Name::read(&mut r)?;
                 if !r.done() {
                     return Err(NOT_A_CODE);
                 }
             }
-            Ok(Tracks { album: Album { count, version, seed: None, title }, picks: None, list: &chars[start..] })
+            Ok(Tracks { album: Album { count, version, seed: None, name }, picks: None, list: &chars[start..] })
         }
         1 => {
             let seed = r.seed()?;
@@ -1121,21 +1042,20 @@ fn album_of(code: &[u8]) -> Result<Tracks<'_>, &'static str> {
                 return Err(NOT_A_CODE);
             }
             // The picks read as a body whose seed is the album's.
-            let mut title = Title::NONE;
             let mut picks = [0u8; LOOP_MOST + 6];
             let rest = &chars[r.at..];
             let room = picks.get_mut(..rest.len() + 6).ok_or(NOT_A_CODE)?;
             room[..6].fill(b'A');
             room[6..].copy_from_slice(rest);
-            let l = read_body(&mut In { chars: room, at: 0 }, version, Fields::Picks, &mut title)?;
-            Ok(Tracks { album: Album { count, version, seed: Some(seed), title }, picks: Some(l.request), list: &[] })
+            let l = read_body(&mut In { chars: room, at: 0 }, version, Fields::Picks)?;
+            Ok(Tracks { album: Album { count, version, seed: Some(seed), name: l.name }, picks: Some(l.request), list: &[] })
         }
         _ => Err(NEEDS_NEWER),
     }
 }
 
 /// Read an album's code: how many tracks, its version, its seed (an album
-/// from one seed) and its title. Every track is checked.
+/// from one seed) and its name. Every track is checked.
 ///
 /// # Errors
 /// `NEEDS_NEWER` for a newer build's album, `NOT_A_CODE` for text that is
@@ -1156,7 +1076,7 @@ pub fn album_track(code: &[u8], index: usize, out: &mut [u8]) -> Result<usize, &
         return Err(BAD_ALBUM);
     }
     if let (Some(seed), Some(picks)) = (t.album.seed, t.picks) {
-        return write_loop(&Loop { seed: track_seed(seed, index), request: picks, mutes: 0, salt: 0 }, out);
+        return write_loop(&Loop { request: picks, ..Loop::of(track_seed(seed, index)) }, out);
     }
     let mut r = In { chars: t.list, at: 0 };
     for _ in 0..index {
@@ -1181,14 +1101,15 @@ pub fn album_track(code: &[u8], index: usize, out: &mut [u8]) -> Result<usize, &
     w.check()
 }
 
-/// Write the album of the loops' codes `tracks`, in their order, with
-/// `title` (`Title::NONE` for none), into `out`: its length. Each track keeps
-/// its own version; the album's is its newest track's.
+/// Write the album of the loops' codes `tracks`, in their order, named
+/// `name` (`Name::NONE` for none), into `out`: its length. Each track keeps
+/// its own version, and its own name; the album's version is its newest
+/// track's.
 ///
 /// # Errors
 /// What `read_loop` says of a track, `BAD_ALBUM` for no tracks or more than
 /// `ALBUM_MOST`, `NO_ROOM` if the album does not fit.
-pub fn write_album<'a>(tracks: impl Iterator<Item = &'a [u8]> + Clone, title: &Title, out: &mut [u8]) -> Result<usize, &'static str> {
+pub fn write_album<'a>(tracks: impl Iterator<Item = &'a [u8]> + Clone, name: &Name, out: &mut [u8]) -> Result<usize, &'static str> {
     let mut count = 0;
     let mut version = FIRST_VERSION;
     for t in tracks.clone() {
@@ -1218,21 +1139,21 @@ pub fn write_album<'a>(tracks: impl Iterator<Item = &'a [u8]> + Clone, title: &T
             w.put(sextet(c).unwrap_or(0));
         }
     }
-    if title.len > 0 {
-        w.uv(tag::TITLE);
-        title.write(&mut w);
+    if !name.is_none() {
+        w.uv(tag::NAME);
+        name.write(&mut w);
     }
     w.check()
 }
 
 /// Write the album of `count` tracks drawn from `seed` (`track_seed`), each
 /// asked `picks` (its edits left out: an album's tracks share picks, not a
-/// loop's edits), with `title`, into `out`: its length.
+/// loop's edits), named `name`, into `out`: its length.
 ///
 /// # Errors
 /// `BAD_ALBUM` for no tracks or more than `ALBUM_MOST`, `NOT_AT_VERSION` as
 /// `write_loop`, `NO_ROOM` if it does not fit.
-pub fn write_seed_album(seed: u32, count: usize, picks: &Request, title: &Title, out: &mut [u8]) -> Result<usize, &'static str> {
+pub fn write_seed_album(seed: u32, count: usize, picks: &Request, name: &Name, out: &mut [u8]) -> Result<usize, &'static str> {
     if count == 0 || count > ALBUM_MOST {
         return Err(BAD_ALBUM);
     }
@@ -1247,7 +1168,7 @@ pub fn write_seed_album(seed: u32, count: usize, picks: &Request, title: &Title,
     // which is then dropped.
     let mut scratch = [0u8; LOOP_MOST];
     let mut b = Out::new(&mut scratch);
-    body(&mut b, &Loop { seed: 0, request: picks, mutes: 0, salt: 0 }, version, None, true)?;
+    body(&mut b, &Loop { request: picks, ..Loop::of(0) }, version, None, true)?;
     if b.full {
         return Err(NO_ROOM);
     }
@@ -1255,9 +1176,9 @@ pub fn write_seed_album(seed: u32, count: usize, picks: &Request, title: &Title,
     for &c in &scratch[6..n] {
         w.put(sextet(c).unwrap_or(0));
     }
-    if title.len > 0 {
-        w.uv(tag::TITLE);
-        title.write(&mut w);
+    if !name.is_none() {
+        w.uv(tag::NAME);
+        name.write(&mut w);
     }
     w.check()
 }

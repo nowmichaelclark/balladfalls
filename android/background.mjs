@@ -418,7 +418,7 @@ try {
       await sleep(2000);
       const name = (/chose: (.+?), \d/.exec(sheet.saved) || [])[1];
       if (name) {
-        const found = sh('find', '/sdcard', '-name', name, '-size', '+1k').split('\n').filter(Boolean)[0];
+        const found = sh('find', '/storage/emulated/0/', '-name', name, '-size', '+1k').split('\n').filter(Boolean)[0];
         const head = found ? sh('head', '-c', '4', `'${found}'`) : '';
         const bytes = found ? Number(sh('stat', '-c', '%s', `'${found}'`)) : 0;
         check(`${format}: the file is where the picker put it, with the right header`, !!found && (format === 'small' ? head.startsWith('OggS') : head.startsWith('fLaC')), `${found} ${bytes} bytes`);

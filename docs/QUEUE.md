@@ -658,8 +658,9 @@ and what may run together are `docs/sessions/README.md`, "Mikey's seven".
 - **111. Track length, its own view, to the second** (his 6; session 30c).
   A view like Bars, its key beside "any tempo" and "any bars"; the time to
   the second; the core's track a time, its close landing on that second;
-  the Sound view's Length slider and the export's "How much" gone (an export
-  is the track length). **Yardsticks:** a track ends on its second at any
+  a fade in and a fade out, each on or off; the Sound view's Length slider
+  and the export's "How much" gone (an export is the track length; with none
+  set it opens the view first). **Yardsticks:** a track ends on its second at any
   tempo, on a loop, a piece and Endless; the export that long.
 - **112. The info card** (his 3 and 4; session 30d). Every detail line
   shown is whole on any display; what doesn't fit is left off, and a tap

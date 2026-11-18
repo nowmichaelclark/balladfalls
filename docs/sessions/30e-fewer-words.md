@@ -30,7 +30,7 @@ The rules for every visible word, in this order:
 
 The work, one PR (or two: the share screen and the export view first, then every other word), app only (BUILD and CACHE):
 
-1. The share screen: just keys, no explainer: copy code, paste code, export audio. Export audio opens an export view: a key a format ("export flac", "export midi", and the small format from session 21 named by its format the same way, "for Mikey's ears"), then the export's progress, cancel and done as today, in fewer words. MIDI export moves from the share screen into it. The track length is session 30c's view, not this one's.
+1. The share screen: just keys, no explainer: copy code, paste code, export audio. Export audio opens an export view: a key a format ("export flac", "export midi", and the small format from session 21 named by its format the same way: Mikey, 2026-11-18, "Yes, export buttons are named by format"), then the export's progress, cancel and done as today, in fewer words. MIDI export moves from the share screen into it. The track length is session 30c's view, not this one's.
 2. Every other screen, line by line: Now Playing, the Vibe panel and its pickers, Bars, Track length, the Library and its albums, Save, Advanced (Mono, Lighter on processor, Files, Diagnostics, Keyboard), the plain lines (a slow browser, a code from a newer or older version), the toasts, the Android app's own screens and notification.
 3. A table in the PR and in for-mikey.md: every line changed or removed, before and after, so Mikey approves the words in one look.
 

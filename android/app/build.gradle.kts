@@ -84,7 +84,19 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            // The release is built the same on any machine (session 29, item
+            // 107e: docs/notes/107-reproducible.md). AGP 8.3 and later stamp the
+            // git commit into the APK unless told not to.
+            vcsInfo.include = false
         }
+    }
+
+    // Google's encrypted dependency list, which Android Gradle Plugin adds to
+    // an APK's signing block and to its bundle: a blob F-Droid refuses (it is
+    // closed, and it differs from build to build of the same source).
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
 
     compileOptions {
@@ -143,17 +155,29 @@ fun siteFiles(): List<String> {
     return entries
 }
 
+val licenseFiles = listOf("LICENSE", "fonts/LICENSE-inter.txt", "fonts/LICENSE-space-grotesk.txt")
+
 val bundleApp by tasks.registering(Sync::class) {
     group = "driftloom"
     description = "Copies the app's files (sw.js's list) from the repo into assets/www."
     val files = siteFiles()
     inputs.file(File(siteRoot, "sw.js"))
+    inputs.files(licenseFiles.map { File(siteRoot, it) })
     into(layout.buildDirectory.dir("generated/bundled-site/www"))
     doFirst {
         val missing = files.filterNot { File(siteRoot, it).isFile }
         if (missing.isNotEmpty()) throw GradleException("sw.js lists files that are not in the repo: $missing")
     }
     for (rel in files) {
+        from(File(siteRoot, rel)) {
+            val dir = rel.substringBeforeLast('/', "")
+            if (dir.isNotEmpty()) into(dir)
+        }
+    }
+    // The licenses that go with the files: the repository's (MIT) and the two
+    // fonts' (SIL OFL 1.1 asks that each copy carries its license). The same
+    // list is in fdroid/check-apk.sh.
+    for (rel in licenseFiles) {
         from(File(siteRoot, rel)) {
             val dir = rel.substringBeforeLast('/', "")
             if (dir.isNotEmpty()) into(dir)
@@ -198,6 +222,13 @@ val buildNative by tasks.registering(Exec::class) {
 
 tasks.matching { it.name.startsWith("merge") && it.name.endsWith("JniLibFolders") }.configureEach {
     dependsOn(buildNative)
+}
+
+// Lint reads the same generated folders (the release build runs "lint vital"
+// before it packages, and Gradle refuses a task that reads another's output
+// with no dependency declared).
+tasks.matching { it.name.contains("lint", ignoreCase = true) }.configureEach {
+    dependsOn(bundleApp, buildNative)
 }
 
 // The golden line (BuildConfig.GOLDEN_LINE): the first loop of

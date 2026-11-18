@@ -454,3 +454,28 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   beside the bars, sent as the request's journey; the Library's lists end in
   each loop's length. Listen to a jump into the middle of a piece: it should
   come in on a phrase line within a blink, nothing ringing from before.
+- #425, a loop's own name travels with its code (item 105b's core part,
+  session 23, no app change), preview URL:
+  <https://claude-s23-code-names-driftloom.nowmichaelclark.workers.dev>:
+  nothing to hear. Codes version 2's tag 30 is now a name of its own for a
+  loop, an album's track or an album, as its UTF-8 bytes (1 to 60) packed
+  eight bits a byte into the 64 characters, written only for a renamed loop.
+  Thai, other scripts and emoji pass; controls, invisible and direction
+  characters, piled-up marks (more than four) and stray joiners or tags are
+  refused ("a name a code can't carry"), by `core/src/code/name.rs` on
+  `classes.rs` (Unicode 17.0, `tools/name-table.mjs`). `code::request_text`
+  (`dl_code_request`) writes a code's request as text, for the app's
+  records. Golden codes: a name column, the two titled albums moved, new
+  Thai and emoji lines.
+- #427, the app speaks share codes version 2, only version 2 (item 105b,
+  session 23, v184), preview URL:
+  <https://claude-s23-codes-app-driftloom.nowmichaelclark.workers.dev>:
+  nothing that plays moved. Copy a loop's code: a plain loop is 9
+  characters (was about 80), two vibes 13; paste it back and it plays the
+  same loop. Rename a loop in Thai with an emoji and share it: the name
+  comes with it. Paste an old `DL1-` code: "That code is from an older
+  Driftloom and can't be opened." The Library opens as it was (nothing
+  converts; `test/library.test.mjs` holds twenty loops saved by v183 to the
+  notes v183 played). A shared code doesn't carry the length slider, so an
+  album's pacing no longer travels. The module grew 124 KB (48 KB gzipped):
+  the codes.

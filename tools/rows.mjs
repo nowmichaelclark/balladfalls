@@ -1153,7 +1153,8 @@ async function codeRows(browser) {
     await library();
     await sleep(300);
     return tev((t) => {
-      const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.trim() === t);
+      // A playing album's title reads ", now playing" after it, for a screen reader.
+      const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.replace(/, now playing$/, '').trim() === t);
       if (r) r.querySelector('.lrow-main').click();
       return !!r;
     }, title);

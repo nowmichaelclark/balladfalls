@@ -483,14 +483,27 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   length, then the next. A loop's own code and an album from one seed carry
   none. `docs/ALBUMS.md`'s six old albums that set lengths have them again.
   Share an album with lengths set and open its link elsewhere.
+- #437, the Android app on F-Droid (item 107e, no app change: still v189):
+  F-Droid's listing (`fastlane/metadata/android/en-US/`: title, short and
+  full description, the changelog for 1.0, icon, feature graphic, six phone
+  screenshots taken from the app on an emulator), the launcher icon drawn as
+  vectors from the web icon's orbit with a monochrome layer, the build recipe
+  as a template filled from `gradle.properties` (`android/fdroid/render.mjs`),
+  built from a clean clone by F-Droid's own tooling in CI, the two-builds
+  comparison and the licenses and anti-features check (`android/LICENSES.md`,
+  `docs/notes/107-reproducible.md`), the release APK on an emulator, the tag's
+  release workflow, and Mikey's steps (signing, the submission after 31) in
+  `docs/notes/for-mikey.md`. Nothing sounds different. Check the six
+  screenshots look like the app, and read the signing choice.
 - #440, the layers show what is heard (item 110, session 30b, v190): the
   core reports what each layer sounded at each step (a Heard event: its
   loudness and the share of its level it was heard at, on the web and in
   the Android app), and the Layers view draws that: a note the budget left
   out is not drawn, nor a layer a long piece rests (a muted one shows its
   pattern dimmed, as before), a long piece's quieter layers and a kit
-  coming in are drawn dimmer and brighten as they rise. The grid of each pass is now as its plan has it heard.
-  Android measures its own output latency for the playhead.
+  coming in are drawn dimmer and brighten as they rise. The grid of each
+  pass is now as its plan has it heard. Android measures its own output
+  latency for the playhead.
   `tools/heard.mjs` measures the drawing against what each channel sounds:
   on every case, drawn-but-not-heard and heard-but-not-drawn went to 0. Watch
   Layers with a long piece on the phone and in the app.

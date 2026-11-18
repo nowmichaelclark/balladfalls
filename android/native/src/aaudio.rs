@@ -83,6 +83,8 @@ unsafe extern "C" {
     fn AAudioStream_getXRunCount(stream: *mut AAudioStream) -> i32;
     fn AAudioStream_getPerformanceMode(stream: *mut AAudioStream) -> i32;
     fn AAudioStream_getSharingMode(stream: *mut AAudioStream) -> i32;
+    fn AAudioStream_getTimestamp(stream: *mut AAudioStream, clock: i32, frame: *mut i64, nanos: *mut i64) -> i32;
+    fn AAudioStream_getFramesWritten(stream: *mut AAudioStream) -> i64;
 }
 
 #[link(name = "log")]
@@ -93,7 +95,19 @@ unsafe extern "C" {
 unsafe extern "C" {
     fn sched_getscheduler(pid: i32) -> i32;
     fn sched_getparam(pid: i32, param: *mut i32) -> i32;
+    fn clock_gettime(clock: i32, time: *mut Timespec) -> i32;
 }
+
+/// `struct timespec`: a `time_t` and a `long`, each a C long on Android's
+/// 32- and 64-bit ABIs alike.
+#[repr(C)]
+struct Timespec {
+    seconds: std::ffi::c_long,
+    nanos: std::ffi::c_long,
+}
+
+/// `CLOCK_MONOTONIC`, the clock AAudio's timestamps are on.
+const CLOCK_MONOTONIC: i32 = 1;
 
 /// A line in the system log (logcat, tag `driftloom`): never from the data
 /// callback.
@@ -401,6 +415,10 @@ pub struct Stream {
     pub info: Info,
     pub policy: i32,
     pub priority: i32,
+    /// How long a frame written now takes to reach the speaker, in seconds,
+    /// as the stream measures it (session 30b, `latency_of`): 0 where it
+    /// can't say yet (the stream just started).
+    pub latency: f64,
 }
 
 /// The stream's figures now.
@@ -412,6 +430,7 @@ pub fn stream() -> Stream {
         // SAFETY: the open stream, under the mutex.
         i64::from(unsafe { AAudioStream_getXRunCount(c.stream) }.max(0))
     };
+    let latency = if c.stream.is_null() { 0.0 } else { latency_of(c.stream, c.info.rate) };
     Stream {
         running: !c.stream.is_null(),
         underruns: c.xruns_before + now,
@@ -419,5 +438,35 @@ pub fn stream() -> Stream {
         info: c.info,
         policy: POLICY.load(Ordering::Relaxed),
         priority: PRIORITY.load(Ordering::Relaxed),
+        latency,
     }
+}
+
+/// The open stream's latency to the speaker now (session 30b, queue item
+/// 110): the frames written to it less the frame the speaker plays now (its
+/// last timestamp, carried on to now on the same clock), in seconds at
+/// `rate`. 0 where the stream has no timestamp yet, or one that makes no
+/// sense (the layers' playhead then reads the stream's buffer instead). The
+/// app's thread, under the mutex: never the data callback.
+fn latency_of(stream: *mut AAudioStream, rate: i32) -> f64 {
+    if rate <= 0 {
+        return 0.0;
+    }
+    let (mut frame, mut at) = (0i64, 0i64);
+    let mut now = Timespec { seconds: 0, nanos: 0 };
+    // SAFETY: the open stream, under the mutex, and places to write to.
+    let (written, timed, clocked) = unsafe {
+        let timed = AAudioStream_getTimestamp(stream, CLOCK_MONOTONIC, &raw mut frame, &raw mut at);
+        (AAudioStream_getFramesWritten(stream), timed, clock_gettime(CLOCK_MONOTONIC, &raw mut now))
+    };
+    if timed != OK || clocked != 0 || written <= 0 {
+        return 0.0;
+    }
+    #[allow(clippy::useless_conversion, reason = "a C long is 32 bits on armeabi-v7a")]
+    let now = i64::from(now.seconds).saturating_mul(1_000_000_000).saturating_add(i64::from(now.nanos));
+    #[allow(clippy::cast_precision_loss, reason = "frames and nanoseconds over a session, far under 2^53")]
+    let playing = frame as f64 + (now - at) as f64 * 1e-9 * f64::from(rate);
+    #[allow(clippy::cast_precision_loss, reason = "the same")]
+    let latency = (written as f64 - playing) / f64::from(rate);
+    if latency.is_finite() && latency > 0.0 && latency < 1.0 { latency } else { 0.0 }
 }

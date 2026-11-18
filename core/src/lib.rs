@@ -1562,7 +1562,7 @@ impl Core {
         slot.begin = begin;
         // A note stolen while it waited ends where its fade does.
         slot.end = if w.fade.1 > w.fade.0 { end.min(w.fade.1) } else { end };
-        slot.busy = slot.end > begin;
+        slot.busy = slot.end > begin; #[cfg(feature = "tools")] if slot.busy { begun::log(&w, begin, self.mix.gain_of(slot.channel)); }
         if !slot.busy {
             blocks::free(&slot.voice, &mut self.pools);
         }
@@ -3419,3 +3419,53 @@ mod tests {
 // shipped code moves (`core/AGENTS.md`).
 #[cfg(any(not(feature = "web"), feature = "flac"))]
 pub mod flac;
+
+// What each note that took a voice was (session 30b, queue item 110): the
+// measuring tools' record of what each layer's channel sounds, note by note
+// (`tools/heard.mjs`), against what the layers draw. The tools build only,
+// at the file's end, so no line of shipped code moves (`core/AGENTS.md`).
+#[cfg(feature = "tools")]
+pub mod begun {
+    use core::cell::UnsafeCell;
+
+    /// How many notes wait to be read at most; the tool reads them after
+    /// every block, and a block starts far fewer.
+    pub const MOST: usize = 2048;
+    /// The numbers kept for each: its channel, its key's seed, pass, step
+    /// and order, the frame it began on, its velocity, its channel's gain
+    /// as it began, the share of its level a fade left it then (1 for
+    /// none), and its voice.
+    pub const WORDS: usize = 10;
+
+    struct Log(UnsafeCell<([f64; MOST * WORDS], usize)>);
+    // Single-threaded, as the core's own global in the web build.
+    unsafe impl Sync for Log {}
+    static LOG: Log = Log(UnsafeCell::new(([0.0; MOST * WORDS], 0)));
+
+    /// A note `waiting` began on frame `begin`, its channel's gain `gain`.
+    pub(crate) fn log(waiting: &super::Waiting, begin: u64, gain: f32) {
+        // SAFETY: single-threaded, and no reference is kept.
+        let (buf, count) = unsafe { &mut *LOG.0.get() };
+        if *count >= MOST {
+            return;
+        }
+        let (from, to) = waiting.fade;
+        #[allow(clippy::cast_precision_loss)] // frames, exact for millennia
+        let faded = if to > from && begin > from { to.saturating_sub(begin) as f64 / (to - from) as f64 } else { 1.0 };
+        let key = waiting.key;
+        let note = &waiting.note;
+        #[allow(clippy::cast_precision_loss)] // the same
+        let row = [f64::from(note.channel), f64::from(key.seed), f64::from(key.pass), f64::from(key.step), f64::from(key.ord), begin as f64, note.vel, f64::from(gain), faded, f64::from(note.voice)];
+        buf[*count * WORDS..(*count + 1) * WORDS].copy_from_slice(&row);
+        *count += 1;
+    }
+
+    /// The notes logged since the last call, `WORDS` numbers each, and how
+    /// many; the log is emptied.
+    pub fn take() -> (&'static [f64], usize) {
+        // SAFETY: single-threaded; the slice is read before the next block.
+        let (buf, n) = unsafe { &mut *LOG.0.get() };
+        let count = core::mem::take(n);
+        (&buf[..count * WORDS], count)
+    }
+}

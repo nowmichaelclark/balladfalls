@@ -219,19 +219,30 @@ function describes(label, x, spec, c) {
 // The next few passes' grids, read as each pass begins (in a piece, any
 // loop with a length asked, each section, as it wanders a section at a
 // time), against the core's wandered passes (the goldens' `passes`, pass 1
-// on, at the app's default amount). The first pass is not among them: it
-// plays the loop as composed but for what its own pass draws (the goldens
-// hold it through the player's renders, tools/seeds.sh).
+// on, at the app's default amount), as heard (session 30b): the kit and the
+// bass silent until the late floor brings them in, and rising as they come.
+// The first pass is not among them: it plays the loop as composed but for
+// what its own pass draws (the goldens hold it through the player's renders,
+// tools/seeds.sh).
 function grids(label, x, spec, c, passes = 3) {
   const made = core.parts(c.seed, c.request);
   let ok = LAYERS.every((l) => grid(x, l).length === ((made.form.cycles && made.form.cycles[l]) || made.form.totalSteps));
+  const late = made.load.late;
+  const sd = 60 / made.spec.bpm / 4;
+  // The late floor on pass `n`'s grid of `layer` (`Loop::each_heard`).
+  const heard = (row, layer, n) => {
+    const at = late && (layer === 'drums' ? late.drums : layer === 'bass' ? late.bass : null);
+    if (at == null) return row;
+    const from = n * made.form.totalSteps;
+    return row.map((v, i) => (from + i < at ? 0 : v * (late.fade > 0 ? Math.min(1, Math.max(0, ((from + i - at) * sd) / late.fade)) : 1)));
+  };
   let n = 0;
   for (let frame = 0; n < passes && frame < RATE * 600; frame += QUANTUM) {
     x.dl_play_process(frame);
     for (const e of events(x)) {
       if (e.kind === (spec.length != null ? 2 : 1) && e.number > 0) {
         n = e.number;
-        ok = ok && LAYERS.every((l) => same(grid(x, l), pageGrid(made.passes[n - 1], l)));
+        ok = ok && LAYERS.every((l) => same(grid(x, l), heard(pageGrid(made.passes[n - 1], l), l, n)));
       }
     }
   }

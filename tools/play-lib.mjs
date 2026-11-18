@@ -43,9 +43,10 @@ function toolsModule() {
 const text = (x, at, length) => new TextDecoder().decode(new Uint8Array(x.memory.buffer, at, length));
 
 // A core started as the worklet starts one: `rate`, full or lite, mono or
-// stereo. `tools` asks for the tools' module.
-function core({ rate = 44100, full = true, layout = 1, tools = false } = {}) {
-  const { exports: x } = new WebAssembly.Instance(tools ? toolsModule() : moduleOf(PLAYER), {});
+// stereo. `tools` asks for the tools' module; `module`, a module file of
+// its own (another build of the tools' module, to measure against).
+function core({ rate = 44100, full = true, layout = 1, tools = false, module = null } = {}) {
+  const { exports: x } = new WebAssembly.Instance(module ? moduleOf(module) : tools ? toolsModule() : moduleOf(PLAYER), {});
   x.dl_init(rate);
   x.dl_quality(full ? 1 : 0);
   if (layout === 2) x.dl_layout(2);
@@ -55,8 +56,8 @@ function core({ rate = 44100, full = true, layout = 1, tools = false } = {}) {
 // A player on a core, the loop of `seed` asked for: `request` as text
 // ("glacial=0.7,bpm=70-85"; the tools' module reads it), wandering by
 // `wander` (the app's default is 1).
-function player(seed, { rate = 44100, full = true, layout = 1, wander = 1, request = '', tools = false } = {}) {
-  const x = core({ rate, full, layout, tools: tools || !!request });
+function player(seed, { rate = 44100, full = true, layout = 1, wander = 1, request = '', tools = false, module = null } = {}) {
+  const x = core({ rate, full, layout, tools: tools || !!request, module });
   x.dl_play_wander(wander);
   x.dl_play_attach(full ? 1 : 0);
   if (request) {

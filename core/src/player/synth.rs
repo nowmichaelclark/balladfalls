@@ -255,6 +255,16 @@ pub struct Synth {
     /// whether one is in force, so a new loop lets it go.
     plan_aim: f64,
     aimed: bool,
+    /// How each channel's plan level glides (session 30b, `plan_share`):
+    /// how far down it starts and ends (0 its own, as `plan_cut`), when it
+    /// starts and its time constant, in the core's channel order. All
+    /// zeros: every channel at its own level.
+    plan_glide: [[f64; 4]; 5],
+    /// The loudest note handed to each of the core's channels since the
+    /// sequencer last cleared it (session 30b, `take_sounded`): what a
+    /// part that plays for no layer of its own sounded there (a glass, a
+    /// bell, a twang's string), at the velocity it was sent.
+    sounded: [f64; 6],
 }
 
 impl Synth {
@@ -280,6 +290,8 @@ impl Synth {
             plan_tone: [0.0; 2],
             plan_aim: 0.0,
             aimed: false,
+            plan_glide: [[0.0; 4]; 5],
+            sounded: [0.0; 6],
         }
     }
 
@@ -296,6 +308,11 @@ impl Synth {
             return;
         }
         *cut = want;
+        // Where the gain glides from: where the last glide has it then.
+        let from = 1.0 - self.plan_share(channel, time);
+        if let Some(gl) = self.plan_glide.get_mut(channel) {
+            *gl = [from, want, time, tau];
+        }
         if self.mutes.get(channel).copied().unwrap_or(false) {
             return;
         }
@@ -311,6 +328,31 @@ impl Synth {
     pub fn clear_plan(&mut self) {
         self.plan_cut = [0.0; 5];
         self.plan_tone = [0.0; 2];
+        self.plan_glide = [[0.0; 4]; 5];
+    }
+
+    /// The share of its own level a long piece's plan leaves channel
+    /// `channel` at `time` (session 30b): 1 its own, 0 at rest, as its gain
+    /// in the mix glides there (`set_plan_level`: a target from its time,
+    /// with its time constant). The layers draw a note as loud as this
+    /// leaves it heard.
+    #[must_use]
+    pub fn plan_share(&self, channel: usize, time: f64) -> f64 {
+        let Some(&[from, to, at, tau]) = self.plan_glide.get(channel) else { return 1.0 };
+        let cut = if time <= at {
+            from
+        } else if tau > 0.0 {
+            to + (from - to) * crate::math::exp(-(time - at) / tau)
+        } else {
+            to
+        };
+        js::clamp(1.0 - cut, 0.0, 1.0)
+    }
+
+    /// The loudest note each of the core's channels was handed since the
+    /// last call, and none from now (session 30b).
+    pub fn take_sounded(&mut self) -> [f64; 6] {
+        core::mem::take(&mut self.sounded)
     }
 
     /// An arc's plan aims the arc's filter (queue item 102c): `aim` from -1
@@ -720,6 +762,11 @@ impl Synth {
     fn note<H: Host>(&mut self, host: &mut H, key: Key, voice: u32, channel: u32, time: f64, midi: f64, dur: f64, vel: f64, parts: u32, x: [f64; EXTRA]) {
         // The voice call notes the channel (`_toCore`, queue item 85c).
         self.budget.note_channel(channel);
+        if let Some(x) = self.sounded.get_mut(channel as usize)
+            && vel > *x
+        {
+            *x = vel;
+        }
         host.key(key);
         // The loop's tuning moves every pitched voice together; the kit
         // (the tuned kick's pitch is its own, in Hz) and the texture's

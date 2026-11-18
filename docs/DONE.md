@@ -495,3 +495,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   release workflow, and Mikey's steps (signing, the submission after 31) in
   `docs/notes/for-mikey.md`. Nothing sounds different. Check the six
   screenshots look like the app, and read the signing choice.
+- #440, the layers show what is heard (item 110, session 30b, v190): the
+  core reports what each layer sounded at each step (a Heard event: its
+  loudness and the share of its level it was heard at, on the web and in
+  the Android app), and the Layers view draws that: a note the budget left
+  out is not drawn, nor a layer a long piece rests (a muted one shows its
+  pattern dimmed, as before), a long piece's quieter layers and a kit
+  coming in are drawn dimmer and brighten as they rise. The grid of each
+  pass is now as its plan has it heard. Android measures its own output
+  latency for the playhead.
+  `tools/heard.mjs` measures the drawing against what each channel sounds:
+  on every case, drawn-but-not-heard and heard-but-not-drawn went to 0. Watch
+  Layers with a long piece on the phone and in the app.

@@ -1,5 +1,5 @@
 //! What the player tells a host about where the loop is (queue item 94a):
-//! events (0 to 8), each at the time on the core's clock it is heard, so a host can
+//! events (0 to 9), each at the time on the core's clock it is heard, so a host can
 //! draw the cursor, the pass, the phrase lines and a piece's sections as the
 //! music reaches them, with nothing of its own deciding when.
 //!
@@ -21,7 +21,7 @@ use crate::generator::list::Empty;
 pub const EVENTS_MAX: usize = 256;
 
 /// What an event says. The numbers hosts know them by are their places here
-/// (0 to 7).
+/// (0 to 9).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u8)]
 pub enum Kind {
@@ -59,11 +59,51 @@ pub enum Kind {
     /// from the load (a piece's from its start); its section, phrase and
     /// steps follow as they come.
     Jump = 8,
+    /// What each layer sounded on a step, as heard (session 30b, queue item
+    /// 110), made as the step is decided and at its time: `number` holds the
+    /// five layers, in `LAYERS`' order, `HEARD_BITS` each from the lowest
+    /// (`pack_heard`, `unpack_heard`): the loudest note's velocity as heard
+    /// (times the share of its level a long piece's plan leaves its
+    /// channel; 0 for none, a note refused, muted or left out), and that
+    /// share, the late floor's rise in it; `step` is the step from the load.
+    /// The layers draw a note when and as loud as it is heard.
+    Heard = 9,
+}
+
+/// How many bits each layer takes in a `Kind::Heard` event's number (five
+/// layers in 50, so the number is exact as a double, as the page reads it):
+/// its loudness in the low `LOUD_BITS`, to a step of `1 / HEARD_ONE` (an
+/// accent's 2 at most), and its share in the rest, to a seventh.
+pub const HEARD_BITS: u32 = 10;
+pub const LOUD_BITS: u32 = 7;
+pub const HEARD_ONE: f64 = 64.0;
+const SHARE_MOST: f64 = 7.0;
+
+/// Five layers' loudness and share as a `Kind::Heard` event's number.
+#[must_use]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // clamped to the field first
+pub fn pack_heard(loud: &[f64; 5], share: &[f64; 5]) -> u64 {
+    let most = f64::from((1u32 << LOUD_BITS) - 1);
+    let q = |x: f64, one: f64, top: f64| if x > 0.0 { crate::math::round(x * one).clamp(0.0, top) as u64 } else { 0 };
+    (0..5).fold(0, |n, i| {
+        let field = q(loud[i], HEARD_ONE, most) | (q(share[i], SHARE_MOST, SHARE_MOST) << LOUD_BITS);
+        n | (field << (HEARD_BITS * i as u32))
+    })
+}
+
+/// A `Kind::Heard` event's number as the five layers' loudness and share.
+#[must_use]
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)] // ten bits a layer, five layers
+pub fn unpack_heard(number: u64) -> ([f64; 5], [f64; 5]) {
+    let field = |i: usize| (number >> (HEARD_BITS * i as u32)) & ((1 << HEARD_BITS) - 1);
+    let loud = core::array::from_fn(|i| (field(i) & ((1 << LOUD_BITS) - 1)) as f64 / HEARD_ONE);
+    let share = core::array::from_fn(|i| (field(i) >> LOUD_BITS) as f64 / SHARE_MOST);
+    (loud, share)
 }
 
 impl Kind {
     /// Every kind, in the hosts' numbering.
-    pub const ALL: [Kind; 9] = [Kind::Step, Kind::Pass, Kind::Section, Kind::Phrase, Kind::Loop, Kind::Revised, Kind::End, Kind::Own, Kind::Jump];
+    pub const ALL: [Kind; 10] = [Kind::Step, Kind::Pass, Kind::Section, Kind::Phrase, Kind::Loop, Kind::Revised, Kind::End, Kind::Own, Kind::Jump, Kind::Heard];
 }
 
 /// An event: what it says, when it is heard, and where the loop is then.
@@ -179,5 +219,24 @@ mod tests {
         assert_eq!(last, Some(1000.0));
         assert!(e.is_empty());
         assert_eq!(Kind::ALL[6], Kind::End);
+        assert_eq!(Kind::ALL[9] as u8, 9);
+    }
+
+    #[test]
+    fn heard_packs_five_layers_into_a_number_a_double_holds() {
+        let loud = [0.0, 0.5, 1.0, 1.98, 0.3];
+        let share = [0.0, 1.0, 0.5, 1.0, 0.3];
+        let n = pack_heard(&loud, &share);
+        assert!(n < 1 << 53, "exact as a double");
+        let (l, s) = unpack_heard(n);
+        for (a, b) in loud.iter().zip(l) {
+            assert!((a - b).abs() <= 0.5 / HEARD_ONE, "{a} {b}");
+        }
+        for (a, b) in share.iter().zip(s) {
+            assert!((a - b).abs() <= 0.5 / SHARE_MOST, "{a} {b}");
+        }
+        let (l, s) = unpack_heard(pack_heard(&[3.0, -1.0, f64::NAN, 0.0, 0.0], &[2.0, 1.0, 1.0, f64::NAN, -1.0]));
+        assert_eq!(l, [127.0 / HEARD_ONE, 0.0, 0.0, 0.0, 0.0]);
+        assert_eq!(s, [1.0, 1.0, 1.0, 0.0, 0.0]);
     }
 }

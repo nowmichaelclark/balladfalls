@@ -128,6 +128,6 @@ export class NativeContext extends EventTarget {
     if (!s) return 'not started';
     const thread = { 0: 'normal', 1: 'SCHED_FIFO', 2: 'SCHED_RR' }[s.policy] || (s.policy < 0 ? 'not yet' : `policy ${s.policy}`);
     const perf = { 10: 'none', 11: 'power saving', 12: 'low latency' }[s.performance] || s.performance;
-    return `${s.running ? 'running' : 'stopped'}, ${s.rate} Hz, ${s.channels} channels, burst ${s.burst}, buffer ${s.buffer} of ${s.capacity}, ${perf}, ${s.sharing === 0 ? 'exclusive' : 'shared'}, thread ${thread}/${s.priority}, reopens ${s.reopens}, busiest callback ${(s.busiest * 100).toFixed(1)}% of its deadline, mean ${(s.mean * 100).toFixed(2)}%, sound ${(s.sounding || 0).toFixed(1)} s`;
+    return `${s.running ? 'running' : 'stopped'}, ${s.rate} Hz, ${s.channels} channels, burst ${s.burst}, buffer ${s.buffer} of ${s.capacity}, ${perf}, ${s.sharing === 0 ? 'exclusive' : 'shared'}, thread ${thread}/${s.priority}, reopens ${s.reopens}, latency ${Math.round((s.latency || 0) * 1000)} ms (${s.measured ? 'measured' : 'from the buffer'}), busiest callback ${(s.busiest * 100).toFixed(1)}% of its deadline, mean ${(s.mean * 100).toFixed(2)}%, sound ${(s.sounding || 0).toFixed(1)} s`;
   }
 }

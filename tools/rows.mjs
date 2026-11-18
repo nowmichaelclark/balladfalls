@@ -619,7 +619,9 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await tab.close();
 
   // A browser with no Opus encoder (the Worker's taken away: the sheet's
-  // choice is the Worker's word): Small is not offered, Lossless is.
+  // choice is the Worker's word; what the page posts before the Worker's
+  // module has loaded is kept and handed to it): Small is not offered,
+  // Lossless is.
   const bare = await browser.newPage({ viewport: { width: 412, height: 915 } });
   const bareBad = [];
   bare.on('pageerror', (e) => bareBad.push(e.message));
@@ -631,7 +633,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
         let u = url;
         if (String(url).includes('export-worker')) {
           const abs = new URL(String(url), location.href).href;
-          u = URL.createObjectURL(new Blob([`self.AudioEncoder = undefined; await import(${JSON.stringify(abs)});`], { type: 'text/javascript' }));
+          u = URL.createObjectURL(new Blob([`self.AudioEncoder = undefined; const early = []; const keep = (e) => early.push(e); self.addEventListener('message', keep); await import(${JSON.stringify(abs)}); self.removeEventListener('message', keep); for (const e of early) self.onmessage(e);`], { type: 'text/javascript' }));
         }
         super(u, options);
       }

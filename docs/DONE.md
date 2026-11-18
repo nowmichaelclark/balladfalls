@@ -442,3 +442,16 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   (`android/cdp.mjs`) and passed ten fresh emulators at once. Diagnostics in
   the app: `engine: native (...) underruns` and a `stream:` line. Check on
   the Moto and the tablet (`for-mikey.md`).
+- #424, audio export: the Small format (item 104c, session 21, v183): the
+  export sheet's Small choice makes an Opus file (`.opus`, Ogg) through the
+  browser's own encoder (WebCodecs `AudioEncoder`, in the export's Worker),
+  muxed by a small tested Ogg writer (`js/ogg.js`, `test/ogg.test.mjs`: the
+  CRC, the headers, granule positions and pre-skip, packets past the end
+  dropped, so players show and seek the true length, to the sample); hidden
+  where the browser has no Opus encoder (a browser with AAC and not Opus
+  too). 64 kbit/s mono and 96 kbit/s stereo, constant: about 2.2 (mono) and
+  2.9 (stereo) times smaller than the median lossless file; 2.5 hours mono
+  is about 73 MB. Also Mikey's answers on the sheet: "Closing the app stops
+  it", and a loop with no name of its own saves under its generated name.
+  Nothing that plays moved (the lossless file's checks are unchanged). Check
+  in `for-mikey.md`.

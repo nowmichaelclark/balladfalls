@@ -504,3 +504,10 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   notes v183 played). A shared code doesn't carry the length slider, so an
   album's pacing no longer travels. The module grew 124 KB (48 KB gzipped):
   the codes.
+- #433, links, an album from one seed and the plain lines (item 105c, v187): a
+  link is the address with `#c=` and the code (no server sees it; the cached
+  page opens it offline), opening a loop or an album ready, not playing; share
+  link (share sheet, else copied); a static preview (title, description, the
+  app icon); an album of one seed from Save, Share (12 tracks, 14
+  characters); the newer, instrument, older and damaged-link lines. Check the
+  preview in Discord and a link on a phone.

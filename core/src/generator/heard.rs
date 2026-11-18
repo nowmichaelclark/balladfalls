@@ -139,7 +139,7 @@ const LOOP_MARGIN: f64 = 10.0;
 const SPANS: usize = 4;
 /// An event's loudness over its life as the loop voices it and as the unit
 /// does, and its piece of the kit, looked up once (`Heard::power`).
-type Looked = (Option<[f64; 6]>, Option<[f64; 6]>, Option<Piece>);
+type Looked = (Option<[f64; 7]>, Option<[f64; 7]>, Option<Piece>);
 /// Where the tune may sit once a variation moves it an octave: up where its
 /// highest stays here or under (then anywhere under the doubling's 96),
 /// down where its lowest stays here or over.
@@ -764,13 +764,13 @@ impl Heard {
             return sums;
         }
         // How far back a note struck can still sound: the table's life.
-        let look = js::ceil(EDGES[6] / step);
+        let look = js::ceil(LIFE / step);
         // (A kit hit is gone in half a second, every one in the table.)
         let kit = js::ceil(EDGES[3] / step);
         // Each voice's loudness as powers, worked out once a walk for the
         // few voices it meets.
-        let mut known: [(&'static str, usize, [f64; 6]); 12] = [("", 9, [0.0; 6]); 12];
-        let mut table = |layer: Layer, name: &'static str| -> Option<[f64; 6]> {
+        let mut known: [(&'static str, usize, [f64; 7]); 12] = [("", 9, [0.0; 7]); 12];
+        let mut table = |layer: Layer, name: &'static str| -> Option<[f64; 7]> {
             let l = layer as usize;
             if let Some(k) = known.iter().find(|k| k.1 == l && k.0 == name) {
                 return Some(k.2);
@@ -787,7 +787,7 @@ impl Heard {
         // A note at `power` as the unit plays it and `own` as the loop as
         // itself does, in the one voice `p`. (A kit hit is held no time: it
         // sounds its voice's life.)
-        let mut add = |layer: Layer, p: Option<[f64; 6]>, shaped: bool, at: f64, dur: f64, power: f64, own: f64| {
+        let mut add = |layer: Layer, p: Option<[f64; 7]>, shaped: bool, at: f64, dur: f64, power: f64, own: f64| {
             let Some(p) = p else { return };
             if !(power > 0.0 || own > 0.0) {
                 return;
@@ -902,7 +902,7 @@ impl Heard {
             }
             for (i, e) in notes.iter().enumerate().take(MELODY_MAX).filter(|(_, e)| e.vel > 0.0) {
                 let name = if e.voice.get().is_empty() { own_voice } else { e.voice.get() };
-                let mut looked: Option<Option<[f64; 6]>> = None;
+                let mut looked: Option<Option<[f64; 7]>> = None;
                 let mut one = |s: f64| {
                     if which(s) == whose && kept_note(whose == tune::OWN, i, s) {
                         let p = *looked.get_or_insert_with(|| table(Layer::Melody, voice(Layer::Melody, name)));
@@ -923,7 +923,7 @@ impl Heard {
         // The loop as itself: its own tune whole, in its own voice.
         for e in base.melody.iter().take(MELODY_MAX).filter(|e| e.vel > 0.0) {
             let name = if e.voice.get().is_empty() { own_voice } else { e.voice.get() };
-            let mut looked: Option<Option<[f64; 6]>> = None;
+            let mut looked: Option<Option<[f64; 7]>> = None;
             places(Layer::Melody, e.step, e.dur, &mut |s| {
                 let p = *looked.get_or_insert_with(|| table(Layer::Melody, name));
                 add(Layer::Melody, p, false, s, e.dur, 0.0, e.vel * e.vel);
@@ -1752,8 +1752,15 @@ impl Default for Heard {
 }
 
 /// The spans of a note's life `[longform loudness]` reads its loudness in,
-/// in seconds from its start.
-const EDGES: [f64; 7] = [0.0, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0];
+/// in seconds from its start: to 8 s since session 23, the last span's
+/// loudness held past it. A long note's life past 4 s had been read as its
+/// 2 to 4 s; a pad held 8 s sounds 6 dB under that there, and a floor join
+/// on corpus piece #27 that kept such a pad alone read 8 dB under the loop
+/// by its notes and played 28 under (the nightly's holes).
+const EDGES: [f64; 8] = [0.0, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0];
+/// A swelling texture's life, and how far back the walk looks for a note
+/// that still sounds: the table's four seconds, as before its last span.
+const LIFE: f64 = 4.0;
 /// How long a note sounds past its end (its release), in seconds.
 const RELEASE: f64 = 0.1;
 
@@ -1766,15 +1773,15 @@ const RELEASE: f64 = 0.1;
 /// long it is held, as the table's four seconds.
 #[allow(clippy::too_many_arguments)] // the note and where it goes
 #[inline(never)] // one body for every layer's walk
-fn note_energy(sums: &mut [[[f64; 3]; 5]; SPANS], spans: &[[f64; 2]; SPANS], l: usize, p: &[f64; 6], shaped: bool, at: f64, dur: f64, rings: f64, power: [f64; 2], taken: bool, step: f64) {
+fn note_energy(sums: &mut [[[f64; 3]; 5]; SPANS], spans: &[[f64; 2]; SPANS], l: usize, p: &[f64; 7], shaped: bool, at: f64, dur: f64, rings: f64, power: [f64; 2], taken: bool, step: f64) {
     let life = |x: f64, y: f64| {
         let mut e = 0.0;
-        for k in 0..6 {
+        for k in 0..7 {
             // (The spans after `y` hold nothing of it.)
             if EDGES[k] >= y {
                 break;
             }
-            let (lo, hi) = (js::max(x, EDGES[k]), if k == 5 { y } else { js::min(y, EDGES[k + 1]) });
+            let (lo, hi) = (js::max(x, EDGES[k]), if k == 6 { y } else { js::min(y, EDGES[k + 1]) });
             if hi > lo {
                 e += (hi - lo) * p[k];
             }
@@ -1788,8 +1795,8 @@ fn note_energy(sums: &mut [[[f64; 3]; 5]; SPANS], spans: &[[f64; 2]; SPANS], l: 
             continue;
         }
         let e = if shaped && dur > 0.0 {
-            let r = EDGES[6] / (dur * step);
-            life(x * r, js::min(y * r, EDGES[6])) / r
+            let r = LIFE / (dur * step);
+            life(x * r, js::min(y * r, LIFE)) / r
         } else {
             life(x, y)
         };

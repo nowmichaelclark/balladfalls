@@ -183,5 +183,18 @@ The Kotlin package (`app.loops`, the `namespace`) is not the id and stays.
   end, so a place that only streams (a cloud folder) is refused for Lossless
   with a plain line; Small is written front to back and goes anywhere. A MIDI
   file and the backup go through the same picker (`ui.download`).
+- **Workers** (session 28): a Worker's own requests (its imports, a `fetch`)
+  are never served by `shouldInterceptRequest` (measured on the emulator,
+  Chromium 124: the Worker's script loads, a Blob module Worker loads, one that
+  imports a file of the app fails), so `js/worker-blob.js` makes the export's
+  Worker from Blob URLs the page builds. The cover Worker (`js/covers.js`)
+  fails the same way and falls back to drawing on the main thread, as it
+  always did in the app; giving it the same loader is a follow-up.
+- **The page while the screen is off** (session 28): measured, a WebView whose
+  window is not shown is hidden to Chromium and its timers stopped for minutes
+  (a 50 ms interval last ran 3 minutes before; the lock screen's buttons never
+  reached the page). `AppWebView` tells the WebView it is shown while the app
+  plays or saves; the page then runs as in front, the emulator's CPU for the
+  app being 0% with the screen off.
 - **Not yet:** the system bars' color following the page's theme (a Painter's
   choice), the launcher icon (a placeholder in plain vectors).

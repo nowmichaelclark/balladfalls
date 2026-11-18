@@ -334,14 +334,7 @@ the last one (same key). On the **Moto** and on the **tablet**:
 
 ## Decisions
 
-- **The new name in three public files (brain B-parallel, 2026-11-18):** it
-  went in by mistake: `docs/DECISIONS.md`'s export line of 2026-11-17,
-  `docs/sessions/21-export-small.md` and `test/ogg.test.mjs` (a song title
-  in a test). Say if they should become a placeholder (git's history keeps
-  them either way).
-- **The journey's word "arc" (item 106b, #419):** the other words are
-  approved (2026-11-18); you weren't sure how a listener reads "arc". Pick
-  a word, or keep it.
+Nothing open here.
 
 (A shared loop's name, the export sheet's words and the export's ending
 were decided 2026-11-17, `docs/DECISIONS.md`, "Share codes, requests and

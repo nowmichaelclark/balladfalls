@@ -925,3 +925,15 @@ mod tests {
         assert!(m.process(0, &ch, None, None, None).iter().all(|&x| x == 0.0));
     }
 }
+
+// The measuring tools' read of a channel's gain (session 30b): at the file's
+// end, so no line of shipped code moves.
+#[cfg(feature = "tools")]
+impl Mix {
+    /// Channel `channel`'s gain into the mix as of the last block (0 for
+    /// none): what its mute and a long piece's plan left it.
+    #[must_use]
+    pub fn gain_of(&self, channel: usize) -> f32 {
+        self.gains.get(channel).map_or(0.0, Timeline::value)
+    }
+}

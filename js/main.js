@@ -13,7 +13,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v189';
+const BUILD = 'v190';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -108,6 +108,8 @@ const state = {
   currentId: null,
   bar: -1,
   gridSteps: 16,
+  // What the layers last drew from (the engine's rowsVersion).
+  rowsDrawn: -1,
   playlist: null,
   // Which viewport is up ('now', 'sounds', 'layers', 'library' or 'save');
   // the last of the first three, where leaving Library or Save goes back
@@ -917,8 +919,7 @@ function setView(view) {
   vb.setAttribute('aria-label', target === 'sounds' ? 'Show sound controls' : 'Show layers');
   vb.title = target === 'sounds' ? 'Sound' : 'Layers';
   ui.setColumnsLive(view === 'layers');
-  const shownPattern = (state.engine && state.engine.live) || state.pattern;
-  if (view === 'layers' && state.spec && shownPattern) ui.renderGrids(cells, shownPattern, state.bar > 0 ? state.bar : 0, state.spec.mutes || {});
+  if (view === 'layers' && state.spec) drawLayers(state.bar > 0 ? state.bar : 0);
   if (view === 'library') library.render();
   if (view === 'save') library.renderSave();
   if (view === 'now') renderNow();
@@ -1415,6 +1416,9 @@ function frameLoop() {
   }
   const step = state.engine.visualStep();
   if (step != null) onStep(step);
+  // A step's sounds came in, or a pass's grid took over: the layers drawn
+  // again (only the dots that moved change).
+  if (state.view === 'layers' && state.bar >= 0 && state.engine.rowsVersion !== state.rowsDrawn) drawLayers(state.bar);
   if (state.view === 'now') updateNowClock();
   state.frameHandle = requestAnimationFrame(frameLoop);
 }
@@ -1427,9 +1431,25 @@ function onStep(step) {
     state.bar = bar;
     // The layers' grid only while it is on screen; it catches up when
     // Layers is opened (setView).
-    if (state.view === 'layers') ui.renderGrids(cells, state.engine.live, bar, state.spec.mutes);
+    if (state.view === 'layers') drawLayers(bar);
   }
   ui.moveCursor(lights, cells, step % spb);
+}
+
+// The layers' bar `bar` (session 30b): while playing, as heard (each step
+// the core has decided as it sounded, the rest of the bar as the pass's plan
+// will have it heard; js/heard.js); else the loop as composed.
+function drawLayers(bar) {
+  if (!state.spec) return;
+  const engine = state.engine;
+  const rows = engine && engine.playing ? engine.barRows(bar) : null;
+  const mutes = state.spec.mutes || {};
+  if (rows) ui.renderRows(cells, rows, mutes);
+  else {
+    const pattern = (engine && engine.live) || state.pattern;
+    if (pattern) ui.renderGrids(cells, pattern, bar, mutes);
+  }
+  state.rowsDrawn = engine ? engine.rowsVersion : 0;
 }
 
 function onLoop(count) {
@@ -1568,7 +1588,7 @@ function toggleMute(layer) {
   // decided again from now (on the page's engine, not after what the core
   // holds: queue item 40).
   state.engine.setMute(layer, state.spec.mutes[layer]);
-  ui.renderGrids(cells, state.engine.live || state.pattern, Math.max(0, state.bar), state.spec.mutes);
+  drawLayers(Math.max(0, state.bar));
 }
 
 // The loop playing as its code carries it: with the wander's salt of this

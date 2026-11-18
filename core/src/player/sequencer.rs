@@ -297,6 +297,52 @@ impl Loop<'_> {
         }
     }
 
+    /// Every note of `layer` as the pass will have it heard (session 30b,
+    /// the layers' grid): `each_velocity`'s, with a long piece's second tune
+    /// where its section plays one and its texture's rests, each times the
+    /// plan's level at its step (a layer on a cycle of its own keeps its
+    /// own: its steps are not the section's); the kit and the bass silent
+    /// until the late floor brings them in and rising as they come (`from`:
+    /// the pass's first step from the load, `sd` a step's seconds). The
+    /// sequencer reports what each step actually sounded as it decides it
+    /// (`Sequencer::heard`); this is the pass ahead of that.
+    pub fn each_heard(&self, layer: Layer, from: f64, sd: f64, mut f: impl FnMut(f64, f64)) {
+        let own_cycle = self.cycle(layer) != self.total();
+        let plan = self.pass.filter(|_| !own_cycle);
+        let late = self.settings.late;
+        let share = |step: f64| {
+            let level = plan.and_then(|p| p.heard.unit(step)).map_or(1.0, |u| u.level(layer, step));
+            let abs = from + step;
+            let arrives = match (layer, late) {
+                (Layer::Drums, Some(l)) => if abs < l.drums { 0.0 } else { l.rise(abs - l.drums, sd) },
+                (Layer::Bass, Some(l)) => if abs < l.bass { 0.0 } else { l.rise(abs - l.bass, sd) },
+                _ => 1.0,
+            };
+            level * arrives
+        };
+        let mut put = |step: f64, vel: f64| f(step, vel * share(step));
+        match (layer, plan) {
+            (Layer::Melody, Some(p)) => {
+                for (i, e) in self.base.melody.iter().enumerate() {
+                    if p.heard.tune_at(e.step) == tune::OWN {
+                        put(e.step, p.melody(i, e).0);
+                    }
+                }
+                for (i, e) in self.second.map_or(&[][..], |m| &m[..]).iter().enumerate() {
+                    if p.heard.tune_at(e.step) == tune::SECOND {
+                        put(e.step, p.second_at(e.step, i, e).0);
+                    }
+                }
+            }
+            (Layer::Texture, Some(p)) => {
+                for e in self.base.texture.iter() {
+                    put(e.step, if p.out(e.step, Layer::Texture, e.dur) { 0.0 } else { e.vel });
+                }
+            }
+            _ => self.each_velocity(layer, put),
+        }
+    }
+
     /// A layer's own cycle in steps (`p.cycles[layer] || p.totalSteps`).
     #[must_use]
     pub fn layer_cycle(&self, layer: Layer) -> f64 {
@@ -416,6 +462,17 @@ pub struct Sequencer {
     /// Whether the next step is a jump's first (session 17): a long piece's
     /// plan sends its levels and tone there, wherever in its unit it is.
     replan: bool,
+    /// The loudest note of its own each layer sounded on the step being
+    /// decided, at the velocity it was composed and played at (session
+    /// 30b): none refused, none muted or left out.
+    sounded: [f64; 5],
+    /// What each layer sounded on the last step decided, as heard: its
+    /// loudest note times the share of its level the plan left its channel
+    /// (0 for none). The layers draw it (`Kind::Heard`).
+    pub heard: [f64; 5],
+    /// The share of its own level each layer was left on that step: the
+    /// plan's level on its channel, times the late floor's rise.
+    pub share: [f64; 5],
 }
 
 impl Sequencer {
@@ -475,6 +532,9 @@ impl Sequencer {
             kick_kind: None,
             tone_held: false,
             replan: false,
+            sounded: [0.0; 5],
+            heard: [0.0; 5],
+            share: [0.0; 5],
         }
     }
 
@@ -654,7 +714,7 @@ impl Sequencer {
     /// out; nothing else sounds after it (the pass leaves every layer's
     /// notes out). A muted layer stays silent.
     #[allow(clippy::too_many_arguments)] // the step's own place and times
-    fn land<H: Host>(host: &mut H, synth: &mut Synth, lp: &Loop, l: &heard::Landing, mutes: [bool; 5], t: f64, sd: f64, key: &mut impl FnMut(Layer) -> Key) {
+    fn land<H: Host>(host: &mut H, synth: &mut Synth, lp: &Loop, l: &heard::Landing, mutes: [bool; 5], sounded: &mut [f64; 5], t: f64, sd: f64, key: &mut impl FnMut(Layer) -> Key) {
         let dur = l.hold * sd;
         synth.budget.set_firm(true);
         if !mutes[Layer::Chords as usize] && !l.chord.is_empty() {
@@ -665,7 +725,7 @@ impl Sequencer {
                 let k = key(Layer::Chords);
                 synth.budget.begin(Some(Layer::Chords), k);
                 synth.pad(host, k, &l.chord, t, dur, l.chord_vel * CHORD_SPREAD, CHORDS);
-                synth.budget.end();
+                sound(sounded, Layer::Chords, l.chord_vel, synth.budget.end());
             } else if !voice.is_empty() {
                 let spread = CHORD_SPREAD / math::sqrt(js::num(l.chord.len()));
                 // Fingers, or a roll where the loop plays a note at a time.
@@ -674,7 +734,7 @@ impl Sequencer {
                     let k = key(Layer::Chords);
                     synth.budget.begin(Some(Layer::Chords), k);
                     synth.voice(host, k, voice, f64::from(n), t + js::num(i) * apart, dur, l.chord_vel * spread, CHORDS, &opts);
-                    synth.budget.end();
+                    sound(sounded, Layer::Chords, l.chord_vel, synth.budget.end());
                 }
             }
         }
@@ -686,7 +746,7 @@ impl Sequencer {
             let k = key(Layer::Melody);
             synth.budget.begin(Some(Layer::Melody), k);
             synth.voice(host, k, lp.voice(Layer::Melody, e.voice.get()), l.tune, t, dur, l.tune_vel, MELODY, &opts);
-            synth.budget.end();
+            sound(sounded, Layer::Melody, l.tune_vel, synth.budget.end());
         }
         synth.budget.set_firm(false);
     }
@@ -695,7 +755,7 @@ impl Sequencer {
     /// share, in the chords' voice as the plan has it there, held across
     /// the line. A muted layer stays silent.
     #[allow(clippy::too_many_arguments)] // the step's own place and times
-    fn pivot<H: Host>(host: &mut H, synth: &mut Synth, lp: &Loop, u: &heard::Unit, mutes: [bool; 5], t: f64, sd: f64, key: &mut impl FnMut(Layer) -> Key) {
+    fn pivot<H: Host>(host: &mut H, synth: &mut Synth, lp: &Loop, u: &heard::Unit, mutes: [bool; 5], sounded: &mut [f64; 5], t: f64, sd: f64, key: &mut impl FnMut(Layer) -> Key) {
         if mutes[Layer::Chords as usize] {
             return;
         }
@@ -712,14 +772,14 @@ impl Sequencer {
             let k = key(Layer::Chords);
             synth.budget.begin(Some(Layer::Chords), k);
             synth.pad(host, k, &chord, t, dur, u.pivot_vel * CHORD_SPREAD, CHORDS);
-            synth.budget.end();
+            sound(sounded, Layer::Chords, u.pivot_vel, synth.budget.end());
         } else if !voice.is_empty() {
             let spread = CHORD_SPREAD / math::sqrt(js::num(notes.len()));
             for (i, &n) in notes.iter().enumerate() {
                 let k = key(Layer::Chords);
                 synth.budget.begin(Some(Layer::Chords), k);
                 synth.voice(host, k, voice, f64::from(n), t + js::num(i) * 0.011, dur, u.pivot_vel * spread, CHORDS, &opts);
-                synth.budget.end();
+                sound(sounded, Layer::Chords, u.pivot_vel, synth.budget.end());
             }
         }
     }
@@ -901,6 +961,8 @@ impl Sequencer {
         let time = self.next_step_time;
         let step = self.step;
         let s = lp.settings;
+        self.sounded = [0.0; 5];
+        synth.take_sounded();
         #[allow(clippy::cast_precision_loss)] // steps, far below 2^53
         let abs = self.abs_step as f64;
         #[allow(clippy::cast_precision_loss)] // the same
@@ -1044,7 +1106,7 @@ impl Sequencer {
                 });
                 synth.budget.begin(Some(Layer::Drums), key);
                 synth.drum(host, key, inst, at, vel, hit);
-                synth.budget.end();
+                sound(&mut self.sounded, Layer::Drums, vel, synth.budget.end());
                 if truthy(pump) && kicked {
                     Synth::duck(host, t + micro, pump * vel);
                 }
@@ -1061,7 +1123,7 @@ impl Sequencer {
                     let key = key_of(Layer::Drums);
                     synth.budget.begin(Some(Layer::Drums), key);
                     synth.drum(host, key, inst, t, vel, None);
-                    synth.budget.end();
+                    sound(&mut self.sounded, Layer::Drums, vel, synth.budget.end());
                 }
             }
         }
@@ -1090,7 +1152,7 @@ impl Sequencer {
                     synth.budget.keep();
                 }
                 synth.bass(host, key, midi, t, e.dur * sd, vel, e.glide, lp.voice(Layer::Bass, e.voice.get()), e.chug);
-                synth.budget.end();
+                sound(&mut self.sounded, Layer::Bass, vel, synth.budget.end());
             }
         }
         // An ensemble does not attack together: a choir's layers each slip,
@@ -1146,7 +1208,7 @@ impl Sequencer {
                     let k = key_of(Layer::Chords);
                     synth.budget.begin(Some(Layer::Chords), k);
                     synth.pad(host, k, chord.notes(), t, dur, vel * CHORD_SPREAD, CHORDS);
-                    synth.budget.end();
+                    sound(&mut self.sounded, Layer::Chords, vel, synth.budget.end());
                     continue;
                 }
                 let notes = chord.notes();
@@ -1165,7 +1227,7 @@ impl Sequencer {
                         let k = key_of(Layer::Chords);
                         synth.budget.begin(Some(Layer::Chords), k);
                         synth.voice(host, k, voice, f64::from(string), t + slip + at, dur, vel * spread * weight, CHORDS, &strummed);
-                        synth.budget.end();
+                        sound(&mut self.sounded, Layer::Chords, vel * weight, synth.budget.end());
                     }
                     continue;
                 }
@@ -1175,7 +1237,7 @@ impl Sequencer {
                     let k = key_of(Layer::Chords);
                     synth.budget.begin(Some(Layer::Chords), k);
                     synth.voice(host, k, voice, f64::from(n), at, dur, vel * spread, CHORDS, &opts);
-                    synth.budget.end();
+                    sound(&mut self.sounded, Layer::Chords, vel, synth.budget.end());
                 }
             }
             if self.had_color {
@@ -1246,7 +1308,7 @@ impl Sequencer {
                 synth.budget.begin(Some(Layer::Melody), k);
                 let voice = lp.voice(Layer::Melody, e.voice.get());
                 synth.voice(host, k, voice, mv(midi), t + slip, dur, vel, MELODY, &opts);
-                synth.budget.end();
+                sound(&mut self.sounded, Layer::Melody, vel, synth.budget.end());
                 // Asked for after the note, so where the budget is short it
                 // is the decoration that yields, never the tune.
                 let mode = e.steps.as_ref().map_or(lp.spec.steps(), |s| &s[..]);
@@ -1261,13 +1323,13 @@ impl Sequencer {
                     let k = key_of(Layer::Melody);
                     synth.budget.begin(Some(Layer::Melody), k);
                     synth.voice(host, k, voice, mv(midi) + f64::from(double), t + slip, dur, vel * share, MELODY, &line);
-                    synth.budget.end();
+                    sound(&mut self.sounded, Layer::Melody, vel * share, synth.budget.end());
                 }
                 if let Some(under) = harmony_of(e.harm, midi, root, mode) {
                     let k = key_of(Layer::Melody);
                     synth.budget.begin(Some(Layer::Melody), k);
                     synth.voice(host, k, voice, mv(under), t + slip, dur, vel * HARMONY_VEL, MELODY, &line);
-                    synth.budget.end();
+                    sound(&mut self.sounded, Layer::Melody, vel * HARMONY_VEL, synth.budget.end());
                 }
                 let (graces, n) = graces_of(e.orn, midi, root, mode);
                 for (k, &g) in graces.iter().take(n).enumerate() {
@@ -1275,18 +1337,18 @@ impl Sequencer {
                     let k = key_of(Layer::Melody);
                     synth.budget.begin(Some(Layer::Melody), k);
                     synth.voice(host, k, voice, mv(g), js::max(now, at), GRACE, vel * GRACE_VEL, MELODY, &line);
-                    synth.budget.end();
+                    sound(&mut self.sounded, Layer::Melody, vel * GRACE_VEL, synth.budget.end());
                 }
             }
         }
         // A finite arc lands, on its landing's first step (queue item 102c).
         if let Some(l) = lp.pass.map(|p| &p.heard.landing).filter(|l| l.on && l.strikes && l.at == stepf) {
-            Self::land(host, synth, lp, l, mutes, t, sd, &mut key_of);
+            Self::land(host, synth, lp, l, mutes, &mut self.sounded, t, sd, &mut key_of);
         }
         // A long piece's key changes across a line (session 15): a chord
         // both keys share, held across it.
         if let Some(u) = lp.pass.and_then(|p| p.pivot_at(stepf)) {
-            Self::pivot(host, synth, lp, u, mutes, t, sd, &mut key_of);
+            Self::pivot(host, synth, lp, u, mutes, &mut self.sounded, t, sd, &mut key_of);
         }
         if !mutes[Layer::Texture as usize] {
             let s_at = at(Layer::Texture);
@@ -1306,8 +1368,28 @@ impl Sequencer {
                 notes.iter_mut().for_each(|n| *n += lp.moved(Layer::Texture, f64::from(*n)) as i16);
                 synth.budget.begin(Some(Layer::Texture), k);
                 synth.texture(host, k, e.kind.get(), &notes, t, e.dur * sd, e.vel, e.band);
-                synth.budget.end();
+                sound(&mut self.sounded, Layer::Texture, e.vel, synth.budget.end());
             }
+        }
+        // What each layer sounded on this step, as heard (session 30b): its
+        // loudest note of its own (a part of no layer's, a glass or a bell,
+        // where it played none), as loud as the plan leaves its channel.
+        // And the share of its level it was left: the plan's, and the late
+        // floor's rise for the kit and the bass.
+        let parts = synth.take_sounded();
+        for layer in LAYERS {
+            let l = layer as usize;
+            let c = channel_of(layer) as usize;
+            let own = self.sounded[l];
+            let vel = if own > 0.0 { own } else { parts.get(c).copied().unwrap_or(0.0) };
+            let plan = synth.plan_share(c, t);
+            let rise = match (layer, late) {
+                (Layer::Drums, Some(l)) => if abs < l.drums { 0.0 } else { l.rise(abs - l.drums, sd) },
+                (Layer::Bass, Some(l)) => if abs < l.bass { 0.0 } else { l.rise(abs - l.bass, sd) },
+                _ => 1.0,
+            };
+            self.heard[l] = vel * plan;
+            self.share[l] = plan * rise;
         }
     }
 
@@ -1804,6 +1886,18 @@ struct Bell {
     swell: bool,
     spot: bool,
     first: bool,
+}
+
+/// A voice call for `layer` at `vel` is over (`sent`: it handed the core a
+/// note, `Budget::end`): the step's loudest note of the layer, for the
+/// layers to draw (session 30b).
+fn sound(into: &mut [f64; 5], layer: Layer, vel: f64, sent: bool) {
+    if let Some(x) = into.get_mut(layer as usize)
+        && sent
+        && vel > *x
+    {
+        *x = vel;
+    }
 }
 
 /// The core's channel a layer plays into.

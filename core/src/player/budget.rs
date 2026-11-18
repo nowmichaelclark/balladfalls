@@ -173,9 +173,11 @@ impl Budget {
         }
     }
 
-    /// The voice call is over.
-    pub fn end(&mut self) {
-        #[cfg(feature = "tools")] self.counts.end(self.current.get().map(|g| g.layer)); self.current = Maybe::NONE;
+    /// The voice call is over: true if it handed the core a note (none was
+    /// refused room), so the layers draw what it played (session 30b).
+    pub fn end(&mut self) -> bool {
+        #[cfg(feature = "tools")] self.counts.end(self.current.get().map(|g| g.layer)); let sent = self.current.get().is_some_and(|g| g.channels != 0); self.current = Maybe::NONE;
+        sent
     }
 
     /// The voice call handed a note to the core's `channel` (`_toCore`):

@@ -198,10 +198,15 @@ h1, h2, h3, h4, h5, p { margin: 0; }
   width: 8px; height: 8px;
   background: var(--n);
 }
+/* A note as loud as it is heard (session 30b): a layer a long piece's
+   plan has soft, a kit still rising, drawn dimmer (js/ui.js sets
+   --heard, 0.3 to 0.9; none at a full share). */
+.pattern span.on[data-shade] { opacity: var(--heard); }
 .pattern span.on.big {
   width: 12px; height: 12px;
 }
 .layer.dim .pattern span.on { opacity: 0.5; }
+.layer.dim .pattern span.on[data-shade] { opacity: calc(0.5 * var(--heard)); }
 
 .phone.playhead-at-9.playing .layer:not(.dim) .pattern span:nth-child(9).on {
   box-shadow:
@@ -607,8 +612,8 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 @media (forced-colors: active) {
   .pattern, .playhead { forced-color-adjust: none; }
   .pattern span { background: GrayText; }
-  .pattern span.on { background: CanvasText; opacity: 1; }
-  .layer.dim .pattern span.on { background: GrayText; opacity: 1; }
+  .pattern span.on, .pattern span.on[data-shade] { background: CanvasText; opacity: 1; }
+  .layer.dim .pattern span.on, .layer.dim .pattern span.on[data-shade] { background: GrayText; opacity: 1; }
   .phone.playhead-at-9.playing .layer:not(.dim) .pattern span:nth-child(9).on {
     box-shadow: 0 0 0 2px Canvas, 0 0 0 4px Highlight;
   }

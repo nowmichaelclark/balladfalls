@@ -45,7 +45,9 @@
 //   wander and salt     the amount, and the salt across the upper range
 //   volume              0: silence; back: sound
 //   mono                the core renders one lane, then two
-//   layers' grid        the dots of the bar shown are the core's grid
+//   layers' grid        the dots of the bar shown are the core's: each step as
+//                       heard where it is decided (queue item 110), the grid of
+//                       the pass heard for the steps to come
 //   picks               a vibe picked: held by the core (queue item 95), the
 //                       loop playing left as it is, the next loop the
 //                       core's own and leaning on it; held again after a
@@ -792,6 +794,113 @@ async function openApp() {
   return page;
 }
 
+// The Layers view against the core (queue item 110), in the page: the dots of
+// the bar shown are each step's Heard event where the step is decided (the
+// loudness of what each layer sounded), and the core's grid of the pass heard
+// where it is not yet; a bar of some pass seen fits every layer. A row each
+// in the app's rows and the long piece's; `DRAWN_LEAST` is the page's own line
+// for a note too quiet to draw.
+async function layersFit() {
+  const { unpackHeard, DRAWN_LEAST } = await import('/js/heard.js');
+  const R = window.__rows;
+  const last = R.nodes.length - 1;
+  const layers = ['drums', 'bass', 'chords', 'melody', 'texture'];
+  const dots = layers.map((l) => [...document.querySelectorAll(`.layer[data-layer="${l}"] .pattern span`)].map((d) => (d.classList.contains('on') ? 1 : 0)));
+  const spb = dots[0].length;
+  // The events since the last loop or jump (its steps count from it).
+  const heard = new Map();
+  const starts = [];
+  let grids = [];
+  for (const b of R.events) {
+    if (b.node !== last) continue;
+    const gridOf = new Map(b.grids.map((g) => [g.at, g.grid]));
+    for (let k = 0; k < b.events.length; k += 4) {
+      const kind = b.events[k + 1];
+      const step = b.events[k + 3];
+      if (kind === 4 || kind === 8) { heard.clear(); starts.length = 0; grids = []; }
+      if (gridOf.has(k / 4)) grids.push(gridOf.get(k / 4));
+      if (kind === 9) heard.set(step, unpackHeard(b.events[k + 2]).loud);
+      if (kind === 0) { const from = step - b.events[k + 2]; if (!starts.includes(from)) starts.push(from); }
+    }
+  }
+  const tried = { grids: grids.length, starts: starts.length, heard: heard.size };
+  for (const g of grids.slice(-3)) {
+    for (const from of starts.slice(-2)) {
+      for (let bar = 0; bar < 64; bar++) {
+        const fits = layers.every((_, i) => {
+          const row = g[i];
+          return dots[i].every((on, k) => {
+            const h = heard.get(from + bar * spb + k);
+            const v = h ? h[i] : row.length ? row[(bar * spb + k) % row.length] : 0;
+            return on === (v >= DRAWN_LEAST ? 1 : 0);
+          });
+        });
+        if (fits) return { ok: true, bar, ...tried };
+      }
+    }
+  }
+  return { ok: false, ...tried, dots: dots.map((d) => d.join('')).join(' ') };
+}
+
+// A long piece's quiet section drawn quiet (queue item 110), in a page of its
+// own: a 128-bar arc whose opening holds its layers under their full level
+// (the plan's level, and the kit and the bass still coming in), opened by its
+// link, in the Layers view. Every layer the core has heard under 0.95 of its
+// level for the last two seconds (its Heard events' share) is drawn dimmer:
+// its dots at that share (the page's tenths, at least 0.3); every layer heard
+// at full, at full. Read three times, a few seconds apart; then the dots are
+// the core's.
+async function quietRows(browser) {
+  console.log('\n  a long piece\'s quiet section (queue item 110)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(HOOK);
+  await tab.goto(linkOf(`${ORIGIN}/`, encodeSong(newSpec(11, 'bars=128,journey=arc'))));
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1800);
+  await tab.click('#playBtn');
+  await tab.evaluate(() => { if (document.querySelector('.view:not([hidden])').dataset.view !== 'layers') document.getElementById('viewBtn').click(); });
+  await sleep(12000);
+  const reads = [];
+  for (let n = 0; n < 3; n++) {
+    reads.push(await tab.evaluate(async () => {
+      const { unpackHeard } = await import('/js/heard.js');
+      const R = window.__rows;
+      const last = R.nodes.length - 1;
+      const layers = ['drums', 'bass', 'chords', 'melody', 'texture'];
+      const now = R.events.length ? R.events[R.events.length - 1].at : 0;
+      const shares = layers.map(() => []);
+      for (const b of R.events) {
+        if (b.node !== last || b.at < now - 2) continue;
+        for (let k = 0; k < b.events.length; k += 4) if (b.events[k + 1] === 9) unpackHeard(b.events[k + 2]).share.forEach((s, i) => shares[i].push(s));
+      }
+      const want = (s) => (s < 0.95 ? Math.round(10 * Math.max(0.3, s)) / 10 : 1);
+      const out = layers.map((l, i) => {
+        const lo = Math.min(...shares[i]);
+        const hi = Math.max(...shares[i]);
+        const on = [...document.querySelectorAll(`.layer[data-layer="${l}"] .pattern span.on`)];
+        const drawn = on.map((d) => (d.dataset.shade ? Number(d.dataset.shade) : 1));
+        const looks = on.map((d) => Number(getComputedStyle(d).opacity));
+        // Steady (the share held for the two seconds): every dot at it.
+        const steady = want(lo) === want(hi);
+        const ok = !shares[i].length || !steady || drawn.every((v) => v === want(lo));
+        return { layer: l, share: shares[i].length ? `${lo.toFixed(2)}..${hi.toFixed(2)}` : '-', dots: on.length, drawn: [...new Set(drawn)].join('/'), quiet: steady && want(lo) < 1 && on.length > 0 && looks.every((o) => o < 0.95), ok };
+      });
+      return { ok: out.every((x) => x.ok), quiet: out.filter((x) => x.quiet).length, layers: out };
+    }));
+    await sleep(3000);
+  }
+  const ok = reads.every((r) => r.ok && r.quiet > 0);
+  row('Layers: a long piece\'s quiet section drawn quiet (each layer\'s dots at the share of its level the core hears it at, full ones full)', ok,
+    reads.map((r) => r.layers.filter((x) => x.dots).map((x) => `${x.layer} ${x.share} drawn ${x.drawn}${x.ok ? '' : ' (wrong)'}`).join(', ')).join(' | '));
+  const fit = await tab.evaluate(layersFit);
+  row('Layers: in the quiet section, the bar shown is the core\'s, its steps as heard and its grid for the steps to come', fit.ok, JSON.stringify(fit));
+  row('Layers: no page errors in the quiet section\'s page', bad.length === 0, bad.join('; '));
+  await tab.close();
+}
+
 // A long piece on screen (queue item 106b), in a page of its own: opened on
 // the 32,768-bar arc a listener's picks make (kept in the prefs as the app
 // keeps them), played in real time. Every row reads what the core says (its
@@ -1176,31 +1285,14 @@ async function main() {
     const stereo = (await probe()).lanes;
     row('mono: one lane, then two again', mono === 1 && stereo === 2, `${mono}, ${stereo}`);
 
-    // The layers' grid: the dots of the bar shown are a bar of the core's
-    // grid of the pass heard.
+    // The layers' grid (queue item 110): the dots of the bar shown are the
+    // core's: what each step sounded where it is decided (its Heard event),
+    // and the core's grid of the pass heard for the steps still to come.
     await ev(() => { if (document.querySelector('.view:not([hidden])').dataset.view !== 'layers') document.getElementById('viewBtn').click(); });
     await sleep(2500);
     {
-      const res = await ev(() => {
-        const R = window.__rows;
-        const last = R.nodes.length - 1;
-        const grids = R.events.filter((b) => b.node === last).flatMap((b) => b.grids.map((g) => g.grid)).slice(-3);
-        const layers = ['drums', 'bass', 'chords', 'melody', 'texture'];
-        const dots = layers.map((l) => [...document.querySelectorAll(`.layer[data-layer="${l}"] .pattern span`)].map((d) => (d.classList.contains('on') ? 1 : 0)));
-        const spb = dots[0].length;
-        for (const g of grids) {
-          for (let bar = 0; bar < 64; bar++) {
-            const fits = layers.every((l, i) => {
-              const row = g[i];
-              const cycle = row.length;
-              return dots[i].every((on, k) => on === (row[(bar * spb + k) % cycle] > 0 ? 1 : 0));
-            });
-            if (fits) return { ok: true, bar };
-          }
-        }
-        return { ok: false, grids: grids.length, dots: dots.map((d) => d.join('')).join(' ') };
-      });
-      row('layers\' grid: the bar shown is the core\'s grid of the pass', res.ok, JSON.stringify(res));
+      const res = await ev(layersFit);
+      row('layers\' grid: the bar shown is the core\'s, its steps as heard and its grid of the pass for the steps to come', res.ok, JSON.stringify(res));
     }
 
     // Picks: a vibe, then Next.
@@ -1327,6 +1419,7 @@ async function main() {
     row('no page errors', errors.length === 0, errors.join('; '));
     // A long piece on screen (queue item 106b), in a page of its own.
     if (!APP) await longRows(browser, PORT, errors);
+    if (!APP) await quietRows(browser);
     if (!APP) await plainRows(browser);
     if (!APP) await codeRows(browser);
     if (!APP) await linkRows(browser);

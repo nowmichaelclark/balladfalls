@@ -1437,7 +1437,10 @@ impl Player {
         #[allow(clippy::cast_precision_loss)] // a step of a section, far below 2^53
         let step = self.seq.step as f64;
         lp.step = step;
+        let (time, abs) = (self.seq.next_step_time, self.seq.abs_step);
         self.seq.schedule_step(host, &mut self.synth, &lp, now);
+        // What each layer sounded there, as heard (session 30b).
+        self.events.push(Event { time, kind: Kind::Heard, number: events::pack_heard(&self.seq.heard, &self.seq.share), step: abs });
         if self.seq.advance(&lp) {
             self.pass_measured();
             if self.seq.abs_step != last {

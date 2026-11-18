@@ -12,6 +12,23 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## The layers show what is heard (item 110, v190, PR #PRNUM)
+
+- **Watch the Layers view with a long piece**, on your phone and in the
+  Android app: open <https://driftloom.nowmichaelclark.workers.dev/#c=ELAAAAAF_DHAbt>
+  (a 128-bar arc), play it and switch to Layers. In the first 15 seconds
+  the kit and the bass come in and the texture rises: their dots should
+  come up dimmer and brighten as they are heard, and a note you hear should
+  have its dot when the playhead reaches it, and no dot without a note
+  (lite too: a note it leaves out is not drawn). Say if any dot doesn't match.
+- **Playhead trim and latency:** leave Playhead trim (Sounds) at 0 and say if
+  the playhead runs ahead of or behind the notes, on the phone with
+  headphones and in the app. In the app, Diagnostics' stream line now says
+  the output latency and whether Android measured it or it came from the
+  buffer; send me that line and the phone's name.
+- **For your eyes:** a dot's brightness follows the layer's level (at least
+  30%, in tenths); the dots, accents and halo look as before.
+
 ## The Android app, screen off (item 107d, v188, PR #431)
 
 Install the universal APK from the PR's `driftloom-debug-apk` artifact over

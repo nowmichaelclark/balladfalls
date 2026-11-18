@@ -373,24 +373,58 @@ function stepsForBar(pattern, layer, bar) {
   return out;
 }
 
+// The layers' grid as composed (a loop not playing, or before the core's
+// first events): each layer's loudest note on each step of bar `bar`.
 export function renderGrids(cells, pattern, bar, mutes) {
-  for (const layer of LAYERS) {
-    const vels = stepsForBar(pattern, layer, bar);
+  const loud = LAYERS.map((layer) => stepsForBar(pattern, layer, bar));
+  renderRows(cells, { loud, share: null }, mutes);
+}
+
+// How bright a dot is drawn for the share of its level it is heard at
+// (session 30b): its own at a full share, dimmer as a long piece's plan, a
+// late arrival or a fade has it softer, never under SHADE_LEAST (still a
+// note). In tenths, so a gliding level writes a dot's style only when it
+// moves a tenth. For Mikey's eyes.
+const SHADE_LEAST = 0.3;
+function shadeOf(share) {
+  if (share == null || !(share < 0.95)) return '';
+  return String(Math.round(10 * Math.max(SHADE_LEAST, share)) / 10);
+}
+
+// The layers drawn from `rows` (js/heard.js's HeardSteps.bar: each layer's
+// loudness on each step of the bar, 0 for none, and the share it is heard
+// at, in the layers' order; `share` null for the grid as composed): a dot
+// for a note, a bigger one for an accent (as loud as heard), dimmer as its
+// share is lower.
+export function renderRows(cells, rows, mutes) {
+  LAYERS.forEach((layer, l) => {
+    const vels = rows.loud[l] || [];
+    const shares = rows.share ? rows.share[l] : null;
     const dots = cells[layer];
     let notes = 0;
     for (let i = 0; i < dots.length; i++) {
-      const v = vels[i];
+      const v = vels[i] || 0;
       if (v) notes++;
       const on = !!v;
       const big = v > 0.55;
+      const shade = on && shares ? shadeOf(shares[i]) : '';
       // Only the dots that change. Writing a class, even the same one,
       // marks the element for style and paint.
       if (dots[i].classList.contains('on') !== on) dots[i].classList.toggle('on', on);
       if (dots[i].classList.contains('big') !== big) dots[i].classList.toggle('big', big);
+      if ((dots[i].dataset.shade || '') !== shade) {
+        if (shade) {
+          dots[i].dataset.shade = shade;
+          dots[i].style.setProperty('--heard', shade);
+        } else {
+          delete dots[i].dataset.shade;
+          dots[i].style.removeProperty('--heard');
+        }
+      }
     }
     const row = document.querySelector(`.layer[data-layer="${layer}"]`);
     const off = !!mutes[layer];
-    row.classList.toggle('dim', off);
+    if (row.classList.contains('dim') !== off) row.classList.toggle('dim', off);
     const sw = row.querySelector('.btn-on');
     const want = off ? 'false' : 'true';
     if (sw.getAttribute('aria-checked') !== want) {
@@ -398,8 +432,9 @@ export function renderGrids(cells, pattern, bar, mutes) {
       sw.firstChild.textContent = off ? 'off' : 'on';
     }
     const pat = row.querySelector('.pattern');
-    pat.setAttribute('aria-label', `${LAYER_LABELS[layer]} pattern: ${notes} ${notes === 1 ? 'note' : 'notes'} in ${dots.length} steps`);
-  }
+    const label = `${LAYER_LABELS[layer]} pattern: ${notes} ${notes === 1 ? 'note' : 'notes'} in ${dots.length} steps`;
+    if (pat.getAttribute('aria-label') !== label) pat.setAttribute('aria-label', label);
+  });
 }
 
 let lastCursor = -1;

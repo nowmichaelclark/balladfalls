@@ -824,8 +824,8 @@ mod player {
     /// Take every event waiting (`Player::event`; queue item 94a) into
     /// `dl_play_event_at`, four doubles each: its time on the core's clock,
     /// its kind (`Kind::ALL`'s order: 0 step, 1 pass, 2 section, 3 phrase, 4
-    /// loop, 5 revised, 6 end, 7 own), its number and its step from the load.
-    /// Returns how many. The worklet calls it after each block.
+    /// loop, 5 revised, 6 end, 7 own, 8 jump, 9 heard), its number and its
+    /// step from the load. Returns how many. The worklet calls it after each block.
     #[unsafe(no_mangle)]
     #[allow(clippy::cast_precision_loss)] // numbers and steps, far below 2^53
     pub extern "C" fn dl_play_events() -> u32 {
@@ -1834,5 +1834,37 @@ mod codes {
             Err(why) => return length(Err(why)),
         };
         length(code::write_seed_album(seed, count as usize, request(), &name, text()))
+    }
+}
+
+// The measuring tools' log of the notes heard (session 30b; the `tools`
+// feature), at the file's end so no line of shipped code moves.
+#[cfg(feature = "tools")]
+mod begun_exports {
+    use core::cell::UnsafeCell;
+
+    struct Begun(UnsafeCell<[f64; crate::begun::MOST * crate::begun::WORDS]>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Begun {}
+    static BEGUN: Begun = Begun(UnsafeCell::new([0.0; crate::begun::MOST * crate::begun::WORDS]));
+
+    /// The notes that took a voice since the last call (session 30b,
+    /// `crate::begun`), at `dl_tools_begun_at`, ten numbers each: channel,
+    /// key seed, pass, step and order, the frame it began on, velocity, the
+    /// channel's gain, the share a fade left it, and its voice. Returns how
+    /// many.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_tools_begun() -> u32 {
+        let (rows, n) = crate::begun::take();
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *BEGUN.0.get() };
+        buf[..rows.len()].copy_from_slice(rows);
+        u32::try_from(n).unwrap_or(0)
+    }
+
+    /// Where `dl_tools_begun` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_tools_begun_at() -> *const f64 {
+        BEGUN.0.get().cast()
     }
 }

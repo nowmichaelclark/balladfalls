@@ -44,7 +44,16 @@ const fact = (name, value) => {
 
 const power = () => sh('dumpsys', 'power');
 const asleep = () => /mWakefulness=Asleep/.test(power());
-const wakeLockHeld = () => power().includes('Driftloom:playing');
+// Held now: the app's lock in dumpsys's list of the locks held (a lock let go is not in it).
+const wakeLocks = () => {
+  const o = power();
+  const at = o.indexOf('Wake Locks: size=');
+  if (at < 0) return o.split('\n').filter((l) => l.includes('Driftloom:playing'));
+  const rest = o.slice(at).split('\n');
+  const end = rest.findIndex((l, i) => i > 0 && !/^\s/.test(l));
+  return rest.slice(1, end < 0 ? undefined : end).filter((l) => l.includes('Driftloom:playing'));
+};
+const wakeLockHeld = () => wakeLocks().length > 0;
 const screenOff = async () => {
   sh('input', 'keyevent', 'KEYCODE_SLEEP');
   await until('the screen to go off', () => asleep(), 20000, 500);
@@ -248,6 +257,11 @@ try {
   check('still playing: the service, the session and the wake lock', service().foreground && sessionState() === 3 && wakeLockHeld() && asleep(), JSON.stringify(service()));
   fact('screen off for', `${Math.round(elapsed)} s`);
 
+  // What the app cost, as the system counts it (the emulator's, said to be only that).
+  const cpu = sh('dumpsys', 'cpuinfo').split('\n').filter((l) => /driftloom|sandboxed|webview|chromium/i.test(l)).map((l) => l.trim()).slice(0, 6);
+  fact('CPU with the screen off (dumpsys cpuinfo, the last minutes)', cpu.join(' ; ') || 'not listed');
+  fact('the page while the screen is off', JSON.stringify(await hiddenPage()));
+
   // The page was hidden the whole time: its loops moved on by the core's tracks.
   const gone = await ev(() => document.getElementById('playBtn').getAttribute('aria-label'));
   check('the page still plays (its button says Pause)', gone === 'Pause', gone);
@@ -272,7 +286,7 @@ try {
   await waitFor('the session to say paused', () => sessionState() === 2, 15000).catch(() => null);
   check('the session says paused', sessionState() === 2, `state ${sessionState()}`);
   await sleep(11000);
-  check('paused: no wake lock, no audio focus', !wakeLockHeld() && !focusHeld(), `wake ${wakeLockHeld()}, focus ${focusHeld()}`);
+  check('paused: no wake lock, no audio focus', !wakeLockHeld() && !focusHeld(), `wake ${wakeLocks().join(' | ').trim()}, focus ${focusHeld()}`);
   check('paused: the service is not foreground; the notification stays (Play)', !service().foreground && /Play/.test(notification()), JSON.stringify(service()));
   check('paused: the stream is stopped (nothing runs)', logcat('DriftloomStream').some((l) => l.includes('stream stopped')), logcat('DriftloomStream').slice(-3).join('\n'));
 
@@ -337,7 +351,13 @@ try {
           || ((document.getElementById('exportAudio').disabled && `exportAudio is disabled: ${document.getElementById('exportAbout').textContent}`) || '');
       }, [format, String(length)]);
       if (missing) {
-        check(`${format}: the export sheet has what the run clicks`, false, `${missing}; lengths: ${await ev(() => [...document.querySelectorAll('#exportLengths .vkey')].map((b) => b.dataset.length).join(' '))}`);
+        const sheet = await ev(() => ({
+          about: document.getElementById('exportAbout').textContent,
+          choose: !document.getElementById('exportChoose').hidden,
+          keys: [...document.querySelectorAll('#exportLengths .vkey')].map((b) => b.dataset.length).join(' '),
+          worker: typeof Worker,
+        }));
+        check(`${format}: the export sheet has what the run clicks`, false, `${missing}; ${JSON.stringify(sheet)}`);
         return null;
       }
       await ev("document.getElementById('exportAudio').click()", undefined, true);

@@ -11,10 +11,10 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Base64
 import android.util.Log
 import android.webkit.ValueCallback
-import android.webkit.WebView
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebViewCompat
 import org.json.JSONObject
@@ -47,7 +47,7 @@ import java.util.concurrent.Executors
  * it may show its notification (Android 13 and later), at the first Play, with
  * the app in front.
  */
-class AppBridge(private val activity: Activity, private val view: WebView) {
+class AppBridge(private val activity: Activity, private val view: AppWebView) {
     private val main = Handler(Looper.getMainLooper())
 
     // Files are written on a thread of their own, one call at a time, in the order they came.
@@ -107,7 +107,14 @@ class AppBridge(private val activity: Activity, private val view: WebView) {
                 if (m.has("name")) Playback.name = m.optString("name")
                 if (m.has("subtitle")) Playback.subtitle = m.optString("subtitle")
                 if (Playback.playing && !was) askNotifications()
+                // Already paused, and the page says paused a while after the call paused it: the listener's own
+                // Pause, which the call's ending must not undo.
+                if (!Playback.playing && !was && SystemClock.elapsedRealtime() - Playback.focusPausedAt > 2000) {
+                    Playback.cancelResume = true
+                }
                 PlaybackService.sync(activity)
+                // The page runs as in front while the app plays or saves, and is hidden when it doesn't.
+                view.refreshVisibility()
             }
             "cover" -> {
                 val data = m.optString("data")
@@ -132,6 +139,7 @@ class AppBridge(private val activity: Activity, private val view: WebView) {
                     lastExportNote = now
                     PlaybackService.sync(activity)
                 }
+                if (on != was) view.refreshVisibility()
             }
             "save" -> chooseNewFile(m)
             "save-view" -> sendSaved(open = true, id = m.optInt("id"))
@@ -318,6 +326,7 @@ class AppBridge(private val activity: Activity, private val view: WebView) {
         proxy = null
         pending = null
         Playback.reset()
+        view.refreshVisibility()
         io.execute { file?.discard(); file = null; saved = null }
         PlaybackService.end(activity)
     }

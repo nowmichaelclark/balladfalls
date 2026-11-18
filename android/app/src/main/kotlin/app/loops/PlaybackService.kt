@@ -22,6 +22,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import android.util.Log
 
 /**
@@ -171,6 +172,9 @@ class PlaybackService : Service() {
 
     /** A button was pressed: the page does it. With no page the service has nothing to play, and ends. */
     private fun act(action: String) {
+        // The listener's own Pause (the notification's, the lock screen's, a headset's) is final: a call's end
+        // does not start the music again.
+        if (action == ACTION_PAUSE) resumeOnFocus = false
         val name = when (action) {
             ACTION_PLAY -> "play"
             ACTION_PAUSE -> "pause"
@@ -187,6 +191,7 @@ class PlaybackService : Service() {
      * button and its player agree (its own pause does the same again, harmlessly).
      */
     private fun pauseNow() {
+        Playback.focusPausedAt = SystemClock.elapsedRealtime()
         NativeCore.pause()
         Playback.playing = false
         Playback.toPage?.invoke("pause")
@@ -197,6 +202,10 @@ class PlaybackService : Service() {
 
     /** Show what [Playback] says, and hold what it needs held (and nothing else). */
     private fun refresh() {
+        if (Playback.cancelResume) {
+            Playback.cancelResume = false
+            resumeOnFocus = false
+        }
         val playing = Playback.playing
         val busy = Playback.busy
         session.isActive = true

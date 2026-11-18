@@ -33,6 +33,12 @@ object Playback {
      */
     @Volatile var toPage: ((String) -> Boolean)? = null
 
+    /** When the service paused the music for a call (the clock's, in ms): the page's own pause then is the listener's. */
+    @Volatile var focusPausedAt = 0L
+
+    /** The listener paused while a call had the music paused: it is not to start again when the call ends. */
+    @Volatile var cancelResume = false
+
     /** Whether the service has anything to hold on for. */
     val busy get() = playing || exporting
 

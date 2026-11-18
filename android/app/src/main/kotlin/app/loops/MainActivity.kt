@@ -81,7 +81,7 @@ class MainActivity : Activity() {
             .addPathHandler("/", BundledSite(this))
             .build()
 
-        val view = WebView(this)
+        val view = AppWebView(this)
         view.settings.apply {
             javaScriptEnabled = true
             // The page keeps the loops, the library and the preferences in

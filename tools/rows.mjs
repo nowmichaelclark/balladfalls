@@ -1164,6 +1164,22 @@ async function codeRows(browser) {
     return !!b;
   }, word);
   // The card's name, out of the Library (there the card names the album).
+  // The album called `title` shared from the Library: its code, waited for
+  // (twice, if the first tap lands before the page has the album open).
+  const shareAlbum = async (title) => {
+    for (let k = 0; k < 2; k++) {
+      await tev(() => { window.__rows.clip = ''; });
+      await openAlbum(title);
+      await sleep(300);
+      await heroKey('share');
+      for (let w = 0; w < 20; w++) {
+        const c = await clip();
+        if (c) return c;
+        await sleep(150);
+      }
+    }
+    return null;
+  };
   const cardName = async () => {
     await tev(() => { if (!document.getElementById('viewLibrary').hidden) document.getElementById('saveBtn').click(); });
     await sleep(300);
@@ -1190,10 +1206,8 @@ async function codeRows(browser) {
   await paste(albumCode);
   t = await toast();
   row('codes: an album\'s code pasted lands in the Library', t === 'Added Rainy Sunday · 3 loops' && await openAlbum('Rainy Sunday'), t);
-  await heroKey('share');
-  await sleep(500);
   let again = null;
-  try { again = decodeAlbum(await clip()); } catch (err) { again = { error: err.message }; }
+  try { again = decodeAlbum(await shareAlbum('Rainy Sunday')); } catch (err) { again = { error: err.message }; }
   const same = (a) => a && a.title === 'Rainy Sunday' && a.specs && a.specs.length === 3 && a.specs.every((s, i) => s.seed === tracks[i].seed && s.name === tracks[i].name && encodeSong(s) === encodeSong(tracks[i]));
   row('codes: the album shared again from the Library is the same album, its first track\'s Thai name with it', same(again), JSON.stringify(again && again.title));
   await heroKey('play album');
@@ -1238,10 +1252,7 @@ async function codeRows(browser) {
   d = about(p && p.about);
   card = await cardName();
   row('codes: after a reload the Library has the album, and its first track plays renamed', kept && d && Number(d.seed) === first.seed && card === 'ฝนตก 🎧', `${d && d.seed} ${card}`);
-  await openAlbum('Rainy Sunday');
-  await heroKey('share');
-  await sleep(500);
-  const before = await clip();
+  const before = await shareAlbum('Rainy Sunday');
 
   // A backup copied, the Library cleared, the backup restored: the album
   // as it was.
@@ -1256,9 +1267,7 @@ async function codeRows(browser) {
   await sleep(800);
   t = await toast();
   const back = await openAlbum('Rainy Sunday');
-  await heroKey('share');
-  await sleep(500);
-  const after = await clip();
+  const after = await shareAlbum('Rainy Sunday');
   row('codes: a backup restored brings the Library back: the album\'s code the same as before', gone && /^Restored \d+ loops/.test(t) && back && after === before && /^[A-Za-z0-9_-]+$/.test(after), `${t}; ${after === before ? 'same code' : `${before} / ${after}`}`);
   row('codes: no page errors in their tab', !bad.length, bad.join('; '));
   await tab.close();

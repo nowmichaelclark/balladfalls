@@ -284,7 +284,10 @@ async function main() {
           if (r.more) await page.click('#metaMore', { clickCount: 1 }).catch(() => {});
           if (SHOTS) {
             const file = `${c.name.replace(/[^a-z0-9]+/gi, '-')}_${size.name.replace(/ /g, '-')}_${scale}`;
-            await (await page.$('.zone-info')).screenshot({ path: path.join(SHOTS, `${file}.png`) });
+            await (await page.$('.zone-info')).screenshot({ path: path.join(SHOTS, `${file}_light.png`) });
+            const d = await open(browser, c, size, scale, true);
+            await (await d.page.$('.zone-info')).screenshot({ path: path.join(SHOTS, `${file}_dark.png`) });
+            await d.ctx.close();
           }
           await ctx.close();
         }

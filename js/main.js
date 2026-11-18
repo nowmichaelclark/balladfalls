@@ -13,7 +13,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v187';
+const BUILD = 'v188';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -719,7 +719,7 @@ function viewsReset() {
 // engine while the audio graph is being built, before any load happens.
 function syncMediaMetadata() {
   if (!state.media || !state.spec) return;
-  state.media.setMetadata(state.spec.name, `${state.spec.bpm} bpm · Driftloom`);
+  state.media.setMetadata(state.spec.name, `${state.spec.bpm} bpm · Driftloom`, state.spec);
 }
 
 // Passes are the honest unit -- a track ends on a whole loop -- but nobody

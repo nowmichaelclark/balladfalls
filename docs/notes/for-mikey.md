@@ -12,6 +12,43 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## The Android app, screen off (item 107d, v188, PR #431)
+
+Install the universal APK from the PR's `driftloom-debug-apk` artifact over
+the last one (same key). On the **Moto** and on the **tablet**:
+
+- **Ten minutes with the screen off.** Play a loop, set Track length to one
+  minute (Sounds), press Home, switch the screen off, put the phone down for
+  ten minutes. Listen for: no gap, no crackle, the loops changing on the
+  minute; the notification and the lock screen show the loop's **own cover**
+  and its name, changing with each loop. Then in Diagnostics (screen on):
+  `engine:` with `late: 0 missed: 0 dropped: 0` and its underruns, and
+  `while hidden:`; send me those two lines and the phone's name.
+- **The controls.** From the lock screen and the notification: Pause, Play,
+  Next, Previous; from a headset's or Bluetooth's buttons too. Pull the
+  headphones (or switch the Bluetooth off) while it plays: it should pause.
+  Call the phone (or play a video in another app): it pauses, and returns when
+  the other sound ends. A short sound from another app (a message tone) should
+  only lower it for a moment.
+- **A long piece and an export with the screen off.** Start a long piece
+  (a Journey, a few minutes) and an export (Save, Share, export audio: pick a
+  place in the system's picker, a 30-minute length, **lossless**), then switch
+  the screen off. Both should finish: the export says "Saved where you chose"
+  and the file plays. Try **small** too where the choice shows, and a MIDI
+  export and a backup (they use the same picker now), and "Restore" (it opens
+  Android's file picker).
+- **The notification question** (Android 13 and later): the first Play asks
+  whether Driftloom may show notifications. Say no once: the music and the
+  lock screen's controls should work all the same (the notification itself is
+  what is missing).
+- **Battery.** Nothing runs when it is paused (no wake lock, no stream). While
+  playing with the screen off the app costs what a music player does: one
+  audio thread and one wake lock. The emulator's figures are in the PR and
+  say only that; a phone's battery is its own: play for an hour with the
+  screen off and send me what Settings, Battery says Driftloom used.
+- Not tested without a device (the emulator can't say): that another app's short
+  sound ducks the music (the system does it for this stream; tell me if it
+  doesn't), and Bluetooth buttons.
 ## Links, an album from one seed, the plain lines (item 105c, v187)
 
 - **Approve the link's shape.** A link is the site's address with the code

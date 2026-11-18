@@ -306,6 +306,44 @@ const HOOK_APP = `(() => {
   };
   hook();
   document.addEventListener('readystatechange', hook);
+  // The app's second bridge (session 28): a file the page saves goes through
+  // Android's own picker, which a row can't answer. So the rows answer for it:
+  // the page is told it was saved where it asked, and the bytes it sent are
+  // the Blob a download would have been (the MIDI row reads it as ever).
+  R.saves = [];
+  let appHooked = false;
+  const hookApp = () => {
+    const A = window.DriftloomApp;
+    if (appHooked || !A) return;
+    appHooked = true;
+    const sendApp = A.postMessage.bind(A);
+    const listenApp = A.addEventListener.bind(A);
+    const heard = [];
+    let chunks = [];
+    const answer = (id, more) => {
+      const data = JSON.stringify({ type: 'reply', id, ok: true, ...more });
+      setTimeout(() => heard.forEach((fn) => fn({ data })), 0);
+    };
+    const shim = {
+      postMessage(text) {
+        let m = null;
+        try { m = JSON.parse(text); } catch { /* not ours to read */ }
+        if (m && m.type === 'save') { chunks = []; R.saves.push({ name: m.name, mime: m.mime, need: m.need }); return answer(m.id, { name: m.name, free: 1e12, seekable: true }); }
+        if (m && m.type === 'save-write') { chunks.push(Uint8Array.from(atob(m.data), (c) => c.charCodeAt(0))); return answer(m.id, {}); }
+        if (m && m.type === 'save-close') { R.blobs.push(new Blob(chunks)); return answer(m.id, {}); }
+        if (m && m.type === 'save-abort') { chunks = []; return answer(m.id, {}); }
+        return sendApp(text);
+      },
+      addEventListener(type, fn, ...rest) {
+        if (type === 'message') heard.push(fn);
+        return listenApp(type, fn, ...rest);
+      },
+      removeEventListener: (...a) => A.removeEventListener(...a),
+    };
+    Object.defineProperty(window, 'DriftloomApp', { configurable: true, value: shim });
+  };
+  hookApp();
+  document.addEventListener('readystatechange', hookApp);
   R.inject = (batch) => { for (const fn of R.listeners) fn({ data: JSON.stringify(batch) }); };
   R.level = () => (R.native ? R.native.level : 0);
   R.probe = () => new Promise((resolve) => {

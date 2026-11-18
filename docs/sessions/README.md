@@ -77,13 +77,13 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 
 | # | File | What | Model, effort | After | Alongside | Done |
 |---|---|---|---|---|---|---|
-| B-par | `brain-parallel.md` | Brain, in Claude Code: makes this plan parallel, then starts and oversees the hands sessions two at a time, up to B4 (Mikey, 2026-11-17) | Opus 5.5, high | B2 | every row to B4 | |
+| B-par | `brain-parallel.md` | Brain, in Claude Code: makes this plan parallel, then starts and oversees the hands sessions two at a time, up to B4 (Mikey, 2026-11-17), and 30a to 30d as they open (2026-11-18) | Opus 5.5, high | B2 | every row to 30d | |
 | | | **Long pieces** | | | | |
 | 17 | `17-long-jump.md` | 106a: the core's jump and the piece map for the page | Opus 5.5, high | B2 | 20, 21, 22, 24, 26 | yes, 2026-11-18 (#414 twang soft only, #417) |
 | 18 | `18-long-screens.md` | 106b: long pieces on screen | Sonnet 5.5, high | 17 | 20, 21, 22, 24, 26, 27, 28, 29 | yes, 2026-11-18 (#419) |
 | | | **Export** | | | | |
 | 20 | `20-export-app.md` | 104b: export in the app, lossless, safe first | Opus 5.5, high | B2 (19 is in) | 17, 18, 22, 24, 26 | yes, 2026-11-18 (#416) |
-| 21 | `21-export-small.md` | 104c: the small format | Sonnet 5.5, high | 20 | 17, 18, 22, 23, 24, 26, 27 | |
+| 21 | `21-export-small.md` | 104c: the small format | Sonnet 5.5, high | 20 | 17, 18, 22, 23, 24, 26, 27  yes, 2026-11-18 (#424) |
 | | | **Codes** | | | | |
 | 22 | `22-codes-core.md` | 105a: codes, version 2, in the core | Opus 5.5, high | B2 | 17, 18, 20, 21, 26, 27, 28, 29 | yes, 2026-11-17 (#412) |
 | 23 | `23-codes-app.md` | 105b: codes in the app | Opus 5.5, high | 22 | 21, 26, 27, 28, 29 | |
@@ -95,13 +95,28 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | | **you** | Install the APK from 27's PR on the Moto and the tablet; say what you hear. The work goes on meanwhile. | | 27 | | yes, 2026-11-18: "it works perfectly" |
 | 28 | `28-android-background.md` | 107d: the screen off, the notification, saving an export | Sonnet 5.5, high | 27, 21 | 18, 22, 23, 24 | |
 | 29 | `29-android-fdroid.md` | 107e: F-Droid's metadata, recipe and icons | Sonnet 5.5, high | 28 | 18, 22, 23, 24 | |
+| | | **Mikey's seven, before the polish** (2026-11-18) | | | | |
+| 30a | `30a-album-previous.md` | 109: Previous works in an album | Sonnet 5.5, high | 24 | 21, 28, 29, 30b, 30c, 30d | |
+| 30b | `30b-layers-heard.md` | 110: the layers show what is heard, in time with it | Opus 5.5, high | 27 | 21, 23, 24, 29, 30a | |
+| 30c | `30c-track-length.md` | 111: Track length, its own view, to the second; out of the sliders and the export | Opus 5.5, high | 21, 24, 28 | 29, 30a, 30d | |
+| 30d | `30d-info-card.md` | 112: the info card: clean lines, the rest a tap away, a round playhead | Sonnet 5.5, high | 23 | 21, 24, 28, 29, 30a, 30c | |
+| 30e | `30e-fewer-words.md` | 113: fewer words: keys, icons and switches; the share screen as keys | Opus 5.5, high | 21, 24, 28, 30a to 30d | 29 | |
+| 30f | `30f-painter-final.md` | 114: the Painter's final touches, and accessibility | Opus 5.5, high | 29, 30e | none | |
 | | | **Then in order, one at a time** | | | | |
-| 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | 18, 21, 24, 29, B4 | none | |
+| 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | 18, 21, 24, 29, B4, 30f | none | |
 | B5 | `brain-5-release.md` | Brain: the release check | Opus 5.5, high | 30 | none | |
 | | **you** | The signing choice (`docs/notes/for-mikey.md` will have the steps); buy the new name's domain and attach it to the Worker, if not done. **31a waits for this.** | | 29 | | |
 | 31a | `31a-new-name.md` | The new name, built and left open (you paste the name, the domain and the id) | Opus 5.5, high | B5, the row above | none | |
 | 31 | `31-one-point-oh.md` | 108: 1.0 (merges 31a first) | Sonnet 5.5, medium | B5, 31a open and green | none | |
 | | **you** | Rename the repo; the F-Droid submission (its merge request is public, so after 1.0) | | 31 | | |
+
+**Mikey's seven** (2026-11-18, queue items 109 to 114): his list for 1.0,
+as six sessions before the polish. The two fixes and the card start as soon
+as what they touch is in (30a after 24's albums, 30b now, 30d after 23's
+names), so they run beside the chains' ends; Track length (30c) waits for
+the export sheet and its Android save (21, 28); the words (30e) go over
+every screen once all are in; the Painter's pass (30f) comes last, so it
+sees the app as it will ship, and 30 then checks the whole.
 
 Why the chains wait where they do: 22 needs nothing from 17 to 21 (a code
 carries the request, the journey and the length, all in the core since 102;
@@ -110,7 +125,7 @@ jump over the bridge and changes the same page files; 28 saves 20's and 21's
 exports on Android; 30 polishes the whole app, so it runs alone. 17 and 23
 both change `js/gen.js`; 20 and 27 both change "lighter on processor".
 
-Thirty-two hands sessions and five brain sessions, and B-parallel.
+Thirty-eight hands sessions (one a Painter's) and five brain sessions, and B-parallel.
 
 **Why this many.** Batch 6 is fourteen approved sounds across five parts of
 the core; one or two a session keeps each PR measurable. Long pieces get

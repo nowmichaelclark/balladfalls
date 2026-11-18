@@ -7,7 +7,7 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-18:** `main` is at v183 (v183 long pieces on screen, item 106b, #419; v182 the Android app on the native core, item 107c, #420; v181 audio export in the app, item 104b, #416; v180 the jump within a long piece, item 106a, #417; v179 twang soft only, #414; v178 codes version 2 in the core, item 105a, #412; v177 the chords nearer the tune, item 84b, #404; v176 the keepalive without its hiss, #403; session 01 done: v154 the tools
+**Status, 2026-11-18:** `main` is at v184 (v184 audio export, the small format (Opus in an Ogg file), item 104c, #424; v183 long pieces on screen, item 106b, #419; v182 the Android app on the native core, item 107c, #420; v181 audio export in the app, item 104b, #416; v180 the jump within a long piece, item 106a, #417; v179 twang soft only, #414; v178 codes version 2 in the core, item 105a, #412; v177 the chords nearer the tune, item 84b, #404; v176 the keepalive without its hiss, #403; session 01 done: v154 the tools
 made steady, Diagnostics without the old scheduler's lines, Mikey's shorter
 plain lines; v155 the width ceiling's rest fix; session 02 done: v156, item
 101a, batch 6's far ends: deepDuck, wideSweep, slowOpening; session 03 done:
@@ -66,7 +66,7 @@ Mikey's two calls, v175 #402: batch 6's draws count against a loop's
 changes, way A of `docs/archive/notes/101h-change-counts.md`, and twang picks a
 beat apart); hands session 10 done (2026-11-17: 84b, v177, the chords a
 fifth under the tune where 84's whole octave left them past an octave, #404);
-brain B2 done (2026-11-17: batch 6 and 84b checked on v177, the "Batch 6 Album" out, `docs/ALBUMS.md`; sessions 17 and 22's prompts adjusted); brain B-parallel (2026-11-17, in Claude Code): from 17 on the road runs as four chains, two sessions at a time (`docs/sessions/README.md`, "From 17 on"), started and overseen by that brain; Mikey heard the Batch 6 Album (2026-11-17: every sound kept, twang soft only, in session 17's first PR; 84b kept); hands session 22 done (2026-11-17: 105a, v178, codes version 2 in the core, #412; the app writes version 1 until session 23); hands session 26 done (2026-11-17: 107b, the core native on Android's own audio, AAudio from a Rust crate in `android/native`, a debug screen and tests, #411; no app change); hands session 17 done (2026-11-18: v179 twang soft only, Mikey's call, #414; 106a, v180, the core's jump within a long piece, where it is, and the piece's map for the page, #417; no screens yet, session 18's); hands session 20 done (2026-11-18: 104b, v181, audio export in the app, lossless, safe first, #416; the Small choice is session 21's); hands session 18 done (2026-11-18: 106b, v183, long pieces on screen: where you are, the piece's line and jumps, the journey pick, the Library's lengths, #419); hands session 27 done (2026-11-18: 107c, v182, the Android app plays on the native core, the page driving it by the worklet's messages, #420; the screen off and the notification are session 28's); next: the chains, and his testers' pastes
+brain B2 done (2026-11-17: batch 6 and 84b checked on v177, the "Batch 6 Album" out, `docs/ALBUMS.md`; sessions 17 and 22's prompts adjusted); brain B-parallel (2026-11-17, in Claude Code): from 17 on the road runs as four chains, two sessions at a time (`docs/sessions/README.md`, "From 17 on"), started and overseen by that brain; Mikey heard the Batch 6 Album (2026-11-17: every sound kept, twang soft only, in session 17's first PR; 84b kept); hands session 22 done (2026-11-17: 105a, v178, codes version 2 in the core, #412; the app writes version 1 until session 23); hands session 26 done (2026-11-17: 107b, the core native on Android's own audio, AAudio from a Rust crate in `android/native`, a debug screen and tests, #411; no app change); hands session 17 done (2026-11-18: v179 twang soft only, Mikey's call, #414; 106a, v180, the core's jump within a long piece, where it is, and the piece's map for the page, #417; no screens yet, session 18's); hands session 20 done (2026-11-18: 104b, v181, audio export in the app, lossless, safe first, #416; the Small choice is session 21's); hands session 18 done (2026-11-18: 106b, v183, long pieces on screen: where you are, the piece's line and jumps, the journey pick, the Library's lengths, #419); hands session 27 done (2026-11-18: 107c, v182, the Android app plays on the native core, the page driving it by the worklet's messages, #420; the screen off and the notification are session 28's); Mikey's seven for 1.0 queued (2026-11-18: items 109 to 114, sessions 30a to 30f, before the polish); hands session 21 done (2026-11-18: 104c, v184, the Small choice in the export sheet: Opus through the browser's own encoder, an Ogg file the page muxes itself, `js/ogg.js`; hidden where the browser has no Opus encoder; #424); next: the chains, and his testers' pastes
 (`docs/notes/98-testers.md`). Item
 75 is low priority. 37 stays on hold. A new Claude Code session starts here:
 read the standing rules and the merge policy, then take the next item.
@@ -375,7 +375,7 @@ and the other games wait (the core already works in Broken Friends); the
 music app is finished first, and **1.0 includes the Android app on
 F-Droid** (Mikey, 2026-11-10). Order, after 103: phase 3's 96, 97, 100 and
 98's hands part; then 101, 84b and 102; then 106, 104 and 105; then 107;
-then the known issues, the polish, and 108. **Screens:** the hands build
+then Mikey's seven (109 to 114, 2026-11-18); then the known issues, the polish, and 108. **Screens:** the hands build
 plain ones in the app's current style, keeping `docs/PAINTER.md`'s rules
 (one screen, no new settings, scrolling in its two places); a Painter
 session may restyle any of them later (Mikey, 2026-11-10). Each sound change merges under the policy and is
@@ -391,7 +391,7 @@ the plan and its map, the wander, the arc's energy, its themes and keys,
 the joins and the listening set, then tuning from Mikey's notes;
 `docs/sessions/long-pieces-brief.md`); 106 is 106a and 106b (17, 18); 104
 is 104a to 104c (19 to 21); 105 is 105a to 105c (22 to 24); 107 is 107a to
-107e (25 to 29); the polish is 30, the new name is 31a (Mikey, 2026-11-11: the app is
+107e (25 to 29); 109 to 114 are 30a to 30f (Mikey's seven, 2026-11-18); the polish is 30, the new name is 31a (Mikey, 2026-11-11: the app is
 renamed at 1.0, kept from the testers until then) and 108 is 31. Five brain sessions (B1 to
 B5) check the work between them.
 
@@ -579,7 +579,9 @@ core renders in small chunks straight to the file (memory the same for a
 minute or three hours); free space checked first; progress with Cancel;
 it survives the app going to the background. **Lossless** (FLAC, written
 by the core) and **small** (Opus, through the browser's own encoder where it
-has one, else that choice is hidden); the format chosen in the export sheet
+has one, else that choice is hidden: built in 104c, `js/ogg.js` and
+`js/export-opus.js`, 64 kbit/s mono and 96 kbit/s stereo at a constant rate,
+so the size is known, 8,100 and 12,100 bytes a second); the format chosen in the export sheet
 each time; "lighter on processor" sets the speed (on: gentle; off: as fast
 as is safe). Endless asks how much. **Yardsticks:** a three-hour lossless
 export on the Moto-class figures in `tools/autolite.mjs`'s slow case
@@ -634,6 +636,47 @@ release id and name come with the rename (31a). Then item 100's link points
 at the listing. **Yardsticks:** the Moto and the tablet play with nothing
 late (Diagnostics in the app), the screen off for ten minutes, a long
 piece and an export; the APK builds from a clean checkout.
+
+## 109 to 114. Mikey's seven, before the polish (2026-11-18)
+
+Mikey's list for 1.0, in his words in each session's prompt
+(`docs/sessions/30a-album-previous.md` to `30f-painter-final.md`); the order
+and what may run together are `docs/sessions/README.md`, "Mikey's seven".
+
+- **109. Previous works in an album** (his 2; session 30a). Previous does
+  nothing in an album. Likely cause, to confirm: Previous is disabled at the
+  history's start, and an album's tracks don't enter the history. In an
+  album Previous goes to the track before, from every button (screen,
+  keyboard, headset, lock screen, Android's notification). **Yardsticks:**
+  rows for it, ten passes.
+- **110. The layers show what is heard** (his 5; session 30b). The layers
+  draw each pass as composed, so a note left out, faded or in a quiet
+  section is drawn, and a layer fading in may be heard before it is drawn.
+  The core reports each layer's notes as heard (after the section's level,
+  the fades and the refusals); the page draws them when and as loud as
+  heard; the cursor's latency checked on the web and on Android. Nothing
+  heard moves. **Yardsticks:** a tool measuring drawn against heard, before
+  and after, near zero after; the baseline unchanged; the tablet's margin.
+- **111. Track length, its own view, to the second** (his 6; session 30c).
+  A view like Bars, its key beside "any tempo" and "any bars"; the time to
+  the second; the core's track a time, its close landing on that second;
+  a fade in and a fade out, each on or off; the Sound view's Length slider
+  and the export's "How much" gone (an export is the track length; with none
+  set it opens the view first). **Yardsticks:** a track ends on its second at any
+  tempo, on a loop, a piece and Endless; the export that long.
+- **112. The info card** (his 3 and 4; session 30d). Every detail line
+  shown is whole on any display; what doesn't fit is left off, and a tap
+  shows the rest. Its playhead round, like the layers' dots, a little bigger.
+  **Yardsticks:** no line clipped from 320 px to a tablet and at 200% text.
+- **113. Fewer words** (his 1; session 30e). Icons, switches and two- or
+  three-word phrases for explaining sentences, across the app; the share
+  screen as keys (copy code, paste code, export audio), export audio a view
+  of a key a format (flac, midi, the small one). Screen readers keep full
+  names. **Yardsticks:** a before and after table for Mikey.
+- **114. The Painter's final touches** (his 7; session 30f). The design once
+  more as one app, and accessibility to WCAG 2.2 AA (contrast in every
+  theme, focus, targets, names, reduced motion, 200% text). **Yardsticks:**
+  a check in `tools/` on every theme; screenshots before and after.
 
 ## 108. 1.0
 

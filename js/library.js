@@ -19,6 +19,7 @@ import { coverImage, paint } from './covers.js';
 import { NOTE_NAMES, SCALES } from './theory.js';
 import * as store from './storage.js';
 import * as ui from './ui.js';
+import { fitName } from './share.js';
 
 const el = ui.el;
 
@@ -383,7 +384,10 @@ function listedAlbums(alsoShow = null) {
 function newAlbumThen(after) {
   const title = prompt('Name this album', 'Untitled');
   if (!title || !title.trim()) return;
-  const album = store.createAlbum(title.trim().slice(0, store.NAME_MAX));
+  // An album's name travels with its code: only what a code can carry.
+  const name = fitName(title, store.NAME_MAX);
+  if (!name) { ui.toast("That name can't be shared; try another"); return; }
+  const album = store.createAlbum(name);
   if (!album) { ui.toast('Could not create the album'); return; }
   after(album);
 }

@@ -4,9 +4,12 @@
 // by which a long piece's join knows, from its notes alone, how much of the
 // mix the layers it keeps carry (core/src/generator/heard.rs, `Heard::share`).
 // One note of every voice the probe knows (tools/play-lib.mjs's `probe`,
-// the voice through its layer's own path, dry), held 4 s at velocity 0.8 at
+// the voice through its layer's own path, dry), held 4 s (and 8 s, for
+// the last span) at velocity 0.8 at
 // three pitches across its layer's window (one for the kit), its mean power
-// in six spans of its life (0 to 1/8 s, to 1/4, 1/2, 1, 2 and 4 s), as dB
+// in seven spans of its life (0 to 1/8 s, to 1/4, 1/2, 1, 2, 4 and 8 s; the
+// last since session 23, held 8 s: a long note past 4 s, which a table that
+// stopped at 4 s read as its 2 to 4 s), as dB
 // at velocity 1 (power goes with the velocity squared: measured, 6.0 dB from
 // 0.4 to 0.8 on every tuned voice, 5.4 to 5.7 on the kit) through the
 // channel's own gain (`CHANNEL_GAIN`, core/src/player/synth.rs), rounded to
@@ -23,7 +26,7 @@ const WINDOWS = { melody: [55, 79], chords: [43, 67], bass: [28, 52], texture: [
 // The channels' gains, by layer (core/src/player/synth.rs, `CHANNEL_GAIN`,
 // in the core's channel order melody, chords, bass, texture, drums).
 const GAIN = { melody: 0.58, chords: 0.44, bass: 0.62, texture: 0.5, drums: 0.82 };
-const SPANS = [[0, 0.125], [0.125, 0.25], [0.25, 0.5], [0.5, 1], [1, 2], [2, 4]];
+const SPANS = [[0, 0.125], [0.125, 0.25], [0.25, 0.5], [0.5, 1], [1, 2], [2, 4], [4, 8]];
 const RATE = 22050;
 const VEL = 0.8;
 
@@ -42,8 +45,12 @@ for (const layer of LAYERS) {
     const midis = layer === 'drums' ? [lo] : [lo + 6, Math.round((lo + hi) / 2), hi - 6];
     const acc = SPANS.map(() => 0);
     for (const midi of midis) {
+      // The first six spans held 4 s, as session 16b measured them; the last,
+      // past 4 s, held 8 s (a voice that fades toward its note's end fades
+      // at the end of whichever it is, so the two holds differ before 4 s).
       const d = probe({ layer, voice, midi, vel: VEL, seconds: 4, rate: RATE, tail: 0.5, seed: 7 });
-      SPANS.forEach(([a, b], i) => (acc[i] += power(d, 0.05 + a, 0.05 + b) / midis.length));
+      const long = probe({ layer, voice, midi, vel: VEL, seconds: 8, rate: RATE, tail: 0.5, seed: 7 });
+      SPANS.forEach(([a, b], i) => (acc[i] += power(i < 6 ? d : long, 0.05 + a, 0.05 + b) / midis.length));
     }
     const db = acc.map((p) => (p > 1e-10 ? Math.round(10 * Math.log10(p) - 20 * Math.log10(VEL) + 20 * Math.log10(GAIN[layer])) : -99));
     lines.push(`${layer}.${voice} = ${db.map((x) => Math.max(-99, x)).join(' ')}`);

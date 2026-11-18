@@ -440,9 +440,11 @@ player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set
 - **On the web** the `player` feature builds `js/dlplayer.wasm` with the
   `dl_play_*` exports; the app plays it by default since queue item 94b
   (`js/player.js` sends the commands and draws the events), and it is the
-  app's only module since item 97. The module is
+  app's only module since item 97. The module was
   665 KB (226 KB gzipped) against the core alone's 252 KB (91 KB gzipped): the
-  generator and the player's code, 547 KB of the module before gzip. The player is all
+  generator and the player's code, 547 KB of the module before gzip; with the
+  FLAC encoder (item 104b) and the share codes (`codes`, session 23: 124 KB,
+  48 KB gzipped) it is 1,059 KB (365 KB gzipped). The player is all
   zero bytes when new (`a_new_player_is_all_zeros`), so its 1.5 MB is `.bss`,
   not bytes in the file (the module was 1.9 MB when it was stored).
 
@@ -492,7 +494,8 @@ decoder.
 
 A loop or an album as a short run of the 64 link-safe characters, written and
 read by `src/code.rs` (natively; `dl_code_*` and `dl_album_*` in the C header;
-`dl_code_*` in the tools' wasm, and the app's from session 23;
+`dl_code_*` in the tools' wasm and in `js/dlplayer.wasm`, which the app
+drives through `js/gen.js` and `js/share.js` since session 23;
 `node tools/codes.mjs` from the command line). **Frozen from 1.0:**
 `golden/share-codes.txt` holds it to its bytes, natively and on the web.
 

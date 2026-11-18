@@ -71,10 +71,12 @@ fi
 # The app's module (queue item 82: the `player` feature, the generator and
 # the player with their exports; and since session 20, queue item 104b, the
 # `flac` feature: the lossless export's encoder, `dl_flac_*`, which the
-# export's Worker drives, js/export-worker.js). Until item 97 a second one,
+# export's Worker drives, js/export-worker.js); and since session 23, queue
+# item 105b, the `codes` feature: share codes, version 2, `dl_code_*`, which
+# js/gen.js drives. Until item 97 a second one,
 # js/dlcore.wasm (the `web` feature alone), played the page's own engine.
 status=0
-for module in dlplayer:player,flac; do
+for module in dlplayer:player,flac,codes; do
   name=${module%%:*}
   feature=${module#*:}
   cargo rustc --release --locked --target wasm32-unknown-unknown --no-default-features --features "$feature" --crate-type cdylib,rlib

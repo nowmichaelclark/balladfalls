@@ -13,7 +13,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v185';
+const BUILD = 'v187';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -36,6 +36,13 @@ const NOT_LOADED = 'Please refresh.';
 // until the Android app has a page (F-Droid, queue item 107); the second
 // sentence shows only when it is set.
 const TOO_SLOW = 'This browser is too slow.';
+// The app's name, where a line names it (the app is renamed at 1.0: session
+// 31a changes it here). The lines a pasted code gets name it, as the core's
+// "needs a newer version" leaves the host to.
+const APP_NAME = 'Driftloom';
+const OLD_CODE = `That code is from an older ${APP_NAME} and can't be opened.`;
+const NEWER_CODE = `That code needs a newer ${APP_NAME}.`;
+const NOT_A_CODE = `That doesn't look like a ${APP_NAME} code.`;
 const GET_APP = 'Get the Driftloom app.';
 const APP_LINK = '';
 
@@ -1234,15 +1241,30 @@ function startRename() {
   input.focus();
   input.select();
 
+  // The box takes only what a share code can carry (session 23): a
+  // character the code refuses (an invisible or a control one, a direction
+  // override, a pile of marks) or a name past its room is not taken, and the
+  // box keeps what it had. Spaces are tidied at the end, and an input
+  // method's word is read once it is whole.
+  let kept = input.value;
+  const onInput = (e) => {
+    if (e.isComposing) return;
+    const tidy = input.value.normalize('NFC').replace(/\s+/g, ' ').trim();
+    if (!tidy || share.fitName(tidy, store.NAME_MAX) === tidy) kept = input.value;
+    else input.value = kept;
+  };
+  input.addEventListener('input', onInput);
+
   let done = false;
   const finish = (commit) => {
     if (done) return;
     done = true;
     input.removeEventListener('keydown', onKey);
     input.removeEventListener('blur', onBlur);
+    input.removeEventListener('input', onInput);
     input.hidden = true;
     h.hidden = false;
-    const name = input.value.trim().slice(0, store.NAME_MAX);
+    const name = share.fitName(input.value, store.NAME_MAX);
     if (!commit || !name || name === h.textContent) return;
     if (albumId) {
       if (!store.renameAlbum(albumId, name)) { ui.toast('Could not rename'); return; }
@@ -1300,7 +1322,12 @@ async function shareAlbum(albumId) {
   const byId = new Map(store.loadAll().map((e) => [e.id, e]));
   const specs = album.ids.map((id) => byId.get(id)).filter(Boolean).map((e) => e.spec);
   if (!specs.length) { ui.toast('That album is empty'); return; }
-  await offerCode(share.encodeAlbum(album.title, specs), `${album.title} · ${specs.length} loops`);
+  try {
+    await offerCode(share.encodeAlbum(album.title, specs), `${album.title} · ${specs.length} loops`);
+  } catch (err) {
+    console.warn('Could not build an album code', err);
+    ui.toast('Could not build a code for this album');
+  }
 }
 
 // Put a code where it can be taken. The clipboard is the quick path; the
@@ -1544,11 +1571,15 @@ async function pasteCode() {
     text = '';
   }
   if (!share.codeKind(text)) {
-    text = prompt('Paste a Driftloom code') || '';
+    text = prompt(`Paste a ${APP_NAME} code`) || '';
   }
   const kind = share.codeKind(text);
+  // A version 1 code (session 23: the app speaks version 2 only), or one
+  // from a newer build: one plain line each, not an error.
+  if (kind === 'old') { ui.toast(OLD_CODE); return; }
+  if (kind === 'newer') { ui.toast(NEWER_CODE); return; }
   if (!kind) {
-    if (text.trim()) ui.toast('That does not look like a Driftloom code');
+    if (text.trim()) ui.toast(NOT_A_CODE);
     return;
   }
   try {
@@ -1582,7 +1613,8 @@ async function pasteCode() {
       ui.toast(`Added ${title} · ${specs.length} loops`);
     }
   } catch (err) {
-    ui.toast(err.message || 'That code could not be read');
+    console.warn('Could not open the code', err);
+    ui.toast(err instanceof share.CodeError && err.message === 'needs a newer version' ? NEWER_CODE : NOT_A_CODE);
   }
 }
 

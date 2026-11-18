@@ -165,7 +165,7 @@ default. Move text, don't rewrite decisions.
 
 ## Listening albums
 
-The app's **Paste a code** button takes an album code (`DLA1-...`) and
+The app's **Paste a code** button takes an album code and
 imports every loop in order.
 
 - `js/share.js` exports `encodeAlbum(title, specs)` and `decodeAlbum`, and

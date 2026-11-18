@@ -1,6 +1,6 @@
 // The ten dials, measured (queue item 34).
 //
-// Run with:  node tools/dials.mjs <export.jsonl | DL1-code ...> [--json <file>]
+// Run with:  node tools/dials.mjs <export.jsonl | code ...> [--json <file>]
 //
 // Every ranked loop needs a position on the ten dials (docs/MOODS.md,
 // "Dials" and "Maps and clouds") before Mikey's answers can be turned into
@@ -626,7 +626,7 @@ function earsReport(file, scale, words, dials) {
 const USAGE = `
 driftloom dials (queue item 34)
 
-  node tools/dials.mjs <export.jsonl | DL1-code ...> [options]
+  node tools/dials.mjs <export.jsonl | code ...> [options]
 
   --json <file>      also write the raw and scaled dials, the per-bar clouds
                      and the per-layer height and edge, keyed by code

@@ -67,20 +67,20 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 // From tools/perf.mjs's fixed set: the busiest loops.
 export const LOOPS = {
-  shatter: { name: 'shatter-glein-fei', code: 'DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR-ND7HF-X1MQ6-VHDRA-009XE-Z9G08-8ZW0G-5ZXKW-TCREH-SH000-00000-V4G0' },
-  cinder: { name: 'cinder-da-yoan', code: 'DL1-0C076-20110-60H1R-PE1MF-FVF35-ZPPA7-DDQPN-9D5MS-SBK94-FAREY-9KW08-EZW10-CDR3S-2QAD0-WEFGB-00000-0006S-3R' },
-  hollow: { name: 'hollow-laith-hu', code: 'DL1-0C04J-2R00G-60ZHQ-01BZP-630Q2-3DP7M-GV3HF-3QTSE-RFHKD-SP413-ABM10-87G5Q-000V1-RW061-8Y02P-G6CYN-M2J71-49H00-00000-041D0' },
+  shatter: { name: 'shatter-glein-fei', code: 'EY676JASAw4ji4xm-9sJfSBohq0xus0o-EfSC6-1nw6kkpkiBhBsq' },
+  cinder: { name: 'cinder-da-yoan', code: 'E-M5dYBSAwi0oj94ox8JfSB4tuzg2l6ks2ChBSC6tujg33ntqPhBPF' },
+  hollow: { name: 'hollow-laith-hu', code: 'E6SNCEDSA0gloz1lp15HfSBi5oio03onjKfSC6-1nw6kkpkiBhBjW' },
   // Shatter's seed as a piece of 32,768 bars and as Endless (queue item 95:
   // long pieces and Endless play from the core alone).
-  piece: { name: 'glein-fei', code: 'DL1-10088-1GE08-60511-HBCQY-R4DR4-V7RDR-ND7HF-X1MQ6-VHDRA-009XE-Z9G08-8ZW0G-5ZXKW-TCREH-SH000-00000-00000-000G6-00519-9' },
-  endless: { name: 'glein-fei', code: 'DL1-10088-1GE08-60511-HBCQY-R4DR4-V7RDR-ND7HF-X1MQ6-VHDRA-009XE-Z9G08-8ZW0G-5ZXKW-TCREH-SH000-00000-00000-00006-T2C' },
+  piece: { name: 'glein-fei', code: 'EY676JAF__fSAw4ji4xm-9sJfSBohq0xus0o-EfSC6-1nw6kkpkiBhBm4' },
+  endless: { name: 'glein-fei', code: 'EY676JAGSAw4ji4xm-9sJfSBohq0xus0o-EfSC6-1nw6kkpkiBhBiv' },
   // (Those two draw the wander.) An arc of 32,768 bars and an Endless arc
   // (session 15): brum-yei (corpus 20261009 #17), its kit, its two themes,
   // its keys and its joins; the codes carry no journey, and its seed draws
   // the arc at both.
-  arc: { name: 'brum-yei', code: 'DL1-1004T-08210-80523-CYS7V-EV398-WHQH9-EAE5X-X3W7C-FJ41G-924MF-RTA0G-6J07P-Y081Z-Z78BH-YBFCH-G0000-00000-00000-08300-2KT7G' },
-  arcs: { name: 'brum-yei', code: 'DL1-1004T-08210-80523-CYS7V-EV398-WHQH9-EAE5X-X3W7C-FJ41G-924MF-RTA0G-6J07P-Y081Z-Z78BH-YBFCH-G0000-00000-00000-0020C-C' },
-  undertow: { name: 'undertow-vith-glour', code: 'DL1-0C066-0R240-80QFF-STBB1-S7BSN-XARZ1-AG3PA-793NP-FN4X2-HKYN6-DS210-9T420-Y3G51-WD020-7ZR2W-BGV5B-5G000-08000-04001-00080-00000-2B5R' },
+  arc: { name: 'brum-yei', code: 'ElG_oEBF__fSAqwi2j07hotBdSBk-w7k1r-lyIfSCi2vlw31wmsYhBeb' },
+  arcs: { name: 'brum-yei', code: 'ElG_oEBGSAqwi2j07hotBdSBk-w7k1r-lyIfSCi2vlw31wmsYhBdo' },
+  undertow: { name: 'undertow-vith-glour', code: 'ERuZq-BSAmtp7shy-3wHfSBwn81xn39l9LfSCy78mguvv60ehBvW' },
 };
 
 function parseArgs(argv) {

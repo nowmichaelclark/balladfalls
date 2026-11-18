@@ -145,19 +145,19 @@ driftloom live performance harness
 // measured them.
 const LOOPS = [
   { name: 'undertow-sai-soan', bars: 2, bpm: 125, why: 'the heaviest audio render in the screen (86.9 ms/s at 1x, full)',
-    code: 'DL1-0C05T-28808-60VJT-AEAXA-ES63R-8HYR1-AQGZP-6S656-KAFJ9-78YQX-ZXY0G-18W4V-G083Z-YW9WT-W1S8G-00000-000AM-SR' },
+    code: 'Ef_3veASAor6uujp-x_IfSB0glktkz9gtBdSCi0glgwixqpWhBPP' },
   { name: 'tide-rer-woa', bars: 2, bpm: 137, why: 'second heaviest render; 109 nodes a second',
-    code: 'DL1-0C06J-10308-6074Z-2RC1A-SV7BX-SCZ6S-KG6PF-CSEZ4-P0XVV-KXHXH-61A0G-E446X-W0G6B-W1T19-W5JNY-7ABG0-00000-00A3W' },
+    code: 'EVwE7xCSA4tuzg2l6ks2ChBSB-wno7mu-5kIfSC2v9zp4hqxmDf_e' },
   { name: 'hollow-laith-hu', bars: 4, bpm: 105, why: 'the sung voices: heavy render (81.1 ms/s)',
-    code: 'DL1-0C04J-2R00G-60ZHQ-01BZP-630Q2-3DP7M-GV3HF-3QTSE-RFHKD-SP413-ABM10-87G5Q-000V1-RW061-8Y02P-G6CYN-M2J71-49H00-00000-041D0' },
+    code: 'E6SNCEDSA0gloz1lp15HfSBi5oio03onjKfSC6-1nw6kkpkiBhBjW' },
   { name: 'cinder-da-yoan', bars: 8, bpm: 147, why: 'the most graph churn: 130 nodes a second, 147 bpm',
-    code: 'DL1-0C076-20110-60H1R-PE1MF-FVF35-ZPPA7-DDQPN-9D5MS-SBK94-FAREY-9KW08-EZW10-CDR3S-2QAD0-WEFGB-00000-0006S-3R' },
+    code: 'E-M5dYBSAwi0oj94ox8JfSB4tuzg2l6ks2ChBSC6tujg33ntqPhBPF' },
   { name: 'shatter-glein-fei', bars: 2, bpm: 164, why: 'fast and fractured: 164 bpm, 126 nodes a second',
-    code: 'DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR-ND7HF-X1MQ6-VHDRA-009XE-Z9G08-8ZW0G-5ZXKW-TCREH-SH000-00000-V4G0' },
+    code: 'EY676JASAw4ji4xm-9sJfSBohq0xus0o-EfSC6-1nw6kkpkiBhBsq' },
   { name: 'undertow-vith-glour', bars: 32, bpm: 131, why: 'a 32-bar loop, the corpus median by notes a second',
-    code: 'DL1-0C066-0R240-80QFF-STBB1-S7BSN-XARZ1-AG3PA-793NP-FN4X2-HKYN6-DS210-9T420-Y3G51-WD020-7ZR2W-BGV5B-5G000-08000-04001-00080-00000-2B5R' },
+    code: 'ERuZq-BSAmtp7shy-3wHfSBwn81xn39l9LfSCy78mguvv60ehBvW' },
   { name: 'vapor-vui-thoum', bars: 32, bpm: 41, why: 'the longest form in the corpus: 32 bars at 41 bpm, 187 s a pass, nearly silent',
-    code: 'DL1-0C00J-08440-801HQ-8B5C4-TNY6D-WE6XG-6FA6N-8P8C4-Z93JQ-WWAHY-RKT08-5ZW0G-BZWM8-2CPDY-R1000-02000-01001-000A0-09000-0BPR0' },
+    code: 'E9E7jKCSAIBSBohqy-lzu-3BdSC0glgwixqpWhBT0' },
 ];
 
 // ------------------------------------------------------------ arguments

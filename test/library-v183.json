@@ -1,0 +1,1207 @@
+{
+ "about": "Twenty loops as v183 kept them in localStorage (driftloom.saves.v1 and driftloom.albums.v1), made by v183's build (tools: session 23), each with the hash of the notes v183 plays test/library.test.mjs opens them on this build.",
+ "build": "v183",
+ "saves": [
+  {
+   "id": "fx0",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1001,
+    "name": "fa-soun",
+    "mix": {
+     "dust": 0.14901960784313725,
+     "hollow": 0.8509803921568627
+    },
+    "feel": {
+     "lift": 0.3333333333333333,
+     "energy": 0.2549019607843137,
+     "warmth": 0.4549019607843137
+    },
+    "feelMix": {
+     "reflective": 0.9176470588235294,
+     "refreshing": 0.08235294117647059
+    },
+    "coherence": 0.4588235294117647,
+    "mood": 0.3333333333333333,
+    "bpm": 67,
+    "root": 8,
+    "scale": "aeolian",
+    "bars": 8,
+    "stepsPerBar": 16,
+    "swing": 0.030212634984855793,
+    "layerSeeds": {
+     "drums": 3358869274,
+     "bass": 4178056027,
+     "chords": 2268221641,
+     "melody": 2487866954,
+     "texture": 1194832335
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.5326536244222488,
+     "space": 0.7425519481934515,
+     "wobble": 0.07758105919098335
+    }
+   }
+  },
+  {
+   "id": "fx1",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1002,
+    "name": "shur-thil",
+    "mix": {
+     "halcyon": 0.4627450980392157,
+     "shatter": 0.5372549019607843
+    },
+    "feel": {
+     "lift": 0.7019607843137254,
+     "energy": 0.6039215686274509,
+     "warmth": 0.7607843137254902
+    },
+    "feelMix": {
+     "happy": 0.6666666666666666,
+     "joyful": 0.3333333333333333
+    },
+    "coherence": 0.5882352941176471,
+    "mood": 0.7019607843137254,
+    "bpm": 135,
+    "root": 4,
+    "scale": "dorian",
+    "bars": 16,
+    "stepsPerBar": 16,
+    "swing": 0.002183034992492002,
+    "layerSeeds": {
+     "drums": 1678892933,
+     "bass": 218366176,
+     "chords": 1522889537,
+     "melody": 3691132114,
+     "texture": 3012310625
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.6038704931546129,
+     "space": 0.4913281701534402,
+     "wobble": 0.249156143639748
+    }
+   }
+  },
+  {
+   "id": "fx2",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1003,
+    "name": "lou-tuth",
+    "mix": {
+     "tide": 0.6941176470588235,
+     "vapor": 0.3058823529411765
+    },
+    "feel": {
+     "lift": 0.4980392156862745,
+     "energy": 0.30196078431372547,
+     "warmth": 0.5490196078431373
+    },
+    "feelMix": {
+     "reflective": 0.9450980392156862,
+     "joyful": 0.054901960784313725
+    },
+    "coherence": 0.8,
+    "mood": 0.4980392156862745,
+    "bpm": 89,
+    "root": 11,
+    "scale": "dorian",
+    "bars": 4,
+    "stepsPerBar": 12,
+    "swing": 0.027122047522186055,
+    "layerSeeds": {
+     "drums": 714222191,
+     "bass": 1479080270,
+     "chords": 1358861746,
+     "melody": 3802809264,
+     "texture": 2407298805
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.5238059929299002,
+     "space": 0.6377352166572647,
+     "wobble": 0.06492363455979264
+    },
+    "vibes": {
+     "cozy": 0.49019607843137253,
+     "glacial": 0.5098039215686274
+    },
+    "vibeStrength": 0.7647058823529411
+   }
+  },
+  {
+   "id": "fx3",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1004,
+    "name": "ta-kou",
+    "mix": {
+     "vapor": 0.9921568627450981,
+     "halcyon": 0.00784313725490196
+    },
+    "feel": {
+     "lift": 0.5568627450980392,
+     "energy": 0.25098039215686274,
+     "warmth": 0.6
+    },
+    "feelMix": {
+     "peaceful": 0.7333333333333333,
+     "reflective": 0.26666666666666666
+    },
+    "coherence": 0.7764705882352941,
+    "mood": 0.5568627450980392,
+    "bpm": 46,
+    "root": 0,
+    "scale": "lydian",
+    "bars": 8,
+    "stepsPerBar": 16,
+    "swing": 0.0000014353303373891459,
+    "layerSeeds": {
+     "drums": 1792177673,
+     "bass": 986973473,
+     "chords": 1561508811,
+     "melody": 1635057207,
+     "texture": 2293568881
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.42462410023041247,
+     "space": 0.8585488295814733,
+     "wobble": 0.1035294117647059
+    },
+    "cycles": {
+     "drums": null,
+     "bass": 144,
+     "chords": 48,
+     "melody": 80,
+     "texture": 64
+    },
+    "vibes": {
+     "dreamy": 1
+    },
+    "vibeStrength": 0.5450980392156862
+   }
+  },
+  {
+   "id": "fx4",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1005,
+    "name": "fisk-shal",
+    "mix": {
+     "grove": 0.7176470588235294,
+     "undertow": 0.21568627450980393,
+     "glade": 0.06666666666666667
+    },
+    "feel": {
+     "lift": 0.788235294117647,
+     "energy": 0.49019607843137253,
+     "warmth": 0.6901960784313725
+    },
+    "feelMix": {
+     "happy": 0.3607843137254902,
+     "joyful": 0.3058823529411765,
+     "refreshing": 0.3333333333333333
+    },
+    "coherence": 0.4666666666666667,
+    "mood": 0.788235294117647,
+    "bpm": 87,
+    "root": 6,
+    "scale": "mixolydian",
+    "bars": 8,
+    "stepsPerBar": 16,
+    "swing": 0.06512002989998074,
+    "layerSeeds": {
+     "drums": 1000027888,
+     "bass": 303502686,
+     "chords": 1661739642,
+     "melody": 754552346,
+     "texture": 1396699932
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.6204620083795104,
+     "space": 0.4819629220199014,
+     "wobble": 0.14803858866242628
+    },
+    "vibes": {
+     "breezy": 0.08235294117647059,
+     "chill": 0.058823529411764705,
+     "earthy": 0.5058823529411764,
+     "jazzy": 0.25882352941176473,
+     "rainy": 0.09411764705882353
+    },
+    "vibeStrength": 0.7058823529411765
+   }
+  },
+  {
+   "id": "fx5",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1006,
+    "name": "tail-vosk",
+    "mix": {
+     "tide": 0.615686274509804,
+     "undertow": 0.3843137254901961
+    },
+    "feel": {
+     "lift": 0.7254901960784313,
+     "energy": 0.5019607843137255,
+     "warmth": 0.5058823529411764
+    },
+    "feelMix": {
+     "enthusiastic": 1
+    },
+    "coherence": 0.5254901960784314,
+    "mood": 0.7254901960784313,
+    "bpm": 120,
+    "root": 8,
+    "scale": "minorPent",
+    "bars": 16,
+    "stepsPerBar": 12,
+    "swing": 0.04494308970561273,
+    "layerSeeds": {
+     "drums": 406492555,
+     "bass": 2501450326,
+     "chords": 669723504,
+     "melody": 4043566119,
+     "texture": 2414053601
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.4405016784811353,
+     "space": 0.6972179837847112,
+     "wobble": 0.2604301357990469
+    },
+    "vibes": {
+     "glacial": 0.4117647058823529,
+     "misty": 0.5882352941176471
+    },
+    "vibeStrength": 0.5686274509803921
+   }
+  },
+  {
+   "id": "fx6",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1007,
+    "name": "mang-yuim",
+    "mix": {
+     "dust": 0.9490196078431372,
+     "glade": 0.050980392156862744
+    },
+    "feel": {
+     "lift": 0.7215686274509804,
+     "energy": 0.6196078431372549,
+     "warmth": 0.4980392156862745
+    },
+    "feelMix": {
+     "refreshing": 1
+    },
+    "coherence": 0.7333333333333333,
+    "mood": 0.7215686274509804,
+    "bpm": 85,
+    "root": 9,
+    "scale": "ionian",
+    "bars": 4,
+    "stepsPerBar": 16,
+    "swing": 0.2653783495810872,
+    "layerSeeds": {
+     "drums": 3886398278,
+     "bass": 2336733120,
+     "chords": 2195872950,
+     "melody": 3891124455,
+     "texture": 588943140
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.55844359267139,
+     "space": 0.801883095412369,
+     "wobble": 0.48411278749838943
+    },
+    "tempo": [
+     70,
+     85
+    ]
+   }
+  },
+  {
+   "id": "fx7",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1008,
+    "name": "woath-rei",
+    "mix": {
+     "halcyon": 0.6901960784313725,
+     "bloom": 0.20392156862745098,
+     "glade": 0.10588235294117647
+    },
+    "feel": {
+     "lift": 0.7215686274509804,
+     "energy": 0.788235294117647,
+     "warmth": 0.7019607843137254
+    },
+    "feelMix": {
+     "enthusiastic": 0.5058823529411764,
+     "comforting": 0.07450980392156863,
+     "joyful": 0.4235294117647059
+    },
+    "coherence": 0.7764705882352941,
+    "mood": 0.7215686274509804,
+    "bpm": 96,
+    "root": 7,
+    "scale": "dorian",
+    "bars": 4,
+    "stepsPerBar": 16,
+    "swing": 0.11494661185937996,
+    "layerSeeds": {
+     "drums": 1251701950,
+     "bass": 4163239620,
+     "chords": 2506558357,
+     "melody": 4176082665,
+     "texture": 198813658
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.5637382175023777,
+     "space": 0.5763790974649144,
+     "wobble": 0.29861682146741997
+    },
+    "tempo": [
+     96,
+     96
+    ],
+    "length": 64
+   }
+  },
+  {
+   "id": "fx8",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1009,
+    "name": "sang-dor",
+    "mix": {
+     "halcyon": 0.5215686274509804,
+     "undertow": 0.20784313725490197,
+     "grove": 0.26666666666666666
+    },
+    "feel": {
+     "lift": 0.7568627450980392,
+     "energy": 0.5215686274509804,
+     "warmth": 0.7803921568627451
+    },
+    "feelMix": {
+     "happy": 1
+    },
+    "coherence": 0.5098039215686274,
+    "mood": 0.7568627450980392,
+    "bpm": 99,
+    "root": 8,
+    "scale": "mixolydian",
+    "bars": 4,
+    "stepsPerBar": 16,
+    "swing": 0.02333507301781203,
+    "layerSeeds": {
+     "drums": 3617296684,
+     "bass": 3465972890,
+     "chords": 2804997310,
+     "melody": 2880831847,
+     "texture": 2376763975
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.6036487015511836,
+     "space": 0.5388001299674043,
+     "wobble": 0.43121599182495707
+    },
+    "length": 3072,
+    "askJourney": "arc"
+   }
+  },
+  {
+   "id": "fx9",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1010,
+    "name": "lain-glu",
+    "mix": {
+     "cinder": 0.17647058823529413,
+     "glade": 0.10196078431372549,
+     "dust": 0.7254901960784313
+    },
+    "feel": {
+     "lift": 0.6274509803921569,
+     "energy": 0.3176470588235294,
+     "warmth": 0.7843137254901961
+    },
+    "feelMix": {
+     "soothing": 0.9098039215686274,
+     "refreshing": 0.09019607843137255
+    },
+    "coherence": 0.6705882352941176,
+    "mood": 0.6274509803921569,
+    "bpm": 69,
+    "root": 3,
+    "scale": "dorian",
+    "bars": 16,
+    "stepsPerBar": 16,
+    "swing": 0.07123431656953727,
+    "layerSeeds": {
+     "drums": 1293930789,
+     "bass": 2301093191,
+     "chords": 3641775316,
+     "melody": 744384973,
+     "texture": 3447517615
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.6993303385260601,
+     "space": 0.44220942921629103,
+     "wobble": 0.25051180425821257
+    },
+    "length": "endless",
+    "askJourney": "wander"
+   }
+  },
+  {
+   "id": "fx10",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1011,
+    "name": "seth-bron",
+    "mix": {
+     "cinder": 0.8235294117647058,
+     "bloom": 0.17254901960784313,
+     "glade": 0.00392156862745098
+    },
+    "feel": {
+     "lift": 0.7215686274509804,
+     "energy": 0.6470588235294118,
+     "warmth": 0.4196078431372549
+    },
+    "feelMix": {
+     "refreshing": 1
+    },
+    "coherence": 0.596078431372549,
+    "mood": 0.7215686274509804,
+    "bpm": 146,
+    "root": 7,
+    "scale": "dorian",
+    "bars": 4,
+    "stepsPerBar": 16,
+    "swing": 0.042739348339224194,
+    "layerSeeds": {
+     "drums": 2482061136,
+     "bass": 3398360002,
+     "chords": 260266979,
+     "melody": 3938635392,
+     "texture": 2201062130
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.2921738449034686,
+     "space": 0.3764935375468842,
+     "wobble": 0.06303140450857908
+    },
+    "askKey": [
+     2,
+     7
+    ],
+    "askScale": [
+     "dorian",
+     "aeolian"
+    ]
+   }
+  },
+  {
+   "id": "fx11",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1012,
+    "name": "voask-der",
+    "mix": {
+     "shrine": 0.792156862745098,
+     "tide": 0.20784313725490197
+    },
+    "feel": {
+     "lift": 0.8,
+     "energy": 0.3764705882352941,
+     "warmth": 0.7019607843137254
+    },
+    "feelMix": {
+     "happy": 0.7803921568627451,
+     "refreshing": 0.2196078431372549
+    },
+    "coherence": 0.7254901960784313,
+    "mood": 0.8,
+    "bpm": 47,
+    "root": 11,
+    "scale": "kumoi",
+    "bars": 4,
+    "stepsPerBar": 16,
+    "swing": 0.03516453480831505,
+    "layerSeeds": {
+     "drums": 1707478408,
+     "bass": 2738199930,
+     "chords": 3868387092,
+     "melody": 463862958,
+     "texture": 1857870599
+    },
+    "mutes": {
+     "drums": true,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.5695148708926678,
+     "space": 0.6494632953850497,
+     "wobble": 0.039995722719559486
+    },
+    "askStyle": [
+     "shrine",
+     "tide"
+    ],
+    "askVoices": {
+     "melody": [
+      "kalimba",
+      "marimba"
+     ]
+    },
+    "askLayers": {
+     "drums": "off"
+    }
+   }
+  },
+  {
+   "id": "fx12",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1013,
+    "name": "teing-their",
+    "mix": {
+     "tide": 0.7607843137254902,
+     "dust": 0.01568627450980392,
+     "thaw": 0.2196078431372549
+    },
+    "feel": {
+     "lift": 0.4392156862745098,
+     "energy": 0.3333333333333333,
+     "warmth": 0.4588235294117647
+    },
+    "feelMix": {
+     "reflective": 1
+    },
+    "coherence": 0.6509803921568628,
+    "mood": 0.4392156862745098,
+    "bpm": 97,
+    "root": 1,
+    "scale": "lydian",
+    "bars": 8,
+    "stepsPerBar": 12,
+    "swing": 0.05072790945916972,
+    "layerSeeds": {
+     "drums": 3242600433,
+     "bass": 493193075,
+     "chords": 953045566,
+     "melody": 725505761,
+     "texture": 1371040017
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.3356711373553957,
+     "space": 0.7011074056548221,
+     "wobble": 0.16876637283272633
+    },
+    "pins": {
+     "organ": "on",
+     "tunedKick": "long",
+     "tuning.cents": -12.5,
+     "space.room": 0.8
+    },
+    "theme": 1234
+   }
+  },
+  {
+   "id": "fx13",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1014,
+    "name": "sol-deith",
+    "mix": {
+     "tide": 0.5254901960784314,
+     "shatter": 0.3764705882352941,
+     "haven": 0.09803921568627451
+    },
+    "feel": {
+     "lift": 0.8705882352941177,
+     "energy": 0.8784313725490196,
+     "warmth": 0.6666666666666666
+    },
+    "feelMix": {
+     "soothing": 0.03137254901960784,
+     "enthusiastic": 0.9686274509803922
+    },
+    "coherence": 0.8,
+    "mood": 0.8705882352941177,
+    "bpm": 137,
+    "root": 0,
+    "scale": "mixolydian",
+    "bars": 8,
+    "stepsPerBar": 12,
+    "swing": 0.0760372193524918,
+    "layerSeeds": {
+     "drums": 3664860604,
+     "bass": 1984113241,
+     "chords": 83811388,
+     "melody": 2850265009,
+     "texture": 888379267
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.4171518479282146,
+     "space": 0.5307725329561542,
+     "wobble": 0.2380259647366463
+    },
+    "forceLayers": {
+     "bass": true
+    }
+   }
+  },
+  {
+   "id": "fx14",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1015,
+    "name": "sain-glousk",
+    "mix": {
+     "haven": 0.6039215686274509,
+     "dust": 0.2823529411764706,
+     "halcyon": 0.07058823529411765,
+     "undertow": 0.043137254901960784
+    },
+    "feel": {
+     "lift": 0.6862745098039216,
+     "energy": 0.38823529411764707,
+     "warmth": 0.8235294117647058
+    },
+    "feelMix": {
+     "happy": 1
+    },
+    "coherence": 0.6627450980392157,
+    "mood": 0.6862745098039216,
+    "bpm": 57,
+    "root": 1,
+    "scale": "lydian",
+    "bars": 24,
+    "stepsPerBar": 16,
+    "swing": 0.02540601525579259,
+    "layerSeeds": {
+     "drums": 2536547362,
+     "bass": 2364046688,
+     "chords": 3887275792,
+     "melody": 4033678579,
+     "texture": 1780084025
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.31,
+     "space": 0.72,
+     "wobble": 0.20976896997066402
+    },
+    "vibes": {
+     "cozy": 1
+    },
+    "vibeStrength": 0.6,
+    "forceLayers": {
+     "melody": true,
+     "drums": true
+    }
+   }
+  },
+  {
+   "id": "fx15",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1016,
+    "name": "lem-ther",
+    "mix": {
+     "bloom": 0.058823529411764705,
+     "halcyon": 0.596078431372549,
+     "tide": 0.32941176470588235,
+     "shrine": 0.01568627450980392
+    },
+    "feel": {
+     "lift": 0.7647058823529411,
+     "energy": 0.611764705882353,
+     "warmth": 0.7529411764705882
+    },
+    "feelMix": {
+     "happy": 0.5490196078431373,
+     "joyful": 0.45098039215686275
+    },
+    "coherence": 0.7019607843137254,
+    "mood": 0.7647058823529411,
+    "bpm": 131,
+    "root": 4,
+    "scale": "mixolydian",
+    "bars": 16,
+    "stepsPerBar": 16,
+    "swing": 0.08942356796100924,
+    "layerSeeds": {
+     "drums": 1327904495,
+     "bass": 2010832884,
+     "chords": 31642076,
+     "melody": 2148134412,
+     "texture": 279296905
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.7578346172350913,
+     "space": 0.610818499544745,
+     "wobble": 0.39097395434176696
+    }
+   }
+  },
+  {
+   "id": "fx16",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1017,
+    "name": "voa-fer",
+    "mix": {
+     "dust": 1
+    },
+    "feel": {
+     "lift": 0.3568627450980392,
+     "energy": 0.30196078431372547,
+     "warmth": 0.5529411764705883
+    },
+    "feelMix": {
+     "reflective": 0.7686274509803922,
+     "comforting": 0.23137254901960785
+    },
+    "coherence": 0.7764705882352941,
+    "mood": 0.3568627450980392,
+    "bpm": 74,
+    "root": 3,
+    "scale": "minorPent",
+    "bars": 2,
+    "stepsPerBar": 16,
+    "swing": 0.05213015567045659,
+    "layerSeeds": {
+     "drums": 133413496,
+     "bass": 3444879368,
+     "chords": 1699742905,
+     "melody": 2402522702,
+     "texture": 258512737
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": true,
+     "melody": false,
+     "texture": true
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.6630346104040304,
+     "space": 0.46896176299778747,
+     "wobble": 0.4428585237357765
+    }
+   }
+  },
+  {
+   "id": "fx17",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1018,
+    "name": "ฝนตกที่กรุงเทพ",
+    "mix": {
+     "halcyon": 0.47843137254901963,
+     "cinder": 0.23529411764705882,
+     "clockwork": 0.2823529411764706
+    },
+    "feel": {
+     "lift": 0.7176470588235294,
+     "energy": 0.7176470588235294,
+     "warmth": 0.5019607843137255
+    },
+    "feelMix": {
+     "refreshing": 0.6549019607843137,
+     "enthusiastic": 0.34509803921568627
+    },
+    "coherence": 0.8117647058823529,
+    "mood": 0.7176470588235294,
+    "bpm": 122,
+    "root": 7,
+    "scale": "mixolydian",
+    "bars": 8,
+    "stepsPerBar": 12,
+    "swing": 0.09345980865651449,
+    "layerSeeds": {
+     "drums": 3627387313,
+     "bass": 3722058870,
+     "chords": 1840051715,
+     "melody": 3160170192,
+     "texture": 2627018876
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.5606103780063729,
+     "space": 0.42085818979095335,
+     "wobble": 0.35392285801560114
+    }
+   }
+  },
+  {
+   "id": "fx18",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1019,
+    "name": "Night drive 🌙",
+    "mix": {
+     "shatter": 0.11764705882352941,
+     "thaw": 0.42745098039215684,
+     "haven": 0.19215686274509805,
+     "clockwork": 0.2627450980392157
+    },
+    "feel": {
+     "lift": 0.5294117647058824,
+     "energy": 0.2,
+     "warmth": 0.3568627450980392
+    },
+    "feelMix": {
+     "soothing": 0.1568627450980392,
+     "happy": 0.1843137254901961,
+     "reflective": 0.6588235294117647
+    },
+    "coherence": 0.45098039215686275,
+    "mood": 0.5294117647058824,
+    "bpm": 55,
+    "root": 0,
+    "scale": "akebono",
+    "bars": 4,
+    "stepsPerBar": 20,
+    "swing": 0.043952475880056546,
+    "layerSeeds": {
+     "drums": 1324654888,
+     "bass": 4022215972,
+     "chords": 3574282182,
+     "melody": 1720981996,
+     "texture": 1345174329
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": 3,
+    "tone": {
+     "warmth": 0.3015397898425384,
+     "space": 0.7352941176470589,
+     "wobble": 0.054848890233164034
+    },
+    "vibes": {
+     "moonlit": 1
+    },
+    "vibeStrength": 0.796078431372549
+   }
+  },
+  {
+   "id": "fx19",
+   "savedAt": "2026-11-18T00:00:00.000Z",
+   "spec": {
+    "seed": 1020,
+    "name": "áb rainy",
+    "mix": {
+     "clockwork": 0.0196078431372549,
+     "dust": 0.3568627450980392,
+     "glade": 0.49411764705882355,
+     "tide": 0.13333333333333333
+    },
+    "feel": {
+     "lift": 0.5568627450980392,
+     "energy": 0.4,
+     "warmth": 0.7490196078431373
+    },
+    "feelMix": {
+     "comforting": 0.5764705882352941,
+     "peaceful": 0.4235294117647059
+    },
+    "coherence": 0.5450980392156862,
+    "mood": 0.5568627450980392,
+    "bpm": 98,
+    "root": 2,
+    "scale": "aeolian",
+    "bars": 2,
+    "stepsPerBar": 12,
+    "swing": 0.04920044106723692,
+    "layerSeeds": {
+     "drums": 2333509507,
+     "bass": 1975718210,
+     "chords": 4162017547,
+     "melody": 318193112,
+     "texture": 1852222910
+    },
+    "mutes": {
+     "drums": false,
+     "bass": false,
+     "chords": false,
+     "melody": false,
+     "texture": false
+    },
+    "playFor": null,
+    "tone": {
+     "warmth": 0.5930760591371497,
+     "space": 0.727193833039837,
+     "wobble": 0.3657348941269446
+    },
+    "wanderSalt": 123456
+   }
+  }
+ ],
+ "albums": [
+  {
+   "id": "fav",
+   "title": "Favorite Loops",
+   "ids": [
+    "fx0",
+    "fx1",
+    "fx2",
+    "fx3",
+    "fx4",
+    "fx5",
+    "fx6",
+    "fx7",
+    "fx8",
+    "fx9"
+   ],
+   "builtin": true
+  },
+  {
+   "id": "imported",
+   "title": "Imported Loops",
+   "ids": [],
+   "builtin": true
+  },
+  {
+   "id": "afx",
+   "title": "Rainy Sunday",
+   "ids": [
+    "fx10",
+    "fx11",
+    "fx12",
+    "fx13",
+    "fx14",
+    "fx15",
+    "fx16",
+    "fx17",
+    "fx18",
+    "fx19"
+   ]
+  }
+ ],
+ "plays": {
+  "fx0": {
+   "why": "plain",
+   "notes": "f816ad985eb09b3e"
+  },
+  "fx1": {
+   "why": "plain",
+   "notes": "d253fcc3c9171513"
+  },
+  "fx2": {
+   "why": "two vibes picked",
+   "notes": "13b5651638f5ae96"
+  },
+  "fx3": {
+   "why": "one vibe",
+   "notes": "e838c0faea374f6d"
+  },
+  "fx4": {
+   "why": "seven vibes picked",
+   "notes": "ac36e9fc4ff2066a"
+  },
+  "fx5": {
+   "why": "a weighted vibe",
+   "notes": "ef6a1aa8b01a6472"
+  },
+  "fx6": {
+   "why": "a tempo range",
+   "notes": "7092e3bf5032e8a7"
+  },
+  "fx7": {
+   "why": "a tempo and 64 bars",
+   "notes": "c5752f7af4274937"
+  },
+  "fx8": {
+   "why": "a long arc",
+   "notes": "5ae391c7de7c9fe7"
+  },
+  "fx9": {
+   "why": "Endless",
+   "notes": "9b53609b1c002793"
+  },
+  "fx10": {
+   "why": "keys and modes",
+   "notes": "a4f221703aaaef48"
+  },
+  "fx11": {
+   "why": "styles, voices, a layer off",
+   "notes": "a2c1a988018af913"
+  },
+  "fx12": {
+   "why": "pins and a theme",
+   "notes": "a5443e5d14a6aefe"
+  },
+  "fx13": {
+   "why": "a layer re-rolled",
+   "notes": "a9ac4bda3789cf9e"
+  },
+  "fx14": {
+   "why": "two layers re-rolled, the tone",
+   "notes": "9d1897052804016a"
+  },
+  "fx15": {
+   "why": "the tempo slider",
+   "notes": "acef0b75639dadfa"
+  },
+  "fx16": {
+   "why": "two layers muted",
+   "notes": "54ec1522ce04be4e"
+  },
+  "fx17": {
+   "why": "renamed in Thai",
+   "notes": "bc6342e8027d491e"
+  },
+  "fx18": {
+   "why": "renamed with an emoji, the slider at three passes",
+   "notes": "2c8d378533a444f2"
+  },
+  "fx19": {
+   "why": "a salt, a name with a mark",
+   "notes": "bf5a82019e1c76df"
+  }
+ }
+}

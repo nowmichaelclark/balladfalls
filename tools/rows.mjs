@@ -67,6 +67,14 @@
 //                       there is no save picker, the private file and a
 //                       download at the end
 //   share code          the code decodes to the loop the core plays
+//   codes (session 23)  version 2 only, in a tab of its own: a version 1
+//                       code pasted gets the "older" line, a newer build's
+//                       the "newer" one; an album's code pasted lands in the
+//                       Library, plays, and shared again is the same album;
+//                       the rename box keeps Thai and emoji and refuses an
+//                       invisible character, and the name travels with the
+//                       loop's code; the Library after a reload; a backup
+//                       copied, the Library cleared, and restored
 //   lighter on processor  a new core at the other quality, the same loop
 //   Diagnostics         the core's player, nothing late, nothing lost
 //   plain line          a browser with no WebAssembly, and a module that
@@ -94,7 +102,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { decodeSong } from '../js/share.js';
+import { decodeSong, encodeSong, encodeAlbum, decodeAlbum } from '../js/share.js';
+import { newSpec } from '../js/gen.js';
 import { LOOPS } from './stalls.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -1104,11 +1113,155 @@ async function main() {
     // A long piece on screen (queue item 106b), in a page of its own.
     if (!APP) await longRows(browser, PORT, errors);
     if (!APP) await plainRows(browser);
+    if (!APP) await codeRows(browser);
   } finally {
     if (browser) await browser.close();
     if (server) server.close();
   }
   report();
+}
+
+// Share codes, version 2 (session 23), in a tab of its own: what pastes,
+// what a code carries, and the Library through a reload and a backup.
+async function codeRows(browser) {
+  console.log('\n  codes, version 2 (session 23)');
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  const bad = [];
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(HOOK);
+  const open = async (reload) => {
+    if (reload) await tab.reload();
+    else await tab.goto(`http://127.0.0.1:${PORT}/`);
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1500);
+  };
+  await open(false);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  const toast = () => tev(() => document.getElementById('toast').textContent);
+  const clip = () => tev(() => window.__rows.clip);
+  const paste = async (text) => {
+    await tev((t) => { window.__rows.clip = t; }, text);
+    await tev(() => document.getElementById('pasteCode').click());
+    await sleep(2500);
+  };
+  const library = () => tev(() => {
+    if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click();
+    document.querySelector('[data-tab="albums"]').click();
+  });
+  // The album called `title` opened in the Library, or false.
+  const openAlbum = async (title) => {
+    await library();
+    await sleep(300);
+    return tev((t) => {
+      const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.trim() === t);
+      if (r) r.querySelector('.lrow-main').click();
+      return !!r;
+    }, title);
+  };
+  const heroKey = (word) => tev((w) => {
+    const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === w);
+    if (b) b.click();
+    return !!b;
+  }, word);
+  // The card's name, out of the Library (there the card names the album).
+  const cardName = async () => {
+    await tev(() => { if (!document.getElementById('viewLibrary').hidden) document.getElementById('saveBtn').click(); });
+    await sleep(300);
+    return tev(() => document.getElementById('loopName').textContent);
+  };
+
+  // What can't be opened says so in one plain line.
+  await paste('DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR');
+  let t = await toast();
+  row('codes: a version 1 code pasted: it is from an older Driftloom and can\'t be opened', t === 'That code is from an older Driftloom and can\'t be opened.', t);
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  let h = 0;
+  for (const c of 'GRiSNBA') h = (h * 64 + A.indexOf(c) + 1) % 4093;
+  await paste(`GRiSNBA${A[h & 63]}${A[h >> 6]}`);
+  t = await toast();
+  row('codes: a newer build\'s code pasted: it needs a newer Driftloom', t === 'That code needs a newer Driftloom.', t);
+
+  // An album's code pasted lands in the Library and plays; shared again, it
+  // is the same album.
+  const first = newSpec(31337, ['rainy', 'mellow']);
+  first.name = 'ฝนตกที่กรุงเทพ 🌧️';
+  const tracks = [first, newSpec(4242), newSpec(777, 'bars=64,bpm=80')];
+  const albumCode = encodeAlbum('Rainy Sunday', tracks);
+  await paste(albumCode);
+  t = await toast();
+  row('codes: an album\'s code pasted lands in the Library', t === 'Added Rainy Sunday · 3 loops' && await openAlbum('Rainy Sunday'), t);
+  await heroKey('share');
+  await sleep(500);
+  let again = null;
+  try { again = decodeAlbum(await clip()); } catch (err) { again = { error: err.message }; }
+  const same = (a) => a && a.title === 'Rainy Sunday' && a.specs && a.specs.length === 3 && a.specs.every((s, i) => s.seed === tracks[i].seed && s.name === tracks[i].name && encodeSong(s) === encodeSong(tracks[i]));
+  row('codes: the album shared again from the Library is the same album, its first track\'s Thai name with it', same(again), JSON.stringify(again && again.title));
+  await heroKey('play album');
+  await sleep(3500);
+  let p = await tev(() => window.__rows.probe());
+  let d = about(p && p.about);
+  let card = await cardName();
+  row('codes: the album plays: the core plays its first track, the card its name', d && Number(d.seed) === first.seed && card === first.name, `${d && d.seed} ${card}`);
+
+  // The rename box: Thai and emoji kept, an invisible character refused, and
+  // the name travels with the loop's code.
+  // Out of the Library first: there the card's name is the album's.
+  await cardName();
+  await tev(() => document.getElementById('loopName').click());
+  await tev(() => {
+    const i = document.getElementById('nameEdit');
+    i.value = 'ฝนตก 🎧';
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+    i.value = 'ฝนตก 🎧\u202E';
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  const box = await tev(() => document.getElementById('nameEdit').value);
+  await tab.keyboard.press('Enter');
+  await sleep(300);
+  await tev(() => {
+    if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+    document.querySelector('[data-stab="share"]').click();
+    document.getElementById('copySong').click();
+  });
+  await sleep(500);
+  let shared = null;
+  try { shared = decodeSong(await clip()); } catch (err) { shared = { error: err.message }; }
+  card = await cardName();
+  row('codes: the rename box keeps Thai and emoji, refuses an invisible character, and the name travels with the code', box === 'ฝนตก 🎧' && card === 'ฝนตก 🎧' && shared && shared.name === 'ฝนตก 🎧' && shared.seed === first.seed, `${JSON.stringify(box)} ${shared && shared.name}`);
+
+  // The Library after a reload: the album there, the renamed loop renamed.
+  await open(true);
+  const kept = await openAlbum('Rainy Sunday');
+  await heroKey('play album');
+  await sleep(3500);
+  p = await tev(() => window.__rows.probe());
+  d = about(p && p.about);
+  card = await cardName();
+  row('codes: after a reload the Library has the album, and its first track plays renamed', kept && d && Number(d.seed) === first.seed && card === 'ฝนตก 🎧', `${d && d.seed} ${card}`);
+  await openAlbum('Rainy Sunday');
+  await heroKey('share');
+  await sleep(500);
+  const before = await clip();
+
+  // A backup copied, the Library cleared, the backup restored: the album
+  // as it was.
+  await tev(() => document.getElementById('copyBackup').click());
+  await sleep(300);
+  const backup = await clip();
+  await tev(() => localStorage.clear());
+  await open(true);
+  const gone = !(await openAlbum('Rainy Sunday'));
+  await tev((b) => { window.__rows.clip = b; }, backup);
+  await tev(() => document.getElementById('pasteBackup').click());
+  await sleep(800);
+  t = await toast();
+  const back = await openAlbum('Rainy Sunday');
+  await heroKey('share');
+  await sleep(500);
+  const after = await clip();
+  row('codes: a backup restored brings the Library back: the album\'s code the same as before', gone && /^Restored \d+ loops/.test(t) && back && after === before && /^[A-Za-z0-9_-]+$/.test(after), `${t}; ${after === before ? 'same code' : `${before} / ${after}`}`);
+  row('codes: no page errors in their tab', !bad.length, bad.join('; '));
+  await tab.close();
 }
 
 // The plain lines, each in a tab of its own.

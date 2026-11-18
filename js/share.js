@@ -1,587 +1,179 @@
-// Share codes.
+// Share codes, version 2 (queue item 105; session 23).
 //
-// A loop is not audio, it is a recipe: a handful of seeds and parameters.
-// So sharing one does not need a server, an upload or a file -- it needs the
-// recipe written down. MIDI is the wrong tool for this. MIDI carries the
-// notes, which means the recipient gets a frozen transcript they cannot
-// re-roll, drift, or edit. A code carries the loop itself.
+// A loop is not audio, it is a recipe: its seed, what was asked of it and
+// what a listener changed. A code writes down only that, in the 64
+// link-safe characters, and the core writes and reads it (core/src/code.rs;
+// core/README.md, "Share codes", is the format; js/gen.js hands the core
+// the page's side). A loop with nothing asked is nine characters.
 //
-// The encoding is explicit rather than "just the seed". A seed-only code
-// would be tiny, but it would mean whatever the generator happened to make
-// of it *that week*: change a weighting and every code in circulation
-// quietly becomes a different piece of music. Writing the parameters down
-// costs about seventy bytes and makes a code mean one thing forever.
+// The page keeps a loop as its record (js/request.js), and a code is made
+// from the loop the record plays: the shortest request and edits that make
+// it again. A vibe the listener asked is written as asked (its weight left
+// for the seed to draw) wherever that makes the same loop; a layer's seed,
+// a part of the tone or the tempo only where the listener changed it. A
+// name only where the loop was renamed.
 //
-// Forever is the design, not yet the promise. Voices are still drawn at
-// render time from the blended pool, so adding a voice to a pool re-renders
-// every code that draws from it; while the app is in testing that is
-// allowed, and old codes are not protected (see the README's Profiles).
+// What a code does not carry: the length slider's setting (how long a track
+// plays before the next; the listener's, not the loop's, as #412 decided).
 //
-// Crockford Base32 because codes get read aloud, written down and typed.
-// It drops I, L, O and U, so there is no 1/l or 0/O confusion, and it is
-// case-insensitive.
+// Version 1 codes (DL1-, DLA1-) are gone (Mikey, 2026-10-29: no shims): one
+// pasted is told plainly it is from an older app, and nothing else.
 
-import { SCALES, SCALE_ORDER } from './theory.js';
-import { CHARACTERS, PROFILE_ORDER, VOICE_ORDER, resolveKey } from './characters.js';
-import { codeForMood, moodForCode } from './moods.js';
-import { seedName } from './rng.js';
-import { VIBES, VIBE_IDS } from './vibes.js';
-import { framedPins, pinItems, pinValue } from './pins.js';
+import { newSpec, playedSpec, loopCode, readLoopCode, albumCode, albumTracks, codeKind as kindOf, nameRefusal, CodeError } from './gen.js';
+import { LAYERS, readRequest, requestOf, askFor } from './request.js';
 
-const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-const DECODE_MAP = (() => {
-  const m = {};
-  for (let i = 0; i < ALPHABET.length; i++) m[ALPHABET[i]] = i;
-  // Crockford's forgiving aliases.
-  m.I = 1; m.L = 1; m.O = 0; m.U = 0;
-  return m;
-})();
+export { CodeError };
 
-// The newest format this build reads and writes. Format 4 (queue item 38a)
-// appends a loop's vibes; format 5 (queue item 85) the tempo it was asked
-// for; format 6 (queue item 85b) the pins it was asked for; format 7 (queue
-// item 85d) the theme it bends; format 8 (queue item 88) the length it was
-// asked for; format 9 (queue item 89) the key and the mode it was asked for;
-// format 10 (queue item 90) the style (set of profiles) it was asked for;
-// format 11 (queue item 91) the voices and the layers it was asked for;
-// format 12 (queue item 88b) a track length shorter than one pass, in bars;
-// format 13 (queue item 92) the wander's salt of the play it was shared from.
-// Each is written only by a loop that needs it
-// (a loop without vibes is still format 3), so every code already in
-// circulation, every saved album and every `/rank` answer keeps the exact
-// string it had.
-export const FORMAT = 13;
-const PLAYBARS_FORMAT = 12;
-const VOICES_FORMAT = 11;
-const STYLE_FORMAT = 10;
-const KEY_FORMAT = 9;
-const LENGTH_FORMAT = 8;
-const THEME_FORMAT = 7;
-const PINS_FORMAT = 6;
-const TEMPO_FORMAT = 5;
-const VIBES_FORMAT = 4;
-const PLAIN_FORMAT = 3;
+const TONE = ['warmth', 'space', 'wobble'];
+// A name's room in a code, in UTF-8 bytes (core/src/code/name.rs).
+export const NAME_BYTES = 60;
+const utf8 = new TextEncoder();
 
-function hasVibes(spec) {
-  return !!(spec && spec.vibes && Object.keys(spec.vibes).some((k) => VIBE_IDS.indexOf(k) >= 0));
+// ------------------------------------------------------------------ names
+
+// `text` as a name the code can carry, or '' for none: composed (NFC), its
+// runs of spaces one space, trimmed, at most `most` characters and
+// NAME_BYTES bytes (cut at a character, never inside one). '' too where the
+// core refuses what is left (an invisible or a control character, a
+// direction override, piled-up marks): the rename box keeps only what a
+// code can carry, so a name that is kept is always one that travels.
+export function fitName(text, most = Infinity) {
+  let chars = Array.from(String(text || '').normalize('NFC').replace(/\s+/g, ' ').trim());
+  if (chars.length > most) chars = chars.slice(0, most);
+  while (chars.length && utf8.encode(chars.join('')).length > NAME_BYTES) chars.pop();
+  const name = chars.join('').trim();
+  return name && !nameRefusal(name) ? name : '';
 }
 
-function hasTempo(spec) {
-  return !!(spec && Array.isArray(spec.tempo) && spec.tempo.length === 2);
+// Whether a code can carry `text` as it is (the rename box asks it as the
+// listener types).
+export function carries(text) {
+  return !nameRefusal(String(text || ''));
 }
 
-function hasPins(spec) {
-  return !!(spec && spec.pins && Object.keys(spec.pins).length);
+// ------------------------------------------------------------ a loop's code
+
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+// What makes a loop the same loop: everything the core says of it.
+function heard(s) {
+  return [s.name, s.mix, s.feelMix, s.feel, s.vibes || null, s.vibeStrength ?? null, s.bpm, s.root, s.scale, s.bars, s.stepsPerBar, s.swing, s.coherence, s.cycles || null, s.layerSeeds, s.tone, s.forceLayers || null];
 }
 
-function hasTheme(spec) {
-  return !!(spec && spec.theme != null);
-}
-
-function hasLength(spec) {
-  return !!(spec && (spec.length === 'endless' || (Number.isInteger(spec.length) && spec.length >= 1)));
-}
-
-function hasKeyScale(spec) {
-  return !!(spec && ((Array.isArray(spec.askKey) && spec.askKey.length) || (Array.isArray(spec.askScale) && spec.askScale.length)));
-}
-
-function hasStyle(spec) {
-  return !!(spec && Array.isArray(spec.askStyle) && spec.askStyle.length);
-}
-
-function hasVoices(spec) {
-  return !!(spec && ((spec.askVoices && Object.values(spec.askVoices).some((v) => v && v.length)) || (spec.askLayers && Object.keys(spec.askLayers).length)));
-}
-
-// A track length shorter than one pass (queue item 88b; `spec.playBars`).
-function hasPlayBars(spec) {
-  return !!(spec && !spec.playFor && Number.isInteger(spec.playBars) && spec.playBars >= 1);
-}
-
-// Shared from a play that wandered unrepeatably (queue item 92).
-function hasSalt(spec) {
-  return !!(spec && Number.isInteger(spec.wanderSalt) && spec.wanderSalt > 0 && spec.wanderSalt <= 0xffffffff);
-}
-
-function formatOf(spec) {
-  if (hasSalt(spec)) return FORMAT;
-  if (hasPlayBars(spec)) return PLAYBARS_FORMAT;
-  if (hasVoices(spec)) return VOICES_FORMAT;
-  if (hasStyle(spec)) return STYLE_FORMAT;
-  if (hasKeyScale(spec)) return KEY_FORMAT;
-  if (hasLength(spec)) return LENGTH_FORMAT;
-  if (hasTheme(spec)) return THEME_FORMAT;
-  if (hasPins(spec)) return PINS_FORMAT;
-  if (hasTempo(spec)) return TEMPO_FORMAT;
-  return hasVibes(spec) ? VIBES_FORMAT : PLAIN_FORMAT;
-}
-
-// Frozen orderings. These must never be reordered or codes already written
-// down stop meaning what they meant; append only.
-const SCALE_IDS = SCALE_ORDER;
-const PROFILE_IDS = PROFILE_ORDER;
-// Moods are numbered in moods.js, beside the rest of their vocabulary.
-const LAYERS = ['drums', 'bass', 'chords', 'melody', 'texture'];
-
-// ------------------------------------------------------------- bit plumbing
-
-class Writer {
-  constructor() { this.bytes = []; }
-  u8(v) { this.bytes.push(v & 0xff); return this; }
-  u16(v) { this.u8(v >> 8); this.u8(v); return this; }
-  u32(v) { this.u16(v >>> 16); this.u16(v & 0xffff); return this; }
-  // A whole number from 0 to 2^53 - 1 in as few bytes as it needs: seven
-  // bits a byte, low first, the top bit set on every byte but the last.
-  vu(v) {
-    let x = v;
-    while (x >= 128) {
-      this.u8((x % 128) | 128);
-      x = Math.floor(x / 128);
-    }
-    return this.u8(x);
-  }
-  // A 0..1 value at 1/255 resolution, which is finer than anyone can hear.
-  unit(v) { return this.u8(Math.round(Math.max(0, Math.min(1, v)) * 255)); }
-  str(s, max = 40) {
-    const enc = new TextEncoder().encode((s || '').slice(0, max));
-    this.u8(enc.length);
-    for (const b of enc) this.u8(b);
-    return this;
-  }
-}
-
-class Reader {
-  constructor(bytes) { this.b = bytes; this.i = 0; }
-  u8() { return this.b[this.i++]; }
-  u16() { return (this.u8() << 8) | this.u8(); }
-  u32() { return ((this.u16() << 16) >>> 0) + this.u16(); }
-  vu() {
-    let x = 0;
-    let scale = 1;
-    for (let i = 0; i < 8; i++) {
-      const b = this.u8();
-      x += (b & 127) * scale;
-      if (!(b & 128)) return x;
-      scale *= 128;
-    }
-    return x;
-  }
-  // No rounding here. The writer stores round(v * 255); dividing straight
-  // back by 255 reproduces the generator's quantised value exactly, and
-  // trimming to three decimals would undo that for the sake of tidiness.
-  unit() { return this.u8() / 255; }
-  str() {
-    const n = this.u8();
-    const slice = this.b.slice(this.i, this.i + n);
-    this.i += n;
-    return new TextDecoder().decode(slice);
-  }
-  get done() { return this.i >= this.b.length; }
-}
-
-// ---------------------------------------------------------------- spec <-> bytes
-
-function writeSpec(w, spec, version = FORMAT) {
-  // The generated name falls out of the seed, so it only costs bytes when
-  // the user has renamed the loop.
-  const generated = seedName(spec.seed >>> 0);
-  if (spec.name && spec.name !== generated) {
-    w.u8(1);
-    w.str(spec.name, 40);
-  } else {
-    w.u8(0);
-  }
-  w.u8(Math.max(32, Math.min(190, spec.bpm || 74)) - 32);
-  w.u8(spec.root || 0);
-  const scaleIdx = SCALE_IDS.indexOf(spec.scale);
-  w.u8(scaleIdx < 0 ? 0 : scaleIdx);
-  w.u8(Math.min(255, spec.bars || 4));
-  w.u8(spec.stepsPerBar || 16);
-  w.unit(spec.swing || 0);
-  w.unit(spec.coherence ?? 0.6);
-
-  for (const layer of LAYERS) w.u32((spec.layerSeeds && spec.layerSeeds[layer]) || 0);
-  w.u32(spec.seed >>> 0);
-
-  const mix = spec.mix || {};
-  const mixKeys = Object.keys(mix).filter((k) => PROFILE_IDS.indexOf(resolveKey(k)) >= 0);
-  w.u8(mixKeys.length);
-  for (const k of mixKeys) {
-    w.u8(PROFILE_IDS.indexOf(resolveKey(k)));
-    w.unit(mix[k]);
-  }
-
-  const feelMix = spec.feelMix || {};
-  const moodKeys = Object.keys(feelMix).filter((k) => codeForMood(k) >= 0);
-  w.u8(moodKeys.length);
-  for (const k of moodKeys) {
-    w.u8(codeForMood(k));
-    w.unit(feelMix[k]);
-  }
-
-  const feel = spec.feel || { lift: 0.5, energy: 0.5, warmth: 0.6 };
-  w.unit(feel.lift).unit(feel.energy).unit(feel.warmth);
-
-  const tone = spec.tone || {};
-  w.unit(tone.warmth ?? 0.6).unit(tone.space ?? 0.5).unit(tone.wobble ?? 0.3);
-
-  let muteBits = 0;
-  LAYERS.forEach((l, i) => { if (spec.mutes && spec.mutes[l]) muteBits |= 1 << i; });
-  w.u8(muteBits);
-
-  let forceBits = 0;
-  LAYERS.forEach((l, i) => { if (spec.forceLayers && spec.forceLayers[l]) forceBits |= 1 << i; });
-  w.u8(forceBits);
-
-  if (spec.cycles) {
-    w.u8(1);
-    for (const layer of LAYERS) w.u16(spec.cycles[layer] || 0);
-  } else {
-    w.u8(0);
-  }
-  // Track length, so a shared album keeps its pacing. Two bytes since
-  // format 3: a two-bar loop can now be set to run for more than a day.
-  w.u16(Math.max(0, Math.min(65535, spec.playFor || 0)));
-
-  // Format 4: the vibes it was steered by (count; id and weight each), then
-  // the strength. A count of zero is a loop without vibes in an album that
-  // has some.
-  if (version >= 4) {
-    const vibes = spec.vibes || {};
-    const ids = Object.keys(vibes).filter((k) => VIBE_IDS.indexOf(k) >= 0);
-    w.u8(ids.length);
-    for (const k of ids) {
-      w.u8(VIBE_IDS.indexOf(k));
-      w.unit(vibes[k]);
-    }
-    if (ids.length) w.unit(spec.vibeStrength ?? 0.7);
-  }
-  // Format 5: the tempo asked (a flag; then low and high, as the tempo byte
-  // is), so a loop made from a request is made again from its code.
-  if (version >= 5) {
-    if (hasTempo(spec)) {
-      const at = (x) => Math.max(32, Math.min(190, Math.round(x))) - 32;
-      w.u8(1).u8(at(spec.tempo[0])).u8(at(spec.tempo[1]));
-    } else {
-      w.u8(0);
-    }
-  }
-  // Format 6: the pins asked, as the request writes them ("organ=on,
-  // arc.period=240"; js/pins.js), two bytes of length first: names, not
-  // numbers, so a pin added later never moves one already written.
-  if (version >= 6) {
-    const text = new TextEncoder().encode(pinItems(spec.pins).join(','));
-    w.u16(text.length);
-    for (const b of text) w.u8(b);
-  }
-  // Format 7: the theme (a flag, then its seed).
-  if (version >= 7) {
-    if (hasTheme(spec)) w.u8(1).u32(spec.theme >>> 0);
-    else w.u8(0);
-  }
-  // Format 8: the length asked, as one number in as few bytes as it needs
-  // (promise 8: it costs only what it uses): 0 none, 1 Endless, bars + 1
-  // otherwise. One byte up to 126 bars, two up to 16,382, three past.
-  if (version >= 8) {
-    w.vu(!hasLength(spec) ? 0 : spec.length === 'endless' ? 1 : spec.length + 1);
-  }
-  // Format 9: the key and the mode asked, each a set as a bit mask in as few
-  // bytes as it needs: the home notes (C is bit 0), then the modes (bit by
-  // place in the frozen order). Zero is none asked.
-  if (version >= 9) {
-    const keys = hasKeyScale(spec) && Array.isArray(spec.askKey) ? spec.askKey : [];
-    const scales = hasKeyScale(spec) && Array.isArray(spec.askScale) ? spec.askScale : [];
-    w.vu(keys.reduce((m, k) => m | (1 << ((k % 12 + 12) % 12)), 0));
-    w.vu(scales.reduce((m, k) => (SCALE_IDS.indexOf(k) < 0 ? m : m | (1 << SCALE_IDS.indexOf(k))), 0));
-  }
-  // Format 10: the style asked, a set of profiles as a bit mask (a bit by
-  // place in the frozen order). Zero is none asked.
-  if (version >= 10) {
-    const styles = hasStyle(spec) ? spec.askStyle : [];
-    w.vu(styles.reduce((m, k) => (PROFILE_IDS.indexOf(k) < 0 ? m : m | (1 << PROFILE_IDS.indexOf(k))), 0));
-  }
-  // Format 11: the voices asked, a mask for each layer in LAYERS' order (a
-  // bit each by place in the layer's frozen list), then the layers asked on
-  // and off: the five on bits, then the five off bits. Zero is none asked.
-  if (version >= 11) {
-    for (const layer of LAYERS) {
-      const asked = (spec.askVoices && spec.askVoices[layer]) || [];
-      w.vu(asked.reduce((m, k) => (VOICE_ORDER[layer].indexOf(k) < 0 ? m : m | (1 << VOICE_ORDER[layer].indexOf(k))), 0));
-    }
-    let layers = 0;
-    LAYERS.forEach((layer, i) => {
-      const state = spec.askLayers && spec.askLayers[layer];
-      if (state === 'on') layers |= 1 << i;
-      if (state === 'off') layers |= 1 << (i + 5);
-    });
-    w.vu(layers);
-  }
-  // Format 12: a track length shorter than one pass (queue item 88b), in
-  // bars, as one number in as few bytes as it needs; zero is none. (A track
-  // length of whole passes is the two bytes above, as ever.)
-  if (version >= 12) w.vu(hasPlayBars(spec) ? spec.playBars : 0);
-  // Format 13: the wander's salt of the play the code was shared from
-  // (queue item 92), as one number in as few bytes as it needs; zero is a
-  // play that wandered as every play of the code does. It says which play
-  // it was; opening the code draws a play's own salt, as any play does.
-  if (version >= 13) w.vu(hasSalt(spec) ? spec.wanderSalt : 0);
-}
-
-function readSpec(r, version = FORMAT) {
-  const spec = {};
-  const hasName = r.u8();
-  const customName = hasName ? r.str() : null;
-  spec.bpm = r.u8() + 32;
-  spec.root = r.u8();
-  spec.scale = SCALE_IDS[r.u8()] || 'dorian';
-  spec.bars = r.u8();
-  spec.stepsPerBar = r.u8();
-  spec.swing = r.unit();
-  spec.coherence = r.unit();
-
-  spec.layerSeeds = {};
-  for (const layer of LAYERS) spec.layerSeeds[layer] = r.u32();
-  spec.seed = r.u32();
-  spec.name = customName || seedName(spec.seed >>> 0);
-
-  spec.mix = {};
-  const mixCount = r.u8();
-  for (let i = 0; i < mixCount; i++) {
-    const key = PROFILE_IDS[r.u8()] || 'dust';
-    spec.mix[key] = r.unit();
-  }
-  if (!Object.keys(spec.mix).length) spec.mix = { dust: 1 };
-
-  spec.feelMix = {};
-  const moodCount = r.u8();
-  for (let i = 0; i < moodCount; i++) {
-    const key = moodForCode(r.u8());
-    spec.feelMix[key] = r.unit();
-  }
-
-  spec.feel = { lift: r.unit(), energy: r.unit(), warmth: r.unit() };
-  spec.mood = spec.feel.lift;
-  spec.tone = { warmth: r.unit(), space: r.unit(), wobble: r.unit() };
-
-  const muteBits = r.u8();
-  spec.mutes = {};
-  LAYERS.forEach((l, i) => { spec.mutes[l] = !!(muteBits & (1 << i)); });
-
-  const forceBits = r.u8();
-  if (forceBits) {
-    spec.forceLayers = {};
-    LAYERS.forEach((l, i) => { if (forceBits & (1 << i)) spec.forceLayers[l] = true; });
-  }
-
-  if (r.u8()) {
-    spec.cycles = {};
-    for (const layer of LAYERS) {
-      const v = r.u16();
-      spec.cycles[layer] = v || null;
-    }
-  }
-  // Format 1 codes end here and get the default; format 2 wrote one byte.
-  if (r.done) spec.playFor = null;
-  else if (version < 3) spec.playFor = r.u8() || null;
-  else spec.playFor = r.u16() || null;
-
-  if (version >= 4) {
-    const count = r.u8();
-    if (count) {
-      const vibes = {};
-      for (let i = 0; i < count; i++) {
-        const key = VIBE_IDS[r.u8()];
-        const weight = r.unit();
-        if (key && VIBES[key]) vibes[key] = weight;
-      }
-      const strength = r.unit();
-      if (Object.keys(vibes).length) {
-        spec.vibes = vibes;
-        spec.vibeStrength = strength;
-      }
-    }
-  }
-  if (version >= 5 && r.u8()) spec.tempo = [r.u8() + 32, r.u8() + 32];
-  if (version >= 6) {
-    const n = r.u16();
-    const text = new TextDecoder().decode(r.b.slice(r.i, r.i + n));
-    r.i += n;
-    // A pin this build doesn't know, or can't take, is left out, as an
-    // unknown vibe is.
-    const pins = {};
-    for (const item of text ? text.split(',') : []) {
-      const eq = item.indexOf('=');
-      try {
-        pins[item.slice(0, eq)] = pinValue(item.slice(0, eq), item.slice(eq + 1));
-      } catch {
-        // left out
-      }
-    }
-    const framed = framedPins(pins);
-    if (framed) spec.pins = framed;
-  }
-  if (version >= 7 && r.u8()) spec.theme = r.u32();
-  if (version >= 8) {
-    const n = r.vu();
-    if (n === 1) spec.length = 'endless';
-    else if (n > 1 && n - 1 <= Number.MAX_SAFE_INTEGER) spec.length = n - 1;
-  }
-  if (version >= 9) {
-    const keys = r.vu();
-    const scales = r.vu();
-    const askKey = Array.from({ length: 12 }, (_, i) => i).filter((i) => keys & (1 << i));
-    const askScale = SCALE_IDS.filter((_, i) => scales & (1 << i));
-    if (askKey.length) spec.askKey = askKey;
-    if (askScale.length) spec.askScale = askScale;
-  }
-  if (version >= 10) {
-    const styles = r.vu();
-    const askStyle = PROFILE_IDS.filter((_, i) => styles & (1 << i));
-    if (askStyle.length) spec.askStyle = askStyle;
-  }
-  if (version >= 11) {
-    const voices = {};
-    for (const layer of LAYERS) {
-      const mask = r.vu();
-      const asked = VOICE_ORDER[layer].filter((_, i) => mask & (1 << i));
-      if (asked.length) voices[layer] = asked;
-    }
-    if (Object.keys(voices).length) spec.askVoices = voices;
-    const layers = r.vu();
-    const asked = {};
-    LAYERS.forEach((layer, i) => {
-      if (layers & (1 << i)) asked[layer] = 'on';
-      else if (layers & (1 << (i + 5))) asked[layer] = 'off';
-    });
-    if (Object.keys(asked).length) spec.askLayers = asked;
-  }
-  if (version >= 12) {
-    const bars = r.vu();
-    if (bars >= 1 && bars <= Number.MAX_SAFE_INTEGER && !spec.playFor) spec.playBars = bars;
-  }
-  if (version >= 13) {
-    const salt = r.vu();
-    if (salt >= 1 && salt <= 0xffffffff) spec.wanderSalt = salt;
-  }
-  return spec;
-}
-
-// ------------------------------------------------------------------ base32
-
-function toBase32(bytes) {
-  let out = '';
-  let buffer = 0;
-  let bits = 0;
-  for (const byte of bytes) {
-    buffer = (buffer << 8) | byte;
-    bits += 8;
-    while (bits >= 5) {
-      out += ALPHABET[(buffer >> (bits - 5)) & 31];
-      bits -= 5;
-    }
-  }
-  if (bits > 0) out += ALPHABET[(buffer << (5 - bits)) & 31];
+// The edits that make `played` from `fresh` (the same seed and request,
+// nothing changed): each layer's seed that differs, or that was re-rolled
+// (a re-rolled layer plays whatever its chances draw), each part of the
+// tone and the tempo that differs.
+function editsOf(played, fresh) {
+  const seeds = [];
+  LAYERS.forEach((l, i) => {
+    const rolled = !!(played.forceLayers && played.forceLayers[l]);
+    if (rolled || played.layerSeeds[l] !== fresh.layerSeeds[l]) seeds.push([i, played.layerSeeds[l] >>> 0, rolled]);
+  });
+  const tone = TONE.map((k) => (played.tone[k] !== fresh.tone[k] ? played.tone[k] : null));
+  const out = {};
+  if (seeds.length) out.seeds = seeds;
+  if (tone.some((v) => v != null)) out.tone = tone;
+  if (played.bpm !== fresh.bpm) out.bpm = played.bpm;
   return out;
 }
 
-function fromBase32(text) {
-  const clean = text.toUpperCase().replace(/[^0-9A-Z]/g, '');
-  const bytes = [];
-  let buffer = 0;
+// The shortest request and edits that make the loop `spec` plays: its
+// vibes as asked where the seed then draws the weights the record has, else
+// with their weights; checked by making it again.
+function recipe(spec) {
+  const played = playedSpec(spec);
+  const asked = requestOf(spec);
+  const tries = [];
+  if (asked.vibes) tries.push({ ...asked, vibes: Object.keys(asked.vibes) });
+  tries.push(asked);
+  for (const request of tries) {
+    const fresh = newSpec(spec.seed, request);
+    const edits = editsOf(played, fresh);
+    if (same(heard(newSpec(spec.seed, request, edits)), heard(played))) return { played, request, edits, plain: fresh };
+  }
+  // Never reached for a record the core made; the whole record as a last
+  // resort, every edit written.
+  const fresh = newSpec(spec.seed, asked);
+  return { played, request: asked, edits: editsOf(played, { ...fresh, layerSeeds: {}, tone: {}, bpm: NaN }), plain: fresh };
+}
+
+// The layers muted by the listener, a bit each (a layer asked off is muted
+// by its request already).
+function muteBits(spec) {
   let bits = 0;
-  for (const ch of clean) {
-    const v = DECODE_MAP[ch];
-    if (v === undefined) throw new Error('bad character in code');
-    buffer = (buffer << 5) | v;
-    bits += 5;
-    if (bits >= 8) {
-      bytes.push((buffer >> (bits - 8)) & 0xff);
-      bits -= 8;
-    }
-  }
-  return Uint8Array.from(bytes);
+  LAYERS.forEach((l, i) => {
+    const off = spec.askLayers && spec.askLayers[l] === 'off';
+    if (spec.mutes && spec.mutes[l] && !off) bits |= 1 << i;
+  });
+  return bits;
 }
-
-// Fletcher-16: catches transpositions, which a plain sum does not, and
-// transposing two characters is exactly what happens when a code is copied
-// out by hand.
-function checksum(bytes) {
-  let a = 0;
-  let b = 0;
-  for (const byte of bytes) {
-    a = (a + byte) % 255;
-    b = (b + a) % 255;
-  }
-  return ((b << 8) | a) & 0xffff;
-}
-
-function wrap(prefix, bytes) {
-  const sum = checksum(bytes);
-  const all = Uint8Array.from([...bytes, (sum >> 8) & 0xff, sum & 0xff]);
-  const body = toBase32(all);
-  const grouped = body.match(/.{1,5}/g).join('-');
-  return `${prefix}${grouped}`;
-}
-
-function unwrap(prefix, code) {
-  const text = String(code || '').trim().toUpperCase();
-  const head = text.startsWith(prefix) ? text.slice(prefix.length) : text;
-  const bytes = fromBase32(head);
-  if (bytes.length < 3) throw new Error('code is too short');
-  const payload = bytes.slice(0, bytes.length - 2);
-  const given = (bytes[bytes.length - 2] << 8) | bytes[bytes.length - 1];
-  if (checksum(payload) !== given) throw new Error('that code has a typo in it');
-  return payload;
-}
-
-// ------------------------------------------------------------------- public
-
-export const SONG_PREFIX = 'DL1-';
-export const ALBUM_PREFIX = 'DLA1-';
 
 export function encodeSong(spec) {
-  const w = new Writer();
-  const version = formatOf(spec);
-  w.u8(version);
-  writeSpec(w, spec, version);
-  return wrap(SONG_PREFIX, Uint8Array.from(w.bytes));
+  const { request, edits, plain } = recipe(spec);
+  // The name only where it is the listener's, and only as a code carries it.
+  const own = spec.name && spec.name !== plain.name ? fitName(spec.name) : '';
+  const salt = Number.isInteger(spec.wanderSalt) && spec.wanderSalt > 0 ? spec.wanderSalt >>> 0 : 0;
+  return loopCode(spec.seed, { ...askFor(readRequest(request)), ...edits }, { mutes: muteBits(spec), salt, name: own });
+}
+
+// A code's request as the core wrote it: its asks (js/request.js reads
+// them) and its edits, its version apart (a code's loop is drawn at its
+// version; this build's is the only one yet).
+function split(text) {
+  const asks = [];
+  const edits = {};
+  for (const item of text ? text.split(',') : []) {
+    const eq = item.indexOf('=');
+    const name = item.slice(0, eq < 0 ? item.length : eq);
+    const value = eq < 0 ? '' : item.slice(eq + 1);
+    if (name === 'version') continue;
+    if (!name.startsWith('edit.')) { asks.push(item); continue; }
+    const edit = name.slice(5);
+    const [kind, layer] = edit.split('.');
+    if (kind === 'seed' || kind === 'roll') {
+      (edits.seeds = edits.seeds || []).push([LAYERS.indexOf(layer), Number(value) >>> 0, kind === 'roll']);
+    } else if (TONE.includes(edit)) {
+      edits.tone = edits.tone || [null, null, null];
+      edits.tone[TONE.indexOf(edit)] = Number(value);
+    } else if (edit === 'bpm') {
+      edits.bpm = Number(value);
+    }
+  }
+  return { asks: asks.join(','), edits };
 }
 
 export function decodeSong(code) {
-  const bytes = unwrap(SONG_PREFIX, code);
-  const r = new Reader(bytes);
-  const version = r.u8();
-  if (version > FORMAT) throw new Error('that code was made by a newer version');
-  return readSpec(r, version);
+  const c = readLoopCode(code);
+  const { asks, edits } = split(c.request);
+  const spec = newSpec(c.seed, asks, Object.keys(edits).length ? edits : null);
+  LAYERS.forEach((l, i) => { if (c.mutes & (1 << i)) spec.mutes[l] = true; });
+  if (c.salt) spec.wanderSalt = c.salt;
+  if (c.name) spec.name = c.name;
+  return spec;
 }
 
+// ---------------------------------------------------------------- albums
+
 export function encodeAlbum(title, specs) {
-  const w = new Writer();
-  const version = Math.max(PLAIN_FORMAT, ...specs.map(formatOf));
-  w.u8(version);
-  w.str(title || 'Untitled', 40);
-  w.u16(specs.length);
-  for (const spec of specs) writeSpec(w, spec, version);
-  return wrap(ALBUM_PREFIX, Uint8Array.from(w.bytes));
+  return albumCode(specs.map(encodeSong), fitName(title));
 }
 
 export function decodeAlbum(code) {
-  const bytes = unwrap(ALBUM_PREFIX, code);
-  const r = new Reader(bytes);
-  const version = r.u8();
-  if (version > FORMAT) throw new Error('that code was made by a newer version');
-  const title = r.str();
-  const count = r.u16();
-  const specs = [];
-  for (let i = 0; i < count; i++) specs.push(readSpec(r, version));
-  return { title, specs };
+  const { name, tracks } = albumTracks(code);
+  return { title: name || 'Untitled', specs: tracks.map(decodeSong) };
 }
 
-// Which kind of code is this? Lets one paste box accept either.
-export function codeKind(code) {
-  const t = String(code || '').trim().toUpperCase();
-  if (t.startsWith(ALBUM_PREFIX)) return 'album';
-  if (t.startsWith(SONG_PREFIX)) return 'song';
-  return null;
+// ------------------------------------------------------------ what it is
+
+// A version 1 code, from an older build: "DL1-" or "DLA1-" before it.
+const OLD = /^\s*DLA?1-/i;
+
+// What `text` is: 'song', 'album', 'old' (a version 1 code, from an older
+// build), 'newer' (from a newer build) or null (no code). Read whole, so a
+// word that happens to be the alphabet's is no code.
+export function codeKind(text) {
+  if (OLD.test(String(text || ''))) return 'old';
+  const kind = kindOf(text);
+  return kind === 'loop' ? 'song' : kind;
 }

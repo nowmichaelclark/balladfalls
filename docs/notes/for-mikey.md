@@ -12,6 +12,19 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## Small audio export (item 104c, v184, PR #424)
+
+- **Listen to a Small export.** Save, Share, Audio: pick **small**, a few
+  minutes of a loop you know, and play the file (`.opus`) in the player you
+  use, on your phone and in VLC. Compare with the lossless file of the same
+  loop. It is Opus at a constant 96 kbit/s stereo (64 mono): meant to be the
+  same to your ears; if you hear a difference (a soft top end, a shimmer in
+  the reverb), say where, and the rate goes up (for Mikey's ears). Small
+  shows only where the browser can encode Opus: tested in Chromium and
+  Firefox on desktop; not tested on a phone or in Safari, so say whether the
+  choice shows on the Moto, the tablet and an iPhone (where it doesn't,
+  Lossless is the only one, by design).
+
 ## The listening album
 
 - **Phase 3 Control (brain B1; fixed at v155):** six loops, one album code,
@@ -25,6 +38,11 @@ the points where the next step is yours.
   soath-wa (track 4, from about 0:27), used to come back narrow in stereo
   for about ten seconds after a long rest; v155 fixed that, so there Now
   may sound the same as Before or wider after the rest.
+- **No join a hole on soath-wa (v185, #430, session 23):** corpus piece
+  #27 (seed 2094475530) as a 1,024-bar arc, at about 38:50 and 45:35, and
+  as an Endless arc at about 9:20: where the bass dropped out before the
+  line and left a fading pad alone (28 dB under the music), the bass and
+  the pad now breathe together for half a beat. Nothing else moved.
 - **The hiss (v176, #403):** the hiss you heard behind every loop was the
   page's hidden keepalive (the file that keeps the lock-screen controls), not
   the music: noise at -62 dBFS. It is now a 20 Hz tone at the same power, far
@@ -91,7 +109,7 @@ the points where the next step is yours.
 
 ## Phone and tablet
 
-- **Codes, version 2 (item 105b, session 23, #427, v184):** on the phone,
+- **Codes, version 2 (item 105b, session 23, #427, v186):** on the phone,
   rename a loop in Thai with an emoji (the box takes it; an invisible
   character it won't), copy its code (Save, Share, copy its code) and paste
   it in the tablet: the same loop, the name with it. Old codes from chats

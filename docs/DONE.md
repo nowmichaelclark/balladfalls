@@ -454,6 +454,19 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   beside the bars, sent as the request's journey; the Library's lists end in
   each loop's length. Listen to a jump into the middle of a piece: it should
   come in on a phrase line within a blink, nothing ringing from before.
+- #424, audio export: the Small format (item 104c, session 21, v184): the
+  export sheet's Small choice makes an Opus file (`.opus`, Ogg) through the
+  browser's own encoder (WebCodecs `AudioEncoder`, in the export's Worker),
+  muxed by a small tested Ogg writer (`js/ogg.js`, `test/ogg.test.mjs`: the
+  CRC, the headers, granule positions and pre-skip, packets past the end
+  dropped, so players show and seek the true length, to the sample); hidden
+  where the browser has no Opus encoder (a browser with AAC and not Opus
+  too). 64 kbit/s mono and 96 kbit/s stereo, constant: about 2.2 (mono) and
+  2.9 (stereo) times smaller than the median lossless file; 2.5 hours mono
+  is about 73 MB. Also Mikey's answers on the sheet: "Closing the app stops
+  it", and a loop with no name of its own saves under its generated name.
+  Nothing that plays moved (the lossless file's checks are unchanged). Check
+  in `for-mikey.md`.
 - #425, a loop's own name travels with its code (item 105b's core part,
   session 23, no app change), preview URL:
   <https://claude-s23-code-names-driftloom.nowmichaelclark.workers.dev>:
@@ -467,8 +480,20 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   (`dl_code_request`) writes a code's request as text, for the app's
   records. Golden codes: a name column, the two titled albums moved, new
   Thai and emoji lines.
+- #430, the nightly green again (session 23, v185), preview URL:
+  <https://claude-s23-nightly-driftloom.nowmichaelclark.workers.dev>: the
+  seed renders' hashes for #414's four twang loops (dith-shuisk, tei-har,
+  nong-lu, yon-reil), and the holes on corpus piece #27 (soath-wa, seed
+  2094475530), from #402 (bisected in CI): it lost its organ, and three
+  floor joins kept a 9-second pad alone, which the join's estimate read
+  at its 2 to 4 s loudness. `[longform loudness]` gains a measured 4 to 8
+  s span; those three joins become breaths, and no other join of the
+  holes corpus's 23,016 moves. Listen: soath-wa as a 1,024-bar arc
+  (`bars=1024,journey=arc`) at 38:50 and 45:35, and as an Endless arc at
+  9:20: the bass and the pad both breathe for half a beat before the line,
+  where the pad was left alone, nearly silent.
 - #427, the app speaks share codes version 2, only version 2 (item 105b,
-  session 23, v184), preview URL:
+  session 23, v186), preview URL:
   <https://claude-s23-codes-app-driftloom.nowmichaelclark.workers.dev>:
   nothing that plays moved. Copy a loop's code: a plain loop is 9
   characters (was about 80), two vibes 13; paste it back and it plays the

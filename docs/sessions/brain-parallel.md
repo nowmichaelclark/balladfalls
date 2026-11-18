@@ -1,5 +1,7 @@
 # Brain session B-parallel: sessions 17 onward, two at a time
 
+**Changed 2026-11-18, at Mikey's request:** his seven items for 1.0 are sessions 30a to 30f (`README.md`, "Mikey's seven"). 30a, 30b, 30c and 30d run beside the chains' ends, so this brain starts them too, under the same rules, as their rows open; 30e and 30f, and 30 after them, are not its own. If it has already ended, the next brain or Mikey starts them in the table's order.
+
 Written by brain B2 (2026-11-17), at Mikey's request: from 17 on the road
 splits into four chains that barely touch each other, so this brain runs
 them two at a time and oversees them, in place of starting each hands

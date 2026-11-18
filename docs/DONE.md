@@ -429,7 +429,20 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   nulls against a straight render (`tools/export.mjs`, in the gate);
   `tools/rows.mjs` has the export's rows and `tools/export-long.mjs` the
   three-hour run (the `export` workflow). The app's module grew 23 KB.
-- #419, long pieces on screen (item 106b, session 18, v182), preview URL:
+- #420, the Android app plays on the native core (item 107c, session 27,
+  v182): the page's player posts the worklet's very messages over the app's
+  bridge (`js/native.js`, `DriftloomNative`; `android/native/src/bridge.rs`)
+  and hears the worklet's messages back, so every control and display of
+  94a's table drives the native core; the WebView plays no audio of its own
+  (no keepalive). Nothing that plays moved, and the website is unchanged.
+  On the CI emulator: `tools/rows.mjs --app` (every row that makes sense
+  there, the length slider's minute included), the page's main thread
+  blocked 5 s with the music on through it (no underrun, nothing late), the
+  too-slow line unable to show; the smoke job waits for the page as it is
+  (`android/cdp.mjs`) and passed ten fresh emulators at once. Diagnostics in
+  the app: `engine: native (...) underruns` and a `stream:` line. Check on
+  the Moto and the tablet (`for-mikey.md`).
+- #419, long pieces on screen (item 106b, session 18, v183), preview URL:
   <https://claude-suspicious-raman-f88179-driftloom.nowmichaelclark.workers.dev>:
   nothing that plays moved (the module grew 124 bytes: `dl_play_journey`, the
   one core addition, so the page can ask a journey). Now Playing for a piece

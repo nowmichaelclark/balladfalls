@@ -2,6 +2,7 @@ import { newSpec as drawSpec, render, unavailable as noGenerator } from './gen.j
 import { RequestError, vibeSelection, rerollLayer, cloneSpec, LAYERS, STEPS_PER_BAR } from './request.js';
 import { Output } from './output.js';
 import { loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES } from './core.js';
+import { nativeBridge, NativeContext } from './native.js';
 import * as quality from './quality.js';
 import { picksAsk, PlayerEngine } from './player.js';
 import { patternToMidi } from './midi.js';
@@ -12,7 +13,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v182';
+const BUILD = 'v183';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -170,8 +171,12 @@ let cells = null;
 // takes it from the start.
 function prepareAudio() {
   if (state.ctx) return;
+  // In the Android app the core plays natively (session 27, js/native.js):
+  // its context is a stand-in on the core's clock, and the WebView makes no
+  // audio of its own.
+  const bridge = nativeBridge();
   const Ctx = window.AudioContext || window.webkitAudioContext;
-  state.ctx = newContext(Ctx, { latencyHint: 'playback' });
+  state.ctx = bridge ? new NativeContext(bridge) : newContext(Ctx, { latencyHint: 'playback' });
   state.ctx.addEventListener('statechange', () => awayEvent(`audio ${state.ctx.state}`));
   const ctx = state.ctx;
   const why = coreUnsupported();
@@ -312,7 +317,7 @@ function onBusy(output, report) {
   // Too slow even on lite (queue item 100): said once, in the card's place.
   // Play goes on.
   if (!state.slow && !state.coreError) {
-    const s = quality.stuck({ quality: output.quality, busy: state.busy });
+    const s = quality.stuck({ quality: output.quality, busy: state.busy, native: !!state.ctx.native });
     if (s) {
       state.slow = { at: performance.now(), why: s.why };
       ui.plainLine(TOO_SLOW, APP_LINK ? { text: GET_APP, href: APP_LINK } : null);
@@ -1866,6 +1871,9 @@ function wire() {
     // The core's player, with the notes it took late, left out or dropped;
     // or why there is none.
     lines.push(`engine: ${state.output ? state.output.engineReport() : state.coreError ? `none (${state.coreError})` : 'rust (loading)'}`);
+    // The Android app's native core (session 27): its stream, as the core's
+    // side says it.
+    if (state.ctx && state.ctx.native) lines.push(`stream: ${state.ctx.streamReport()}`);
     lines.push(`core: ${state.core ? `loaded ${state.coreAt} ms after the page began` : state.coreError ? 'not loaded' : 'loading'}`);
     const host = state.output && state.output.core && !state.output.core.failed ? state.output.core : null;
     lines.push(`layout: ${host ? (host.layout === 2 ? 'stereo' : 'mono') : '-'}  mono switch: ${state.mono ? 'on' : 'off'}`);
@@ -2058,7 +2066,10 @@ if (noGenerator) {
   }
 }
 
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+if (nativeBridge()) {
+  // The Android app (session 27): its files are inside it, so no worker.
+  swState = 'none (the app holds its own files)';
+} else if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   swState = 'registering';
   navigator.serviceWorker.register('sw.js').then((reg) => {
     // Followed as it moves: the state shown is the newest worker's, and

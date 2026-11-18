@@ -91,7 +91,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | B4 | `brain-4-codes.md` | Brain: check 16 to 24; the albums again in the new codes | Opus 5.5, high | 18, 21, 24 | 26 to 29 | |
 | | | **Android** | | | | |
 | 26 | `26-android-audio.md` | 107b: the core native, on Android's audio | Opus 5.5, high | 25 | 17, 18, 20, 21, 22, 23, 24 | yes, 2026-11-17 (#411; no app change) |
-| 27 | `27-android-bridge.md` | 107c: the page talks to the native core | Opus 5.5, high | 26, 17 | 18, 21, 22, 23, 24 | |
+| 27 | `27-android-bridge.md` | 107c: the page talks to the native core | Opus 5.5, high | 26, 17 | 18, 21, 22, 23, 24 | yes, 2026-11-18 (#420) |
 | | **you** | Install the APK from 27's PR on the Moto and the tablet; say what you hear. The work goes on meanwhile. | | 27 | | |
 | 28 | `28-android-background.md` | 107d: the screen off, the notification, saving an export | Sonnet 5.5, high | 27, 21 | 18, 22, 23, 24 | |
 | 29 | `29-android-fdroid.md` | 107e: F-Droid's metadata, recipe and icons | Sonnet 5.5, high | 28 | 18, 22, 23, 24 | |

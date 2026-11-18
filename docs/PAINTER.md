@@ -75,7 +75,7 @@ code ("a peaceful, zany loop at 77 bpm, 16 bars, when the sun rises").
 
 ## 2. Long pieces (after the generator moves to the core)
 
-**Built plain (session 18, v182, `js/piece.js`, `design/` untouched):** on Now Playing the
+**Built plain (session 18, v183, `js/piece.js`, `design/` untouched):** on Now Playing the
 rail becomes the piece's line (ticks for the map, a bead for you), under it
 "bar 812 of 3,072 · the peak" and the time played and left, with a key each way
 for the section before or after; press the line to jump. The journey (arc,

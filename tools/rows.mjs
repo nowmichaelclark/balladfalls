@@ -3,6 +3,20 @@
 // event), in the real app, in headless Chromium, playing in real time.
 //
 //   node tools/rows.mjs [--long] [--port 8771]
+//   node tools/rows.mjs --app [--cdp URL] [--long]
+//
+// `--app` (session 27, queue item 107c): the same rows against the Android
+// app, its page driving the native core (android/cdp.mjs: the WebView's
+// DevTools port over adb, on the one device or emulator adb sees, the app
+// installed; `--cdp` an endpoint already up instead). The hooks sit on the
+// app's bridge (`DriftloomNative`) instead of a worklet's node, and "is
+// anything sounding" is the native output's own level. The rows that make no
+// sense there are left out (the export's, Android's own in session 28; the
+// plain lines: the app always has its core), and four are the app's own:
+// the WebView makes no audio of its own; Diagnostics says the native core,
+// with its counts and the stream's underruns; the page's main thread blocked
+// for five seconds and the music plays on (docs/CORE.md, promise 1); and
+// the too-slow line (item 100) can't show, however slow the reports read.
 //
 // Nothing in js/ is touched. The page is read from outside, before its own
 // scripts run: every AudioWorkletNode it builds is kept, with what the core
@@ -95,6 +109,8 @@ const flag = (name, dflt) => {
 };
 const LONG = argv.includes('--long');
 const PORT = Number(flag('--port', 8771));
+const APP = argv.includes('--app');
+const CDP = flag('--cdp', '');
 
 function loadPlaywright() {
   const require = createRequire(import.meta.url);
@@ -216,6 +232,73 @@ const HOOK = `(() => {
     }
     return out;
   };
+  const make = URL.createObjectURL;
+  URL.createObjectURL = function (b) { if (b instanceof Blob) R.blobs.push(b); return make.call(this, b); };
+})();`;
+
+// The app's (`--app`): the same record, kept from the native bridge. Every
+// message the page posts it (an `init` is a new player, the node's place);
+// every batch it posts back; any audio context the page makes (none should
+// be); and a way to hand the page's own listener a batch, as the core would.
+const HOOK_APP = `(() => {
+  const R = window.__rows = { nodes: [], events: [], posts: [], probes: new Map(), id: 0, clip: null, blobs: [], native: null, contexts: 0, listeners: [], app: true };
+  for (const name of ['AudioContext', 'webkitAudioContext']) {
+    const Real = window[name];
+    if (typeof Real !== 'function') continue;
+    window[name] = class extends Real { constructor(...a) { super(...a); R.contexts++; } };
+  }
+  const hear = (text) => {
+    let batch;
+    try { batch = JSON.parse(text); } catch { return; }
+    for (const m of [].concat(batch)) {
+      if (!m) continue;
+      if (m.type === 'native') R.native = m;
+      if (m.type === 'events') R.events.push({ node: R.nodes.length - 1, at: 0, events: m.events, grids: m.grids || [] });
+      if (m.type === 'probe' && R.probes.has(m.id)) { R.probes.get(m.id)(m); R.probes.delete(m.id); }
+    }
+  };
+  let hooked = false;
+  const hook = () => {
+    const N = window.DriftloomNative;
+    if (hooked || !N) return;
+    hooked = true;
+    const send = N.postMessage.bind(N);
+    const listen = N.addEventListener.bind(N);
+    R.send = (m) => send(JSON.stringify(m));
+    const post = (text) => {
+      try {
+        const m = JSON.parse(text);
+        if (m && m.type === 'init') R.nodes.push({ quality: m.quality });
+        if (m && typeof m.type === 'string' && /^play|^layout/.test(m.type)) R.posts.push({ ...m });
+      } catch { /* not ours to read */ }
+      return send(text);
+    };
+    const add = (type, fn, ...rest) => {
+      if (type === 'message') R.listeners.push(fn);
+      return listen(type, fn, ...rest);
+    };
+    listen('message', (e) => hear(e.data));
+    try { N.postMessage = post; N.addEventListener = add; } catch { /* read-only */ }
+    if (N.postMessage !== post) {
+      // An object whose methods can't be replaced: the page is given one
+      // that passes everything to it.
+      const shim = { postMessage: post, addEventListener: add, removeEventListener: (...a) => N.removeEventListener(...a) };
+      Object.defineProperty(window, 'DriftloomNative', { configurable: true, value: shim });
+    }
+  };
+  hook();
+  document.addEventListener('readystatechange', hook);
+  R.inject = (batch) => { for (const fn of R.listeners) fn({ data: JSON.stringify(batch) }); };
+  R.level = () => (R.native ? R.native.level : 0);
+  R.probe = () => new Promise((resolve) => {
+    if (!R.send) return resolve(null);
+    const id = 1e9 + ++R.id;
+    R.probes.set(id, resolve);
+    R.send({ type: 'probe', id });
+    setTimeout(() => resolve(null), 2000);
+  });
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+    writeText: async (t) => { R.clip = t; }, readText: async () => R.clip || '' } });
   const make = URL.createObjectURL;
   URL.createObjectURL = function (b) { if (b instanceof Blob) R.blobs.push(b); return make.call(this, b); };
 })();`;
@@ -418,6 +501,72 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await tab.close();
 }
 
+// The app's own rows (`--app`, session 27), on the page playing.
+async function appRows({ ev, diag, clickId, level, probe }) {
+  const line = (t, k) => t.split('\n').find((l) => l.startsWith(`${k}:`)) || '';
+  {
+    const seen = await ev(() => ({ contexts: window.__rows.contexts, audio: document.querySelectorAll('audio').length }));
+    const keep = line(await diag(), 'keepalive');
+    row('app: the WebView plays no audio of its own (no audio context, no keepalive element)', seen.contexts === 0 && seen.audio === 0 && /native/.test(keep), `${seen.contexts} contexts, ${seen.audio} audio elements; ${keep}`);
+  }
+  {
+    const t = await diag();
+    const engine = line(t, 'engine');
+    const stream = line(t, 'stream');
+    row('app: Diagnostics says the native core, its late, missed and dropped counts and the stream\'s underruns', /^engine: native \(the core's player\)\s+late: \d+\s+missed: \d+\s+dropped: \d+.*underruns: \d+/.test(engine) && /^stream: running/.test(stream), `${engine} | ${stream}`);
+  }
+  {
+    // Promise 1: the page's main thread blocked for five seconds; the core
+    // plays on through it, its clock keeping time with the wall's, its
+    // output sounding throughout, no underrun, nothing late.
+    const n0 = await ev(() => window.__rows.native);
+    const t0 = Date.now();
+    await ev(() => { const t = Date.now(); while (Date.now() - t < 5000) { /* busy */ } });
+    const blocked = Date.now() - t0;
+    await sleep(2500);
+    const n1 = await ev(() => window.__rows.native);
+    const wall = (Date.now() - t0) / 1000;
+    const clock = n1.time - n0.time;
+    const sounding = n1.sounding - n0.sounding;
+    const p = await probe();
+    row('app: the page\'s main thread blocked for 5 s, the music plays on (promise 1)', blocked >= 4900 && Math.abs(clock - wall) < 1.0 && sounding >= clock - 0.5 && n1.underruns === n0.underruns && p && p.player.state === 3 && p.late === 0,
+      `blocked ${blocked} ms; the core's clock ${clock.toFixed(2)} s in ${wall.toFixed(2)} s, ${sounding.toFixed(2)} s sounding; underruns ${n0.underruns} -> ${n1.underruns}; late ${p && p.late}`);
+  }
+  {
+    // Item 100's too-slow line can't show in the app: on lite, a minute of
+    // reports with every quarter-second behind (in a browser, the line
+    // after twenty seconds), handed to the page as the core hands them.
+    const isLite = () => ev(() => document.getElementById('liteMode').getAttribute('aria-checked'));
+    const was = await isLite();
+    if (was !== 'true') {
+      await clickId('liteMode');
+      await sleep(3000);
+    }
+    const lite = await isLite();
+    await ev(() => {
+      const busy = { max: 1.5, behind: 8, windows: 8, seconds: 2 };
+      for (let i = 0; i < 30; i++) window.__rows.inject([{ type: 'cost', ms: [0, 0], seconds: [0, 0], busy }]);
+    });
+    await sleep(500);
+    const shown = await ev(() => !document.getElementById('plainLine').hidden);
+    const slow = line(await diag(), 'slow');
+    row('app: the too-slow line can\'t show (lite, a minute of reports every quarter-second behind)', lite === 'true' && !shown && slow === 'slow: no', `lite ${lite}, line ${shown ? 'shown' : 'hidden'}, ${slow}`);
+    if (was !== 'true') {
+      await clickId('liteMode');
+      await sleep(3000);
+    }
+    row('app: and the music plays on', (await level(1500)) > 1e-4);
+  }
+}
+
+// The app's page (`--app`), with the hooks in, loaded afresh.
+async function openApp() {
+  const { AppPage } = await import('../android/cdp.mjs');
+  const page = await AppPage.open({ cdp: CDP, ms: 90000, log: (...a) => console.log(' ', ...a) });
+  await page.addInitScript(HOOK_APP);
+  await page.reload();
+  return page;
+}
 
 // A long piece on screen (queue item 106b), in a page of its own: opened on
 // the 32,768-bar arc a listener's picks make (kept in the prefs as the app
@@ -607,16 +756,25 @@ async function longRows(browser, port, errors) {
 }
 
 async function main() {
-  const { chromium } = loadPlaywright();
-  const server = await serve(PORT);
-  const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  const { chromium } = APP ? {} : loadPlaywright();
+  const server = APP ? null : await serve(PORT);
+  const browser = APP ? null : await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const errors = [];
   try {
-    const page = await browser.newPage({ viewport: { width: 412, height: 915 } });
+    const page = APP ? await openApp() : await browser.newPage({ viewport: { width: 412, height: 915 } });
     page.on('pageerror', (e) => errors.push(e.message));
-    await page.addInitScript(HOOK);
-    await page.goto(`http://127.0.0.1:${PORT}/`);
-    await page.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    const ready = async () => {
+      for (let t = 0; t < 60000; t += 250) {
+        if (await page.evaluate(() => document.readyState === 'complete' && !!document.getElementById('playBtn'))) return;
+        await sleep(250);
+      }
+      throw new Error('the page did not load');
+    };
+    if (!APP) {
+      await page.addInitScript(HOOK);
+      await page.goto(`http://127.0.0.1:${PORT}/`);
+    }
+    await ready();
     await sleep(1500);
     const ev = (fn, arg) => page.evaluate(fn, arg);
     const probe = async () => {
@@ -858,7 +1016,8 @@ async function main() {
       return String.fromCharCode(...t.slice(0, 4));
     });
     row('export MIDI: a MIDI file', midi === 'MThd', String(midi));
-    await exportRows({ page, ev, probe, level, diag, clickId, browser });
+    // The export's rows are the browser's (in the app, session 28's).
+    if (!APP) await exportRows({ page, ev, probe, level, diag, clickId, browser });
     await clickId('copySong');
     await sleep(500);
     const code = await ev(() => window.__rows.clip);
@@ -890,6 +1049,7 @@ async function main() {
       row('Diagnostics: the core\'s player, nothing late, missed or dropped, no event lost, no edit refused', /the core's player\)\s+late: 0\s+missed: 0\s+dropped: 0/.test(engineLine)
         && /playerEventsLost: 0/.test(text) && /playerRefused: 0/.test(text), `${engineLine}; ${text.split('\n').filter((l) => /^player(EventsLost|Refused)/.test(l)).join(', ')}`);
     }
+    if (APP) await appRows({ ev, diag, clickId, level, probe });
 
     // The length slider: the shortest stop, a minute.
     if (LONG) {
@@ -932,7 +1092,7 @@ async function main() {
       await sleep(300);
       const kept = await lastPicks();
       await page.reload();
-      await page.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+      await ready();
       await sleep(1500);
       await page.click('#playBtn');
       await sleep(3000);
@@ -941,10 +1101,19 @@ async function main() {
       row('picks: held again by the core after a reload', kept && again && p.picksTag === again.tag && JSON.stringify(again.ask.vibes) === JSON.stringify(kept.ask.vibes), JSON.stringify(again && again.ask.vibes));
     }
     row('no page errors', errors.length === 0, errors.join('; '));
-
     // A long piece on screen (queue item 106b), in a page of its own.
-    await longRows(browser, PORT, errors);
+    if (!APP) await longRows(browser, PORT, errors);
+    if (!APP) await plainRows(browser);
+  } finally {
+    if (browser) await browser.close();
+    if (server) server.close();
+  }
+  report();
+}
 
+// The plain lines, each in a tab of its own.
+async function plainRows(browser) {
+  {
     // The plain line (queue item 97; Mikey, 2026-11-07): a browser that
     // can't run the core says so in the card's place and plays nothing;
     // there is no fallback synth. A page with WebAssembly taken away
@@ -967,10 +1136,10 @@ async function main() {
     row('plain line: a browser with no WebAssembly is told it can\'t play', none.shown && none.text === 'This browser can\'t play Driftloom; try a recent Chrome, Firefox or Safari' && !none.bad.length, `${none.text} ${none.bad.join('; ')}`);
     const lost = await plain((tab) => tab.route('**/js/dlplayer.wasm', (r) => r.abort('failed')));
     row('plain line: a module that never arrives says to refresh', lost.shown && lost.text === 'Please refresh.' && !lost.bad.length, `${lost.text} ${lost.bad.join('; ')}`);
-  } finally {
-    await browser.close();
-    server.close();
   }
+}
+
+function report() {
   const failed = rows.filter((r) => !r.ok);
   console.log(failed.length ? `\n${failed.length} of ${rows.length} failed` : `\nall ${rows.length} passed`);
   process.exit(failed.length ? 1 : 0);

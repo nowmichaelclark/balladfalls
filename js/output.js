@@ -10,6 +10,10 @@
 // (js/synth.js), which played whatever the core could not; a browser that
 // cannot run the core now plays nothing, and the page says so in a plain
 // line (Mikey, 2026-11-07).
+//
+// In the Android app (session 27) the core's player is native and the
+// context a stand-in on its clock (js/native.js): there is no node to
+// connect, and the WebView plays nothing; the same commands reach the core.
 
 import { CoreHost, MIX, CANCEL, HOLD, LINEAR, SET, DROP_CAUSES } from './core.js';
 
@@ -54,7 +58,7 @@ export class Output {
       this.coreError = this.core.failed;
       if (this.onCoreError) this.onCoreError(this.coreError);
     };
-    this.core.node.connect(this.ctx.destination, 0);
+    if (this.core.node) this.core.node.connect(this.ctx.destination, 0);
     this.output = this.core.node;
     if (this._killed) this.core.param(MIX.kill, SET, 0, 0);
     if (this.userVolume != null) this.core.playVolume(this.userVolume);
@@ -144,6 +148,11 @@ export class Output {
     const p = c.playerAt;
     const at = p ? `  player: ${['idle', 'making a loop', 'its first pass', 'playing'][p.state] || p.state}, step ${p.step}` : '';
     const dropped = c.dropped ? ` (${DROP_CAUSES.map((cause, i) => `${cause} ${c.droppedBy[i] || 0}`).join(', ')})` : '';
+    // The app's native core (session 27): with the stream's underruns.
+    if (c.native) {
+      const s = this.ctx.stream;
+      return `native (the core's player)  late: ${c.late}  missed: ${c.missed}  dropped: ${c.dropped}${dropped}  underruns: ${s ? s.underruns : '-'}${at}`;
+    }
     return `rust (the core's player)  late: ${c.late}  missed: ${c.missed}  dropped: ${c.dropped}${dropped}${at}`;
   }
 }

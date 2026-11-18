@@ -147,6 +147,17 @@ const diag = () => ev("document.getElementById('diagRefresh').click(); document.
 const line = (t, key) => (t.split('\n').find((l) => l.startsWith(`${key}:`)) || '').trim();
 const waitFor = (what, fn, ms = 20000) => until(what, fn, ms, 500);
 const dispatch = (key) => sh('cmd', 'media_session', 'dispatch', key);
+// What the app and the page said about the controls, for a failed check.
+const evidence = (what) => {
+  log(`  evidence (${what}):`);
+  const lines = sh('logcat', '-d').split('\n').filter((l) => /DriftloomService|DriftloomApp|DriftloomStream|MediaSession|MediaButton/.test(l)).slice(-25);
+  for (const l of lines) log(`    ${l.slice(0, 260)}`);
+};
+// How the hidden page runs its timers, as the page itself says.
+const hiddenPage = () => ev(() => new Promise((resolve) => {
+  const t = performance.now();
+  setTimeout(() => resolve({ visible: document.visibilityState, timer100: Math.round(performance.now() - t) }), 100);
+}));
 
 try {
   await waitFor('the page to be built', () => ev("document.readyState === 'complete' && !!document.getElementById('playBtn') && !!document.getElementById('diagOut')"), 90000);
@@ -245,18 +256,19 @@ try {
 
   // ------------------------------------------------ the lock screen's keys
   log('\n-- the lock screen\'s controls, screen off --');
+  fact('the hidden page', JSON.stringify(await hiddenPage()));
   const before = await loopName();
   dispatch('next');
   await waitFor('Next to change the loop', async () => (await loopName()) !== before, 20000).catch(() => null);
   const after = await loopName();
-  check('Next (the session\'s) goes to a new loop', after !== before, `${before} -> ${after}`);
+  if (!check('Next (the session\'s) goes to a new loop', after !== before, `${before} -> ${after}`)) evidence('Next');
   dispatch('previous');
   await sleep(3000);
   check('Previous (the session\'s) is heard by the page and the music plays on', await playingNow(), `${after} -> ${await loopName()}`);
 
   dispatch('pause');
   await waitFor('Pause to pause the page', async () => !(await playingNow()), 20000).catch(() => null);
-  check('Pause pauses the page', !(await playingNow()));
+  if (!check('Pause pauses the page', !(await playingNow()))) evidence('Pause');
   await waitFor('the session to say paused', () => sessionState() === 2, 15000).catch(() => null);
   check('the session says paused', sessionState() === 2, `state ${sessionState()}`);
   await sleep(11000);
@@ -319,8 +331,15 @@ try {
           return null;
         }
       }
-      await ev((f) => document.querySelector(`[data-format="${f}"]`).click(), format);
-      await ev((l) => document.querySelector(`#exportLengths [data-length="${l}"]`).click(), String(length));
+      const missing = await ev(([f, l]) => {
+        const pick = (sel) => { const e = document.querySelector(sel); if (e) e.click(); return e ? '' : sel; };
+        return [pick(`[data-format="${f}"]`), pick(`#exportLengths [data-length="${l}"]`)].filter(Boolean).join(', ')
+          || ((document.getElementById('exportAudio').disabled && `exportAudio is disabled: ${document.getElementById('exportAbout').textContent}`) || '');
+      }, [format, String(length)]);
+      if (missing) {
+        check(`${format}: the export sheet has what the run clicks`, false, `${missing}; lengths: ${await ev(() => [...document.querySelectorAll('#exportLengths .vkey')].map((b) => b.dataset.length).join(' '))}`);
+        return null;
+      }
       await ev("document.getElementById('exportAudio').click()", undefined, true);
       const picked = await pickerSave();
       if (!check(`${format}: the picker opened and took Save`, picked)) return null;

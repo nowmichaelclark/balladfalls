@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
+import android.util.Log
 import android.webkit.ValueCallback
 import android.webkit.WebView
 import androidx.webkit.JavaScriptReplyProxy
@@ -88,7 +89,10 @@ class AppBridge(private val activity: Activity, private val view: WebView) {
             if (proxy == null) {
                 false
             } else {
-                main.post { proxy?.postMessage("""{"type":"action","action":"$action"}""") }
+                main.post {
+                    Log.i(PlaybackService.TAG, "action $action: posted to the page")
+                    proxy?.postMessage("""{"type":"action","action":"$action"}""")
+                }
                 true
             }
         }

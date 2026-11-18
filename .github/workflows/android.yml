@@ -40,6 +40,12 @@ on:
       smoke_runs:
         description: 'Smoke tests to run, each on an emulator of its own'
         default: '1'
+      only:
+        description: 'Run only this emulator job (background, smoke, native, rows); empty runs all'
+        default: ''
+      minutes:
+        description: 'Minutes the background job keeps the screen off (10 in a PR)'
+        default: '10'
 
 permissions:
   contents: read
@@ -169,6 +175,7 @@ jobs:
           retention-days: 14
 
   smoke:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.only == '' || github.event.inputs.only == 'smoke'
     name: the APK installs, starts and plays on an emulator (${{ matrix.run }})
     needs: build
     runs-on: ubuntu-24.04
@@ -219,6 +226,7 @@ jobs:
           retention-days: 14
 
   native:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.only == '' || github.event.inputs.only == 'native'
     name: the core plays natively on the emulator's audio
     needs: build
     runs-on: ubuntu-24.04
@@ -266,6 +274,7 @@ jobs:
             "$(ls apk/*-x86_64-debug.apk)" "$(ls test-apk/*.apk)" "$GITHUB_STEP_SUMMARY"
 
   rows:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.only == '' || github.event.inputs.only == 'rows'
     name: the app's rows on the native core, on an emulator (tools/rows.mjs --app)
     needs: build
     runs-on: ubuntu-24.04
@@ -312,6 +321,7 @@ jobs:
   # encoder) finishes with the screen off into a file chosen in Android's own
   # picker. The emulator's figures are the emulator's, said to be only that.
   background:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.only == '' || github.event.inputs.only == 'background'
     name: the screen off, the controls, a call and an export, on an emulator
     needs: build
     runs-on: ubuntu-24.04
@@ -344,4 +354,4 @@ jobs:
           pactl set-default-sink driftloom
 
       - name: the screen-off test
-        run: sh android/emulator-background.sh "$(ls apk/*-x86_64-debug.apk)" "$GITHUB_STEP_SUMMARY" 10
+        run: sh android/emulator-background.sh "$(ls apk/*-x86_64-debug.apk)" "$GITHUB_STEP_SUMMARY" "${{ github.event.inputs.minutes || '10' }}"

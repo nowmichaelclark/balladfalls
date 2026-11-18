@@ -97,6 +97,9 @@ class AppLink {
       if (resolve) resolve(m);
     } else if (m.type === 'action') {
       const fn = { play: 'onPlay', pause: 'onPause', next: 'onNext', previous: 'onPrev' }[m.action];
+      // In the logs of a test build (adb logcat), so a button that never reached the page can be told from one
+      // the page ignored.
+      console.info(`DriftloomApp action ${m.action}`);
       if (fn && this.handlers[fn]) this.handlers[fn]();
     }
   }

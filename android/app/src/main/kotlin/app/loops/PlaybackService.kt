@@ -178,6 +178,7 @@ class PlaybackService : Service() {
             else -> "previous"
         }
         val given = Playback.toPage?.invoke(name) == true
+        Log.i(TAG, "action $name: ${if (given) "given to the page" else "no page"}")
         if (!given) shutdown()
     }
 

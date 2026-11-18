@@ -12,7 +12,7 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
-## The layers show what is heard (item 110, v190, PR #PRNUM)
+## The layers show what is heard (item 110, v190, PR #440)
 
 - **Watch the Layers view with a long piece**, on your phone and in the
   Android app: open <https://driftloom.nowmichaelclark.workers.dev/#c=ELAAAAAF_DHAbt>

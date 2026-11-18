@@ -483,7 +483,7 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   length, then the next. A loop's own code and an album from one seed carry
   none. `docs/ALBUMS.md`'s six old albums that set lengths have them again.
   Share an album with lengths set and open its link elsewhere.
-- #PRNUM, the layers show what is heard (item 110, session 30b, v190): the
+- #440, the layers show what is heard (item 110, session 30b, v190): the
   core reports what each layer sounded at each step (a Heard event: its
   loudness and the share of its level it was heard at, on the web and in
   the Android app), and the Layers view draws that: a note the budget left

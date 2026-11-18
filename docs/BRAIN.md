@@ -299,8 +299,9 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   32,768 bars and Endless, three hours in, lite and full
   (`test/jump.test.mjs`); `node tools/export.mjs`: 12 of 12 exports decode
   (ffmpeg) and null against a straight render, lossless and the small
-  format's samples; an hour of Endless exported with memory sampled (the
-  line in the PR); a long piece from a link in Chromium at phone size: the
+  format's samples; `--hours 1`, Endless: memory flat (238.2 to
+  238.4 MB resident, the core 17.7 MB throughout; the tool wrote 0.75 h,
+  158.8 MB, at 14.8x); a long piece from a link in Chromium at phone size: the
   piece line, "bar 3 of 256 - the opening", nothing scrolls but the
   Library, Advanced and the Vibes list (the last is older than 106, the
   Painter's), no page error. 102's tuning: B3 checked #385 against his

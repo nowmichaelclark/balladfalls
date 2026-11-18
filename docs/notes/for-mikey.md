@@ -12,20 +12,12 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
-## Brain B4 (2026-11-18): three albums to play, one call to overrule
+## Brain B4 (2026-11-18): three albums to play
 
 - **Listen when you like (nothing waits on it):** batch 6, the nearer chords
   and the long pieces, as links the app plays (`docs/ALBUMS.md`, "Three
   albums in the app"). You heard them all as clips; this is them on your
   own devices. One word a track only if something sounds wrong.
-- **The code version, the brain's call (say if you disagree):** a code's
-  first character holds its version up to 15, then it takes two. Today the
-  version rises with every change that adds an instrument or a choice, so
-  every code would grow a character after about fifteen of them. Session
-  24c makes it one version a release: a code made on a build between
-  releases may then move when another addition joins before the release
-  ("it's okay for the song attached to a code to change"). The other way
-  keeps such codes exactly, at a character more within a year or two.
 - **Removed sounds:** after 24c, a code naming something since taken out
   (first: twang's slow and bright) plays something close (soft) instead of
   "needs a newer version". No code gets longer.

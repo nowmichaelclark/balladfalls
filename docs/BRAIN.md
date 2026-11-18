@@ -317,7 +317,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   setting escape the version filter; the dummy build lacks scales, bass
   styles, other layers' voices, words and removals; the head is one
   character only to version 15 and `newest` rises per change, so one
-  version a release (brain's call, in for-mikey). Twang's slow and bright
+  version a release (Mikey agreed, 2026-11-18). Twang's slow and bright
   (only a pin reaches them) are 24c's first removal. **Albums:** batch 6
   (15), the nearer chords (6), the long pieces (10) as app links
   (`docs/ALBUMS.md`); every older album code there still reads. **Android:**

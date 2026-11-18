@@ -12,11 +12,41 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## Brain B4 (2026-11-18): three albums to play, one call to overrule
+
+- **Listen when you like (nothing waits on it):** batch 6, the nearer chords
+  and the long pieces, as links the app plays (`docs/ALBUMS.md`, "Three
+  albums in the app"). You heard them all as clips; this is them on your
+  own devices. One word a track only if something sounds wrong.
+- **The code version, the brain's call (say if you disagree):** a code's
+  first character holds its version up to 15, then it takes two. Today the
+  version rises with every change that adds an instrument or a choice, so
+  every code would grow a character after about fifteen of them. Session
+  24c makes it one version a release: a code made on a build between
+  releases may then move when another addition joins before the release
+  ("it's okay for the song attached to a code to change"). The other way
+  keeps such codes exactly, at a character more within a year or two.
+- **Removed sounds:** after 24c, a code naming something since taken out
+  (first: twang's slow and bright) plays something close (soft) instead of
+  "needs a newer version". No code gets longer.
+
 ## The Android app on F-Droid (item 107e, session 29): choose the signing, then submit after 31
 
 Nothing here is submitted or signed yet and no account was made. Two choices
 are yours; the submission itself waits until after session 31, because the
 merge request to F-Droid is public and carries the app's new name.
+
+**Google's developer verification (brain B4, 2026-11-18; read before you
+submit):** since 2026-09-30 certified Android phones in Thailand, Brazil,
+Indonesia and Singapore require apps from seven big stores (Play, Samsung's,
+Xiaomi's and others) to come from a developer verified by Google. F-Droid is
+not one of them, and an APK installed by hand is not checked yet, so nothing
+changes for 1.0. Google plans to cover every install worldwide in 2027 (no
+date yet); then an unregistered app needs a one-time "advanced" setting on
+the phone (with a 24-hour wait), and adb still works. F-Droid advises
+developers not to register, and Google lets a store that signs apps itself
+register its key. Nothing to do now; it matters for Play later, and it is
+one more reason to keep the app's id yours (31a).
 
 **1. Who signs the app (decide before 31; it can wait until you submit).**
 

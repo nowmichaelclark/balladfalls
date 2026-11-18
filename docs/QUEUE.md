@@ -859,3 +859,6 @@ Mikey decides this line:
 - (Mikey, 2026-11-18) The brain may merge any hands PR, not only a
   docs-only one, once CI is green on its last commit and it checks out
   against its prompt.
+- (Mikey, 2026-11-18) Don't wait on the `export` workflow's `long` job:
+  merge once every other check is green on the last commit (the export
+  rows included).

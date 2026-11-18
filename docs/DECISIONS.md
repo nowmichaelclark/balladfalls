@@ -109,6 +109,7 @@ stays, marked superseded, with the date. Long reasoning goes to
 
 ## Platforms and games
 
+- 2026-11-18 -- **The new name may be in the repo (Mikey, 2026-11-18, to brain B-parallel 2):** "It's okay if it's in the repo itself": the three files that already name it (this file's export line of 2026-11-17, `docs/sessions/21-export-small.md`, `test/ogg.test.mjs`) stay as they are. The rename still comes from one place, at 31a.
 - 2026-11-18 -- **The new name's domain bought (Mikey, 2026-11-18):** on Cloudflare. The name and domain stay out of this public repo; Mikey pastes them into session 31a.
 - 2026-11-18 -- **Android's Now Playing shows the loop's cover (Mikey, 2026-11-18):** "it would be nice if the now playing notification on android shows the cover art of a song instead of the app's icon" (session 28: the notification and the lock screen).
 - 2026-11-18 -- **The Android app on the native core, heard on his devices (Mikey, 2026-11-18):** he installed the APK from #420 (107c, the page driving the native core): "it works perfectly". The APK check before 28 is done; no Diagnostics figures were sent.

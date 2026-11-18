@@ -303,7 +303,9 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   s"); 540 s is the span from the first heartbeat to the tenth, and the
   stream's own count (28,803,720 frames at 48 kHz) is 600 s with 0
   underruns. Nothing to ask for. Session 29's Alongside caught up with the
-  rows that already named it (24b, 30a to 30e). **Running:** see the next
+  rows that already named it (24b, 30a to 30e). Mikey answered B-parallel's
+  question on the new name in three public files: "It's okay if it's in the
+  repo itself" (`docs/DECISIONS.md`). **Running:** see the next
   update of this bullet.
 - **Brain B-parallel (Opus 5.5, 2026-11-17 to 18, in Claude Code): the
   chains run two at a time; ended at Mikey's request (long session).** The

@@ -149,9 +149,12 @@ async function pickerSave() {
 // ----------------------------------------------------------------- the page
 
 const page = await AppPage.open({ pkg, ms: 120000, log });
-const ev = (fn, arg, gesture = false) => page.evaluate(fn, arg, { gesture });
-const playingNow = () => ev(() => document.getElementById('playBtn').getAttribute('aria-label') === 'Pause');
-const loopName = () => ev(() => document.getElementById('loopName').textContent.trim());
+const ev = (fn, arg, gesture = false, ms = 20000) => page.evaluate(fn, arg, { gesture, ms });
+// A question to a page that may not answer (a hidden page's timers are slowed, a frozen one's stop): an
+// answer, or null after a few seconds; never a test that waits for it.
+const ask = (fn, arg) => ev(fn, arg, false, 8000).catch(() => null);
+const playingNow = () => ask(() => document.getElementById('playBtn').getAttribute('aria-label') === 'Pause');
+const loopName = () => ask(() => document.getElementById('loopName').textContent.trim());
 const diag = () => ev("document.getElementById('diagRefresh').click(); document.getElementById('diagOut').textContent");
 const line = (t, key) => (t.split('\n').find((l) => l.startsWith(`${key}:`)) || '').trim();
 const waitFor = (what, fn, ms = 20000) => until(what, fn, ms, 500);
@@ -162,15 +165,19 @@ const evidence = (what) => {
   const lines = sh('logcat', '-d').split('\n').filter((l) => /DriftloomService|DriftloomApp|DriftloomStream|MediaSession|MediaButton/.test(l)).slice(-25);
   for (const l of lines) log(`    ${l.slice(0, 260)}`);
 };
-// How the hidden page runs its timers, as the page itself says.
-const hiddenPage = () => ev(() => new Promise((resolve) => {
-  const t = performance.now();
-  setTimeout(() => resolve({ visible: document.visibilityState, timer100: Math.round(performance.now() - t) }), 100);
+// How the page runs, as it says itself without a timer of its own to wait for: what it thinks of its
+// visibility, and how long since its own 50 ms interval last ran (a page whose timers are slowed shows it).
+const hiddenPage = () => ask(() => ({
+  visible: document.visibilityState,
+  hidden: document.hidden,
+  lastTickAgoMs: window.__tick ? Math.round(performance.now() - window.__tick) : null,
+  locks: !!navigator.locks,
 }));
 
 try {
   await waitFor('the page to be built', () => ev("document.readyState === 'complete' && !!document.getElementById('playBtn') && !!document.getElementById('diagOut')"), 90000);
   sh('logcat', '-c');
+  await ev(() => { window.__tick = performance.now(); setInterval(() => { window.__tick = performance.now(); }, 50); });
   const bridged = await ev("typeof window.DriftloomApp === 'object' && !!window.DriftloomApp");
   check('the app\'s second bridge (saving, the lock screen) is in the page', bridged);
 
@@ -261,6 +268,7 @@ try {
   const cpu = sh('dumpsys', 'cpuinfo').split('\n').filter((l) => /driftloom|sandboxed|webview|chromium/i.test(l)).map((l) => l.trim()).slice(0, 6);
   fact('CPU with the screen off (dumpsys cpuinfo, the last minutes)', cpu.join(' ; ') || 'not listed');
   fact('the page while the screen is off', JSON.stringify(await hiddenPage()));
+  fact('the page\'s timer', JSON.stringify(await ask(() => new Promise((resolve) => { const t = performance.now(); setTimeout(() => resolve(Math.round(performance.now() - t)), 100); }))));
 
   // The page was hidden the whole time: its loops moved on by the core's tracks.
   const gone = await ev(() => document.getElementById('playBtn').getAttribute('aria-label'));
@@ -270,10 +278,10 @@ try {
 
   // ------------------------------------------------ the lock screen's keys
   log('\n-- the lock screen\'s controls, screen off --');
-  fact('the hidden page', JSON.stringify(await hiddenPage()));
+  fact('the page before the first button', JSON.stringify(await hiddenPage()));
   const before = await loopName();
   dispatch('next');
-  await waitFor('Next to change the loop', async () => (await loopName()) !== before, 20000).catch(() => null);
+  await waitFor('Next to change the loop', async () => { const n = await loopName(); return n && n !== before; }, 40000).catch(() => null);
   const after = await loopName();
   if (!check('Next (the session\'s) goes to a new loop', after !== before, `${before} -> ${after}`)) evidence('Next');
   dispatch('previous');

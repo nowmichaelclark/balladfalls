@@ -86,7 +86,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 21 | `21-export-small.md` | 104c: the small format | Sonnet 5.5, high | 20 | 17, 18, 22, 23, 24, 26, 27 | yes, 2026-11-18 (#424) |
 | | | **Codes** | | | | |
 | 22 | `22-codes-core.md` | 105a: codes, version 2, in the core | Opus 5.5, high | B2 | 17, 18, 20, 21, 26, 27, 28, 29 | yes, 2026-11-17 (#412) |
-| 23 | `23-codes-app.md` | 105b: codes in the app | Opus 5.5, high | 22 | 21, 26, 27, 28, 29 | |
+| 23 | `23-codes-app.md` | 105b: codes in the app | Opus 5.5, high | 22 | 21, 26, 27, 28, 29 | yes, 2026-11-18 (#425, #427) |
 | 24 | `24-codes-links.md` | 105c: links, an album from one seed, the plain lines | Sonnet 5.5, medium | 23 | 17, 18, 20, 21, 26, 27, 28, 29 | |
 | B4 | `brain-4-codes.md` | Brain: check 16 to 24; the albums again in the new codes | Opus 5.5, high | 18, 21, 24 | 26 to 29 | |
 | | | **Android** | | | | |

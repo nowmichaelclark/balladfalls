@@ -467,3 +467,40 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #331 are in
   it", and a loop with no name of its own saves under its generated name.
   Nothing that plays moved (the lossless file's checks are unchanged). Check
   in `for-mikey.md`.
+- #425, a loop's own name travels with its code (item 105b's core part,
+  session 23, no app change), preview URL:
+  <https://claude-s23-code-names-driftloom.nowmichaelclark.workers.dev>:
+  nothing to hear. Codes version 2's tag 30 is now a name of its own for a
+  loop, an album's track or an album, as its UTF-8 bytes (1 to 60) packed
+  eight bits a byte into the 64 characters, written only for a renamed loop.
+  Thai, other scripts and emoji pass; controls, invisible and direction
+  characters, piled-up marks (more than four) and stray joiners or tags are
+  refused ("a name a code can't carry"), by `core/src/code/name.rs` on
+  `classes.rs` (Unicode 17.0, `tools/name-table.mjs`). `code::request_text`
+  (`dl_code_request`) writes a code's request as text, for the app's
+  records. Golden codes: a name column, the two titled albums moved, new
+  Thai and emoji lines.
+- #430, the nightly green again (session 23, v185), preview URL:
+  <https://claude-s23-nightly-driftloom.nowmichaelclark.workers.dev>: the
+  seed renders' hashes for #414's four twang loops (dith-shuisk, tei-har,
+  nong-lu, yon-reil), and the holes on corpus piece #27 (soath-wa, seed
+  2094475530), from #402 (bisected in CI): it lost its organ, and three
+  floor joins kept a 9-second pad alone, which the join's estimate read
+  at its 2 to 4 s loudness. `[longform loudness]` gains a measured 4 to 8
+  s span; those three joins become breaths, and no other join of the
+  holes corpus's 23,016 moves. Listen: soath-wa as a 1,024-bar arc
+  (`bars=1024,journey=arc`) at 38:50 and 45:35, and as an Endless arc at
+  9:20: the bass and the pad both breathe for half a beat before the line,
+  where the pad was left alone, nearly silent.
+- #427, the app speaks share codes version 2, only version 2 (item 105b,
+  session 23, v186), preview URL:
+  <https://claude-s23-codes-app-driftloom.nowmichaelclark.workers.dev>:
+  nothing that plays moved. Copy a loop's code: a plain loop is 9
+  characters (was about 80), two vibes 13; paste it back and it plays the
+  same loop. Rename a loop in Thai with an emoji and share it: the name
+  comes with it. Paste an old `DL1-` code: "That code is from an older
+  Driftloom and can't be opened." The Library opens as it was (nothing
+  converts; `test/library.test.mjs` holds twenty loops saved by v183 to the
+  notes v183 played). A shared code doesn't carry the length slider, so an
+  album's pacing no longer travels. The module grew 124 KB (48 KB gzipped):
+  the codes.

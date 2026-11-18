@@ -68,10 +68,9 @@ flac = []
 capi = []
 
 # The share codes' WebAssembly exports (`src/wasm.rs`, `dl_code_*`; queue
-# item 105): in the tools' build, and not in js/dlplayer.wasm until the app
-# reads version 2 codes (session 23 adds it to tools/build-core.sh's player
-# build), so the app's module stays the bytes it was. Natively the codes are
-# always there, the C face's `dl_code_*` and `dl_album_*` too.
+# item 105): in the tools' build, and in js/dlplayer.wasm since session 23,
+# when the app moved to version 2 codes (tools/build-core.sh). Natively the
+# codes are always there, the C face's `dl_code_*` and `dl_album_*` too.
 codes = ["player"]
 
 # The dummy build (queue item 105): `build.rs` lays `tests/dummy/*.txt` over

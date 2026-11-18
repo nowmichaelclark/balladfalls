@@ -29,13 +29,20 @@ the points where the next step is yours.
 
 - **Phase 3 Control (brain B1; fixed at v155):** six loops, one album code,
   in the app before phase 3 (**Before**) and today's (**Now**, the live
-  site). Code and links in `docs/ALBUMS.md`. On the Moto (it stays at full),
+  site). Links in `docs/ALBUMS.md`; since v184 (session 23) two codes of the
+  same six loops: the version 2 one there for **Now**, the version 1 one in
+  `docs/archive/notes/98-phase3-control-v1.md` for **Before**. On the Moto (it stays at full),
   headphones, the same volume: each loop about 45 s in Before, then in Now;
   one word a loop. The brain's renders now match on all 30 loops it tried
   (-82 dB or lower). Two loops, tui-doask (track 1, from about 0:31) and
   soath-wa (track 4, from about 0:27), used to come back narrow in stereo
   for about ten seconds after a long rest; v155 fixed that, so there Now
   may sound the same as Before or wider after the rest.
+- **No join a hole on soath-wa (v185, #430, session 23):** corpus piece
+  #27 (seed 2094475530) as a 1,024-bar arc, at about 38:50 and 45:35, and
+  as an Endless arc at about 9:20: where the bass dropped out before the
+  line and left a fading pad alone (28 dB under the music), the bass and
+  the pad now breathe together for half a beat. Nothing else moved.
 - **The hiss (v176, #403):** the hiss you heard behind every loop was the
   page's hidden keepalive (the file that keeps the lock-screen controls), not
   the music: noise at -62 dBFS. It is now a 20 Hz tone at the same power, far
@@ -102,6 +109,12 @@ the points where the next step is yours.
 
 ## Phone and tablet
 
+- **Codes, version 2 (item 105b, session 23, #427, v186):** on the phone,
+  rename a loop in Thai with an emoji (the box takes it; an invisible
+  character it won't), copy its code (Save, Share, copy its code) and paste
+  it in the tablet: the same loop, the name with it. Old codes from chats
+  (DL1-, DLA1-) now get "from an older Driftloom" and don't open; your
+  Library is untouched (and any album in it shares with a new short code).
 - **The testers' steps (item 98, session 01):** `docs/notes/98-testers.md` has
   one paste for your Moto, one for your tablet and one for the friends'
   Pixels on GrapheneOS (JIT allowed, then blocked). Each ends with the five
@@ -159,11 +172,13 @@ the points where the next step is yours.
   easing, the return, the close, a breath, a lift, holding, turning. The
   journey keys read "arc" and "wander"; the pills beside the bars say the
   same. A piece past a day shows hours ("32,768 bars · 30h") in the Library.
-- **A journey is not in a share code yet (#419):** the pick is kept with a
-  loop in the Library, but a version-1 code (what the app still writes) has
-  no room for it; codes version 2 carry it (`core/src/code.rs`), so session 23
-  writes `askJourney` (the spec's field) into them. Until then a pasted code
-  of a long piece draws the journey its seed and vibes lean to.
+- **An album's pacing in a share code (#427, session 23):** version 2 codes
+  don't carry the length slider (how many passes a track plays before the
+  next; #412 left it out as the listener's, not the loop's), so an album
+  shared now plays each track until your own slider moves on. Twenty-six
+  tracks of the old listening albums had a pacing that is gone in their new
+  codes (`docs/ALBUMS.md`). Say if albums should carry it: it would be one
+  more field, a few characters a track.
 
 (A shared loop's name, the export sheet's words and the export's ending
 were decided 2026-11-17, `docs/DECISIONS.md`, "Share codes, requests and

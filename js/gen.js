@@ -14,8 +14,16 @@
 // its own in JavaScript (js/generator.js), held to the core's by the
 // generation goldens; there is now one.
 //
-//   newSpec(seed, request)   the loop a seed and a request make, as the
-//                            page's record of it (js/request.js)
+//   newSpec(seed, request, edits)
+//                            the loop a seed and a request make (and a
+//                            code's edits, if any), as the page's record of
+//                            it (js/request.js)
+//   playedSpec(spec)         the record of the loop a record plays
+//                            (`askOf`): what the Library and a code hear
+//   loopCode, readLoopCode, albumCode, albumTracks, codeKind, nameRefusal
+//                            share codes, version 2, written and read by the
+//                            core (session 23; js/share.js is the page's
+//                            side, core/README.md the format)
 //   render(spec)             that record's notes, layer by layer, as the
 //                            grid and the MIDI export read them
 //   pieceMarks(spec, opts)   a long piece's marks: where its movements and
@@ -24,7 +32,7 @@
 // In Node the module is read from disk (the tests and the tools).
 
 import { randomSeed } from './rng.js';
-import { LAYERS, STEPS_PER_BAR, RequestError, readRequest, askOf, askFor } from './request.js';
+import { LAYERS, STEPS_PER_BAR, RequestError, readRequest, askOf, askFor, requestOf } from './request.js';
 
 const IN_NODE = typeof window === 'undefined' && typeof process !== 'undefined' && !!(process.versions && process.versions.node);
 const TONE = ['warmth', 'space', 'wobble'];
@@ -62,6 +70,8 @@ try {
 export const unavailable = why;
 
 const text = (at, length) => String.fromCharCode(...new Uint8Array(x.memory.buffer, at, length));
+const utf8 = new TextEncoder();
+const fromUtf8 = new TextDecoder();
 
 // Hand the core what is asked of the next loop, call by call: the same
 // calls, in the same order, as js/worklet.js's `ask` makes for the core that
@@ -81,7 +91,7 @@ function ask(a) {
   (a.voices || []).forEach((mask, layer) => { if (mask) take(x.dl_play_voices(layer, mask)); });
   (a.layers || []).forEach((state, layer) => { if (state) take(x.dl_play_layer(layer, state)); });
   for (const [layer, seed, rolled] of a.seeds || []) take(x.dl_play_seed(layer, seed >>> 0, rolled ? 1 : 0));
-  (a.tone || []).forEach((v, which) => take(x.dl_play_edit_tone(which, v)));
+  (a.tone || []).forEach((v, which) => { if (v != null) take(x.dl_play_edit_tone(which, v)); });
   if (a.bpm != null) take(x.dl_play_edit_bpm(a.bpm));
   return ok;
 }
@@ -116,11 +126,27 @@ const numbers = (s) => (s || '').split('|').map(Number);
 
 // The loop `seed` and `request` make (js/request.js's `readRequest` says
 // what a request is; a list of vibe names is a listener's selection): the
-// page's record of it. A request the core cannot meet throws a RequestError
-// with the core's line for it.
-export function newSpec(seed = randomSeed(), request = null) {
+// page's record of it. `edits`, a code's ({ seeds: [[layer, seed, rolled]],
+// tone: [warmth, space, wobble] with null for one not edited, bpm }), are
+// made with it, as the core makes a code's loop. A request the core cannot
+// meet throws a RequestError with the core's line for it.
+export function newSpec(seed = randomSeed(), request = null, edits = null) {
   const asked = readRequest(request);
-  make(seed, askFor(asked));
+  make(seed, edits ? { ...askFor(asked), ...edits } : askFor(asked));
+  return record(asked);
+}
+
+// The record of the loop a record plays: made from its seed, request and
+// edits (`askOf`), as the Library, the player and a share code make it, and
+// read back. Its own request is kept as the record had it.
+export function playedSpec(spec) {
+  make(spec.seed, askOf(spec));
+  return record(readRequest(requestOf(spec)));
+}
+
+// What the core said of the loop just made, and `asked`, as the page's
+// record.
+function record(asked) {
   const d = about();
   const [lift, energy, warmth] = numbers(d.feel);
   const tone = numbers(d.tone);
@@ -146,6 +172,8 @@ export function newSpec(seed = randomSeed(), request = null) {
     playFor: null,
     tone: Object.fromEntries(TONE.map((k, i) => [k, tone[i]])),
   };
+  // The layers a code's edits re-rolled, played whatever their chances draw.
+  if (d.rolled) spec.forceLayers = Object.fromEntries(d.rolled.split('|').map((l) => [l, true]));
   // Each layer's own cycle in steps, for a loop whose layers drift apart.
   if (d.cycles) spec.cycles = Object.fromEntries(LAYERS.map((l, i) => [l, numbers(d.cycles)[i] || null]));
   // The vibes that steered it, with the weights the core drew.
@@ -257,4 +285,121 @@ export function pieceMarks(spec, { from = 0, count = null, coarse = false } = {}
     marks.push({ bar, section, role: ROLES[role], theme: THEMES[theme], root, relation: RELATIONS[relation], energy, movement: MOVEMENTS[movement] });
   }
   return marks;
+}
+
+// ------------------------------------------------------------ share codes
+
+// Share codes, version 2 (session 23; core/src/code.rs, core/README.md's
+// "Share codes"): the core writes and reads them, the page hands it a
+// loop's seed, what was asked and changed, the mutes, the wander's salt and
+// a name of its own, and reads the same back. Names are UTF-8 both ways.
+// A refusal is a CodeError whose message is the core's plain line ("not a
+// code", "needs a newer version", "a name a code can't carry").
+
+export class CodeError extends Error {}
+
+function input(bytes) {
+  new Uint8Array(x.memory.buffer, x.dl_code_input(), bytes.length).set(bytes);
+  return bytes.length;
+}
+
+const codeText = (n) => fromUtf8.decode(new Uint8Array(x.memory.buffer, x.dl_code_text(), n));
+
+function refused() {
+  const n = x.dl_code_refusal();
+  return new CodeError(n ? codeText(n) : 'not a code');
+}
+
+// The request asked so far dropped, so nothing of a code reaches the next
+// loop made.
+function dropAsked(seed) {
+  x.dl_play_load(seed >>> 0, 0);
+  x.dl_play_stop();
+}
+
+function need() {
+  if (!x) throw new Error(`no generator: ${why}`);
+}
+
+// A loop's code: `seed`, `a` (the core's numbers: js/request.js's askFor,
+// with a code's edits), the layers muted (a bit each, in LAYERS' order), the
+// wander's salt (0 for none) and its own name ('' for none).
+export function loopCode(seed, a, { mutes = 0, salt = 0, name = '' } = {}) {
+  need();
+  x.dl_play_stop();
+  const ok = ask(a);
+  const n = ok ? x.dl_code_write(seed >>> 0, mutes, salt >>> 0, input(utf8.encode(name))) : 0;
+  const err = !ok ? new CodeError(text(x.dl_play_refusal_at(), x.dl_play_refusal()) || "can't do that") : n ? null : refused();
+  const code = n ? codeText(n) : null;
+  dropAsked(seed);
+  if (err) throw err;
+  return code;
+}
+
+// A loop's code read: { seed, mutes, salt, name, request }, the request as
+// the text the core's `Request::parse` (and js/request.js's readRequest, for
+// its asks) reads, its edits ("edit.seed.drums=1234") and its version
+// ("version=2") among it.
+export function readLoopCode(code) {
+  need();
+  if (!x.dl_code_read(input(utf8.encode(String(code))))) throw refused();
+  const out = { seed: x.dl_code_seed() >>> 0, mutes: x.dl_code_mutes(), salt: x.dl_code_salt() >>> 0 };
+  out.name = codeText(x.dl_code_name());
+  out.request = codeText(x.dl_code_request());
+  dropAsked(out.seed);
+  return out;
+}
+
+// An album's code: the loops' codes in their order, named `name` ('' for
+// none).
+export function albumCode(codes, name = '') {
+  need();
+  const head = utf8.encode(name);
+  const body = utf8.encode(codes.join('.'));
+  const all = new Uint8Array(head.length + body.length);
+  all.set(head);
+  all.set(body, head.length);
+  const n = x.dl_code_album_write(input(all), head.length);
+  if (!n) throw refused();
+  return codeText(n);
+}
+
+// An album's { name, tracks }, each track a loop's code.
+export function albumTracks(code) {
+  need();
+  const len = input(utf8.encode(String(code)));
+  const count = x.dl_code_album(len);
+  if (!count) throw refused();
+  const mem = new Uint8Array(x.memory.buffer, x.dl_code_text(), 256);
+  const name = fromUtf8.decode(mem.slice(0, mem.indexOf(0)));
+  const tracks = [];
+  for (let i = 0; i < count; i++) {
+    const n = x.dl_code_track(len, i);
+    if (!n) throw refused();
+    tracks.push(codeText(n));
+  }
+  return { name, tracks };
+}
+
+// What `text` is, read whole: 'loop', 'album', 'newer' (a newer build's) or
+// null (no code).
+export function codeKind(text) {
+  need();
+  const len = input(utf8.encode(String(text || '')));
+  if (x.dl_code_kind(len) === 2) {
+    if (x.dl_code_album(len)) return 'album';
+  } else if (x.dl_code_read(len)) {
+    dropAsked(x.dl_code_seed());
+    return 'loop';
+  }
+  // A newer build's code says so from its head, loop or album.
+  return refused().message === NEWER ? 'newer' : null;
+}
+
+const NEWER = 'needs a newer version';
+
+// Why a code can't carry `name` (the core's line), or null if it can.
+export function nameRefusal(name) {
+  need();
+  return x.dl_code_name_ok(input(utf8.encode(String(name)))) ? null : refused().message;
 }

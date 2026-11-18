@@ -495,3 +495,13 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   release workflow, and Mikey's steps (signing, the submission after 31) in
   `docs/notes/for-mikey.md`. Nothing sounds different. Check the six
   screenshots look like the app, and read the signing choice.
+- #442, Previous works in an album (item 109, session 30a, v190), preview URL:
+  the branch's preview (no hash kept): in an album the Previous key was off
+  wherever the history was at its start (an album's tracks don't enter it);
+  it is on now, from the first track round to the last, and from the screen,
+  the keyboard, a headset, the lock screen and Android's notification it goes
+  to the track before, which plays its own length again; a deleted track is
+  gone round the way Previous was going. Outside an album, the history's.
+  `tools/rows.mjs --only previous`: 12 rows. Listen for nothing; press
+  Previous in an album on the phone and in the Android app. Previous a few
+  seconds in still goes to the track before, not the start: for Mikey's ears.

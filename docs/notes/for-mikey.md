@@ -123,11 +123,6 @@ the last one (same key). On the **Moto** and on the **tablet**:
   doesn't), and Bluetooth buttons.
 ## An album's code carries each track's length (item 105d, v189, PR #438)
 
-- **Check it once:** set Track length (Sounds) on two or three loops of an
-  album, share the album's link from the Library, and open it on another
-  device (or a private window). Each track should play its length, then the
-  next. Albums whose tracks play on cost nothing extra; twelve tracks of two
-  passes are two characters longer.
 - **Left out on purpose:** a single loop's code carries no length (it sounds
   the same however long it plays; when your app moves on is yours), nor does
   an album from one seed (its tracks are drawn, and a slider's passes would

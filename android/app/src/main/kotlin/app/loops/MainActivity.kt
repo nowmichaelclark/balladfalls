@@ -9,8 +9,10 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.window.OnBackInvokedDispatcher
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -65,6 +67,11 @@ class MainActivity : Activity() {
             }
         }
         setContentView(root)
+        if (Build.VERSION.SDK_INT >= 33) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
+                if (Playback.busy) moveTaskToBack(true) else finish()
+            }
+        }
         attachPage(root)
     }
 
@@ -168,10 +175,14 @@ class MainActivity : Activity() {
     }
 
     // Back with the music playing or a file being saved leaves the app, as Home does, and the page goes on;
-    // it would otherwise close the page (before Android 12), and the music with it.
-    @Suppress("OVERRIDE_DEPRECATION")
-    override fun onBackPressed() {
-        if (Playback.busy) moveTaskToBack(true) else super.onBackPressed()
+    // it would otherwise close the page, and the music with it. Android 13 and later send the back gesture to
+    // a callback (and from Android 16 to nothing else); before that it is the back key.
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && Build.VERSION.SDK_INT < 33 && Playback.busy) {
+            moveTaskToBack(true)
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     override fun onDestroy() {

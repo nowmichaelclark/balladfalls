@@ -11,7 +11,7 @@
 
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { newSpec } from '../js/gen.js';
+import { newSpec, ROLES } from '../js/gen.js';
 import { rerollLayer, vibeSelection, LAYERS } from '../js/request.js';
 import { askOf, picksAsk, KIND, JUMP, END_FADE, MOMENT, CHANGE_FADE } from '../js/player.js';
 import { Rng } from '../js/rng.js';
@@ -408,6 +408,57 @@ console.log('\nA jump within a long piece (session 17, item 106a)');
   render(e, 1);
   const last = e.sent.filter((m) => m.type === 'events').pop();
   check('Endless: its section, and no end or time left', last && last.place && last.place.section === 1000 && last.place.bars === null && last.place.left === null, JSON.stringify(last && last.place));
+}
+
+console.log('\nThe journey through the core (session 18, item 106b)');
+{
+  // The journey pick is the request's journey (`dl_play_journey`): asked of
+  // a loop (a code's, the page's) or held as a pick for the core's own loops,
+  // the piece the core plays takes it. Read from the playing core's own map
+  // (`dl_play_marks`): an arc has its peak, a wander its holds and turns.
+  const make = () => new DriftloomCore({ numberOfOutputs: 1, processorOptions: { bytes: wasm, quality: 'full', layout: 2 } });
+  const render = (p, seconds) => {
+    const from = p.next || 0;
+    for (let b = 0; b * QUANTUM < seconds * RATE; b++) {
+      globalThis.currentFrame = from + b * QUANTUM;
+      p.process(Array.from({ length: 5 }, () => []), [[new Float32Array(QUANTUM), new Float32Array(QUANTUM)]]);
+    }
+    p.next = from + Math.ceil((seconds * RATE) / QUANTUM) * QUANTUM;
+  };
+  const rolesOf = (p) => {
+    const x = p.core;
+    const n = x.dl_play_marks(0, 100000, 0);
+    const f = new Float64Array(x.memory.buffer, x.dl_play_marks_at(), n * 8);
+    return new Set(Array.from({ length: n }, (_, i) => ROLES[f[i * 8 + 2]]));
+  };
+  const events = (p) => p.sent.filter((m) => m.type === 'events').flatMap((m) => m.events);
+  for (const journey of ['arc', 'wander']) {
+    const spec = newSpec(20261009, { length: 512, journey });
+    const a = make();
+    a.receive({ type: 'playLoad', seed: spec.seed, ask: askOf(spec), at: 0 });
+    render(a, 0.5);
+    const roles = rolesOf(a);
+    check(`${journey}: asked of a loop, the core plays that journey`, journey === 'arc' ? roles.has('peak') && roles.has('return') : roles.has('holding') && roles.has('turning') && !roles.has('peak'), [...roles].join());
+    // Held as a pick: the core's own next loop takes it.
+    const b = make();
+    b.receive({ type: 'playDraws', seed: 4242 });
+    const first = newSpec(99);
+    b.receive({ type: 'playLoad', seed: first.seed, ask: askOf(first), at: 0 });
+    render(b, 1);
+    const sent = picksAsk({ vibes: [], length: 512, journey });
+    b.receive({ type: 'playPicks', ask: sent.ask, tag: 11 });
+    const reply = b.sent.find((m) => m.type === 'picks');
+    check(`${journey}: the pick is held whole by the core, nothing refused`, sent.ask.journey === (journey === 'arc' ? 1 : 2) && reply && reply.met === true && reply.why === null && b.refused === 0, JSON.stringify(reply));
+    b.receive({ type: 'playNext', moment: MOMENT.now, fade: CHANGE_FADE });
+    render(b, 1.5);
+    const rolesB = rolesOf(b);
+    const own = events(b).some((v, i) => i % 4 === 1 && v === KIND.own);
+    check(`${journey}: Next, the core's own loop with the pick, plays that journey`, own && (journey === 'arc' ? rolesB.has('peak') : rolesB.has('turning') && !rolesB.has('peak')), [...rolesB].join());
+  }
+  const none = make();
+  none.receive({ type: 'playPicks', ask: { ...picksAsk({ vibes: [], length: 512 }).ask, journey: 3 }, tag: 12 });
+  const no = none.sent.find((m) => m.type === 'picks');
+  check('a journey the core has none of is refused in its own words', no && no.met === false && no.why === 'no such journey', JSON.stringify(no));
 }
 
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);

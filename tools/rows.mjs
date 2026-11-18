@@ -71,6 +71,18 @@
 //   Diagnostics         the core's player, nothing late, nothing lost
 //   plain line          a browser with no WebAssembly, and a module that
 //                       never arrives: one plain line each, nothing played
+//   long piece          (queue item 106b; a page of its own, opened on a
+//                       32,768-bar arc) where you are: bar of how many,
+//                       time played and left, in the rail's place; the
+//                       markers on the line are the map's (a fresh call of
+//                       the core's map, painted pixel for pixel); a tap on
+//                       the line three hours in starts there within a
+//                       second, the words and the place saying so, nothing
+//                       late; the next-section key goes to the map's next
+//                       section; the journey pick (arc, wander) reaches the
+//                       core with the picks and is held whole; Endless: time
+//                       played, no time left, and a wander's own markers;
+//                       the Library's line says each loop's length
 //   length (--long)     a minute: the track ends on its line and the core's
 //                       own loop starts there, with the picks (queue item
 //                       95), the card following; Now Playing counts down
@@ -144,7 +156,7 @@ const HOOK = `(() => {
       R.nodes.push({ node: this, quality: options && options.processorOptions && options.processorOptions.quality });
       this.port.addEventListener('message', (e) => {
         const m = e.data;
-        if (m && m.type === 'events') R.events.push({ node: R.nodes.length - 1, at: ctx.currentTime, events: m.events, grids: m.grids || [] });
+        if (m && m.type === 'events') R.events.push({ node: R.nodes.length - 1, at: ctx.currentTime, events: m.events, grids: m.grids || [], place: m.place });
         if (m && m.type === 'probe' && R.probes.has(m.id)) { R.probes.get(m.id)(m); R.probes.delete(m.id); }
       });
       this.port.start();
@@ -152,7 +164,7 @@ const HOOK = `(() => {
   };
   const post = MessagePort.prototype.postMessage;
   MessagePort.prototype.postMessage = function (m, ...rest) {
-    if (m && typeof m.type === 'string' && /^play|^layout/.test(m.type)) R.posts.push({ ...m, at: R.ctx ? R.ctx.currentTime : 0 });
+    if (m && typeof m.type === 'string' && /^play|^layout/.test(m.type)) R.posts.push({ ...m, at: R.ctx ? R.ctx.currentTime : 0, msg: m });
     return post.call(this, m, ...rest);
   };
   const connect = AudioNode.prototype.connect;
@@ -556,6 +568,193 @@ async function openApp() {
   return page;
 }
 
+// A long piece on screen (queue item 106b), in a page of its own: opened on
+// the 32,768-bar arc a listener's picks make (kept in the prefs as the app
+// keeps them), played in real time. Every row reads what the core says (its
+// `place` on each events post, its Jump event) against what the page shows.
+async function longRows(browser, port, errors) {
+  const page = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.addInitScript(HOOK);
+  await page.addInitScript(() => {
+    try {
+      if (!localStorage.getItem('driftloom.prefs.v1')) {
+        localStorage.setItem('driftloom.prefs.v1', JSON.stringify({ view: 'now', picks: { length: 32768, journey: 'arc' } }));
+      }
+    } catch (e) { /* no storage: the rows say so */ }
+  });
+  await page.goto(`http://127.0.0.1:${port}/`);
+  await page.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  const ev = (fn, arg) => page.evaluate(fn, arg);
+  const probe = async () => {
+    const m = await ev(() => window.__rows.probe());
+    return m ? { ...m, d: about(m.about) } : null;
+  };
+  const diag = () => ev(() => { document.getElementById('diagRefresh').click(); return document.getElementById('diagOut').textContent; });
+  const nothingLate = (text) => /late: 0\s+missed: 0\s+dropped: 0/.test(text.split('\n').find((l) => l.startsWith('engine:')) || '');
+  // The core's last word on where it is, and the page's words for it.
+  const place = () => ev(() => { const R = window.__rows; for (let i = R.events.length - 1; i >= 0; i--) if (R.events[i].place) return R.events[i].place; return null; });
+  const words = () => ev(() => ({
+    shown: !document.getElementById('nowPiece').hidden,
+    rail: !document.getElementById('nowRail').hidden,
+    bars: document.getElementById('pieceBars').textContent,
+    times: document.getElementById('pieceTimes').textContent,
+  }));
+  // "1:12:03 played" in seconds.
+  const secs = (t) => { const m = /^([\d:]+) played/.exec(t); return m ? m[1].split(':').reduce((a, v) => a * 60 + Number(v), 0) : NaN; };
+  const jumps = () => ev(() => window.__rows.posts.filter((m) => m.type === 'playJump'));
+  // Seconds from the page's jump to the core's Jump event arriving.
+  const landed = async (count) => {
+    for (let i = 0; i < 40; i++) {
+      const r = await ev((n) => {
+        const R = window.__rows;
+        const posts = R.posts.filter((m) => m.type === 'playJump');
+        if (posts.length < n) return null;
+        const post = posts[n - 1];
+        for (const b of R.events) if (b.at >= post.at) for (let k = 1; k < b.events.length; k += 4) if (b.events[k] === 8) return { after: b.at - post.at, at: post.at };
+        return null;
+      }, count);
+      if (r) return r;
+      await sleep(250);
+    }
+    return null;
+  };
+
+  console.log(`\nA long piece on screen (queue item 106b)`);
+  await page.click('#playBtn');
+  await sleep(4500);
+  let p = await probe();
+  const spb = Number(p.d.steps_per_bar);
+  const perBar = spb * (60 / Number(p.d.bpm) / 4);
+  let w = await words();
+  row('long piece: Now Playing says where you are: bar of how many, time played and time left, the line in the rail\'s place',
+    w.shown && !w.rail && /^bar [\d,]+ of 32,768/.test(w.bars) && /^[\d:]+ played \u00b7 [\d:]+ left$/.test(w.times), `${w.bars}; ${w.times}`);
+
+  // The markers are the map's: a fresh call of the core's map, drawn.
+  const m = await ev(async () => {
+    const piece = await import('/js/piece.js');
+    const st = piece.pieceState();
+    const model = st.model;
+    if (!model) return null;
+    const again = piece.modelNow(model.spec);
+    const line = document.getElementById('pieceLine');
+    const canvas = document.getElementById('pieceCanvas');
+    const W = Math.round(line.clientWidth);
+    const { heights } = piece.columns(model, W);
+    const dpr = canvas.width / canvas.clientWidth;
+    const ctx = canvas.getContext('2d');
+    const y = Math.round((canvas.clientHeight - 4.5) * dpr);
+    const row = ctx.getImageData(0, y, canvas.width, 1).data;
+    let missing = 0;
+    let stray = 0;
+    let ticks = 0;
+    for (let x = 0; x < W; x++) {
+      const alpha = row[Math.min(canvas.width - 1, Math.floor((x + 0.5) * dpr)) * 4 + 3];
+      if (heights[x] > 0) { ticks++; if (alpha < 40) missing++; } else if (!(x > 0 && heights[x - 1] > 0) && alpha > 10) stray++;
+    }
+    const roles = {};
+    for (const k of model.marks) roles[k.role] = (roles[k.role] || 0) + 1;
+    return { same: JSON.stringify(again.marks) === JSON.stringify(model.marks), marks: model.marks.length, first: model.marks[0].bar, last: model.last, ticks, missing, stray, W, roles };
+  });
+  row('long piece: the markers are the map\'s: the core\'s marks asked again are the line\'s, every tick is painted and nothing else is',
+    m && m.same && m.marks > 100 && m.first === 0 && m.last === 32768 && m.ticks > 20 && m.missing === 0 && m.stray === 0 && m.roles.peak > 0 && m.roles.opening > 0, JSON.stringify(m && { ...m, roles: undefined }));
+
+  // A jump to three hours in: a tap on the line.
+  const box = await page.locator('#pieceLine').boundingBox();
+  const target = Math.floor(10800 / perBar);
+  const x = box.x + (target / 32768) * box.width;
+  await page.mouse.click(x, box.y + box.height / 2);
+  const hit = await landed(1);
+  await sleep(1500);
+  const sent = (await jumps())[0];
+  const pl = await place();
+  const pixel = 32768 / box.width;
+  row('long piece: a tap three hours in starts there within a second (the core\'s Jump event, its place three hours in)',
+    hit && hit.after < 1 && sent && sent.kind === 1 && Math.abs(sent.msg.at - target) <= pixel + 1 && pl && Math.abs(pl.played - 10800) < 120 + pixel * perBar, `after ${hit && hit.after.toFixed(2)} s, jump to bar ${sent && sent.msg.at}, place ${pl && Math.round(pl.played)} s`);
+  w = await words();
+  const now = await place();
+  const shownBar = Number((/^bar ([\d,]+)/.exec(w.bars) || [])[1] && /^bar ([\d,]+)/.exec(w.bars)[1].replace(/,/g, ''));
+  const word = await ev(async (bar) => {
+    const piece = await import('/js/piece.js');
+    const mark = piece.markAt(piece.pieceState().model, bar);
+    return { want: mark ? piece.ROLE_WORDS[mark.role] : null, section: mark ? mark.section : null };
+  }, now.bar);
+  row('long piece: where you are after the jump: the bar, the time played and left, and the section\'s word are the core\'s place and the map\'s',
+    Math.abs(shownBar - (Math.floor(now.bar) + 1)) <= 3 && Math.abs(secs(w.times) - now.played) < 6 && /left$/.test(w.times) && word.want && w.bars.endsWith(word.want), `${w.bars}; ${w.times}; place bar ${now.bar.toFixed(1)}`);
+  row('long piece: nothing late across the jump', nothingLate(await diag()), (await diag()).split('\n').find((l) => l.startsWith('engine:')));
+
+  // The next-section key goes to the map's next section.
+  const want = await ev(async (bar) => {
+    const piece = await import('/js/piece.js');
+    const next = piece.neighbor(piece.pieceState().model, bar, 1);
+    return next ? { bar: next.bar, role: next.role } : null;
+  }, now.bar);
+  await ev(() => document.getElementById('pieceNext').click());
+  const second = await landed(2);
+  await sleep(1500);
+  const after = await place();
+  const sent2 = (await jumps())[1];
+  row('long piece: the next-section key goes to the map\'s next section, on its line', want && second && sent2 && sent2.msg.at === want.bar && after && after.bar >= want.bar - 0.1 && after.bar < want.bar + 12, `to ${sent2 && sent2.msg.at} (${want && want.role}), place ${after && after.bar.toFixed(1)}`);
+
+  // The journey pick reaches the core with the picks (through the Bars
+  // picker, as a listener sets it), and is held whole.
+  await ev(() => document.getElementById('vibesBtn').click());
+  await sleep(300);
+  await ev(() => [...document.querySelectorAll('.pk-line-pace button')].find((b) => /^Bars/.test(b.getAttribute('aria-label') || '')).click());
+  await sleep(300);
+  await ev(() => { document.getElementById('lenEndless').click(); document.querySelector('#lenJourney [data-journey="wander"]').click(); });
+  const lit = await ev(() => ({ wander: document.querySelector('#lenJourney [data-journey="wander"]').getAttribute('aria-pressed'), arc: document.querySelector('#lenJourney [data-journey="arc"]').getAttribute('aria-pressed'), dim: document.getElementById('lenJourney').classList.contains('off') }));
+  await ev(() => document.getElementById('lenDone').click());
+  await sleep(600);
+  const picks = await ev(() => window.__rows.posts.filter((m) => m.type === 'playPicks').pop() || null);
+  p = await probe();
+  const cant = await ev(() => { const n = document.querySelector('.pk-cant'); return n ? n.textContent : ''; });
+  const pills = await ev(() => [...document.querySelectorAll('#picksList .pk-line-pace .pk-pill')].map((x) => x.textContent));
+  row('long piece: the journey pick (a wander, with Endless) is sent with the picks, held whole by the core, and shown beside the bars',
+    lit.wander === 'true' && lit.arc === 'false' && !lit.dim && picks && picks.ask.journey === 2 && picks.ask.length === 'endless' && p.picksTag === picks.tag && !cant && pills.includes('wander'),
+    `lit ${JSON.stringify(lit)}, ask journey ${picks && picks.ask.journey}, tag ${p && p.picksTag}/${picks && picks.tag}, ${cant}, ${pills.join('|')}`);
+
+  // Next: the core's own loop takes them, Endless, a wander: time played, no
+  // time left, and a wander's own markers.
+  await ev(() => document.getElementById('nowBtn').click());
+  await sleep(300);
+  await ev(() => document.getElementById('nextBtn').click());
+  await sleep(5000);
+  p = await probe();
+  w = await words();
+  const end = await ev(async () => {
+    const piece = await import('/js/piece.js');
+    const model = piece.pieceState().model;
+    const roles = new Set(model ? model.marks.map((k) => k.role) : []);
+    return { endless: !!(model && model.endless), wander: roles.has('holding') && !roles.has('peak') && !roles.has('opening'), window: model ? model.last - model.first : 0 };
+  });
+  row('long piece: Endless: bar and time played, no time left, a window of the map with a wander\'s holds',
+    end.endless && end.wander && end.window > 0 && /^bar [\d,]+( \u00b7 [a-z ]+)?$/.test(w.bars) && !/ of /.test(w.bars) && /^[\d:]+ played$/.test(w.times), `${w.bars}; ${w.times}; ${JSON.stringify(end)}`);
+
+  // The Library says each loop's length: from 4 bars to 27 hours, or
+  // Endless. Four loops saved (the page's own storage, as a Save would), the
+  // album opened, the lines read.
+  await ev(async () => {
+    const store = await import('/js/storage.js');
+    const gen = await import('/js/gen.js');
+    [[11, 'bars=4'], [12, 'bars=3072,journey=arc'], [13, 'bars=32768,journey=wander'], [14, 'bars=endless,journey=arc'], [15, '-']].forEach(([seed, request]) => {
+      const entry = store.save(gen.newSpec(seed, request));
+      store.addToAlbum(store.FAVORITES, entry.id);
+    });
+  });
+  await ev(() => document.getElementById('libraryBtn').click());
+  await sleep(600);
+  await ev(() => document.querySelector('#libPane .lrow-main').click());
+  await sleep(600);
+  const lines = await ev(() => [...document.querySelectorAll('#libPane .lrow-meta')].map((x) => x.textContent.replace(/\u00a0/g, ' ')));
+  const has = (re) => lines.some((t) => re.test(t));
+  row('Library: a list\'s line says a loop\'s length: 4 bars and its time, 3,072 bars and hours, 32,768 bars and about a day, endless, a plain loop\'s own bars',
+    has(/ bpm · 4 bars · \d+s$/) && has(/ bpm · 3,072 bars · \d+h( \d+m)?$/) && has(/ bpm · 32,768 bars · \d+h( \d+m)?$/) && has(/ bpm · endless$/) && has(/ bpm · \d+ bars$/), lines.join(' | '));
+  row('long piece: no page errors in its page', errors.length === 0, errors.join('; '));
+  await page.close();
+}
+
 async function main() {
   const { chromium } = APP ? {} : loadPlaywright();
   const server = APP ? null : await serve(PORT);
@@ -902,6 +1101,8 @@ async function main() {
       row('picks: held again by the core after a reload', kept && again && p.picksTag === again.tag && JSON.stringify(again.ask.vibes) === JSON.stringify(kept.ask.vibes), JSON.stringify(again && again.ask.vibes));
     }
     row('no page errors', errors.length === 0, errors.join('; '));
+    // A long piece on screen (queue item 106b), in a page of its own.
+    if (!APP) await longRows(browser, PORT, errors);
     if (!APP) await plainRows(browser);
   } finally {
     if (browser) await browser.close();

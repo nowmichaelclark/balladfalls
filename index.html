@@ -65,7 +65,26 @@
         </div>
         <div class="np-mid">
           <div id="nowBig" class="np-time">0:00</div>
-          <div class="np-bar" aria-hidden="true"><i id="nowFill"></i></div>
+          <div id="nowRail" class="np-bar" aria-hidden="true"><i id="nowFill"></i></div>
+          <!-- A long piece (session 18, queue item 106b): its line of
+               sections with the map's markers, where you are, and a key each
+               way to the section before or after. Shown in the rail's place
+               for a piece past 32 bars, and for Endless. -->
+          <div id="nowPiece" class="np-piece" hidden>
+            <div id="pieceLine" class="pc-line" role="slider" tabindex="0" aria-label="Place in the piece">
+              <canvas id="pieceCanvas" class="pc-canvas" aria-hidden="true"></canvas>
+              <i id="pieceHead" class="pc-head" aria-hidden="true"></i>
+              <i id="pieceGhost" class="pc-ghost" aria-hidden="true" hidden></i>
+            </div>
+            <div class="pc-row">
+              <button id="piecePrev" type="button" class="vkey pc-key" aria-label="Previous section" disabled></button>
+              <div class="pc-text" aria-live="off">
+                <span id="pieceBars" class="pc-bars"></span>
+                <span id="pieceTimes" class="pc-times"></span>
+              </div>
+              <button id="pieceNext" type="button" class="vkey pc-key" aria-label="Next section" disabled></button>
+            </div>
+          </div>
           <div id="nowNext" class="np-next"></div>
           <!-- Outside an album, what new loops lean toward, as pills: one
                button that opens the Vibe panel (design/next-picks.md). -->
@@ -128,6 +147,13 @@
                to chance (Mikey, 2026-10-14). -->
           <div class="ln-keys">
             <button id="lenEndless" type="button" class="vkey ln-inf" aria-pressed="false" aria-label="Endless"><span aria-hidden="true">∞</span></button>
+            <!-- The journey a long piece takes (queue item 106b): an arc or a
+                 wander, a pick like the vibes (pressed again, it goes back to
+                 chance). Dimmed for a loop of up to 32 bars, which has none. -->
+            <div id="lenJourney" class="ln-journey" role="group" aria-label="Journey of a long piece">
+              <button type="button" class="vkey word" data-journey="arc" aria-pressed="false">arc</button>
+              <button type="button" class="vkey word" data-journey="wander" aria-pressed="false">wander</button>
+            </div>
             <button id="lenAny" type="button" class="vkey word pk-anykey" aria-pressed="false" aria-label="Any number of bars">any</button>
           </div>
         </div>

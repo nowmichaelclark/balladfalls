@@ -1919,6 +1919,43 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 .np-head .np-top { grid-column: 2; padding-top: 4px; }
 .np-vibes { min-width: var(--vibes-key, 88px); font-size: min(0.75rem, 18px); }
 
+/* ---------- A long piece on Now Playing (queue item 106b) ----------
+   The piece's line stands where the rail stood: ticks for where a theme
+   enters, the peak, the return, the close and a wander's turns (painted once
+   into the canvas), the playhead a bead moved by a transform, and under it
+   where you are in words, a key each way to the section before or after.
+   Pressing the line shows where a let-go would jump to. Nothing scrolls. */
+.np-piece { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; --piece-tick: var(--text-secondary); --piece-mark: var(--text-primary); }
+.pc-line {
+  position: relative; height: 34px; margin: 0 4px; touch-action: none; cursor: pointer;
+  border-radius: 6px; outline-offset: 2px; -webkit-tap-highlight-color: transparent;
+}
+.pc-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.pc-head, .pc-ghost { position: absolute; left: 0; top: 0; bottom: 0; width: 0; pointer-events: none; will-change: transform; }
+.pc-head::before { content: ''; position: absolute; left: -1px; top: 0; bottom: 2px; width: 2px; border-radius: 1px; background: var(--np-fill); }
+.pc-head::after {
+  content: ''; position: absolute; left: -5px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; background: var(--np-fill);
+  box-shadow: 0 0 0 2px var(--lit-ring, rgba(255,255,255,0.85)), var(--led-glow);
+}
+.pc-ghost::before { content: ''; position: absolute; left: -1px; top: 0; bottom: 0; width: 2px; background: var(--text-primary); opacity: 0.75; }
+.np-piece.idle .pc-head::after { box-shadow: 0 0 0 2px var(--lit-ring, rgba(255,255,255,0.85)); }
+.np-piece.idle .pc-line { opacity: 0.7; cursor: default; }
+.pc-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.pc-key { min-width: 44px; width: 44px; min-height: 44px; padding: 0; }
+.pc-key:disabled { opacity: 0.4; }
+.pc-text { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
+.pc-bars { font-size: min(0.8125rem, 19.5px); font-weight: 600; line-height: 1.25; color: var(--text-primary); overflow-wrap: anywhere; }
+.pc-times { font-size: min(0.6875rem, 16.5px); font-weight: 500; line-height: 1.25; color: var(--text-secondary); min-height: 1.25em; }
+.v-now.fit-tight .np-piece { gap: 2px; }
+.v-now.fit-tight .pc-line { height: 26px; }
+.v-now.fit-tight .pc-times { display: none; }
+@media (prefers-reduced-motion: reduce) { .ln-journey { transition: none; } }
+@media (forced-colors: active) {
+  .pc-head::before, .pc-head::after { background: Highlight; box-shadow: none; }
+  .pc-ghost::before { background: CanvasText; }
+  .ln-journey .vkey[aria-pressed="true"] { outline: 2px solid Highlight; }
+}
+
 /* ---------- Vibes ---------------------------------------------
    Every vibe in two columns, tap to pick. The list scrolls (the one
    view that does, for the number of vibes); the header row with
@@ -2312,6 +2349,7 @@ canvas.art { image-rendering: auto; }
 .pk-key { --pk: var(--pk-key); }
 .pk-style { --pk: var(--pk-style); }
 .pk-voices { --pk: var(--pk-voices); }
+.pk-journey { --pk: var(--pk-length); }
 
 /* ---------- Now Playing: the picks under the clock ------------- */
 /* One button, centred, at least 44px tall, drawing nothing of its
@@ -2472,7 +2510,7 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
    Both are lit the app's way, a ring in the primary text colour, so
    neither state is shown by colour alone. Lit, the ∞ itself also
    glows in the length colour. */
-.ln-keys { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ln-keys { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .vkey.ln-inf { min-width: 64px; padding: 2px 14px; }
 .ln-inf > span {
   font-family: 'Inter', sans-serif; font-size: min(1.375rem, 30px); font-weight: 600; line-height: 1;
@@ -2486,6 +2524,14 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   text-shadow: 0 0 8px color-mix(in srgb, var(--pk-length) 70%, transparent);
 }
 .ln-keys .vkey.word.pk-anykey { min-width: 64px; min-height: 48px; }
+/* The journey (queue item 106b): arc and wander, between the ∞ and the
+   any key; lit as the ∞ is (a ring in the primary text colour, so colour is
+   never the only sign), pressed again to go back to chance. Dimmed for a
+   loop of up to 32 bars, which has none. */
+.ln-journey { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 120ms ease; }
+.ln-journey .vkey.word { flex: 0 1 auto; min-width: 64px; min-height: 48px; padding: 2px 10px; font-size: min(0.75rem, 18px); }
+.ln-journey .vkey[aria-pressed="true"] { color: var(--text-primary); font-weight: 700; box-shadow: inset 0 0 0 2px var(--text-primary), var(--btn-mini-shadow); }
+.ln-journey.off { opacity: 0.4; }
 /* On the mid-tone light panels the length colour is under 3:1 against
    the panel (Ember 2.45, Tidal 2.89, measured), so in the light themes
    the slider thumb also gets a 1px edge in the text colour, which is

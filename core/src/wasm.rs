@@ -676,6 +676,24 @@ mod player {
         take(request().with_length(length))
     }
 
+    /// Ask the next `dl_play_load` for the journey a long piece takes: 1 an arc, 2 a wander
+    /// (`Request::with_journey`; queue item 106b, the app's journey pick). 0 for no such journey
+    /// (refused with the request's own line), else 1. A loop of up to 32 bars has none and plays as it does without.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_journey(journey: u32) -> u32 {
+        use crate::generator::request::{Journey, NO_SUCH_JOURNEY};
+        let j = match journey {
+            1 => Journey::Arc,
+            2 => Journey::Wander,
+            _ => {
+                refused().get_or_insert(NO_SUCH_JOURNEY);
+                return 0;
+            }
+        };
+        *request() = request().with_journey(j);
+        1
+    }
+
     /// Ask the next `dl_play_load` for the home notes in `keys`, a bit each
     /// with C the lowest (`Request::with_keys`; queue item 89). 1 if it can
     /// be met.

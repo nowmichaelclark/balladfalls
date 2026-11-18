@@ -55,6 +55,7 @@ mod output {
         pub info: Info,
         pub policy: i32,
         pub priority: i32,
+        pub latency: f64,
     }
 
     pub fn engine() -> Option<&'static Engine> {
@@ -68,7 +69,7 @@ mod output {
         Err("no audio device on this machine".into())
     }
     pub fn stream() -> Stream {
-        Stream { running: false, underruns: 0, reopens: 0, info: Info::default(), policy: -1, priority: -1 }
+        Stream { running: false, underruns: 0, reopens: 0, info: Info::default(), policy: -1, priority: -1, latency: 0.0 }
     }
 }
 
@@ -355,6 +356,7 @@ fn figures(e: &Engine) -> Figures {
         callbacks: c.callbacks.load(Ordering::Relaxed),
         refused: c.refused.load(Ordering::Relaxed),
         lost: c.out_lost.load(Ordering::Relaxed),
+        latency: s.latency,
     }
 }
 

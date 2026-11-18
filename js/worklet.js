@@ -42,6 +42,9 @@ const SECTION = 2;
 const LOOP = 4;
 const REVISED = 5;
 const JUMP = 8;
+// What each layer sounded on a step, as heard (session 30b): a step's
+// companion, posted with the steps rather than at once.
+const HEARD = 9;
 const LAYER_COUNT = 5;
 const EVENTS_EVERY = 0.05;
 // A change at the track's end (`Moment::End`).
@@ -363,7 +366,7 @@ class DriftloomCore extends AudioWorkletProcessor {
       const f = views.events;
       for (let i = 0; i < n; i++) {
         const kind = f[4 * i + 1];
-        if (kind !== STEP) this.urgent = true;
+        if (kind !== STEP && kind !== HEARD) this.urgent = true;
         if (kind === PASS || kind === SECTION || kind === LOOP || kind === REVISED || kind === JUMP) {
           const grid = [];
           for (let l = 0; l < LAYER_COUNT; l++) {

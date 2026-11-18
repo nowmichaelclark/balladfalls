@@ -12,6 +12,23 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## The layers show what is heard (item 110, v190, PR #440)
+
+- **Watch the Layers view with a long piece**, on your phone and in the
+  Android app: open <https://driftloom.nowmichaelclark.workers.dev/#c=ELAAAAAF_DHAbt>
+  (a 128-bar arc), play it and switch to Layers. In the first 15 seconds
+  the kit and the bass come in and the texture rises: their dots should
+  come up dimmer and brighten as they are heard, and a note you hear should
+  have its dot when the playhead reaches it, and no dot without a note
+  (lite too: a note it leaves out is not drawn). Say if any dot doesn't match.
+- **Playhead trim and latency:** leave Playhead trim (Sounds) at 0 and say if
+  the playhead runs ahead of or behind the notes, on the phone with
+  headphones and in the app. In the app, Diagnostics' stream line now says
+  the output latency and whether Android measured it or it came from the
+  buffer; send me that line and the phone's name.
+- **For your eyes:** a dot's brightness follows the layer's level (at least
+  30%, in tenths); the dots, accents and halo look as before.
+
 ## Brain B4 (2026-11-18): three albums to play
 
 - **Listen when you like (nothing waits on it):** batch 6, the nearer chords
@@ -143,7 +160,7 @@ the last one (same key). On the **Moto** and on the **tablet**:
 - Not tested without a device (the emulator can't say): that another app's short
   sound ducks the music (the system does it for this stream; tell me if it
   doesn't), and Bluetooth buttons.
-## Previous in an album (item 109, v190, session 30a)
+## Previous in an album (item 109, v191, session 30a)
 
 - **Check it once, on your phone and in the Android app:** play an album and
   press Previous (the key on the screen, then the headset's or the lock
@@ -347,14 +364,7 @@ the last one (same key). On the **Moto** and on the **tablet**:
 
 ## Decisions
 
-- **The new name in three public files (brain B-parallel, 2026-11-18):** it
-  went in by mistake: `docs/DECISIONS.md`'s export line of 2026-11-17,
-  `docs/sessions/21-export-small.md` and `test/ogg.test.mjs` (a song title
-  in a test). Say if they should become a placeholder (git's history keeps
-  them either way).
-- **The journey's word "arc" (item 106b, #419):** the other words are
-  approved (2026-11-18); you weren't sure how a listener reads "arc". Pick
-  a word, or keep it.
+Nothing open here.
 
 (A shared loop's name, the export sheet's words and the export's ending
 were decided 2026-11-17, `docs/DECISIONS.md`, "Share codes, requests and

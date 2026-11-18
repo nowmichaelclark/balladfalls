@@ -296,10 +296,18 @@ int64_t dl_player_track_end(dl_player *player);
    seed (DL_LOOP: a new loop's first step; DL_REVISED: the loop made again
    in place), or 0 (DL_TRACK_END: the track's end), or the picks' tag (DL_OWN:
    the loop whose DL_LOOP comes next is the core's own), or the step it goes
-   on from (DL_JUMPED: dl_player_jump landed); `step` is from the loop's
-   load.
+   on from (DL_JUMPED: dl_player_jump landed), or what each layer sounded on
+   the step, as heard (DL_HEARD, after each DL_STEP: five layers in the
+   layers' order, DL_HEARD_BITS bits each from the lowest; in each, the low
+   DL_LOUD_BITS the loudest note's velocity as heard times DL_HEARD_ONE,
+   after a long piece's levels, 0 for a note refused, muted or left out,
+   and the rest the share of its level the layer was left, in sevenths);
+   `step` is from the loop's load.
    256 wait at most; dl_player_events_lost counts the ones lost. */
-enum { DL_STEP = 0, DL_PASS_BEGINS = 1, DL_SECTION = 2, DL_PHRASE_LINE = 3, DL_LOOP = 4, DL_REVISED = 5, DL_TRACK_END = 6, DL_OWN = 7, DL_JUMPED = 8 };
+enum { DL_STEP = 0, DL_PASS_BEGINS = 1, DL_SECTION = 2, DL_PHRASE_LINE = 3, DL_LOOP = 4, DL_REVISED = 5, DL_TRACK_END = 6, DL_OWN = 7, DL_JUMPED = 8, DL_HEARD = 9 };
+#define DL_HEARD_BITS 10
+#define DL_LOUD_BITS 7
+#define DL_HEARD_ONE 64.0
 typedef struct dl_event {
     double time;
     uint32_t kind;

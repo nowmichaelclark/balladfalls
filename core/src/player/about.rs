@@ -55,15 +55,18 @@ impl Player {
     /// Layer `layer`'s grid (the app's layers, `stepsForBar`): into `out`,
     /// one velocity a step of the layer's own cycle (the loop's pass, or its
     /// polymeter cycle), the loudest note on each step, 0 for none; of the
-    /// pass the player is deciding, as it wanders. Returns the cycle's
-    /// steps, or 0 with nothing made or `out` too short (`GRID_MAX` is
-    /// always enough). A bar `b` of the grid is steps `b * steps_per_bar`
-    /// on, around the cycle.
+    /// pass the player is deciding, as it wanders, and as its plan will have
+    /// it heard (session 30b, `Loop::each_heard`: a long piece's levels and
+    /// its second tune, the kit and the bass waiting to come in). Returns
+    /// the cycle's steps, or 0 with nothing made or `out` too short
+    /// (`GRID_MAX` is always enough). A bar `b` of the grid is steps
+    /// `b * steps_per_bar` on, around the cycle.
     ///
     /// The pass being decided is a lookahead ahead of the one heard: a host
     /// reads the grid when the player tells it a pass or a section begins
     /// (`Kind::Pass`, `Kind::Section`), in the same render, and shows it from
-    /// that event's time.
+    /// that event's time. What each step then sounds, a budget's refusal
+    /// and all, comes with the step (`Kind::Heard`).
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // steps, far below 2^53
     pub fn grid(&self, layer: Layer, out: &mut [f64]) -> usize {
         if !self.made() {
@@ -77,7 +80,10 @@ impl Player {
         let n = cycle as usize;
         let row = &mut out[..n];
         row.fill(0.0);
-        lp.each_velocity(layer, |step, vel| {
+        #[allow(clippy::cast_precision_loss)] // steps, far below 2^53
+        let from = self.seq.abs_step.saturating_sub(self.seq.step) as f64;
+        let sd = if self.seq.bpm > 0.0 { self.seq.step_dur() } else { 60.0 / lp.spec.bpm / 4.0 };
+        lp.each_heard(layer, from, sd, |step, vel| {
             if vel == 0.0 || vel.is_nan() {
                 return;
             }

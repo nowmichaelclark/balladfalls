@@ -26,6 +26,7 @@
 // that record's seed, request and edits.
 
 import { render } from './gen.js';
+import { HeardSteps } from './heard.js';
 import { LAYERS, askOf, picksAsk, pieceOf, loopBars } from './request.js';
 
 // The core's numbers for a record and for the picks, for the modules that
@@ -54,7 +55,7 @@ export function freshSalt() {
 // The moments a change waits for, as the core numbers them (`Moment::ALL`).
 export const MOMENT = { now: 0, beat: 1, bar: 2, phrase: 3, pass: 4, end: 5 };
 // The kinds of event the player reports (`Kind::ALL`).
-export const KIND = { step: 0, pass: 1, section: 2, phrase: 3, loop: 4, revised: 5, end: 6, own: 7, jump: 8 };
+export const KIND = { step: 0, pass: 1, section: 2, phrase: 3, loop: 4, revised: 5, end: 6, own: 7, jump: 8, heard: 9 };
 // Where a jump goes (session 17, item 106a; `Player::jump`): a section, a bar
 // or a time in seconds, each from the piece's start.
 export const JUMP = { section: 0, bar: 1, time: 2 };
@@ -123,6 +124,9 @@ export class PlayerEngine {
     this.decided = null;
     this.heard = null;
     this.gridQueue = [];
+    // What the layers draw (session 30b, js/heard.js): each step as heard,
+    // the pass ahead as its plan will have it heard.
+    this.heardSteps = new HeardSteps();
     this.loopCount = 0;
     this.trackEnd = null;
     this.countFrom = 0;
@@ -362,6 +366,8 @@ export class PlayerEngine {
     this.output.silence();
     this.visualQueue = [];
     this.gridQueue = [];
+    this.heardSteps.clear();
+    this.heard = null;
   }
 
   setMute(layer, muted) {
@@ -419,9 +425,10 @@ export class PlayerEngine {
       const kind = ev[4 * i + 1];
       const number = ev[4 * i + 2];
       const step = ev[4 * i + 3];
+      this.heardSteps.event(time, kind, number, step, grids.get(i) || null);
       if (kind === KIND.step) {
         this.decided = { time, number, step };
-        this.visualQueue.push({ time, step: number, abs: step });
+        this.visualQueue.push({ time, step: number, abs: step, run: this.heardSteps.current });
         if (this.visualQueue.length > QUEUE_MOST) this.visualQueue.shift();
       } else if (kind === KIND.pass || kind === KIND.section) {
         this.loopCount = number;
@@ -478,6 +485,7 @@ export class PlayerEngine {
     core.playJump(kind, at);
     this.visualQueue = [];
     this.gridQueue = [];
+    this.heardSteps.dropGrids();
     return true;
   }
 
@@ -532,7 +540,25 @@ export class PlayerEngine {
       found = v.step;
     }
     while (this.gridQueue.length && this.gridQueue[0].time <= now) this.live = this.gridQueue.shift().pattern;
+    this.heardSteps.at(now);
     return found;
+  }
+
+  // What the layers show of bar `bar` now (js/heard.js, HeardSteps.bar):
+  // each layer's loudness and share on each step of the bar holding the
+  // step heard last, as heard where it is decided; a muted layer as its
+  // plan has it. Null before the first step is heard, or for another bar.
+  barRows(bar) {
+    const h = this.heard;
+    const spb = this.base && this.base.stepsPerBar;
+    if (!h || !spb || Math.floor(h.step / spb) !== bar) return null;
+    const mutes = (this.spec && this.spec.mutes) || {};
+    return this.heardSteps.bar(bar, spb, h.abs - (h.step % spb), h.run, LAYERS.map((l) => !!mutes[l]));
+  }
+
+  // A number that moves whenever what `barRows` gives may have moved.
+  get rowsVersion() {
+    return this.heardSteps.version;
   }
 
   // Where the listener is in this loop, in steps from its load.

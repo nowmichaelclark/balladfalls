@@ -36,8 +36,10 @@ const COST_EVERY: f64 = 2.0;
 const NATIVE_EVERY: Duration = Duration::from_millis(250);
 /// How busy the audio thread is, a window this many seconds of audio.
 const BUSY_WINDOW: f64 = 0.25;
-/// The kinds of event (`Kind::ALL`): a step's, and the end's moment.
+/// The kinds of event (`Kind::ALL`): a step's, and what the layers sounded
+/// on one (session 30b), which ride with the steps rather than post at once.
 const STEP: u8 = 0;
+const HEARD: u8 = 9;
 
 /// The stream's figures for the `native` message: what `aaudio::stream()`
 /// and the engine's counts say.
@@ -60,6 +62,9 @@ pub struct Figures {
     pub callbacks: u64,
     pub refused: u32,
     pub lost: u32,
+    /// The stream's latency to the speaker as it measures it, in seconds (0
+    /// where it can't say: the buffer stands in).
+    pub latency: f64,
 }
 
 /// What a message asks of the next loop, built as the worklet's `ask`
@@ -346,7 +351,7 @@ impl Bridge {
                 if f64::from(e) < epoch {
                     return;
                 }
-                if kind != STEP {
+                if kind != STEP && kind != HEARD {
                     urgent = true;
                 }
                 if let Some(g) = grid {
@@ -552,9 +557,14 @@ fn native_of(engine: &Engine, status: &[f64; at::WORDS], f: &Figures) -> String 
     number(&mut s, status[at::TIME]);
     let _ = write!(s, ",\"running\":{},\"rate\":", f.running);
     number(&mut s, f.rate);
-    // What is queued ahead of the speaker: the stream's buffer.
+    // How long a frame the core renders now takes to reach the speaker
+    // (session 30b): as the stream measures it, or where it can't yet, what
+    // is queued ahead of the speaker, the stream's buffer. The layers'
+    // playhead reads it (js/native.js, `outputLatency`).
     s.push_str(",\"latency\":");
-    number(&mut s, if f.rate > 0.0 { f64::from(f.buffer) / f.rate } else { 0.0 });
+    let buffered = if f.rate > 0.0 { f64::from(f.buffer) / f.rate } else { 0.0 };
+    number(&mut s, if f.latency > 0.0 { f.latency } else { buffered });
+    let _ = write!(s, ",\"measured\":{}", u8::from(f.latency > 0.0));
     let _ = write!(
         s,
         ",\"underruns\":{},\"burst\":{},\"buffer\":{},\"capacity\":{},\"channels\":{},\"performance\":{},\"sharing\":{},\"policy\":{},\"priority\":{},\"reopens\":{},\"callbacks\":{},\"queueRefused\":{},\"reportsLost\":{}",

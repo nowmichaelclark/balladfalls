@@ -159,6 +159,14 @@ function inspect() {
       }
     }
   }
+  // The quiet mark for more lies whole inside the details' column too.
+  const mark = $('metaDots');
+  if (mark && !$('metaMore').hidden) {
+    for (const e of [mark, ...mark.children]) {
+      const r = e.getBoundingClientRect();
+      if (r.top < colBox.top - 1 || r.bottom > colBox.bottom + 1 || r.right > cardBox.right + 1) problems.push('the mark for more is cut off');
+    }
+  }
   const all = [...$('loopDetail').children].map((li) => li.textContent);
   return {
     problems,
@@ -169,7 +177,7 @@ function inspect() {
     // The tap: present when there is more to show; its label says which page.
     more: (() => {
       const b = $('metaMore');
-      return b && !b.hidden ? { label: b.getAttribute('aria-label'), dots: b.querySelectorAll('i').length, rect: b.getBoundingClientRect().toJSON() } : null;
+      return b && !b.hidden ? { label: b.getAttribute('aria-label'), dots: Number(b.dataset.pages || 0), rect: b.getBoundingClientRect().toJSON() } : null;
     })(),
     facts: [...$('loopFacts').children].map((li) => li.textContent),
     plain: getComputedStyle($('loopFacts')).position,
@@ -255,7 +263,7 @@ async function main() {
           if (!r.facts.length) pageProblems.push('a screen reader has no facts');
           if (r.ariaHidden !== 'true') pageProblems.push('the drawn lines are not hidden from a screen reader (they would be read twice)');
           if (r.more) {
-            if (r.more.dots < 2) pageProblems.push('the mark for more has fewer than two dots');
+            if (r.more.dots < 2) pageProblems.push('the mark for more says fewer than two pages');
             for (let i = 1; i <= 12; i++) {
               await page.click('#metaMore');
               await sleep(60);
@@ -281,12 +289,16 @@ async function main() {
           } else if (process.argv.includes('--verbose')) {
             console.log(`        ${r.facts.length} facts on ${seen.length} page${seen.length === 1 ? '' : 's'}`);
           }
-          if (r.more) await page.click('#metaMore', { clickCount: 1 }).catch(() => {});
           if (SHOTS) {
             const file = `${c.name.replace(/[^a-z0-9]+/gi, '-')}_${size.name.replace(/ /g, '-')}_${scale}`;
             await (await page.$('.zone-info')).screenshot({ path: path.join(SHOTS, `${file}_light.png`) });
             const d = await open(browser, c, size, scale, true);
             await (await d.page.$('.zone-info')).screenshot({ path: path.join(SHOTS, `${file}_dark.png`) });
+            if (r.more) {
+              await d.page.click('#metaMore');
+              await sleep(80);
+              await (await d.page.$('.zone-info')).screenshot({ path: path.join(SHOTS, `${file}_dark_page2.png`) });
+            }
             await d.ctx.close();
           }
           await ctx.close();

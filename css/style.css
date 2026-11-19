@@ -2168,6 +2168,16 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
   box-sizing: border-box; border: 1px solid currentColor; opacity: 0.75;
 }
 .meta-dots i.on { background: currentColor; opacity: 1; }
+/* Too many pages for dots to fit: a thin track, its thumb on the page. */
+.meta-dots.track { top: 2px; bottom: 2px; width: 4px; display: block; border-radius: 2px; }
+.meta-dots.track::before {
+  content: ''; position: absolute; inset: 0; border-radius: 2px;
+  background: currentColor; opacity: 0.25;
+}
+.meta-dots.track i {
+  position: absolute; left: 0; width: 4px; min-height: 3px; border: 0; border-radius: 2px;
+  background: currentColor; opacity: 1;
+}
 @media (forced-colors: active) {
   .meta-dots { forced-color-adjust: none; color: CanvasText; }
 }

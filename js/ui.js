@@ -282,6 +282,8 @@ if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
 const card = { facts: [], sig: '', page: 0, pages: 1 };
 const SEP = ' \u00b7 ';
 const GUTTER = 14;
+const MAX_PAGES = 12;
+const DOT_PITCH = 10; // a page's dot (6px) and its gap
 
 function setFacts(facts) {
   const sig = facts.map((f) => f.atoms.map((a) => a.text).join('|')).join('\n');
@@ -357,7 +359,7 @@ function paginate(facts, width, maxLines, sepW) {
   let rest = new Set();
   for (const f of facts) for (const a of f.atoms) if (a.w <= width) rest.add(a);
   const pages = [];
-  while (rest.size && pages.length < 8) {
+  while (rest.size && pages.length < MAX_PAGES) {
     const keep = new Set(rest);
     let lines;
     for (;;) {
@@ -417,11 +419,24 @@ function paintMore() {
   const dots = el('metaDots');
   more.hidden = card.pages < 2;
   dots.innerHTML = '';
+  dots.classList.remove('track');
   if (card.pages < 2) return;
-  for (let i = 0; i < card.pages; i++) {
-    const d = document.createElement('i');
-    if (i === card.page) d.className = 'on';
-    dots.appendChild(d);
+  more.dataset.pages = String(card.pages);
+  // Where the dots do not all fit the details' height, the mark is a thin
+  // track with a thumb on the page shown, so it is never cut off.
+  const room = el('metaWrap').clientHeight - 2;
+  if (card.pages * DOT_PITCH - 4 > room) {
+    dots.classList.add('track');
+    const thumb = document.createElement('i');
+    thumb.style.top = `${(card.page / card.pages) * 100}%`;
+    thumb.style.height = `${100 / card.pages}%`;
+    dots.appendChild(thumb);
+  } else {
+    for (let i = 0; i < card.pages; i++) {
+      const d = document.createElement('i');
+      if (i === card.page) d.className = 'on';
+      dots.appendChild(d);
+    }
   }
   more.setAttribute('aria-label', `More details, ${card.page + 1} of ${card.pages}`);
 }

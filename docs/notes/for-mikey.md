@@ -12,7 +12,7 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
-## Track length, its own view (item 111, session 30c, PR #TBD)
+## Track length, its own view (item 111, v192, PR #448)
 
 - **Look at the view:** Vibe, then the pace line's third key ("plays on",
   or the time set) opens **Track length**: the time to the second (type

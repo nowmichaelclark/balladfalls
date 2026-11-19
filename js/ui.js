@@ -86,7 +86,12 @@ const RANK = {
   feel: [94, 92, 89], shape: 91, pass: 80,
 };
 
-const atom = (text, rank) => ({ text, rank });
+// An atom may carry `alts`: shorter words for the same fact, used only where
+// the column is too narrow for the full text on its own (a fact is never
+// cut; it is said in fewer words).
+const atom = (text, rank, alts = []) => ({ text, rank, alts, shown: text });
+// "40% Undertow" shortened to "Undertow".
+const bare = (part) => [part.replace(/^\d+% /, '')];
 
 // The facts of a loop, in the order the card lays them out.
 function loopFacts(spec, pattern, extra) {
@@ -95,16 +100,22 @@ function loopFacts(spec, pattern, extra) {
   if (pattern && pattern.form) shape.push('airy');
   if (spec.cycles) shape.push('drifting');
   const facts = [];
-  mixParts(spec).forEach((m, i) => facts.push({ cls: 'mix', atoms: [atom(m, RANK.mix[i])] }));
-  feelParts(spec).forEach((f, i) => facts.push({ cls: 'feel', atoms: [atom(f, RANK.feel[i])] }));
+  mixParts(spec).forEach((m, i) => facts.push({ cls: 'mix', atoms: [atom(m, RANK.mix[i], bare(m))] }));
+  feelParts(spec).forEach((f, i) => facts.push({ cls: 'feel', atoms: [atom(f, RANK.feel[i], bare(f))] }));
   facts.push({ pack: true, atoms: [atom(`${NOTE_NAMES[spec.root]} ${SCALES[spec.scale].label}`, RANK.key)] });
   const tempo = [atom(`${spec.bpm} bpm`, RANK.tempo)];
   if (shape.length) tempo.push(atom(shape.join(' · '), RANK.shape));
   facts.push({ pack: true, atoms: tempo });
   facts.push({ pack: true, atoms: [atom(meter, RANK.meter), atom(barsText(spec), RANK.bars)] });
-  if (extra.album) facts.push({ cls: 'album-line', atoms: [atom(extra.album, RANK.album)] });
+  if (extra.album) facts.push({ cls: 'album-line', atoms: [atom(extra.album, RANK.album, albumAlts(extra.album))] });
   if (extra.pass) facts.push({ cls: 'faint', atoms: [atom(extra.pass, RANK.pass)] });
   return facts;
+}
+
+// "Rainy Day Mix 1/3": the title alone, then the place alone.
+function albumAlts(line) {
+  const m = /^(.*) (\d+\/\d+)$/.exec(line);
+  return m ? [m[1], m[2]] : [];
 }
 
 // The card's words for a loop: `extra` adds the album being played and the
@@ -133,7 +144,7 @@ export function renderAlbumCard(title, specs, extra = {}) {
       }
     }
     asMixParts(named, (k) => (CHARACTERS[k] ? CHARACTERS[k].label : k), 2)
-      .forEach((part, i) => facts.push({ cls: 'feel', atoms: [atom(part, 94 - 2 * i)] }));
+      .forEach((part, i) => facts.push({ cls: 'feel', atoms: [atom(part, 94 - 2 * i, bare(part))] }));
     const bpms = specs.map((s) => s.bpm);
     const lo = Math.min(...bpms);
     const hi = Math.max(...bpms);
@@ -317,11 +328,20 @@ function measureAtoms(host, facts) {
     return li;
   };
   const items = [];
-  for (const f of facts) for (const a of f.atoms) items.push([a, make(a.text, f.cls)]);
+  for (const f of facts) {
+    for (const a of f.atoms) {
+      items.push([a, make(a.text, f.cls)]);
+      a.altProbes = a.alts.map((t) => make(t, f.cls));
+    }
+  }
   const sep = make(SEP, '');
   const tall = make('Ag', '');
   const out = { sep: 0, line: 0 };
-  for (const [a, li] of items) a.w = li.getBoundingClientRect().width + 0.5;
+  for (const [a, li] of items) {
+    a.w0 = li.getBoundingClientRect().width + 0.5;
+    a.altW = a.altProbes.map((p) => p.getBoundingClientRect().width + 0.5);
+    delete a.altProbes;
+  }
   out.sep = sep.getBoundingClientRect().width;
   out.line = tall.getBoundingClientRect().height;
   for (const li of probes) li.remove();
@@ -381,6 +401,22 @@ function paginate(facts, width, maxLines, sepW) {
   return pages;
 }
 
+// Each fact in its full words where they fit the column, else in its
+// shortest words that do (a fact too wide even so is on no page).
+function fitAndPaginate(width, maxLines, sepW) {
+  for (const f of card.facts) {
+    for (const a of f.atoms) {
+      a.shown = a.text;
+      a.w = a.w0;
+      if (a.w0 > width) {
+        const i = a.altW.findIndex((w) => w <= width);
+        if (i >= 0) { a.shown = a.alts[i]; a.w = a.altW[i]; }
+      }
+    }
+  }
+  return paginate(card.facts, width, maxLines, sepW);
+}
+
 function layoutDetails() {
   const host = el('loopDetail');
   const wrap = host && host.parentElement;
@@ -393,18 +429,18 @@ function layoutDetails() {
   wrap.classList.remove('paged');
   const m = measureAtoms(host, card.facts);
   const maxLines = Math.floor((col.clientHeight - used + 1) / (m.line || 16));
-  let pages = paginate(card.facts, host.clientWidth, maxLines, m.sep);
+  let pages = fitAndPaginate(host.clientWidth, maxLines, m.sep);
   if (pages.length > 1) {
     // The mark for "more" takes a strip of its own at the side.
     wrap.classList.add('paged');
-    pages = paginate(card.facts, host.clientWidth, maxLines, m.sep);
+    pages = fitAndPaginate(host.clientWidth, maxLines, m.sep);
   }
   card.pages = Math.max(1, pages.length);
   if (card.page >= card.pages) card.page = 0;
   host.innerHTML = '';
   for (const line of pages[card.page] || []) {
     const li = document.createElement('li');
-    li.textContent = line.atoms.map((a) => a.text).join(SEP);
+    li.textContent = line.atoms.map((a) => a.shown).join(SEP);
     if (line.cls) li.className = line.cls;
     host.appendChild(li);
   }

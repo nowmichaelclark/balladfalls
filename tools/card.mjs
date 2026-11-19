@@ -280,7 +280,10 @@ async function main() {
           const text = seen.join('\n');
           for (const fact of r.facts) {
             for (const part of fact.split(' \u00b7 ')) {
-              if (!text.includes(part)) pageProblems.push(`"${part}" is on no page`);
+              // A fact too wide for the column is said in fewer words: a style
+              // or feeling without its percent, an album's title or its place.
+              const short = [part, part.replace(/^\d+% /, ''), part.replace(/ \d+\/\d+$/, ''), (/(\d+\/\d+)$/.exec(part) || [])[1]];
+              if (!short.some((t) => t && text.includes(t))) pageProblems.push(`"${part}" is on no page`);
             }
           }
           if (pageProblems.length) {

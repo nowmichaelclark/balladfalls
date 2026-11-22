@@ -2888,14 +2888,17 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   .v-sheet .ln-head .vkey { font-size: min(0.75rem, 14px); }
   .page-foot .vkey, .page-head .vkey { font-size: min(0.75rem, 15px); }
 }
-
-/* ============================================================
-   PAINTER 30f: THE FINAL PASS, ONE APP
-   ============================================================ */
 /* A title that takes the focus wears its ring around its word, not through it. */
 .phone .view .page-title { flex: 0 1 auto; padding: 3px 6px; border-radius: 8px; }
 .phone .view :is(.hero-title, .page-title):focus-visible { outline-offset: 0; }
 .phone .view .page-title.vh { padding: 0; }
+@container track (max-height: 279.98px) {
+  .phone .v-track .page-title.ln-title { padding: 0; }
+}
+
+/* ============================================================
+   PAINTER 30f: THE FINAL PASS, ONE APP
+   ============================================================ */
 /* A popup is solid: the words under it don't show through. */
 .t-dawn { --toast-base: #f7ecee; }
 .t-ember { --toast-base: #f4d4cc; }
@@ -2918,7 +2921,3 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 .phone.unplayable > :is(.zone-dynamic, .zone-buttons) { display: none; }
 .phone.unplayable > .zone-info { flex: 0 0 auto; grid-area: auto; grid-column: 1 / -1; align-self: center; padding: 12px; }
 .phone.unplayable .info-inner { padding: 22px 14px; }
-/* Track length's title, read out only on a short panel, takes no room. */
-@container track (max-height: 279.98px) {
-  .phone .v-track .page-title.ln-title { padding: 0; }
-}

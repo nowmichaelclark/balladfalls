@@ -130,7 +130,7 @@ reset-on-fork), reopens 0.
 - A full ten minutes with the screen off: 395 s of sound in all, so that
   test is still to do.
 
-## Session 30g's first build (v201): the stream, not yet heard on a phone
+## Session 30g's build (v201): the stream on a music player's path
 
 The cause is not proven. What was found in the sources:
 

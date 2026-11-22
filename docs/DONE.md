@@ -615,5 +615,5 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   late callbacks, the worst four, the longest gap). Mikey heard it clean on
   the moto g stylus 5G (2022), headphones, after hearing v195 crackle on
   them (`docs/notes/115-crackles.md`). Pause and Next are heard about
-  222 ms later there, which Mikey didn't notice. Listen for no crackles with the screen off. No album
-  loop.
+  222 ms later there, which Mikey didn't notice. Listen for no crackles
+  with the screen off. No album loop.

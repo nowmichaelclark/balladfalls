@@ -113,3 +113,15 @@ A sketch for B4 to check (not the brain's): the name is carried as its UTF-8 byt
 ## Short codes over sounding the same forever (Mikey, 2026-11-17)
 
 The brain's reading: the version filter on additions costs no characters and stays; nothing is added to a code only to keep an old one's sound; a code naming something since removed plays something close rather than being refused. B4 checks the format against this.
+
+## Seven more for 1.0 (Mikey, 2026-11-18)
+
+- 2026-11-18 -- **Seven more for 1.0 (Mikey, 2026-11-18):** fewer words in the app (icons, switches, short phrases; the share screen as keys); Previous in an album fixed; the info card's lines clean on any display, the rest a tap away; its playhead round; the layers drawn as heard; Track length its own view, to the second, out of the sliders and the export; a final Painter pass with accessibility. Queue items 109 to 114, sessions 30a to 30f, before the polish. Then: the Track length view gets a fade in and fade out option; with no length set, export opens that view first; the export keys are named by format ("export flac", "export midi").
+
+## The themes merged short of the brightness order (Mikey, 2026-11-13)
+
+- 2026-11-13 -- **The themes merged short of the brightness order (#379; Mikey asked the brain, which said merge as it is; he merges it):** brightness rises and falls on 77% of arc pieces (9 in 10 asked; 87% on main before), the new misses being the variations a centroid reads (a return an octave up, a lift in another voice, a release in outline); as heard at the app's amount 9 of 10 rise and fall, as before. His ears at B3 are the test. Session 15 changes the yardstick to the arc's own job (opening, peak, close), the full figure still reported. The hands also allowed 3 LU (not 2) between neighboring units where one plays other notes than the loop's (largest 2.85).
+
+## Rust: the synth, then the generator (Mikey, 2026-10-03)
+
+- 2026-10-03 -- **Rust:** the synth, then the generator, move to a host-agnostic Rust core (WebAssembly in an AudioWorklet for the web), in its own brain chat. **(Superseded 2026-10-12: the generator no longer waits; see "The core: aims and design".)** **Timing (2026-10-03): the synth ports now; the generator waits until the words' draws stop moving.** Its case is portability, not speed (the performance baseline showed the fixable costs were elsewhere). The deliverable is the phone app; a native build and games are separate projects. Rust over C++ and the rest: roadmap 16.

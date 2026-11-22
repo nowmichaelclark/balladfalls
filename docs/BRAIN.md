@@ -288,10 +288,29 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 - `tools/check-docs.mjs` -- the size limits on the live docs (see "The docs
   stay small"); CI runs it.
 
-## State -- 2026-11-17
+## State -- 2026-11-22
 
 ### Start here (for the next brain)
 
+- **Brain B-parallel 3 (Opus 5.5, 2026-11-22, in Claude Code; ended
+  with its close-out, #451).** **Merged:** 30d (#446, v192), 30c (#448,
+  v193, df5ff16), 24c (#450, v194, 7cd44c4), 30e (#449, v195, 998f64b, live).
+  No hands session is running. **Checked here:** #450 against main, 50 codes
+  and 2,000 loops' notes the same, 106 random loops' audio sample for sample;
+  Track length's 11 controls reachable at 360x640 and 320x568 on #448's and
+  #449's previews; each PR's gate and rows read from CI's logs (30d's from
+  its checks and body). The nightly is green on v193
+  (44995399978) and v194 (45000684305); v195's (45012032493) was read
+  before #451 merged, its result in #451's body. The archive pass is done.
+  **Next:** 30f (`30f-painter-final.md`, alone), then
+  30 (alone), then B5. **Mikey's answers:** DECISIONS, 2026-11-22: a code's
+  version kept before the first new sound, not before 1.0; item 113's words.
+  **Learned:** read a PR body back from GitHub (30c reported edits it hadn't
+  made); measure screens at 360x640 and 320x568, not only 360x780; rows ten
+  take about 62 minutes (`-f jobs=all -f repeat=10` runs views beside them);
+  Auto-fix wakes a session only on red, so the brain waits for green; a
+  session auto-archives when its PR merges; give a pair its version numbers
+  up front.
 - **Brain B4 (Opus 5.5, 2026-11-18, a cloud thread of the project): export,
   the screens and the codes checked; the albums again.** On main (c5b2862,
   v189), measured here: `cargo test --test codes` 26 of 26 and `--features
@@ -325,68 +344,9 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   developer verification (Thailand since 2026-09-30, not F-Droid, worldwide
   2027) noted in for-mikey. **Next:** 24c when 30c merges (B-par2 starts
   it); B5 after 30.
-- **Brain B-parallel 2 (Opus 5.5, 2026-11-18, a cloud thread of Mikey's
-  claude.ai project; ended when his usage ran out). Next: brain
-  B-parallel 3, `docs/sessions/brain-parallel-3.md`, from his other
-  account: the repo is the whole handover (nothing in that project, its
-  threads or its files is needed).** **Merged, each checked against its
-  prompt:** 24b (#438, v189: `cargo test --test codes` 26 of 26 here, the
-  old share-code fixtures unchanged; its first push had a stale module;
-  Mikey: "Link sharing an album with track lengths set works"); 29 (#437, no
-  app change: F-Droid's build and two machines' builds the same bytes, lint
-  green); 30b (#440, v190: the brain checked the render hashes, golden mono
-  and stereo `--strict` on x86_64 and `tools/seeds.sh` 80 of 80; the sketch
-  job's timing test flaked once, a re-run passed); 30a (#442, v191; see
-  below); docs #436, #439, #441, #444, #445. **Mikey answered** (all in
-  `docs/DECISIONS.md`): the brain merges any PR once green and checked; no
-  waiting on the export workflow's `long` job; the new name may be in the
-  repo; "keep arc". #431's "540 s" was 600 s with the screen off (540 is the
-  first heartbeat to the tenth). **Open at the end:** 30d, draft #446
-  (branch `claude/project-thread-g37m5i`), stopped partway with a "Left"
-  list at the top of its prompt file on that branch: resume it from there,
-  merging main in first (it takes the version after main's). The nightly
-  was started by hand on main after #440 (78a90e4): read it first.
-  **Not started:** 30c, then 24c (B4's row, after 30c), then 30e.
-  **Learned:** sessions in project threads end their turn while CI runs
-  and may sit idle with a green or red PR for hours: check their PRs
-  yourself and merge a green one; a session's yardsticks "in the thread"
-  belong in the PR body; two sessions took the same version twice (tell
-  the second its number up front).
-- **Brain B-parallel (Opus 5.5, 2026-11-17 to 18, in Claude Code): the
-  chains run two at a time; ended at Mikey's request (long session).** The
-  plan made parallel (#409: four chains, an After and an Alongside for every
-  row, the merge-main rule). **Merged, each checked against its prompt:**
-  26 (#411, native audio on Android: 5 min on the emulator, 0 underruns,
-  samples bit for bit the wasm's); 22 (#412, codes v2 in the core, v178);
-  17 (#414 twang soft v179, #417 the jump v180: heard 0.059 s after asked,
-  notes bit for bit playing's); 20 (#416, lossless export, v181); 27 (#420,
-  the page on the native core, v182; the smoke job's races fixed); 18
-  (#419, long pieces on screen, v183); 21 (#424, the Small format, v184);
-  23 (#425 a loop's name in its code, #430 the nightly green again v185,
-  #427 the app on v2 only v186); 24 (#433, links after `#c=`, an album from
-  one seed, the plain lines, v187); 28 (#431, Android screen off, the
-  loop's cover on the lock screen, saving through the picker, v188; its
-  screen-off run was 540 s, not the prompt's ten minutes: for the next
-  brain to look at). **Mikey answered** (all in `docs/DECISIONS.md`): the
-  Batch 6 Album (every sound kept, twang soft only; 84b kept); codes may
-  change between versions, no code rot; a loop's name travels in its code;
-  the export's words and ending; the APK "works perfectly"; an album's code
-  carries each track's length (new session 24b, before B4); the long pieces'
-  words but "arc" (open); the domain bought (not named here); the
-  Android notification shows the loop's cover; his seven (#426, sessions 30a
-  to 30f); wait for the export workflow except docs-only or minor PRs
-  (#434). **Missed by this brain:** #414 left the nightly's stored render
-  hashes stale (red a day; #430 fixed it and found #402 behind piece #27's
-  holes). **Not running at the end; next:** 24b, 29, 30b, 30d, 30a, 30c, by
-  `brain-parallel-2.md`; B4 when 24b merges. **Open with Mikey:** the word
-  "arc"; whether to take the new name out of three public files
-  (`docs/DECISIONS.md`'s export line of 2026-11-17, `21-export-small.md`,
-  `test/ogg.test.mjs`); attaching the domain and the Android id (31a).
-  **Learned:** sessions end a turn while CI runs, so the brain waits and
-  wakes them; from a report's turn the app only proposes (cards); usage
-  limits stop sessions (a message resumes them); a timing test in
-  `tests/longform.rs` (a section's cost at 1 and 10^9) flaked once on a
-  docs-only PR (#434): one re-run.
+- Brains B-parallel and B-parallel 2's bullets (the chains, sessions 17 to 29,
+  30a and 30b, as checked): `docs/archive/brain-log.md`, "Start here before
+  B-parallel 3".
 - **Brain B2 (Opus 5.5, 2026-11-17): batch 6 and 84b checked, the album
   out.** On `main` at v177 (686543d), measured, not taken from the reports:
   the module matches its source (886,209 bytes); goldens 5,139 of 5,139; the

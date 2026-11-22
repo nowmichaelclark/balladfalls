@@ -625,36 +625,8 @@ Mikey's list for 1.0, in his words in each session's prompt
 (`docs/sessions/30a-album-previous.md` to `30f-painter-final.md`); the order
 and what may run together are `docs/sessions/README.md`, "Mikey's seven".
 
-- **109. Previous works in an album** (his 2; session 30a). Previous does
-  nothing in an album. Likely cause, to confirm: Previous is disabled at the
-  history's start, and an album's tracks don't enter the history. In an
-  album Previous goes to the track before, from every button (screen,
-  keyboard, headset, lock screen, Android's notification). **Yardsticks:**
-  rows for it, ten passes.
-- **110. The layers show what is heard** (his 5; session 30b). The layers
-  draw each pass as composed, so a note left out, faded or in a quiet
-  section is drawn, and a layer fading in may be heard before it is drawn.
-  The core reports each layer's notes as heard (after the section's level,
-  the fades and the refusals); the page draws them when and as loud as
-  heard; the cursor's latency checked on the web and on Android. Nothing
-  heard moves. **Yardsticks:** a tool measuring drawn against heard, before
-  and after, near zero after; the baseline unchanged; the tablet's margin.
-- **111. Track length, its own view, to the second** (his 6; session 30c).
-  A view like Bars, its key beside "any tempo" and "any bars"; the time to
-  the second; the core's track a time, its close landing on that second;
-  a fade in and a fade out, each on or off; the Sound view's Length slider
-  and the export's "How much" gone (an export is the track length; with none
-  set it opens the view first). **Yardsticks:** a track ends on its second at any
-  tempo, on a loop, a piece and Endless; the export that long.
-- **112. The info card** (his 3 and 4; session 30d). Every detail line
-  shown is whole on any display; what doesn't fit is left off, and a tap
-  shows the rest. Its playhead round, like the layers' dots, a little bigger.
-  **Yardsticks:** no line clipped from 320 px to a tablet and at 200% text.
-- **113. Fewer words** (his 1; session 30e). Icons, switches and two- or
-  three-word phrases for explaining sentences, across the app; the share
-  screen as keys (copy code, paste code, export audio), export audio a view
-  of a key a format (flac, midi, the small one). Screen readers keep full
-  names. **Yardsticks:** a before and after table for Mikey.
+- **109 to 113 done** (#442, #440, #448, #446, #449; v190 to v195): their briefs
+  are in `docs/archive/queue-items.md`, "109 to 113. Mikey's seven". 114 is left:
 - **114. The Painter's final touches** (his 7; session 30f). The design once
   more as one app, and accessibility to WCAG 2.2 AA (contrast in every
   theme, focus, targets, names, reduced motion, 200% text). **Yardsticks:**
@@ -810,6 +782,18 @@ stay channel sources until an ears session needs a voice's note-by-note play
 
 ## Known issues
 
+- **CI's flakes and weak checks; for session 30** (brain B-parallel 3,
+  2026-11-22). Flakes, worst first: the Kotlin Gradle plugin's download
+  (four times in a day); the F-Droid emulator check counts UiAutomation's
+  own crash as the app's (twice); `android/smoke.mjs`'s blocked-page check
+  plays a random loop and fails on a quiet one (2 of 106 loops on main's own
+  core: give it a fixed loop); `tests/longform.rs`'s "a section costs the
+  same at one and at a billion", and `tools/longform.mjs`'s "no section
+  line's block over the loop's own worst audio block", are timings. Weak,
+  found by 30c: `tools/views.mjs` exits 0 when a view fails, and CI never
+  runs it on Endless; `tools/export-long.mjs`'s "no fill-ins" passes with no
+  count; `tools/track-fades.mjs`'s "first 5 ms silence" passes with the fade
+  in off.
 - **F-Droid's CI passes a byte check it didn't make; for session 30** (hands
   30e, 2026-11-22, #449): `android/fdroid/compare-apks.sh` exits 0 with "no
   F-Droid build to compare with" when that APK is missing, so "the same

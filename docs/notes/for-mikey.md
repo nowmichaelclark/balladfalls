@@ -243,7 +243,8 @@ open it, then on the phone's speaker, as before:
 2. The Batch 6 album, screen off, ten minutes.
 3. A few minutes behind the home screen.
 4. Lighter on processor on, then off (say if it clicks right at the switch).
-5. Still playing: Diagnostics, copy, paste to the brain.
+5. Still playing: Diagnostics, copy, paste to the brain (its `stream:` line
+   should say "power saving": if not, the phone didn't give the new path).
 
 Say too if Pause or Next now feels slow, the speaker sounds different, the
 lit dots run off the beat, or it moved to Lite by itself. The new counts

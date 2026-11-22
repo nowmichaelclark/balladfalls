@@ -41,9 +41,8 @@ crackles".
 | the app | clean (full and Lite) | clean | crackles (full and Lite) |
 | the site in Chrome | clean (full and Lite) | not tried | clean (full and Lite) |
 
-Not yet known: headphones. The browser of the clean screen-off test was
-Chrome (Mikey, 2026-11-22: "yes I used duckduckgo for the painter test, but
-chrome for the crackle-free test").
+Asked which browser that was: "chrome for the crackle-free test" (their
+DuckDuckGo screenshot was the Painter's test). Not yet known: headphones.
 
 Diagnostics after it (copied paused, the stream stopped): late, missed,
 dropped and underruns all 0 again, so **the counters don't see these
@@ -169,3 +168,12 @@ longer than it holds), playback behind the phone's clock (over 10 ms, held
 for a second), callbacks over their deadline and the worst four. Zeros don't
 prove a clean sound: a glitch that doesn't stop the device's position isn't
 seen.
+
+CI's emulator on it (run 45038681309, f6c3ce0, every job green) **did not
+get this path**: asked for power saving, it gave the mode None (burst 2180,
+buffer 4360, 152 to 165 ms measured, the thread normal). So its zero
+underruns in five minutes, and in ten with the screen off, say nothing of a
+deep buffer; nor that a phone is free of crackles. Its worst callback with
+the screen off took 41.4 ms (194% of its deadline) and the 91 ms buffer took
+it with no underrun. The phone's `stream:` line has to say "power saving"
+for the listen to test this change.

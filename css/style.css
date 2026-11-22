@@ -2577,6 +2577,30 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 .v-track.endless .ln-input { color: var(--text-secondary); text-decoration: none; font-weight: 500; font-size: min(1.75rem, 40px); }
 .v-track.endless .ln-slide input[type="range"]::-webkit-slider-thumb { opacity: 0.5; }
 .v-track.endless .ln-slide input[type="range"]::-moz-range-thumb { opacity: 0.5; }
+/* Short phones: the view asks its own height (what the card and the keys
+   leave it), and nothing in it scrolls. Under 324px the gaps close and the
+   tick labels no longer take the slider's touches; under 280px (360x640,
+   320x568) the time takes the title's place between cancel and done, and
+   its words and the tick labels go (still read out; the title too). */
+.v-track { container: track / size; position: relative; }
+.v-track .ln-ticks { pointer-events: none; }
+@container track (max-height: 323.98px) {
+  .v-track .ln-body { gap: 4px; padding-top: 0; padding-bottom: 0; }
+}
+@container track (max-height: 279.98px) {
+  .v-track .ln-head { grid-template-columns: auto 1fr auto; }
+  .v-track .ln-head .vkey { min-height: 44px; height: 44px; }
+  .v-track .ln-head .ln-done { grid-column: 3; }
+  .v-track .ln-title, .v-track .ln-time {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .v-track .tk-num { position: absolute; top: 4px; left: 72px; right: 72px; width: auto; height: 44px; }
+  .v-track .ln-input, .v-track.endless .ln-input { height: 44px; font-size: min(1.5rem, 26px); }
+  .v-track .ln-body { gap: 0; padding: 0 4px; justify-content: space-evenly; }
+  .v-track .tk-steps .ln-step, .v-track .ln-keys .vkey.word { min-height: 44px; height: 44px; }
+  .v-track .ln-slide input[type="range"] { height: 28px; }
+  .v-track .ln-ticks { display: none; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .phone .np-picks:active, .phone button.pk-val:active { transform: none !important; }

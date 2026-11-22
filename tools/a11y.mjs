@@ -849,7 +849,8 @@ async function main() {
   }
   for (const [what, where] of failures) console.log(`  failed ${where.length}x  ${what}`);
   console.log(`\na11y: ${tally.text} looks at text, ${tally.marks} at graphics, ${tally.rings} at rings in ${THEMES.length} themes and forced colors; ${tally.fits} fits; ${tally.under44} of ${tally.controls} targets under 44 px at 360x780; ${Math.round((Date.now() - began) / 1000)} s; ${failures.size} failed`);
-  process.exit(failures.size ? 1 : 0);
+  // Not process.exit: a long log down a pipe is cut short by it.
+  process.exitCode = failures.size ? 1 : 0;
 }
 
 main().catch((e) => {

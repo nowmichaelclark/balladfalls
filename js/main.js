@@ -14,7 +14,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v195';
+const BUILD = 'v196';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -2241,8 +2241,15 @@ function wire() {
   updateHistoryButtons();
   updateSaveButton();
 
-  // The name's size depends on the card's width.
-  window.addEventListener('resize', () => ui.fitCard());
+  // A turned phone or a resized window: what is measured is measured again
+  // (the name, the card's lines, the sliders' stops, the panel's fit).
+  window.addEventListener('resize', () => {
+    ui.fitCard();
+    if (state.view === 'length') picks.renderLength();
+    else if (state.view === 'track') tracklen.renderTrack();
+    else if (state.view === 'vibe') picks.fitPanel();
+    else if (state.view === 'now') fitNow();
+  });
 }
 
 if (noGenerator) {

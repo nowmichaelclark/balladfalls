@@ -27,7 +27,7 @@ the points where the next step is yours.
 - **On a short phone** (360x640, 320x568) the time takes the title's
   place between cancel and done, and its words and the slider's labels are
   left out, so every key fits without scrolling. A phone on its side has
-  no room for the view yet (a Known issue, for the Painter's session).
+  had room for it since v196 (two columns).
 - **How the fades sound (for your ears):** the fade in rises from silence
   over 3 s; the fade out reaches silence on the last second over the 8 s
   before it, the notes and the room falling together, so its last couple

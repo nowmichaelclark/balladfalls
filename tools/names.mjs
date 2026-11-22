@@ -19,7 +19,8 @@
 //   node tools/names.mjs [--shots DIR] [--verbose] [--port 8773]
 //
 // --shots: every screen at 360 px and a tablet's width, light and dark, and
-// one sheet of them for each of the four.
+// one sheet of them for each of the four; and Track length on short phones
+// (360x640, 320x568), on and on and a time set (`short_*`).
 //
 // Chromium from Playwright (npm install --no-save playwright@1.56.1).
 
@@ -319,6 +320,29 @@ async function checkFit(browser, code, size, scale) {
   await ctx.close();
 }
 
+// Track length on the short phones 30c's fix is for, its infinity key
+// among the controls (tools/rows.mjs checks that each can be touched).
+async function shortShots(browser, code) {
+  for (const [width, height] of [[360, 640], [320, 568]]) {
+    const size = { name: `${width}x${height}`, width, height };
+    for (const mode of ['light', 'dark']) {
+      const { ctx, page } = await open(browser, { url: linkOf(`${ORIGIN}/`, code), size, mode });
+      await toVibe(page);
+      await click(page, '#picksList .pk-track');
+      await sleep(400);
+      await page.screenshot({ path: path.join(SHOTS, `short_track-on-and-on_${size.name}_${mode}.png`) });
+      await page.evaluate(() => {
+        const n = document.getElementById('trkNum');
+        n.value = '45:00';
+        n.dispatchEvent(new Event('blur'));
+      });
+      await sleep(300);
+      await page.screenshot({ path: path.join(SHOTS, `short_track-set_${size.name}_${mode}.png`) });
+      await ctx.close();
+    }
+  }
+}
+
 // ----------------------------------------------------------------- run
 
 async function open(browser, { url, size = PHONE, scale = 100, mode = 'dark', init = null }) {
@@ -389,6 +413,7 @@ async function main() {
     }
     const loop = encodeSong(newSpec(11));
     for (const size of SIZES) for (const scale of SCALES) await checkFit(browser, loop, size, scale);
+    if (SHOTS) await shortShots(browser, loop);
   } finally {
     await browser.close();
     server.close();

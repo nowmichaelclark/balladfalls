@@ -33,8 +33,9 @@ words: 30f, 30, B5. The before and after of every line is in
   itself" is "auto".
 - No popup for what the screen already shows (a loop's name, left album, a
   roll in Layers).
-- Not changed, his own sentences: "Please refresh." and the app's
-  description (the install box, a link's preview).
+- Not changed, his own sentences, and both open questions to him in
+  `for-mikey.md`: "Please refresh." and the app's description (the install
+  box, a link's preview).
 
 ## How it holds together, for the next session
 

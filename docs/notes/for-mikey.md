@@ -445,8 +445,12 @@ the last one (same key). On the **Moto** and on the **tablet**:
   sentence. Where I held back: the lines for something going wrong
   keep their reason (no space, nothing saved, needs update); delete
   with 3 loops keeps its count; share link and seed album stay on Share,
-  else both would be lost; "Please refresh." is your own wording, left; so is the app's one-sentence
-  description, which an install box and a link's preview show.
+  else both would be lost.
+  **Two questions still yours** (both lines stay as they are until you
+  answer): should "Please refresh." become "Refresh."? And should the app's
+  description, which an install box and a link's preview show ("A
+  procedural loop machine for relaxing, meditative and joyful nostalgic
+  loops."), become "Calm, nostalgic loops"?
 
 | Where | Before | After |
 |---|---|---|

@@ -105,7 +105,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 30c | `30c-track-length.md` | 111: Track length, its own view, to the second; out of the sliders and the export | Opus 5.5, high | 21, 24, 28 | 29, 30a, 30d | yes, 2026-11-22 (#448) |
 | 30d | `30d-info-card.md` | 112: the info card: clean lines, the rest a tap away, a round playhead | Sonnet 5.5, high | 23 | 21, 24, 24c, 28, 29, 30a, 30c | yes, 2026-11-22 (#446) |
 | 30e | `30e-fewer-words.md` | 113: fewer words: keys, icons and switches; the share screen as keys | Opus 5.5, high | 21, 24, 28, 30a to 30d | 24c, 29 | yes, 2026-11-22 (#449) |
-| 30f | `30f-painter-final.md` | 114: the Painter's final touches, and accessibility | Opus 5.5, high | 29, 30e | none | |
+| 30f | `30f-painter-final.md` | 114: the Painter's final touches, and accessibility | Opus 5.5, high | 29, 30e | none | yes, 2026-11-22 (#452, #453, #454, #455) |
 | | | **Then in order, one at a time** | | | | |
 | 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | 18, 21, 24, 24c, 29, B4, 30f | none | |
 | B5 | `brain-5-release.md` | Brain: the release check | Opus 5.5, high | 30 | none | |

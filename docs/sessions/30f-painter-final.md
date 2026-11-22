@@ -6,10 +6,8 @@ art when the screen is off or in the android notifications? Does 30f handle
 that?"): the playing loop's own cover as Now Playing art, the one exception
 to "don't add features" below.
 
-**Left:** that piece, the session's fourth PR (v199): a browser's lock
-screen and notification show the loop's cover, a check holds it, and the
-Android screen-off job keeps a screenshot of it. 30f is done when it
-merges; session 30 waits for it.
+**Done with it:** #455 (v199), the session's fourth PR, after #452, #453
+and #454.
 
 Written 2026-11-18 at Mikey's request (his list of seven for 1.0, item 7:
 "A final touches painter session that goes over the design again and

@@ -816,6 +816,15 @@ stay channel sources until an ears session needs a voice's note-by-note play
   `data/codes.txt` until the app keeps a code's version
   (`docs/notes/105e-page.md`, 1): until then an addition would move every
   older code played in the app.
+- **Bars' keys are covered on short phones; for session 30f** (brain
+  B-parallel 3, 2026-11-22, on live v192 at 360x640: lenEndless, arc, wander
+  and lenAny). Track length had the same fault and has its own fix in #448
+  (`.v-track` asks its own height); that doesn't touch Bars. A row like
+  Track length's (`covered`, `tools/rows.mjs`) would hold it.
+- **A phone on its side leaves the middle view 30 to 65 px; for session
+  30f** (hands 30c, 2026-11-22, at 800x360 and 915x412): Track length can't
+  be used there, with #448's fix or without. It needs the screen's layout to
+  change, not the view's; the other views weren't measured.
 - **"Let the loop wander" repeats itself since item 44** (Mikey,
   2026-10-18). Since #211 each pass's wandering is drawn from the loop's
   code and the pass number, so replaying a saved loop wanders exactly as

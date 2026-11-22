@@ -1116,10 +1116,13 @@ async function longRows(browser, port, errors) {
     }
     const roles = {};
     for (const k of model.marks) roles[k.role] = (roles[k.role] || 0) + 1;
-    return { same: JSON.stringify(again.marks) === JSON.stringify(model.marks), marks: model.marks.length, first: model.marks[0].bar, last: model.last, ticks, missing, stray, W, roles };
+    // The height is the peak, or in the small form, which has neither build
+    // nor second theme, the lift (docs/LONGFORM.md): about 1 arc in 100.
+    const height = roles.peak > 0 || (roles.lift > 0 && !roles.build && !roles.second);
+    return { height, same: JSON.stringify(again.marks) === JSON.stringify(model.marks), marks: model.marks.length, first: model.marks[0].bar, last: model.last, ticks, missing, stray, W, roles };
   });
   row('long piece: the markers are the map\'s: the core\'s marks asked again are the line\'s, every tick is painted and nothing else is',
-    m && m.same && m.marks > 100 && m.first === 0 && m.last === 32768 && m.ticks > 20 && m.missing === 0 && m.stray === 0 && m.roles.peak > 0 && m.roles.opening > 0, JSON.stringify(m && { ...m, roles: undefined }));
+    m && m.same && m.marks > 100 && m.first === 0 && m.last === 32768 && m.ticks > 20 && m.missing === 0 && m.stray === 0 && m.height && m.roles.opening > 0, JSON.stringify(m));
 
   // A jump to three hours in: a tap on the line.
   const box = await page.locator('#pieceLine').boundingBox();

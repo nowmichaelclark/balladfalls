@@ -586,3 +586,11 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   theme's color. Left for Mikey: the two screen reader passes, the sheets,
   the letter shortcuts, 400% zoom (`docs/notes/for-mikey.md`). Listen for
   nothing. No album loop.
+- #455, the loop's own cover as Now Playing art (item 114, session 30f,
+  added by Mikey 2026-11-22; v199), preview URL:
+  <https://claude-s30f-cover-driftloom.nowmichaelclark.workers.dev> (the
+  branch's): a browser's media session shows the playing loop's cover (it
+  was always the app's icon); `test/media.test.mjs` and the rows hold it,
+  and Android's screen-off job keeps screenshots of the notification and
+  the lock screen. One look on the phone, both ways in. Listen for nothing.
+  No album loop.

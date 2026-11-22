@@ -9,13 +9,27 @@
 // and the finished picture goes to the page as an ImageBitmap, moved, not
 // copied. The page only pastes it in.
 //
-// Messages: { id, spec, size } in; { id, bitmap } or { id, error } out, in
-// the order they came.
+// Messages: { id, spec, size } in; { id, bitmap } or { id, error } out. And
+// { id, image, size } in, a picture already drawn, for the PNG the lock
+// screen takes (session 30f): { id, blob } out, made here too, so the page
+// never reads a pixel back or waits for an encoder.
 
 import { drawCover } from './cover.js';
 
-self.onmessage = (e) => {
-  const { id, spec, size } = e.data;
+self.onmessage = async (e) => {
+  const { id, spec, size, image } = e.data;
+  if (image) {
+    try {
+      const canvas = new OffscreenCanvas(size, size);
+      canvas.getContext('2d', { willReadFrequently: true }).drawImage(image, 0, 0, size, size);
+      image.close();
+      const blob = await canvas.convertToBlob({ type: 'image/png' });
+      self.postMessage({ id, blob });
+    } catch (err) {
+      self.postMessage({ id, error: String((err && err.message) || err) });
+    }
+    return;
+  }
   try {
     const canvas = new OffscreenCanvas(size, size);
     drawCover(canvas, spec, size);

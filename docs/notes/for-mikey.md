@@ -36,6 +36,13 @@ the points where the next step is yours.
 - **One look on Android:** in Dawn the system's bars are Dawn's color with
   dark icons; a box to type in lines up with its title.
 
+- **The lock screen's cover (#455, v199):** play, turn the screen off, and
+  look at the notification and the lock screen through a Next: each loop's
+  own cover, both in the site installed from Chrome and in the APK (the
+  artifact `driftloom-debug-apk` of the
+  [newest Android run on that PR's branch](https://github.com/nowmichaelclark/driftloom/actions/workflows/android.yml?query=branch%3Aclaude%2Fs30f-cover)).
+  The small status bar icon stays Driftloom's.
+
 **Yours to decide (nothing waits on them):**
 
 - **The letter shortcuts (N, S, 1 to 5).** WCAG 2.1.4 (level A) wants

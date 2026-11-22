@@ -7,7 +7,7 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-22:** `main` is at v198 (v198 the final pass, one app, #454; v197 accessibility to WCAG 2.2 AA and its check, `tools/a11y.mjs`, #453; v196 every screen fits: short phones and a phone on its side, #452, all item 114, which is not done: the lock screen's cover is left, session 30f's fourth PR; v195 fewer words: Share as keys, Export a key a format (flac, opus, midi), one word or a symbol where it will do, a popup two words and said whole, item 113, #449; v194 the codes made ready to freeze: a removed member plays something close, every draw filtered by version, one version a release; twang's slow and bright taken out, item 105e, #450; v193 Track length, its own view, to the second, with a fade in and a fade out; the Sound view's Length slider and the export's How much gone, item 111, #448; v192 the info card: every detail line whole at any width or text size, what doesn't fit left off in a fixed order and a tap away, the playhead round, item 112, #446; v191 Previous works in an album, item 109, #442; v190 the layers show what is heard: each step's notes drawn as each layer sounded them, a long piece's quiet layers dimmer, item 110, #440; v189 an album's code carries how long each track plays, item 105d, #438; v188 the Android app with the screen off: a foreground service, the lock screen and notification with the loop's own cover, audio focus, saving through Android's picker, item 107d, #431; v187 links, an album from one seed and the plain lines, item 105c, #433; v186 share codes version 2 in the app, item 105b, #427, with a loop's own name in the code, #425; v185 the nightly green again, twang's seed renders and no join a hole on corpus piece #27, #430; v184 audio export, the small format (Opus in an Ogg file), item 104c, #424; v183 long pieces on screen, item 106b, #419; v182 the Android app on the native core, item 107c, #420; v181 audio export in the app, item 104b, #416; v180 the jump within a long piece, item 106a, #417; v179 twang soft only, #414; v178 codes version 2 in the core, item 105a, #412; v177 the chords nearer the tune, item 84b, #404; v176 the keepalive without its hiss, #403; session 01 done: v154 the tools
+**Status, 2026-11-22:** `main` is at v199 (v199 the loop's own cover as Now Playing art, #455, item 114 not done yet: Mikey's sideways review is left, v200; v198 the final pass, one app, #454; v197 accessibility to WCAG 2.2 AA and its check, `tools/a11y.mjs`, #453; v196 every screen fits: short phones and a phone on its side, #452, all item 114; v195 fewer words: Share as keys, Export a key a format (flac, opus, midi), one word or a symbol where it will do, a popup two words and said whole, item 113, #449; v194 the codes made ready to freeze: a removed member plays something close, every draw filtered by version, one version a release; twang's slow and bright taken out, item 105e, #450; v193 Track length, its own view, to the second, with a fade in and a fade out; the Sound view's Length slider and the export's How much gone, item 111, #448; v192 the info card: every detail line whole at any width or text size, what doesn't fit left off in a fixed order and a tap away, the playhead round, item 112, #446; v191 Previous works in an album, item 109, #442; v190 the layers show what is heard: each step's notes drawn as each layer sounded them, a long piece's quiet layers dimmer, item 110, #440; v189 an album's code carries how long each track plays, item 105d, #438; v188 the Android app with the screen off: a foreground service, the lock screen and notification with the loop's own cover, audio focus, saving through Android's picker, item 107d, #431; v187 links, an album from one seed and the plain lines, item 105c, #433; v186 share codes version 2 in the app, item 105b, #427, with a loop's own name in the code, #425; v185 the nightly green again, twang's seed renders and no join a hole on corpus piece #27, #430; v184 audio export, the small format (Opus in an Ogg file), item 104c, #424; v183 long pieces on screen, item 106b, #419; v182 the Android app on the native core, item 107c, #420; v181 audio export in the app, item 104b, #416; v180 the jump within a long piece, item 106a, #417; v179 twang soft only, #414; v178 codes version 2 in the core, item 105a, #412; v177 the chords nearer the tune, item 84b, #404; v176 the keepalive without its hiss, #403; session 01 done: v154 the tools
 made steady, Diagnostics without the old scheduler's lines, Mikey's shorter
 plain lines; v155 the width ceiling's rest fix; session 02 done: v156, item
 101a, batch 6's far ends: deepDuck, wideSweep, slowOpening; session 03 done:
@@ -628,9 +628,9 @@ and what may run together are `docs/sessions/README.md`, "Mikey's seven".
 - **109 to 113 done** (#442, #440, #448, #446, #449; v190 to v195): their briefs
   are in `docs/archive/queue-items.md`, "109 to 113. Mikey's seven". 114 is left:
 - **114. The Painter's final touches** (his 7; session 30f, whose file is the
-  brief): #452, #453 and #454 (v196 to v198) are the pass. **Left** (Mikey,
-  2026-11-22, "Add to 30f"): the playing loop's own cover as Now Playing
-  art, v199. Session 30 waits for it.
+  brief): #452 to #455 (v196 to v199) are in. **Left** (Mikey's sideways
+  review, 2026-11-22): the two sides swapped, centered, and the browser's
+  bar put away by a scroll, v200. Session 30 waits for it.
 
 ## 108. 1.0
 
@@ -805,6 +805,18 @@ stay channel sources until an ears session needs a voice's note-by-note play
   `data/codes.txt` until the app keeps a code's version
   (`docs/notes/105e-page.md`, 1): until then an addition would move every
   older code played in the app.
+- **A drawn loop can refuse to play; for session 30** (hands 30f, 2026-11-22,
+  on main's generator, ab1b9d7): about 1 loop in 84,000 (3 in 253,456) is
+  drawn with a warmth a little over 1 (`core/src/generator/spec.rs`, the
+  tone's range times `0.6 + feel.warmth * 0.6`, not held to 1). The page
+  shows it, then `render` gives it back as the tone's edit, `with_tone`
+  refuses it and the page throws: nothing plays. Seeds 983236608, 720091369
+  and 2840407293 show it (`gen.render(gen.newSpec(seed))` in Node; with the
+  warmth held to 1 they play). It only says "can't do that": `take` notes
+  the reason in `REFUSED`, and `dl_play_refusal` reads `PICKS_REFUSED`.
+  Holding it to 1 may move those loops' sound and goldens. It may be what
+  failed #454's rows once (job 137211756616, the codes rows, the page's
+  opening loop drawn at random: the same error, the seed not logged).
 - **"Let the loop wander" repeats itself since item 44** (Mikey,
   2026-10-18). Since #211 each pass's wandering is drawn from the loop's
   code and the pass number, so replaying a saved loop wanders exactly as

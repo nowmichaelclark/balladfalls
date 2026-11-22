@@ -6,10 +6,21 @@ art when the screen is off or in the android notifications? Does 30f handle
 that?"): the playing loop's own cover as Now Playing art, the one exception
 to "don't add features" below.
 
-**Left:** that piece, the session's fourth PR (v199): a browser's lock
-screen and notification show the loop's cover, a check holds it, and the
-Android screen-off job keeps a screenshot of it. 30f is done when it
-merges; session 30 waits for it.
+**Built:** #455 (v199), the session's fourth PR, after #452, #453
+and #454.
+
+**Added by Mikey, 2026-11-22** (to brain B-parallel 3, from the v198 preview
+on their phone sideways): "I want the viewports to be swapped though; the
+play buttons and other buttons near it and the info card should be on the
+right. The viewport box that changes should be on the left side. Also, when
+viewing on chrome, I can't get the address bar at the top to go away; what
+would be the sensible way to do that without Fullscreen? I would thing the
+user could just be able to scroll down a bit. Also, things weren't quite
+centered for me and the boxes could have probably enlarged a bit more with
+how much empty space there is in the top and right."
+
+**Left:** that, the session's fifth PR (v200). 30f is done when it merges;
+session 30 waits for it.
 
 Written 2026-11-18 at Mikey's request (his list of seven for 1.0, item 7:
 "A final touches painter session that goes over the design again and

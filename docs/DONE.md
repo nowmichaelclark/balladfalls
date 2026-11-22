@@ -594,3 +594,11 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   and Android's screen-off job keeps screenshots of the notification and
   the lock screen. One look on the phone, both ways in. Listen for nothing.
   No album loop.
+- #457, sideways as Mikey asked (item 114, session 30f, their review of
+  2026-11-22; v200), preview URL:
+  <https://claude-s30f-sideways-driftloom.nowmichaelclark.workers.dev> (the
+  branch's): the panel at the left, the card and keys at the right; insets
+  already outside the page aren't counted twice; in a browser's tab on a
+  touch screen a small scroll puts the address bar away. Not proven on a
+  phone: two steps in `docs/notes/for-mikey.md`. Listen for nothing. No
+  album loop.

@@ -19,7 +19,7 @@ user could just be able to scroll down a bit. Also, things weren't quite
 centered for me and the boxes could have probably enlarged a bit more with
 how much empty space there is in the top and right."
 
-**Done with it:** the session's fifth PR (v200).
+**Done with it:** #457 (v200), the session's fifth PR.
 
 Written 2026-11-18 at Mikey's request (his list of seven for 1.0, item 7:
 "A final touches painter session that goes over the design again and

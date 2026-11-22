@@ -42,7 +42,7 @@ the points where the next step is yours.
   [newest Android run on that PR's branch](https://github.com/nowmichaelclark/driftloom/actions/workflows/android.yml?query=branch%3Aclaude%2Fs30f-cover)).
   The small status bar icon stays Driftloom's.
 
-- **Sideways, your review (v200; not seen on a phone yet):** in Chrome and
+- **Sideways, your review (#457, v200; not seen on a phone yet):** in Chrome and
   in DuckDuckGo open <https://claude-s30f-sideways-driftloom.nowmichaelclark.workers.dev>,
   turn the phone, and:
   1. The panel at the left, card and keys at the right, the same gap at

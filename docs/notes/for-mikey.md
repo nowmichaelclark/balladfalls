@@ -235,12 +235,11 @@ merge request is faster and keeps the recipe in this repository.
 Your checks of 2026-11-22 are all in (`docs/notes/115-crackles.md`): only in
 the app with the screen off (maybe faintly on the lit lock screen), on full
 and Lite; clean behind Home and other apps, and in Chrome with the screen on
-or off. Until it's fixed, the site in Chrome for listening with the screen
-off.
+or off.
 
 **Heard (2026-11-23): no more crackles** on v201 (f6c3ce0's APK, #458),
 with headphones, after hearing them on v195 first; `docs/notes/115-crackles.md`
-has your words and your Diagnostics. Item 115 closes when #458 merges. One
+has your words and your Diagnostics. Item 115 closed with #458. One
 thing left to say if it bothers you: Pause and Next are heard about a fifth
 of a second later now (222 ms).
 

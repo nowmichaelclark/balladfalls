@@ -2,22 +2,20 @@
 
 **Left** (2026-11-23, after Mikey heard v201 clean: `docs/notes/115-crackles.md`):
 
-- Merge #458 after #455 and #457 (30f's), main merged in, CI green on the
-  last commit; then the Done line, the queue's status (item 115 closed by
-  that listen), the tick. Session 30g's own session ends at that merge, so
-  what follows is for the next session with this prompt.
+- #458 (v201) is the fix, with its Done line, the queue's status (item 115
+  closed by that listen) and the row's tick. The rest is for a later session
+  with this prompt: 30f's row is ticked, so none of it waits any more.
 - Step 1 (E9T-ZxDxj and the album rendered natively, read for steps in the
   samples), step 3 (every command timed natively, the worst against promise
   1), step 4 (a switch by hand and by itself without a click): not done.
-- Step 6 (the Lite rule for the native buffer and thread): waits for 30f's
-  tick (`js/quality.js`, `js/main.js`). On v201 Mikey's phone read 22% over
-  20 s and 60 s at full, under the 50% line.
-- Step 2's rest needs 30f's files too: "reset counters" clearing the native
+- Step 6 (the Lite rule for the native buffer and thread; `js/quality.js`,
+  `js/main.js`). On v201 Mikey's phone read 22% over 20 s and 60 s at full,
+  under the 50% line.
+- Step 2's rest, in files 30f had: "reset counters" clearing the native
   counts and why it moved to Lite (`js/main.js`), time played with the
   screen off (Kotlin), the screen-off job reading the new counts
   (`NativeCore.kt`, `android/background.mjs`).
-- Step 7 (Play after two minutes paused, `android/background.mjs`): waits
-  for the tick.
+- Step 7 (Play after two minutes paused, `android/background.mjs`).
 - If Mikey minds the 222 ms latency on Pause and Next: a follow-up item.
 - The nightly by hand on main after the last merge, and read.
 

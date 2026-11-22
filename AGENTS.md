@@ -85,6 +85,9 @@ that changes how it sounds.
   usage in the queue's standing rules and the file headers. The app's
   controls on the player, a check each: `node tools/rows.mjs` (`--long`
   adds the length slider's minute).
+- Accessibility (item 114): `node tools/a11y.mjs` (Playwright's Chromium;
+  CI's `a11y` job in the export workflow runs it). Not the gate: it takes
+  minutes and a browser.
 - Docs: `node tools/check-docs.mjs`.
 - Android (item 107): `cd android && ./gradlew assembleDebug` (needs the NDK
   `android/gradle.properties` pins and rustup; the core is built native by

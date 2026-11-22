@@ -53,8 +53,6 @@ h1, h2, h3, h4, h5, p { margin: 0; }
   isolation: isolate;
   font-size: 1rem;
   line-height: 1.4;
-  container-type: inline-size;
-  container-name: phone;
 }
 .phone > .zone-info,
 .phone > .zone-dynamic,
@@ -212,12 +210,17 @@ h1, h2, h3, h4, h5, p { margin: 0; }
 /* A note as loud as it is heard (session 30b): a layer a long piece's
    plan has soft, a kit still rising, drawn dimmer (js/ui.js sets
    --heard, 0.3 to 0.9; none at a full share). */
-.pattern span.on[data-shade] { opacity: var(--heard); }
+.pattern span.on[data-shade] {
+  background: color-mix(in srgb, var(--n) calc(var(--heard) * 100%), transparent);
+  box-shadow: inset 0 0 0 1.25px var(--n);
+}
 .pattern span.on.big {
   width: 12px; height: 12px;
 }
-.layer.dim .pattern span.on { opacity: 0.5; }
-.layer.dim .pattern span.on[data-shade] { opacity: calc(0.5 * var(--heard)); }
+/* A muted layer's notes are rings: a shape, not only a fainter color. */
+.layer.dim .pattern span.on, .layer.dim .pattern span.on[data-shade] {
+  background: transparent; box-shadow: inset 0 0 0 1.5px var(--text-dim);
+}
 
 .phone.playhead-at-9.playing .layer:not(.dim) .pattern span:nth-child(9).on {
   box-shadow:
@@ -293,14 +296,15 @@ h1, h2, h3, h4, h5, p { margin: 0; }
    locked zones do not: Info 205 / Dynamic ~319 / Buttons 240 stay
    exactly that at every text size, so the pins below stop a zone
    growing to fit its content and squeezing its neighbour. What
-   changes is what happens INSIDE a zone, in steps. The phone is a
-   size container, so each step is measured in ems of the phone's
-   own font size:  340px / (16px x scale).
+   changes is what happens INSIDE a zone, in steps, each measured in
+   ems of the phone's own font size:  340px / (16px x scale). (Since
+   v197 js/main.js measures them: a container query in em went stale
+   when the text size changed under the page, Chromium 141.)
       Q1  <= 17.5em  scale >= 1.21   Layers stack
    (The info card's lines no longer step: script lays out whole
    lines and leaves off what does not fit, session 30d.)
-   No media query, no JS, no class: the same rules answer to the
-   browser's own text-size setting.
+   The same rules answer to the browser's own text-size setting and
+   to the Android app's.
    ============================================================ */
 .zone-info, .zone-buttons, .info-inner { min-height: 0; }
 .info-text { overflow: hidden; }
@@ -320,22 +324,20 @@ h1, h2, h3, h4, h5, p { margin: 0; }
 .phone.fit-stack .layer .btn-roll { grid-area: roll; }
 .phone.fit-stack .layer .btn-on   { grid-area: on;   }
 
-@container phone (max-width: 17.5em) {
-  /* Layers: the label moves ABOVE the pattern and the two buttons
+/* Layers: the label moves ABOVE the pattern and the two buttons
      span both rows. The 48 x 48 targets are unchanged and the
      pattern gets wider. */
-  .layer {
+:where(.phone.text-large) .layer {
     grid-template-columns: 1fr 48px 48px;
     grid-template-rows: auto auto;
     grid-template-areas: "lbl roll on" "pat roll on";
     align-content: center; align-items: center;
     row-gap: 1px;
   }
-  .layer .lbl      { grid-area: lbl;  align-self: end;   line-height: 1.15; }
-  .layer .pattern  { grid-area: pat;  align-self: start; }
-  .layer .btn-roll { grid-area: roll; }
-  .layer .btn-on   { grid-area: on;   }
-}
+:where(.phone.text-large) .layer .lbl { grid-area: lbl;  align-self: end;   line-height: 1.15; }
+:where(.phone.text-large) .layer .pattern { grid-area: pat;  align-self: start; }
+:where(.phone.text-large) .layer .btn-roll { grid-area: roll; }
+:where(.phone.text-large) .layer .btn-on { grid-area: on;   }
 
 
 /* ============================================================
@@ -574,8 +576,8 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 @media (forced-colors: active) {
   .pattern, .playhead { forced-color-adjust: none; }
   .pattern span { background: GrayText; }
-  .pattern span.on, .pattern span.on[data-shade] { background: CanvasText; opacity: 1; }
-  .layer.dim .pattern span.on, .layer.dim .pattern span.on[data-shade] { background: GrayText; opacity: 1; }
+  .pattern span.on, .pattern span.on[data-shade] { background: CanvasText; box-shadow: none; }
+  .layer.dim .pattern span.on, .layer.dim .pattern span.on[data-shade] { background: transparent; box-shadow: inset 0 0 0 1.5px GrayText; }
   .phone.playhead-at-9.playing .layer:not(.dim) .pattern span:nth-child(9).on {
     box-shadow: 0 0 0 2px Canvas, 0 0 0 4px Highlight;
   }
@@ -636,8 +638,8 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
   --glass-border: rgba(255,255,255,0.78);
   --glass-shadow: 0 20px 40px -25px rgba(80,60,90,0.5), inset 0 1px 0 rgba(255,255,255,0.9);
   --text-primary: #3a2848;
-  --text-secondary: #6a5868;
-  --text-dim: #74627c;
+  --text-secondary: #645262;
+  --text-dim: #6a5973;
   --rule: rgba(74,56,80,0.32);
   --guide-dot: rgba(74,56,80,0.42);
   --playhead-bg: rgba(74,56,80,0.28);
@@ -723,7 +725,7 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
     inset 0 -1px 0 rgba(180,90,110,0.18);
   --text-primary: #2a1428;
   --text-secondary: #5a2840;
-  --text-dim: #663450;
+  --text-dim: #602f4b;
   --rule: rgba(42,20,40,0.36);
   --guide-dot: rgba(42,20,40,0.48);
   --playhead-bg: rgba(42,20,40,0.32);
@@ -733,7 +735,7 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
   /* v16 — ruby, violet, vermilion, plum, royal blue. Light rows
      3.6:1, deep rows 5.4:1, Air between at 4.2:1.
      Session 12's were #c03050 #ab4e00 #8840a8 #8e5200 #a7285d. */
-  --n1: #c6243c; --n2: #651cae; --n3: #ab3918; --n4: #75135e; --n5: #2338c5;
+  --n1: #ac1a30; --n2: #651cae; --n3: #983012; --n4: #75135e; --n5: #2338c5;
   --halo-inner: rgba(255,235,220,0.6);
   --n-glow: rgba(255,140,120,0.5);
   --btn-mini-bg: linear-gradient(180deg, rgba(255,235,220,0.6), rgba(255,210,190,0.3));
@@ -818,7 +820,7 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
     inset 0 -2px 8px rgba(20,100,130,0.15);
   --text-primary: #0e2e40;
   --text-secondary: #1c4654;
-  --text-dim: #2e5466;
+  --text-dim: #294e60;
   --rule: rgba(14,46,64,0.36);
   --guide-dot: rgba(14,46,64,0.48);
   --playhead-bg: rgba(14,46,64,0.32);
@@ -828,7 +830,7 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
   /* v16 — ocean, sea teal, violet, reef coral, deep cerulean.
      Light rows 3.6-3.7:1, deep rows 5.2-5.7:1, Air 4.8:1.
      Session 12's were #1a5868 #288080 #208071 #86671a #007557. */
-  --n1: #145492; --n2: #207d6f; --n3: #6230c1; --n4: #bd2c26; --n5: #13546a;
+  --n1: #145492; --n2: #19685d; --n3: #6230c1; --n4: #bd2c26; --n5: #13546a;
   --halo-inner: rgba(230,250,250,0.7);
   --n-glow: rgba(130,220,205,0.5);
   --btn-mini-bg: linear-gradient(180deg, rgba(230,250,250,0.6), rgba(205,235,240,0.32));
@@ -1169,7 +1171,7 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
   --rule: rgba(200,170,255,0.30);
   --guide-dot: rgba(200,170,255,0.40);
   --playhead-bg: rgba(200,170,255,0.26);
-  --playhead-beat: rgba(200,170,255,0.56);   /* Session 12: beat cells to 3:1 */
+  --playhead-beat: rgba(218,194,255,0.68);   /* Session 12: beat cells to 3:1 */
   --playhead-on: linear-gradient(180deg, #ffd890, #e89040);
   --playhead-on-shadow: 0 0 12px rgba(255,180,90,0.85);
   --n1: #c878e8; --n2: #e878b8; --n3: #78b8e8; --n4: #e8b878; --n5: #a888e8;
@@ -1920,7 +1922,7 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 }
 .pc-ghost::before { content: ''; position: absolute; left: -1px; top: 0; bottom: 0; width: 2px; background: var(--text-primary); opacity: 0.75; }
 .np-piece.idle .pc-head::after { box-shadow: 0 0 0 2px var(--lit-ring, rgba(255,255,255,0.85)); }
-.np-piece.idle .pc-line { opacity: 0.7; cursor: default; }
+.np-piece.idle .pc-line { cursor: default; }
 .pc-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
 .pc-key { min-width: 44px; width: 44px; min-height: 44px; padding: 0; }
 .pc-key:disabled { opacity: 0.4; }
@@ -1983,27 +1985,26 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 .more.fit-five .sw-card { left: 10%; right: 10%; top: 30%; bottom: 30%; gap: 2px; padding: 0 3px; }
 .more.fit-five .sw-card i:nth-child(3) { display: none; }
 .more.fit-five .sw-card b { width: 9px; }
-@container phone (max-width: 17.5em) {
-  .themes { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  .sw-card { left: 10%; right: 10%; top: 30%; bottom: 30%; gap: 2px; padding: 0 3px; }
-  .sw-card i:nth-child(3) { display: none; }
-  .sw-card b { width: 9px; }
-  .trim { flex-wrap: wrap; }
-  .trim .setrow-text { flex-basis: 100%; }
-  .trim .trim-val { flex: 1; }
-  .hero-keys { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .hero-keys .vkey:last-child:nth-child(odd) { grid-column: 1 / -1; }
-  .keys3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  /* Rows with keys put the keys under the text, so a long name
+:where(.phone.text-large) .themes { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+:where(.phone.text-large) .sw-card { left: 10%; right: 10%; top: 30%; bottom: 30%; gap: 2px; padding: 0 3px; }
+:where(.phone.text-large) .sw-card i:nth-child(3) { display: none; }
+:where(.phone.text-large) .sw-card b { width: 9px; }
+:where(.phone.text-large) .trim { flex-wrap: wrap; }
+:where(.phone.text-large) .trim .setrow-text { flex-basis: 100%; }
+:where(.phone.text-large) .trim .trim-val { flex: 1; }
+:where(.phone.text-large) .hero-keys { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+:where(.phone.text-large) .hero-keys .vkey:last-child:nth-child(odd) { grid-column: 1 / -1; }
+:where(.phone.text-large) .keys3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* Rows with keys put the keys under the text, so a long name
      keeps the full width and never breaks mid-word. */
-  .lrow.track, .lrow.album { flex-wrap: wrap; row-gap: 0; }
-  .lrow.track .lrow-main, .lrow.album .lrow-main { flex-basis: 100%; }
-  .lrow.track .row-keys, .lrow.album > .vkey { margin: 0 0 8px auto; }
-}
-@container phone (max-width: 15.5em) {
-  .v-now .np-mid { gap: 8px; }
-  .go-hint { flex-basis: 100%; }
-}
+:where(.phone.text-large) .lrow.track,
+:where(.phone.text-large) .lrow.album { flex-wrap: wrap; row-gap: 0; }
+:where(.phone.text-large) .lrow.track .lrow-main,
+:where(.phone.text-large) .lrow.album .lrow-main { flex-basis: 100%; }
+:where(.phone.text-large) .lrow.track .row-keys,
+:where(.phone.text-large) .lrow.album > .vkey { margin: 0 0 8px auto; }
+:where(.phone.text-larger) .v-now .np-mid { gap: 8px; }
+:where(.phone.text-larger) .go-hint { flex-basis: 100%; }
 
 /* ---------- Reduced motion -------------------------------------
    The global rule (SESSION 6) already stops every transition and
@@ -2050,14 +2051,14 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 .sw-ember {
   --sw-glass: linear-gradient(180deg, rgba(255,238,224,0.72), rgba(255,222,208,0.66));
   --sw-edge: rgba(255,215,190,0.62);
-  --sw-a: #c6243c; --sw-b: #651cae; --sw-c: #ab3918;
+  --sw-a: #ac1a30; --sw-b: #651cae; --sw-c: #983012;
   --sw-play: linear-gradient(180deg, #ffb878 0%, #e85878 48%, #a02858 50%, #c03868 100%);
   background: radial-gradient(55% 45% at 25% 15%, #ffb070 0%, transparent 60%), radial-gradient(50% 40% at 78% 22%, #e85890 0%, transparent 60%), radial-gradient(65% 50% at 20% 82%, #7a2878 0%, transparent 65%), radial-gradient(60% 45% at 88% 85%, #c84878 0%, transparent 60%), radial-gradient(40% 22% at 50% 4%, #ffd0a0 0%, transparent 75%), linear-gradient(180deg, #e89878 0%, #b85888 45%, #4a1858 100%);
 }
 .sw-tidal {
   --sw-glass: linear-gradient(180deg, rgba(228,246,248,0.72), rgba(208,236,240,0.64));
   --sw-edge: rgba(210,235,240,0.66);
-  --sw-a: #145492; --sw-b: #207d6f; --sw-c: #6230c1;
+  --sw-a: #145492; --sw-b: #19685d; --sw-c: #6230c1;
   --sw-play: linear-gradient(180deg, #b8e8e0 0%, #38a0a8 48%, #0a6878 50%, #187888 100%);
   background: radial-gradient(55% 45% at 28% 15%, #b8e0da 0%, transparent 55%), radial-gradient(50% 40% at 78% 24%, #88bcc4 0%, transparent 60%), radial-gradient(75% 55% at 22% 82%, #2a7890 0%, transparent 65%), radial-gradient(55% 40% at 88% 82%, #68a8b4 0%, transparent 55%), linear-gradient(170deg, #c8e8e0 0%, #78b8c4 45%, #285a78 100%);
 }
@@ -2147,19 +2148,19 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 .name:focus { outline: none; }
 .name:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }
 .name-edit {
+  min-height: 24px;
   font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600;
   font-size: min(1.75rem, 36px); letter-spacing: -0.02em; line-height: 1;
   width: 100%; min-width: 0; padding: 0 0 2px; margin: 0;
   color: var(--text-primary); background: transparent;
-  border: 0; border-bottom: 1px solid var(--rule); border-radius: 0;
-  outline: none;
+  border: 0; border-bottom: 1px solid var(--text-secondary); border-radius: 0;
 }
 .meta { margin: 0; padding: 0; list-style: none; }
 /* Every line is whole (session 30d): the script sets only lines that fit
    and leaves off the rest, so nothing here wraps or shows an ellipsis. */
 .meta li { white-space: nowrap; overflow: hidden; }
 .meta li.mix { font-weight: 700; color: var(--text-primary); }
-.meta li.album-line { font-weight: 700; color: var(--mark); }
+.meta li.album-line { font-weight: 700; color: var(--mark-text, var(--mark)); }
 /* The details, and the tap that shows what was left off. The strip at the
    side holds the quiet mark (a dot a page) where there is more. */
 .meta-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
@@ -2267,7 +2268,6 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 }
 .phone input[type="range"]:focus { outline: none; }
 .phone input[type="range"]:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; border-radius: 8px; }
-.srow.off input[type="range"] { opacity: 0.7; }
 
 /* ---------- Library and Save ------------------------------------- */
 .tabs.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2289,7 +2289,7 @@ canvas.art { image-rendering: auto; }
   flex: 0 0 auto; margin-left: auto;
   width: 26px; height: 26px; border-radius: 7px;
   display: inline-flex; align-items: center; justify-content: center;
-  border: 1.5px solid color-mix(in srgb, var(--text-primary) 55%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--text-primary) 70%, transparent);
   color: var(--text-secondary);
 }
 .pick svg { width: 16px; height: 16px; }
@@ -2592,8 +2592,15 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 .tk-fades { justify-content: flex-end; }
 .tk-fades #trkFadeOut:disabled { opacity: 0.4; }
 .v-track.endless .ln-input { color: var(--text-secondary); text-decoration: none; font-weight: 500; font-size: min(1.75rem, 40px); }
-.v-track.endless .ln-slide input[type="range"]::-webkit-slider-thumb { opacity: 0.5; }
-.v-track.endless .ln-slide input[type="range"]::-moz-range-thumb { opacity: 0.5; }
+/* On and on, the steps and the slider still set a time: they keep their
+   contrast, the thumb hollow as Bars' is under any. */
+.v-track.endless :is(.ln-step, .ln-slide) { opacity: 1; }
+.v-track.endless .ln-slide input[type="range"]::-webkit-slider-thumb {
+  background: transparent; box-shadow: inset 0 0 0 2px var(--text-secondary);
+}
+.v-track.endless .ln-slide input[type="range"]::-moz-range-thumb {
+  background: transparent; box-shadow: inset 0 0 0 2px var(--text-secondary);
+}
 /* Short phones: the view asks its own height (what the card and the keys
    leave it), and nothing in it scrolls. Under 324px the gaps close and the
    tick labels no longer take the slider's touches; under 280px (360x640,
@@ -2684,20 +2691,14 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 .layer { grid-template-rows: minmax(0, 1fr); }
 .layer .btn-roll, .layer .btn-on { height: min(48px, 100%); min-height: 24px; align-self: center; }
 .phone.fit-stack .layer { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
-@container phone (max-width: 17.5em) {
-  .layer { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
-}
+:where(.phone.text-large) .layer { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
 
-/* The layer's name keeps its column at any text size; on a wide screen
-   the stacking asks the panel's width, which the zones hold at 480px. */
+/* The layer's name keeps its column at any text size. The text's steps
+   (.text-large, .text-larger) are js/main.js's stepText: on a wide screen
+   it asks the panel's width, which the zones hold at 480px. */
 .layer { grid-template-columns: max(48px, 3rem) minmax(0, 1fr) 48px 48px; }
 .phone.fit-stack .layer { grid-template-columns: minmax(0, 1fr) 48px 48px; }
-@container phone (max-width: 17.5em) {
-  .layer { grid-template-columns: minmax(0, 1fr) 48px 48px; }
-}
-@media (min-width: 480px) {
-  .phone > .zone-dynamic { container: phone / inline-size; }
-}
+:where(.phone.text-large) .layer { grid-template-columns: minmax(0, 1fr) 48px 48px; }
 
 /* A short phone upright: the keys give the panel what they can spare and
    stay 44px; on the smallest the card's art is 100px, room for four of its lines. */
@@ -2808,3 +2809,88 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 }
 /* The ∞ that opens Track length is a glyph wide: its key is a finger's. */
 .pk-val.pk-track { min-width: 44px; justify-content: center; }
+
+/* ============================================================
+   PAINTER 30f: ACCESSIBILITY (WCAG 2.2 AA; tools/a11y.mjs holds it)
+   ============================================================ */
+/* Words in the lamp's hue need 4.5:1; the mark alone is a graphic's 3:1. */
+.t-dawn, .t-ember, .t-tidal, .t-olive { --mark-text: color-mix(in srgb, var(--mark) 60%, var(--text-primary)); }
+/* The length color on the two mid-tone panels: 3:1 as a fill and a glyph. */
+.t-ember, .t-tidal { --pk-length: #5a38b8; }
+/* Play's glyph has a dark edge where the gloss under it is pale. */
+.t-dawn { --play-edge: #6e3d08; }
+.t-ember { --play-edge: #5c0c30; }
+.t-tidal { --play-edge: #04414c; }
+.t-olive { --play-edge: #3c3a08; }
+.t-nightlight { --play-edge: #4a2408; }
+:where(.t-dawn, .t-ember, .t-tidal, .t-olive, .t-nightlight) .btn-play svg > * {
+  stroke: var(--play-edge); stroke-width: 3; paint-order: stroke;
+}
+/* A slider's thumb has an edge that can be found on the glass. */
+.phone input[type="range"]::-webkit-slider-thumb { border: 2px solid var(--text-secondary); }
+.phone input[type="range"]::-moz-range-thumb { border: 2px solid var(--text-secondary); }
+.phone .ln-slide input[type="range"]::-webkit-slider-thumb { border: 0; }
+.phone .ln-slide input[type="range"]::-moz-range-thumb { border: 0; }
+
+/* Focus is shown on whatever takes it: a link, a typed number, a piece's
+   line and a title as much as a key. */
+.phone :is(a, input, pre, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: 2px;
+}
+.phone .ln-input:focus-visible { outline-offset: 0; }
+.phone .meta-more:focus-visible { outline-offset: -2px; }
+.info-text { overflow: hidden; overflow: clip; overflow-clip-margin: 5px; }
+.phone .name:focus-visible { outline-offset: 1px; }
+.vb-list { padding: 4px 4px 8px; scroll-padding-block: 6px; }
+.name { min-height: 24px; }
+
+@media (forced-colors: active) {
+  .phone :focus-visible { outline-color: Highlight !important; }
+  .vkey[aria-pressed="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
+  .phone input[type="range"], .export-bar { forced-color-adjust: none; }
+  .phone input[type="range"]::-webkit-slider-runnable-track { background: GrayText; box-shadow: none; }
+  .phone input[type="range"]::-moz-range-track { background: GrayText; box-shadow: none; }
+  .phone input[type="range"]::-webkit-slider-thumb { background: Canvas; border: 3px solid Highlight; box-shadow: none; }
+  .phone input[type="range"]::-moz-range-thumb { background: Canvas; border: 3px solid Highlight; box-shadow: none; }
+  /* (Bars' and Track length's thumbs, in each of their states, have rules of their own.) */
+  .phone .v-length .ln-slide input[type="range"]::-webkit-slider-thumb { background: Canvas; border: 3px solid Highlight; box-shadow: none; }
+  .phone .v-length .ln-slide input[type="range"]::-moz-range-thumb { background: Canvas; border: 3px solid Highlight; box-shadow: none; }
+  .phone input[type="range"]:disabled { opacity: 0.6; }
+  .export-bar { background: Canvas; border: 1px solid CanvasText; box-shadow: none; }
+  .export-bar span { background: Highlight; }
+  .lrow.in .pick { background: Canvas; border-color: Highlight; color: CanvasText; }
+  .t-dawn .btn-play svg > *, .t-ember .btn-play svg > *, .t-tidal .btn-play svg > *,
+  .t-olive .btn-play svg > *, .t-nightlight .btn-play svg > * { stroke: currentColor; stroke-width: 1; }
+}
+/* A short panel's page keeps room for its list at any text size: the
+   head's and the foot's words stop growing sooner (the list's don't). */
+@container middle (max-height: 299.98px) {
+  .page-head .vkey, .page-foot .vkey { font-size: min(0.75rem, 16px); min-height: 40px; }
+  .page-head .page-title { font-size: min(0.8125rem, 16px); }
+  .page-head { row-gap: 0; }
+  .page-foot { padding-top: 4px; }
+  .save-head { flex-wrap: nowrap; padding-bottom: 2px; }
+  .save-head .hint { flex: 0 1 auto; font-size: min(0.6875rem, 13px); }
+  .save-head .vkey { font-size: min(0.75rem, 14px); min-height: 40px; min-width: 0; padding-inline: 4px; }
+}
+/* A narrow panel (a small phone, or its side): the tabs' and the heads'
+   words stop growing where they would run into each other. */
+@container middle (max-width: 299.98px) {
+  .tab { font-size: min(0.75rem, 14px); padding-inline: 2px; gap: 4px; }
+  .v-sheet .ln-head { grid-template-columns: auto minmax(0, 1fr); }
+  .v-sheet .ln-title { font-size: min(0.8125rem, 16px); }
+  .v-sheet .ln-head .vkey { font-size: min(0.75rem, 14px); }
+  .page-foot .vkey, .page-head .vkey { font-size: min(0.75rem, 15px); }
+}
+/* A title that takes the focus wears its ring around its word, not through it. */
+.phone .view .page-title { flex: 0 1 auto; padding: 3px 6px; border-radius: 8px; }
+.phone .view :is(.hero-title, .page-title):focus-visible { outline-offset: 0; }
+.phone .view .page-title.vh { padding: 0; }
+@container track (max-height: 279.98px) {
+  .phone .v-track .page-title.ln-title { padding: 0; }
+}
+/* A browser that can make no loop has the line alone: no empty keys. */
+.phone.unplayable { display: flex; justify-content: center; }
+.phone.unplayable > :is(.zone-dynamic, .zone-buttons) { display: none; }
+.phone.unplayable > .zone-info { flex: 0 0 auto; grid-area: auto; grid-column: 1 / -1; align-self: center; padding: 12px; }
+.phone.unplayable .info-inner { padding: 22px 14px; }

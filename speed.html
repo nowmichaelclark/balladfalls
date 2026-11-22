@@ -19,16 +19,17 @@
 <style>
   :root { --bg: #08060c; --fg: #ece8f4; --dim: #9a93ab; --line: #2a2533; --key: #1a1622; --hi: #c9b6ff; --bad: #ff9a8a; --good: #9fe0b0; }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 0.9375rem/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
   main { max-width: 640px; margin: 0 auto; padding: 20px 16px 40px; }
-  h1 { font-size: 20px; margin: 0 0 8px; }
+  h1 { font-size: 1.25rem; margin: 0 0 8px; }
   p { margin: 0 0 12px; color: var(--dim); }
   .keys { display: flex; gap: 10px; margin: 16px 0; }
-  button { flex: 1; min-height: 52px; border: 1px solid var(--line); border-radius: 12px; background: var(--key); color: var(--fg); font: 600 16px system-ui, sans-serif; }
+  button { flex: 1; min-height: 52px; border: 1px solid var(--line); border-radius: 12px; background: var(--key); color: var(--fg); font: 600 1rem system-ui, sans-serif; }
   button:disabled { opacity: 0.45; }
   button.go { background: var(--hi); color: #120e1a; border-color: var(--hi); }
   #status { color: var(--hi); min-height: 1.5em; }
-  pre { white-space: pre-wrap; word-break: break-word; background: #110e17; border: 1px solid var(--line); border-radius: 12px; padding: 12px; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; min-height: 6em; }
+  :focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  pre { white-space: pre-wrap; word-break: break-word; background: #110e17; border: 1px solid var(--line); border-radius: 12px; padding: 12px; font: 0.75rem/1.5 ui-monospace, Menlo, Consolas, monospace; min-height: 6em; }
   #verdict.over { color: var(--bad); } #verdict.under { color: var(--good); }
 </style>
 </head>

@@ -2920,7 +2920,7 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 #seedAlbum .srow { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: center; column-gap: 14px; }
 .v-sheet #seedAlbum .srow span { font-size: min(0.75rem, 18px); }
 /* A browser that can make no loop has the line alone: no empty keys. */
-.phone.unplayable { justify-content: center; }
+.phone.unplayable { display: flex; justify-content: center; }
 .phone.unplayable > :is(.zone-dynamic, .zone-buttons) { display: none; }
 .phone.unplayable > .zone-info { flex: 0 0 auto; grid-area: auto; grid-column: 1 / -1; align-self: center; padding: 12px; }
 .phone.unplayable .info-inner { padding: 22px 14px; }

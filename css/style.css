@@ -2730,7 +2730,7 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   .phone > .zone-dynamic { grid-area: middle; padding-block: 8px; }
   .phone > .zone-buttons { grid-area: keys; padding-bottom: 8px; min-height: 0; }
   .zone-info { padding-top: 8px; }
-  .toast { left: 75%; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); max-width: min(46%, 420px); }
+  .toast { left: calc(50% + min(25%, 240px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); max-width: min(46%, 420px); }
 }
 @media (min-width: 480px) and (max-height: 349.98px) {
   .info-inner { padding-block: 10px; }
@@ -2739,11 +2739,14 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   .name, .name-edit { font-size: min(1.375rem, 28px); }
 }
 
-/* The keyboard up on a phone upright (the app's window shrinks for it):
-   what is being typed into keeps the screen. */
+/* Upright and under 440px high (the keyboard up, a split screen): the
+   card steps aside for the panel, unless its name is being typed or it
+   holds a plain line. By height alone, never by focus: nothing moves from
+   under a finger as a box loses it. Play stays. */
 @media (max-width: 479.98px) and (max-height: 440px) {
-  .phone:has(.zone-dynamic input[type="text"]:focus) > .zone-info,
-  .phone:has(input[type="text"]:focus) > .zone-buttons { display: none; }
+  .phone:not(:has(.name-edit:not([hidden]), .info-inner.plain)) > .zone-info { display: none; }
+  .zone-dynamic { padding-top: 6px; }
+  .zone-buttons { flex-basis: max(100px, 28dvh); }
 }
 
 /* Under 340px of panel: Bars and Vibe close their gaps. */

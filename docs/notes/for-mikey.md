@@ -17,8 +17,7 @@ the points where the next step is yours.
 - **Look at the sheets,** before and after, every screen: the branch
   [`s30f-shots`](https://github.com/nowmichaelclark/driftloom/tree/s30f-shots)
   (light and dark at 360 px and a tablet's width; after also has every
-  theme, a short phone and a phone on its side). Then turn your phone on
-  its side: the card and keys at the left, the panel at the right.
+  theme, a short phone and a phone on its side).
 - **TalkBack in the Android app (five minutes):**
   1. Settings, Accessibility, TalkBack, on; open the app.
   2. Swipe right from the top: the name, the details, the panel, the seven
@@ -36,16 +35,30 @@ the points where the next step is yours.
 - **One look on Android:** in Dawn the system's bars are Dawn's color with
   dark icons; a box to type in lines up with its title.
 
+- **The lock screen's cover (#455, v199):** play, turn the screen off, and
+  look at the notification and the lock screen through a Next: each loop's
+  own cover, both in the site installed from Chrome and in the APK (the
+  artifact `driftloom-debug-apk` of the
+  [newest Android run on that PR's branch](https://github.com/nowmichaelclark/driftloom/actions/workflows/android.yml?query=branch%3Aclaude%2Fs30f-cover)).
+  The small status bar icon stays Driftloom's.
+
+- **Sideways, your review (#457, v200; not seen on a phone yet):** in
+  DuckDuckGo first (your screenshot's browser), then in Chrome, open
+  <https://claude-s30f-sideways-driftloom.nowmichaelclark.workers.dev>,
+  turn the phone, and:
+  1. The panel at the left, card and keys at the right, the same gap at
+     both ends. (A screenshot if not: it says which insets that browser gave.)
+  2. A small swipe up on the panel puts the address bar away and the boxes
+     grow; a swipe down brings it back. Sliders and lists don't move the page.
+
+- **The keyboard, as you asked (#457):** Space plays; Alt+Shift+arrows are
+  Next and Previous; Ctrl+S (Cmd+S on a Mac) or Alt+Shift+S saves;
+  Alt+Shift+1 to 5 roll. N, S and the bare numbers are gone. Spotify's
+  Alt+Shift+B is Edge's favorites bar, so Save took S instead. Say if any
+  should change.
+
 **Yours to decide (nothing waits on them):**
 
-- **The letter shortcuts (N, S, 1 to 5).** WCAG 2.1.4 (level A) wants
-  single-letter keys able to be turned off or remapped, since speech input
-  types letters by accident. That needs a setting, or Shift on each, or
-  their going, and the Keyboard line's words change with it. Left as they
-  are. Proposed: Shift+N, Shift+S, Shift+1 to 5.
-- **400% zoom on a computer** (a 320 x 256 screen, WCAG 1.4.10) can't hold
-  one screen that doesn't scroll. Left to your rule. Proposed: under 280 px
-  high only, let the page scroll.
 - **Text stops at 1.5x in the views that don't scroll** (the card, the
   keys, the pickers), as since Painter 5, so they fit; browser zoom still
   takes them to 200%, and the lists and Advanced go all the way. The
@@ -69,13 +82,6 @@ the points where the next step is yours.
   place between cancel and done, and its words and the slider's labels are
   left out, so every key fits without scrolling. A phone on its side has
   had room for it since v196 (two columns).
-- **How the fades sound (for your ears):** the fade in rises from silence
-  over 3 s; the fade out reaches silence on the last second over the 8 s
-  before it, the notes and the room falling together, so its last couple
-  of seconds are already near silence (on a short track each fade takes at
-  most a third of it). Fade out on and fade in off are the defaults, as the
-  old close and start. Try a 0:45 track each way; say if a fade is too
-  long, too short, or should be a different shape.
 - **Without the fade out** the track stops on its second: nothing after it
   is played, what was sounding rings out (as an export ends), and the next
   track starts on that second (a long piece without it stops where it is,
@@ -663,7 +669,7 @@ the last one (same key). On the **Moto** and on the **tablet**:
 | Advanced | Normally leave at zero | (gone) |
 | Advanced | Select the text above and copy it manually | Copy from box |
 | Advanced | Speed test: how fast this device plays the busiest loops (a few minutes). | speed test (a key) |
-| Advanced | Space plays. N makes something new (or Next, outside an album). S keeps it in Favorite Loops. 1 to 5 re-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device. | Space play · N new · S save · 1-5 roll |
+| Advanced | Space plays. N makes something new (or Next, outside an album). S keeps it in Favorite Loops. 1 to 5 re-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device. | Space play · Ctrl+S save · Alt+Shift+Left/Right skip · Alt+Shift+1-5 roll (v200; v195: Space play · N new · S save · 1-5 roll; read out, every key in full) |
 | Advanced | Lighter on processor | Lite |
 | Advanced | back up all | back up |
 | Advanced | reset counters | reset |

@@ -357,7 +357,16 @@ jobs:
           pactl set-default-sink driftloom
 
       - name: the screen-off test
-        run: sh android/emulator-background.sh "$(ls apk/*-x86_64-debug.apk)" "$GITHUB_STEP_SUMMARY" "${{ github.event.inputs.minutes || '10' }}"
+        run: sh android/emulator-background.sh "$(ls apk/*-x86_64-debug.apk)" "$GITHUB_STEP_SUMMARY" "${{ github.event.inputs.minutes || '10' }}" "$RUNNER_TEMP/now-playing"
+
+      # The notification and the lock screen as they were on the glass, and
+      # the cover they should show (session 30f).
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: now-playing-shots
+          path: ${{ runner.temp }}/now-playing
+          if-no-files-found: warn
 
   # The F-Droid listing's phone screenshots (session 29, queue item 107e), taken
   # from the app on an emulator (android/screenshots.mjs). The artifact's files

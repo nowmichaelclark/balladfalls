@@ -518,6 +518,7 @@ export function buildLayers(handlers, steps = STEPS_PER_BAR) {
     reroll.innerHTML = icon('dice');
     reroll.title = 'Roll';
     reroll.setAttribute('aria-label', `Roll ${label}`);
+    reroll.setAttribute('aria-keyshortcuts', `Alt+Shift+${LAYERS.indexOf(layer) + 1}`);
     reroll.addEventListener('click', () => handlers.onReroll(layer));
 
     const mute = document.createElement('button');

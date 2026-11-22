@@ -130,8 +130,15 @@ const KEYS = {
   Enter: { key: 'Enter', code: 'Enter', keyCode: 13, text: '\r' },
   Escape: { key: 'Escape', code: 'Escape', keyCode: 27 },
 };
+const MODS = { Alt: 1, Control: 2, Meta: 4, Shift: 8 };
 function keyOf(k) {
   if (KEYS[k]) return KEYS[k];
+  if (k.includes('+')) {
+    const names = k.split('+');
+    const code = names.pop();
+    const ch = (/^(?:Key|Digit)(.)$/.exec(code) || [])[1];
+    return { key: ch || code, code, keyCode: ch ? ch.charCodeAt(0) : { ArrowLeft: 37, ArrowRight: 39 }[code] || 0, modifiers: names.reduce((m, n) => m | MODS[n], 0) };
+  }
   if (/^[0-9]$/.test(k)) return { key: k, code: `Digit${k}`, keyCode: 48 + Number(k), text: k };
   if (/^[a-z]$/i.test(k)) return { key: k, code: `Key${k.toUpperCase()}`, keyCode: k.toUpperCase().charCodeAt(0), text: k };
   return { key: k, code: k, keyCode: 0 };
@@ -260,7 +267,7 @@ export class AppPage {
 
   async press(k) {
     const d = keyOf(k);
-    const base = { key: d.key, code: d.code, windowsVirtualKeyCode: d.keyCode, nativeVirtualKeyCode: d.keyCode };
+    const base = { key: d.key, code: d.code, modifiers: d.modifiers || 0, windowsVirtualKeyCode: d.keyCode, nativeVirtualKeyCode: d.keyCode };
     await this._call('Input.dispatchKeyEvent', { type: d.text ? 'keyDown' : 'rawKeyDown', ...base, text: d.text });
     await this._call('Input.dispatchKeyEvent', { type: 'keyUp', ...base });
   }

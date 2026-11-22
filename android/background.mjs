@@ -7,13 +7,19 @@
 // (`dumpsys`, `cmd media_session`, `input`, `uiautomator`). What CI's
 // `background` job runs (android/emulator-background.sh boots the emulator).
 //
-//   node android/background.mjs [--minutes 10] [--no-export] [--summary FILE]
+//   node android/background.mjs [--minutes 10] [--no-export] [--summary FILE] [--shots DIR]
+//
+// --shots (session 30f): the notification shade and the lock screen as they
+// are on the glass while it plays, and the loop's cover beside them
+// (cover-*.png), to see that the art is that cover.
 //
 // The emulator's figures are the emulator's, said to be only that: they say
 // the app's service holds what it must and the audio thread keeps its time
 // with the screen off; what a battery costs is a phone's to say.
 
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import path from 'node:path';
 import { AppPage, appId, adb, until } from './cdp.mjs';
 
 const argv = process.argv.slice(2);
@@ -24,6 +30,7 @@ const opt = (name, fallback) => {
 const MINUTES = Number(opt('--minutes', '10'));
 const EXPORT = !argv.includes('--no-export');
 const SUMMARY = opt('--summary', '');
+const SHOTS = opt('--shots', '');
 const pkg = appId();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...a) => console.log(...a);
@@ -97,6 +104,16 @@ const heartbeats = () => logcat('DriftloomService').filter((l) => l.includes('he
   rate: Number((/rate=(\d+)/.exec(l) || [])[1]),
   line: l,
 }));
+
+// ------------------------------------------------------------ on the glass
+
+const screencap = (name) => fs.writeFileSync(path.join(SHOTS, `${name}.png`), execFileSync('adb', ['exec-out', 'screencap', '-p'], { maxBuffer: 64 * 1024 * 1024 }));
+// The keyguard, as the window manager's policy has it.
+const keyguard = () => sh('dumpsys', 'window').split('\n').filter((l) => /keyguard|^\s*showing=/i.test(l)).map((l) => l.trim());
+const locked = () => keyguard().some((l) => /^showing=true|(mKeyguardShowing|isKeyguardShowing|mDreamingLockscreen)=true/.test(l));
+// The notification's large icon, as the system holds it: a bitmap, not a
+// resource (the app's icon would be one).
+const largeIcon = () => (/android\.largeIcon=[^\n]*/.exec(notification()) || ['none'])[0];
 
 // ------------------------------------------------------------ the picker
 
@@ -240,8 +257,41 @@ try {
   check('the notification has the loop\'s name and Previous, Play or Pause, Next', note.includes(first) && /Previous/.test(note) && /Next/.test(note) && /Pause/.test(note), note.slice(0, 600));
   check('the audio focus is held', focusHeld());
   check('the wake lock is held while it plays', wakeLockHeld());
-  fact('cover in the session', /METADATA_KEY_ALBUM_ART|bitmap/i.test(session()) || /albumArt|bitmap/i.test(session()) ? 'yes' : 'not shown by dumpsys (read the screenshot)');
+  await waitFor('the notification to take the cover', () => /BITMAP/i.test(largeIcon()), 20000).catch(() => null);
+  check('the notification\'s large picture is a bitmap (the cover\'s)', /BITMAP/i.test(largeIcon()), largeIcon());
 
+  if (SHOTS) {
+    fs.mkdirSync(SHOTS, { recursive: true });
+    const saveCover = async (name) => {
+      const url = await ev(() => document.getElementById('cover').toDataURL('image/png'));
+      fs.writeFileSync(path.join(SHOTS, `${name}.png`), Buffer.from(url.split(',')[1], 'base64'));
+    };
+    await saveCover('cover-first');
+    screencap('app');
+    sh('input', 'keyevent', 'KEYCODE_HOME');
+    await sleep(2000);
+    sh('cmd', 'statusbar', 'expand-notifications');
+    await sleep(5000);
+    screencap('notification');
+    sh('cmd', 'statusbar', 'collapse');
+    await sleep(1000);
+    // The emulator comes with no lock screen: without one the picture was
+    // the home screen's. One for the picture, then as it was.
+    const had = sh('locksettings', 'get-disabled').trim();
+    sh('locksettings', 'set-disabled', 'false');
+    await screenOff();
+    // (A screen gone to sleep can take five seconds to lock.)
+    await sleep(8000);
+    // On, and left locked.
+    sh('input', 'keyevent', 'KEYCODE_WAKEUP');
+    await sleep(5000);
+    check('the lock screen is what the picture shows', locked(), `disabled was ${had}; ${keyguard().join(' | ').slice(0, 1500)}`);
+    screencap('lock-screen');
+    fact('screenshots', fs.readdirSync(SHOTS).join(', '));
+    if (had === 'true') sh('locksettings', 'set-disabled', 'true');
+    try { sh('wm', 'dismiss-keyguard'); } catch { /* none */ }
+    await sleep(1000);
+  }
   sh('input', 'keyevent', 'KEYCODE_HOME');
   await sleep(2000);
   await screenOff();

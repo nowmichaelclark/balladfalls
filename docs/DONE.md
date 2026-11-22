@@ -584,5 +584,23 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   titles' rings, Track length's infinity, solid popups, one dimmed state,
   the speed test in the app's type with a way back, Android's bars in the
   theme's color. Left for Mikey: the two screen reader passes, the sheets,
-  the letter shortcuts, 400% zoom (`docs/notes/for-mikey.md`). Listen for
+  the letter shortcuts (`docs/notes/for-mikey.md`). Listen for
   nothing. No album loop.
+- #455, the loop's own cover as Now Playing art (item 114, session 30f,
+  added by Mikey 2026-11-22; v199), preview URL:
+  <https://claude-s30f-cover-driftloom.nowmichaelclark.workers.dev> (the
+  branch's): a browser's media session shows the playing loop's cover (it
+  was always the app's icon); `test/media.test.mjs` and the rows hold it,
+  and Android's screen-off job keeps screenshots of the notification and
+  the lock screen. One look on the phone, both ways in. Listen for nothing.
+  No album loop.
+- #457, sideways as Mikey asked (item 114, session 30f, their review of
+  2026-11-22; v200), preview URL:
+  <https://claude-s30f-sideways-driftloom.nowmichaelclark.workers.dev> (the
+  branch's): the panel at the left, the card and keys at the right; insets
+  already outside the page aren't counted twice; in a browser's tab on a
+  touch screen a small scroll puts the address bar away; 400% zoom scrolls;
+  the keyboard's shortcuts as a music player's, none a bare letter or
+  number (`js/shortcuts.js`). Not proven on a phone: two steps in
+  `docs/notes/for-mikey.md`. Listen for nothing. No
+  album loop.

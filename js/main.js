@@ -9,6 +9,8 @@ import { patternToMidi } from './midi.js';
 import { AudioExport } from './export.js';
 import { MediaBridge } from './media.js';
 import { appBridge, appLink } from './app.js';
+import { watchViewport } from './viewport.js';
+import { shortcutOf, keyNames, onMac } from './shortcuts.js';
 import * as share from './share.js';
 
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
@@ -912,7 +914,7 @@ function saveAsNew() {
   savedChanged();
 }
 
-// S on a keyboard: save to Favorite Loops, or save the changes to a saved loop.
+// Save on a keyboard: to Favorite Loops, or the changes to a saved loop.
 function saveQuick() {
   if (!state.spec) return;
   if (!isSaved()) saveIn(store.FAVORITES);
@@ -1821,6 +1823,8 @@ function applyTheme(cls, save = true) {
   const th = THEMES.find((t) => t[0] === cls);
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta && th) meta.content = th[3];
+  // What shows past the app as a browser's bar slides away.
+  if (th) document.documentElement.style.setProperty('--page-back', th[3]);
   // The Android app's bars behind the page take the theme's color too.
   const link = appLink();
   if (link && th) link.theme(th[3]);
@@ -2256,25 +2260,38 @@ function wire() {
   });
 
   document.addEventListener('pointerdown', () => { byKeys = false; }, true);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Tab' || e.key.startsWith('Arrow')) byKeys = true; }, true);
+  // (An arrow with Alt is a shortcut's: the focus hasn't moved by it.)
+  document.addEventListener('keydown', (e) => { if (e.key === 'Tab' || (e.key.startsWith('Arrow') && !e.altKey)) byKeys = true; }, true);
+  // The chords (js/shortcuts.js) come before what has the focus, whose own
+  // arrows take any modifier: never in a box to type in or on a slider.
+  const mac = onMac();
+  const CHORDS = { next: goForward, previous: goBack, save: saveQuick };
+  LAYERS.forEach((layer, i) => { CHORDS[`roll${i}`] = () => reroll(layer); });
   document.addEventListener('keydown', (e) => {
     if (e.target.matches('input, textarea')) return;
-    // The browser's own shortcuts (copy, save, a tab's number) are its own.
+    const does = CHORDS[shortcutOf(e, mac)];
+    if (!does) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (!e.repeat) does();
+  }, true);
+  for (const id of ['keysLine', 'keysSaid']) ui.el(id).textContent = keyNames(ui.el(id).textContent, mac);
+  if (mac) ui.el('saveBtn').setAttribute('aria-keyshortcuts', 'Meta+S Alt+Shift+S');
+  document.addEventListener('keydown', (e) => {
+    if (e.target.matches('input, textarea')) return;
+    // Any other modifier's keys are the browser's and the system's.
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     // Space presses the key the keyboard is on; after a tap it is Play.
     if (e.code === 'Space' && byKeys && e.target.matches('button, [role="button"], a[href]')) return;
     if (e.code === 'Space' || e.code === 'MediaPlayPause') {
       e.preventDefault();
-      togglePlay();
-    } else if (e.key === 'n') newLoop();
-    else if (e.key === 's') saveQuick();
-    else if (e.key >= '1' && e.key <= '5') reroll(LAYERS[parseInt(e.key, 10) - 1]);
-    else if (e.code === 'MediaNextTrack') {
+      if (!e.repeat) togglePlay();
+    } else if (e.code === 'MediaNextTrack') {
       e.preventDefault();
-      goForward();
+      if (!e.repeat) goForward();
     } else if (e.code === 'MediaPreviousTrack') {
       e.preventDefault();
-      goBack();
+      if (!e.repeat) goBack();
     }
   });
 
@@ -2353,6 +2370,10 @@ function wire() {
   window.addEventListener('resize', refit);
   watchTextSize(refit);
 }
+
+// The safe area as it really is, and the browser's bar a scroll puts away
+// (js/viewport.js): before anything is measured.
+watchViewport({ app: !!nativeBridge() });
 
 if (noGenerator) {
   // No loop can be made or shown here (js/gen.js): the page is the line.

@@ -39,6 +39,9 @@
 //                       the core's loop is the card's
 //   Previous            back to the loop before, by its seed, request and edits
 //   roll a layer        made again in place: its seed re-rolled, the steps go on
+//   the keyboard        (session 30f) each shortcut does its one thing, once
+//                       however long it is held; each old key, and a key in
+//                       a box to type in, does nothing
 //   mutes               all five off: silence; on: sound
 //   tempo               the core's tempo and its steps' spacing
 //   tone                the core's tone
@@ -90,6 +93,14 @@
 //                       copied, the Library cleared, and restored
 //   lighter on processor  a new core at the other quality, the same loop
 //   Diagnostics         the core's player, nothing late, nothing lost
+//   now playing art     (session 30f) the media session's artwork is the
+//                       playing loop's own cover: on first Play, Next,
+//                       Previous, an album track, a track's end, a rename
+//                       and out of an album
+//   sideways            (session 30f, Mikey's review) the panel at the
+//                       left, centered with no insets, double-counted ones
+//                       and real ones; a scroll puts a browser's bar away
+//                       and nothing else moves the page
 //   plain line          a browser with no WebAssembly, and a module that
 //                       never arrives: one plain line each, nothing played
 //   long piece          (queue item 106b; a page of its own, opened on a
@@ -1105,10 +1116,13 @@ async function longRows(browser, port, errors) {
     }
     const roles = {};
     for (const k of model.marks) roles[k.role] = (roles[k.role] || 0) + 1;
-    return { same: JSON.stringify(again.marks) === JSON.stringify(model.marks), marks: model.marks.length, first: model.marks[0].bar, last: model.last, ticks, missing, stray, W, roles };
+    // The height is the peak, or in the small form, which has neither build
+    // nor second theme, the lift (docs/LONGFORM.md): about 1 arc in 100.
+    const height = roles.peak > 0 || (roles.lift > 0 && !roles.build && !roles.second);
+    return { height, same: JSON.stringify(again.marks) === JSON.stringify(model.marks), marks: model.marks.length, first: model.marks[0].bar, last: model.last, ticks, missing, stray, W, roles };
   });
   row('long piece: the markers are the map\'s: the core\'s marks asked again are the line\'s, every tick is painted and nothing else is',
-    m && m.same && m.marks > 100 && m.first === 0 && m.last === 32768 && m.ticks > 20 && m.missing === 0 && m.stray === 0 && m.roles.peak > 0 && m.roles.opening > 0, JSON.stringify(m && { ...m, roles: undefined }));
+    m && m.same && m.marks > 100 && m.first === 0 && m.last === 32768 && m.ticks > 20 && m.missing === 0 && m.stray === 0 && m.height && m.roles.opening > 0, JSON.stringify(m));
 
   // A jump to three hours in: a tap on the line.
   const box = await page.locator('#pieceLine').boundingBox();
@@ -1338,11 +1352,11 @@ async function main() {
     p = await probe();
     row('Previous: back to the loop before', (await name()) === first && p.d.name === first, p.d.name);
 
-    // Roll a layer (key 1, the drums): made again in place.
+    // Roll a layer (Alt+Shift+1, the drums): made again in place.
     await ev(() => document.getElementById('viewBtn').click());
     const seedsBefore = p.d.layer_seeds.split('|');
     const stepBefore = (await steps()).filter((e) => e[1] === kinds.step).pop()[3];
-    await key('1');
+    await key('Alt+Shift+Digit1');
     await sleep(2000);
     {
       p = await probe();
@@ -1438,9 +1452,16 @@ async function main() {
       const index = sent ? sent.ask.vibes.map(([i]) => i) : [];
       row('picks: sent as a command and held by the core, the loop playing left as it is', sent && p.picksTag === sent.tag && index.length === 1 && p.d.seed === playingSeed, `tag ${p.picksTag}, ${JSON.stringify(sent && sent.ask.vibes)}`);
     }
-    // N, a new loop (Next would walk forward through the history first).
-    await key('n');
-    await sleep(3000);
+    // A new loop by Next's keys: through the history to its end, and one more.
+    {
+      const lastOwn = async () => JSON.stringify((await owns()).pop() || null);
+      const had = await lastOwn();
+      for (let i = 0; i < 8; i++) {
+        await key('Alt+Shift+ArrowRight');
+        await sleep(3000);
+        if (await lastOwn() !== had) break;
+      }
+    }
     {
       p = await probe();
       const own = (await owns()).pop();
@@ -1577,7 +1598,10 @@ async function main() {
     if (!APP) await linkRows(browser);
     if (!APP) await paceRows(browser);
     if (!APP) await previousRows(browser);
+    if (!APP) await artRows(browser);
     if (!APP) await trackRows(browser);
+    if (!APP) await sidewaysRows(browser);
+    if (!APP) await keyboardRows(browser);
   } finally {
     if (browser) await browser.close();
     if (server) server.close();
@@ -2152,13 +2176,400 @@ async function previousRows(browser) {
   await sleep(500);
   const left = await tev(() => document.getElementById('prevBtn').disabled);
   row('previous in an album: after leaving the album, Previous is as the history says (off at its start)', offered && left, `${offered} ${left}`);
-  await tev(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', code: 'KeyN', bubbles: true })));
+  await tev(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', code: 'ArrowRight', altKey: true, shiftKey: true, bubbles: true, cancelable: true })));
   await sleep(2500);
   const afterNew = await prevOn();
   row('previous in an album: and on again once a new loop has made a history', afterNew, String(afterNew));
   await pause();
   row('previous in an album: no page errors', !bad.length, bad.join('; '));
   await tab.close();
+}
+
+// The lock screen's artwork (session 30f; Mikey, 2026-11-22): what
+// navigator.mediaSession.metadata says, fetched, decoded and compared with
+// that loop's cover as js/cover.js draws it, pixel for pixel at 32 px.
+async function artRows(browser) {
+  console.log('\n  Now Playing art (session 30f)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(() => {
+    window.__long = [];
+    try {
+      new PerformanceObserver((list) => { for (const t of list.getEntries()) window.__long.push({ at: t.startTime, ms: t.duration }); }).observe({ entryTypes: ['longtask'] });
+    } catch { /* none here */ }
+  });
+  const specs = [newSpec(31337, ['rainy', 'mellow']), newSpec(4242), newSpec(777, 'bpm=80')];
+  await tab.goto(linkOf(`${ORIGIN}/`, encodeAlbum('Art', specs)));
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  const click = (id) => tev((i) => document.getElementById(i).click(), id);
+  // How far the artwork is from a loop's cover (0: that cover), or why not.
+  // `spec` null: the card's own cover (a loop the core made itself).
+  const artIs = (spec) => tev(async (want) => {
+    const m = navigator.mediaSession.metadata;
+    if (!m || !m.artwork.length) return { why: 'no artwork', title: m && m.title };
+    const src = m.artwork[0].src;
+    if (src.includes('/icons/')) return { why: 'the app\'s icon', title: m.title, src };
+    let got;
+    try {
+      got = await createImageBitmap(await (await fetch(src)).blob());
+    } catch (e) {
+      return { why: `unreadable: ${e.message}`, title: m.title, src };
+    }
+    let expected = document.getElementById('cover');
+    if (want) {
+      expected = document.createElement('canvas');
+      (await import('/js/cover.js')).drawCover(expected, want, 320);
+    }
+    const small = (image) => {
+      const c = document.createElement('canvas');
+      c.width = c.height = 32;
+      const x = c.getContext('2d', { willReadFrequently: true });
+      x.drawImage(image, 0, 0, 32, 32);
+      return x.getImageData(0, 0, 32, 32).data;
+    };
+    const a = small(got);
+    const b = small(expected);
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) sum += Math.abs(a[i] - b[i]);
+    return { off: sum / a.length, width: got.width, title: m.title, src };
+  }, spec);
+  // Within a few seconds: that loop's title, and its cover.
+  const becomes = async (spec, title, ms = 8000) => {
+    const until = Date.now() + ms;
+    let last;
+    do {
+      last = await artIs(spec);
+      if (last.off != null && last.off < 2 && last.width === 320 && (!title || last.title === title)) return { ok: true, ...last };
+      await sleep(300);
+    } while (Date.now() < until);
+    return { ok: false, ...last };
+  };
+  const say = (x) => (x.why ? `${x.why} (${x.title})` : `${x.off.toFixed(2)} off, ${x.width} px, ${x.title}`);
+  const steps = async (name, go, spec, title, ms) => {
+    await go();
+    const x = await becomes(spec, title, ms);
+    row(`now playing art: ${name}: the loop's own cover`, x.ok, say(x));
+    return x;
+  };
+
+  const apart = await steps('first Play', () => click('playBtn'), specs[0], specs[0].name);
+  const other = await artIs(specs[1]);
+  row('now playing art: one loop\'s cover is not another\'s', apart.ok && other.off > 4, say(other));
+  // From here: switching loops, not the first Play's loading of the core.
+  await sleep(1500);
+  await steps('Next', () => click('nextBtn'), specs[1], specs[1].name);
+  await steps('Previous', () => click('prevBtn'), specs[0], specs[0].name);
+  await steps('an album track', () => tev(async () => {
+    const at = async (sel) => { document.querySelector(sel).click(); await new Promise((r) => setTimeout(r, 300)); };
+    if (document.getElementById('viewLibrary').hidden) await at('#libraryBtn');
+    await at('[data-tab="albums"]');
+    [...document.querySelectorAll('.lrow.album')].find((r) => r.textContent.includes('Art')).querySelector('.lrow-main').click();
+    await new Promise((r) => setTimeout(r, 300));
+    document.querySelectorAll('.lrow.track .lrow-main')[1].click();
+  }), specs[1], specs[1].name);
+  await steps('a track\'s end', async () => {
+    await click('nowBtn');
+    await trackTo(tev, 3);
+  }, specs[2], specs[2].name, 15000);
+  const before = await artIs(specs[2]);
+  const renamed = await steps('a rename', () => tev(() => {
+    if (document.getElementById('viewNow').hidden) document.getElementById('nowBtn').click();
+    document.getElementById('loopName').click();
+    const i = document.getElementById('nameEdit');
+    i.value = 'renamed';
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+    i.dispatchEvent(new Event('blur'));
+  }), specs[2], 'renamed');
+  row('now playing art: a rename keeps the picture it had', renamed.ok && renamed.src === before.src, `${before.src} then ${renamed.src}`);
+
+  // Out of the album, a loop the core makes: the card's cover. Nothing here
+  // draws a cover to compare, so the long tasks are the app's own.
+  await tev(() => {
+    if (document.getElementById('viewNow').hidden) document.getElementById('nowBtn').click();
+    if (!document.getElementById('nowAlbum').hidden) document.getElementById('nowAction').click();
+  });
+  await sleep(500);
+  await tev(() => { window.__long = []; });
+  await click('nextBtn');
+  await sleep(2500);
+  const long = await tev(() => window.__long.map((t) => Math.round(t.ms)));
+  row('now playing art: no long task over 100 ms as a new loop\'s cover is made', long.every((ms) => ms <= 100), `${long.join(', ') || 'none'} ms`);
+  const fresh = await becomes(null);
+  row('now playing art: out of the album, a new loop: the cover on the card', fresh.ok && fresh.title !== 'renamed' && fresh.src !== renamed.src, say(fresh));
+  row('now playing art: no page errors', !bad.length, `${bad.join('; ')}`);
+  await tab.close();
+}
+
+// A phone on its side in a browser (session 30f; Mikey's review,
+// 2026-11-22): the insets as a browser reports them (DevTools' override),
+// the screen's size apart from the page's, real touch gestures.
+async function keyboardRows(browser) {
+  console.log('\n  the keyboard (session 30f)');
+  const ctx = await browser.newContext({ viewport: { width: 1180, height: 820 }, serviceWorkers: 'block' });
+  const tab = await ctx.newPage();
+  const bad = [];
+  tab.on('pageerror', (e) => bad.push(e.message));
+  try {
+    await tab.goto(`http://127.0.0.1:${PORT}/`);
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1000);
+    await tab.evaluate(() => {
+      addEventListener('keydown', (e) => { window.keyEvent = e; }, true);
+    });
+    const state = () => tab.evaluate(() => ({
+      name: document.getElementById('loopName').textContent,
+      play: document.getElementById('playBtn').getAttribute('aria-label'),
+      said: document.querySelector('.toast').textContent,
+      saves: localStorage.getItem('driftloom.saves.v1') || '',
+    }));
+    const press = async (k, wait = 700) => {
+      await tab.evaluate(() => {
+        window.keyEvent = null;
+        document.querySelector('.toast').textContent = '';
+      });
+      await tab.keyboard.press(k);
+      await sleep(wait);
+      return { ...await state(), heard: await tab.evaluate(() => !!window.keyEvent), taken: await tab.evaluate(() => !!window.keyEvent && window.keyEvent.defaultPrevented) };
+    };
+
+    let s = await press('Space', 3000);
+    row('keyboard: Space plays', s.play === 'Pause' && s.taken, JSON.stringify(s.play));
+    const was = s;
+    for (const k of ['n', 'Shift+N', 's', 'Shift+S', '1', '2', '3', '4', '5', 'Shift+Digit1', 'Shift+Digit5', 'Control+Alt+KeyS', 'Control+Alt+Digit1', 'Alt+Shift+KeyB']) {
+      s = await press(k);
+      row(`keyboard: ${k} does nothing`, s.heard && !s.taken && s.name === was.name && s.play === was.play && s.said === '' && s.saves === was.saves, JSON.stringify({ taken: s.taken, said: s.said, name: s.name }));
+    }
+
+    const first = s.name;
+    s = await press('Alt+Shift+ArrowRight', 3000);
+    const second = s.name;
+    row('keyboard: Alt+Shift+Right is Next', s.taken && second !== first, `${first} to ${second}`);
+    s = await press('Alt+Shift+ArrowLeft', 3000);
+    row('keyboard: Alt+Shift+Left is Previous', s.taken && s.name === first, `${second} to ${s.name}`);
+    const layers = await tab.evaluate(() => [...document.querySelectorAll('#layerList .layer')].map((e) => e.dataset.layer));
+    for (let i = 0; i < 5; i++) {
+      s = await press(`Alt+Shift+Digit${i + 1}`, 1200);
+      row(`keyboard: Alt+Shift+${i + 1} rolls ${layers[i]}`, s.taken && s.said === `Rolled ${layers[i]}` && s.name === first, s.said);
+    }
+    s = await press('Control+KeyS');
+    row('keyboard: Ctrl+S saves to Favorite Loops, not the page', s.taken && s.said === 'Saved' && s.saves !== was.saves, s.said);
+    s = await press('Alt+Shift+KeyS');
+    row('keyboard: Alt+Shift+S is the same Save', s.taken && s.said === 'Already saved', s.said);
+
+    const held = await tab.evaluate(() => {
+      const one = (code, key, mods) => {
+        const e = new KeyboardEvent('keydown', { code, key, ...mods, repeat: true, bubbles: true, cancelable: true });
+        document.body.dispatchEvent(e);
+        return e.defaultPrevented;
+      };
+      document.querySelector('.toast').textContent = '';
+      return [one('ArrowRight', 'ArrowRight', { altKey: true, shiftKey: true }), one('KeyS', 's', { ctrlKey: true }), one('Space', ' ', {})];
+    });
+    await sleep(1500);
+    s = await state();
+    row('keyboard: a key held down acts once', held.every(Boolean) && s.name === first && s.said === '' && s.play === 'Pause', JSON.stringify({ held, said: s.said }));
+
+    // A control with arrows of its own lets the chord through, and stays.
+    await tab.evaluate(() => document.getElementById('libraryBtn').click());
+    await sleep(400);
+    await tab.evaluate(() => document.querySelector('[data-tab="albums"]').focus());
+    s = await press('Alt+Shift+ArrowRight', 3000);
+    row('keyboard: on a tab the chord is Next, and the tab stays', s.name !== first && await tab.evaluate(() => document.activeElement.dataset.tab === 'albums'), s.name);
+
+    await tab.evaluate(() => document.getElementById('loopName').click());
+    await sleep(400);
+    const typing = await tab.evaluate(() => document.activeElement.id);
+    const named = await state();
+    for (const k of ['Alt+Shift+Digit1', 'Alt+Shift+ArrowLeft', 'Control+KeyS']) {
+      s = await press(k);
+      row(`keyboard: typing a name, ${k} is left alone`, typing === 'nameEdit' && s.heard && !s.taken && s.said === '' && s.name === named.name && s.saves === named.saves, JSON.stringify({ typing, taken: s.taken, said: s.said }));
+    }
+
+    const said = await tab.evaluate(() => ['playBtn', 'nextBtn', 'prevBtn', 'saveBtn'].map((id) => document.getElementById(id).getAttribute('aria-keyshortcuts'))
+      .concat(document.querySelector('.btn-roll').getAttribute('aria-keyshortcuts')));
+    row('keyboard: the five controls say their keys', said.join() === 'Space,Alt+Shift+ArrowRight,Alt+Shift+ArrowLeft,Control+S Alt+Shift+S,Alt+Shift+1', said.join());
+  } catch (e) {
+    row('keyboard: measured', false, e.message.split('\n')[0]);
+  }
+  row('keyboard: no page errors', !bad.length, bad.join('; '));
+  await ctx.close();
+}
+
+async function sidewaysRows(browser) {
+  console.log('\n  a phone on its side, and the browser\'s bar (session 30f)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const phone = async ({ page: [width, height], screen: [sw, sh], insets: [top, right, bottom, left] = [0, 0, 0, 0], url = '/' }) => {
+    const ctx = await browser.newContext({ viewport: { width, height }, screen: { width: sw, height: sh }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+    const tab = await ctx.newPage();
+    tab.on('pageerror', (e) => bad.push(e.message));
+    const cdp = await ctx.newCDPSession(tab);
+    if (top || right || bottom || left) {
+      await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top, topMax: top, right, rightMax: right, bottom, bottomMax: bottom, left, leftMax: left } });
+    }
+    await tab.goto(url.startsWith('http') ? url : `${ORIGIN}${url}`);
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1000);
+    return { ctx, tab, cdp };
+  };
+
+  // The boxes, against the part of the page that is really the app's.
+  const CASES = [
+    ['no insets', { page: [800, 360], screen: [800, 360] }, [0, 0, 0, 0]],
+    ['no insets, small', { page: [568, 320], screen: [568, 320] }, [0, 0, 0, 0]],
+    ['no insets, wide', { page: [1000, 420], screen: [1000, 420] }, [0, 0, 0, 0]],
+    ['the window\'s insets, already outside (Mikey\'s phone)', { page: [804, 303], screen: [895, 393], insets: [25, 49, 0, 0] }, [0, 0, 0, 0]],
+    ['the same, the bar away', { page: [804, 368], screen: [895, 393], insets: [25, 49, 0, 0] }, [0, 0, 0, 0]],
+    ['real ones: a notch each side and a home bar', { page: [852, 343], screen: [852, 393], insets: [0, 59, 21, 59] }, [0, 59, 21, 59]],
+    ['real ones: edge to edge, the bar at one side', { page: [895, 393], screen: [895, 393], insets: [25, 49, 0, 0] }, [25, 49, 0, 0]],
+  ];
+  for (const [name, how, [top, right, bottom, left]] of CASES) {
+    try {
+      const { ctx, tab } = await phone(how);
+      const b = await tab.evaluate(() => {
+        const r = (s) => document.querySelector(s).getBoundingClientRect();
+        return { panel: r('.dynamic-inner'), card: r('.info-inner'), next: r('#nextBtn'), prev: r('#prevBtn'), last: r('#viewBtn'), w: document.documentElement.clientWidth, h: innerHeight };
+      });
+      await ctx.close();
+      const gap = {
+        left: b.panel.left - left, right: b.w - right - b.card.right,
+        top: b.panel.top - top, cardTop: b.card.top - top, bottom: b.h - bottom - b.panel.bottom, keysBottom: b.h - bottom - b.last.bottom,
+      };
+      const said = JSON.stringify(Object.fromEntries(Object.entries(gap).map(([k, v]) => [k, Math.round(v * 10) / 10])));
+      row(`sideways, ${name}: the panel at the left, the card and the keys at the right`, b.panel.right <= b.card.left && b.panel.right <= b.prev.left && Math.abs(b.next.right - b.card.right) <= 1, said);
+      row(`sideways, ${name}: centered in the room, and filling it`,
+        Math.abs(gap.left - gap.right) <= 2 && gap.left >= 0 && gap.left <= 14 && Math.abs(b.panel.width - b.card.width) <= 2
+        && [gap.top, gap.cardTop, gap.bottom, gap.keysBottom].every((v) => v >= 0 && v <= 10), said);
+    } catch (e) {
+      row(`sideways, ${name}: measured`, false, e.message.split('\n')[0]);
+    }
+  }
+
+  // The scroll that puts the bar away.
+  const long = linkOf(`${ORIGIN}/`, encodeSong(newSpec(11, { length: 1024 })));
+  for (const [width, height, sw, sh] of [[804, 303, 895, 393], [360, 640, 360, 760]]) {
+    const at = `${width}x${height}`;
+    try {
+      const { ctx, tab, cdp } = await phone({ page: [width, height], screen: [sw, sh], url: long });
+      const home = async () => {
+        await tab.evaluate(() => scrollTo(0, 0));
+        await sleep(250);
+      };
+      // A finger, move by move: headless Chromium's synthesizeScrollGesture
+      // sends the touch's start and no move, so nothing scrolls and "doesn't
+      // move the page" passes on nothing. So each swipe also says how many
+      // of its moves the element itself was given.
+      const swipe = async (selector, dx, dy, along = 0.5) => {
+        await home();
+        const p = await tab.evaluate(([s, part]) => {
+          window.fingerMoves = 0;
+          if (!window.fingerHeard) {
+            window.fingerHeard = true;
+            document.addEventListener('touchmove', (e) => { if (e.target.closest && e.target.closest(window.fingerOn)) window.fingerMoves++; }, { capture: true, passive: true });
+          }
+          window.fingerOn = s;
+          const r = document.querySelector(s).getBoundingClientRect();
+          return { x: Math.round(r.left + 12 + (r.width - 24) * part), y: Math.round(r.top + r.height / 2) };
+        }, [selector, along]);
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [p] });
+        for (let i = 1; i <= 12; i++) {
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x + (dx * i) / 12, y: p.y + (dy * i) / 12 }] });
+          await sleep(16);
+        }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await sleep(400);
+        return tab.evaluate(() => ({ y: scrollY, moves: window.fingerMoves }));
+      };
+      const press = async (selector) => {
+        await tab.evaluate((s) => document.querySelector(s).click(), selector);
+        await sleep(350);
+      };
+      const by = await swipe('#nowBig', 0, -120);
+      row(`the bar, ${at}: a swipe on the panel scrolls the document (what puts a browser's bar away)`, by.y >= 40, JSON.stringify(by));
+      await tab.evaluate(() => scrollTo(0, 1e5));
+      await sleep(250);
+      const still = await tab.evaluate(() => {
+        const app = document.getElementById('app').getBoundingClientRect();
+        const keys = [...document.querySelectorAll('.zone-buttons button')].map((b) => b.getBoundingClientRect());
+        return { top: app.top, height: app.height, h: innerHeight, in: keys.every((r) => r.top >= 0 && r.bottom <= innerHeight + 1), wide: document.documentElement.scrollWidth - innerWidth };
+      });
+      row(`the bar, ${at}: scrolled to the end, the app fills the screen, every key on it`, Math.abs(still.top) <= 1 && Math.abs(still.height - still.h) <= 1 && still.in && still.wide <= 0, JSON.stringify(still));
+      const line = await swipe('#pieceLine', 0, -100);
+      row(`the bar, ${at}: a finger on the piece's line doesn't move the page`, line.y === 0 && line.moves > 0, JSON.stringify(line));
+      await home();
+      for (let i = 0; i < 3 && await tab.evaluate(() => document.getElementById('viewSounds').hidden); i++) await press('#viewBtn');
+      const slider = await swipe('#warmth', 0, -100);
+      row(`the bar, ${at}: a finger on a slider doesn't move the page`, slider.y === 0 && slider.moves > 0, JSON.stringify(slider));
+      const was = await tab.evaluate(() => document.getElementById('warmth').value);
+      await swipe('#warmth', was > 0.5 ? -60 : 60, 0, Number(was));
+      const now = await tab.evaluate(() => document.getElementById('warmth').value);
+      row(`the bar, ${at}: the slider still slides`, now !== was, `${was} to ${now}`);
+      await press('#libraryBtn');
+      await press('[data-tab="albums"]');
+      const short = await swipe('#libPane .scroll', 0, -100);
+      row(`the bar, ${at}: the Library's list, with nothing more to scroll, doesn't move the page`, short.y === 0 && short.moves > 0, JSON.stringify(short));
+      await press('[data-tab="more"]');
+      await press('#goAdvanced');
+      let moved = 0;
+      let left = Infinity;
+      // To its end, and once more past it: there the page would take over.
+      for (let i = 0, past = false; i < 80 && !past; i++) {
+        past = left <= 2;
+        moved = Math.max(moved, (await swipe('#libAdvanced .scroll', 0, -Math.round(height * 0.3))).y);
+        left = await tab.evaluate(() => {
+          const sc = document.querySelector('#libAdvanced .scroll');
+          return sc.scrollHeight - sc.clientHeight - sc.scrollTop;
+        });
+      }
+      row(`the bar, ${at}: Advanced scrolls to its end and the page stays`, moved === 0 && left <= 2, `${moved} px; ${left} px left in the list`);
+      await ctx.close();
+    } catch (e) {
+      row(`the bar, ${at}: measured`, false, e.message.split('\n')[0]);
+    }
+  }
+  const desk = await browser.newPage({ viewport: { width: 1180, height: 820 } });
+  await desk.goto(`${ORIGIN}/`);
+  await sleep(800);
+  const extra = await desk.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+  row('the bar: with a mouse the page doesn\'t scroll at all', extra <= 1, `${extra} px`);
+  await desk.close();
+
+  // A computer at 400% (320x256), and at half a screen more across.
+  for (const [width, height] of [[320, 256], [320, 180], [640, 256]]) {
+    const at = `400% zoom, ${width}x${height}`;
+    try {
+      const tab = await browser.newPage({ viewport: { width, height } });
+      tab.on('pageerror', (e) => bad.push(e.message));
+      await tab.goto(`${ORIGIN}/`);
+      await sleep(1000);
+      await tab.mouse.move(6, height / 2);
+      for (let i = 0; i < 6; i++) { await tab.mouse.wheel(0, 120); await sleep(150); }
+      await sleep(400);
+      const end = await tab.evaluate(() => {
+        const r = document.getElementById('viewBtn').getBoundingClientRect();
+        return { y: scrollY, left: document.documentElement.scrollHeight - innerHeight - scrollY, key: r.top >= 0 && r.bottom <= innerHeight + 1, wide: document.documentElement.scrollWidth - innerWidth, card: document.querySelector('.zone-info').checkVisibility() };
+      });
+      row(`${at}: the wheel scrolls to the last key, the card kept, nothing across`, end.y > 0 && end.left <= 1 && end.key && end.card && end.wide <= 0, JSON.stringify(end));
+      await tab.evaluate(() => {
+        scrollTo(0, document.documentElement.scrollHeight);
+        document.getElementById('loopName').focus({ preventScroll: true });
+      });
+      await sleep(250);
+      const seen = await tab.evaluate(() => {
+        const r = document.activeElement.getBoundingClientRect();
+        return { on: document.activeElement.id, top: r.top, bottom: r.bottom, h: innerHeight };
+      });
+      row(`${at}: the focus the app moves is scrolled into sight`, seen.on === 'loopName' && seen.top >= -1 && seen.bottom <= seen.h + 1, JSON.stringify(seen));
+      await tab.close();
+    } catch (e) {
+      row(`${at}: measured`, false, e.message.split('\n')[0]);
+    }
+  }
+  row('sideways and the bar: no page errors', !bad.length, bad.join('; '));
 }
 
 // The plain lines, each in a tab of its own.

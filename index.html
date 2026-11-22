@@ -412,8 +412,8 @@
               </section>
               <section class="adv-sec">
                 <h3 class="sec">Keyboard</h3>
-                <p class="colophon" aria-hidden="true">Space play · N new · S save · 1-5 roll</p>
-                <p class="vh">Space plays. N makes something new (or Next, outside an album). S keeps it in Favorite Loops. 1 to 5 re-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device.</p>
+                <p id="keysLine" class="colophon" aria-hidden="true">Space play · Ctrl+S save · Alt+Shift+Left/Right skip · Alt+Shift+1-5 roll</p>
+                <p id="keysSaid" class="vh">Space plays. Alt+Shift+Right arrow is Next, Alt+Shift+Left arrow Previous. Ctrl+S, or Alt+Shift+S, keeps it in Favorite Loops. Alt+Shift+1 to 5 re-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device.</p>
               </section>
             </div>
           </div>
@@ -427,13 +427,13 @@
        (play / pause) and the bottom-right switch (Sound / Layers). -->
   <nav class="zone-buttons" aria-label="Controls">
     <div class="row row-1">
-      <button id="prevBtn" type="button" class="btn" aria-label="Previous loop" title="Previous"></button>
-      <button id="playBtn" type="button" class="btn btn-play" aria-label="Play" title="Play"></button>
-      <button id="nextBtn" type="button" class="btn" aria-label="Next loop" title="Next"></button>
+      <button id="prevBtn" type="button" class="btn" aria-label="Previous loop" aria-keyshortcuts="Alt+Shift+ArrowLeft" title="Previous"></button>
+      <button id="playBtn" type="button" class="btn btn-play" aria-label="Play" aria-keyshortcuts="Space" title="Play"></button>
+      <button id="nextBtn" type="button" class="btn" aria-label="Next loop" aria-keyshortcuts="Alt+Shift+ArrowRight" title="Next"></button>
     </div>
     <div class="row row-2">
       <button id="libraryBtn" type="button" class="btn" aria-label="Library" title="Library"></button>
-      <button id="saveBtn" type="button" class="btn" aria-label="Save or share" title="Save / share"></button>
+      <button id="saveBtn" type="button" class="btn" aria-label="Save or share" aria-keyshortcuts="Control+S Alt+Shift+S" title="Save / share"></button>
     </div>
     <div class="row row-3">
       <button id="nowBtn" type="button" class="btn" aria-label="Now playing" title="Now playing"></button>

@@ -39,6 +39,11 @@ on:
       - 'js/export*.js'
       - 'js/ogg.js'
       - 'js/main.js'
+      - 'js/media.js'
+      - 'js/viewport.js'
+      - 'js/shortcuts.js'
+      - 'js/covers.js'
+      - 'js/cover-worker.js'
       - 'js/piece.js'
       - 'js/picks.js'
       - 'js/tracklen.js'
@@ -91,7 +96,7 @@ jobs:
   rows:
     if: github.event_name != 'workflow_dispatch' || inputs.jobs == 'all' || inputs.jobs == 'rows'
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -8,7 +8,7 @@ import { picksAsk, PlayerEngine } from './player.js';
 import { patternToMidi } from './midi.js';
 import { AudioExport } from './export.js';
 import { MediaBridge } from './media.js';
-import { appBridge } from './app.js';
+import { appBridge, appLink } from './app.js';
 import * as share from './share.js';
 
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
@@ -1821,6 +1821,9 @@ function applyTheme(cls, save = true) {
   const th = THEMES.find((t) => t[0] === cls);
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta && th) meta.content = th[3];
+  // The Android app's bars behind the page take the theme's color too.
+  const link = appLink();
+  if (link && th) link.theme(th[3]);
   if (save) store.setPrefs({ theme: cls });
   ui.el('themeName').textContent = th ? th[2] : '';
   for (const sw of document.querySelectorAll('#themes .sw')) {

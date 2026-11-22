@@ -12,8 +12,10 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.window.OnBackInvokedDispatcher
 import android.webkit.JsPromptResult
 import android.webkit.RenderProcessGoneDetail
@@ -108,7 +110,7 @@ class MainActivity : Activity() {
         // With the screen off and the app in the background the page goes on (its export, the next loop's
         // choice): the renderer keeps its priority when the window is not shown (session 28).
         view.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
-        val bridge = AppBridge(this, view)
+        val bridge = AppBridge(this, view) { paintBars(root, view, it) }
         app = bridge
         // The restore file's picker (an <input type=file>): Android's own.
         view.webChromeClient = object : WebChromeClient() {
@@ -130,9 +132,15 @@ class MainActivity : Activity() {
                     setSelectAllOnFocus(true)
                     setText(defaultValue.orEmpty())
                 }
+                // In line with the dialog's title and keys, not edge to edge.
+                val margin = (DIALOG_MARGIN_DP * resources.displayMetrics.density).roundToInt()
+                val holder = FrameLayout(this@MainActivity).apply {
+                    setPadding(margin, 0, margin, 0)
+                    addView(box)
+                }
                 AlertDialog.Builder(this@MainActivity)
                     .setTitle(message)
-                    .setView(box)
+                    .setView(holder)
                     .setPositiveButton(android.R.string.ok) { _, _ -> result.confirm(box.text.toString()) }
                     .setNegativeButton(android.R.string.cancel) { _, _ -> result.cancel() }
                     .setOnCancelListener { result.cancel() }
@@ -203,6 +211,29 @@ class MainActivity : Activity() {
         )
     }
 
+    /** The system's bars in the page's theme, their icons dark on a light one. */
+    private fun paintBars(root: View, view: View, hex: String) {
+        if (!HEX_COLOR.matches(hex)) return
+        val color = Color.parseColor(hex)
+        val light = Color.luminance(color) > LIGHT_LUMINANCE
+        root.setBackgroundColor(color)
+        view.setBackgroundColor(color)
+        // Before Android 15 the bars have colors of their own.
+        @Suppress("DEPRECATION")
+        window.statusBarColor = color
+        @Suppress("DEPRECATION")
+        window.navigationBarColor = color
+        if (Build.VERSION.SDK_INT >= 30) {
+            val both = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS or
+                WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+            window.insetsController?.setSystemBarsAppearance(if (light) both else 0, both)
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility =
+                if (light) View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR else 0
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         app?.resumed = true
@@ -245,5 +276,13 @@ class MainActivity : Activity() {
         web?.let { (it.parent as? ViewGroup)?.removeView(it); it.destroy() }
         web = null
         super.onDestroy()
+    }
+
+    private companion object {
+        val HEX_COLOR = Regex("#[0-9a-fA-F]{6}")
+
+        // Black reads better than white from here up.
+        const val LIGHT_LUMINANCE = 0.18f
+        const val DIALOG_MARGIN_DP = 24
     }
 }

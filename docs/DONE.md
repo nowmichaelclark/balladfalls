@@ -566,3 +566,23 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   screens. Android draws its own boxes to type in (one look on the phone).
   The before and after table is in `docs/notes/for-mikey.md`. Listen for
   nothing. No album loop.
+- #452, every screen fits (item 114, session 30f, v196), preview URL:
+  <https://claude-s30f-painter-final-4a5f13-driftloom.nowmichaelclark.workers.dev>
+  (the branch's): a phone on its side is two columns (the panel 48 to 344 px
+  at 800x360); on short phones the keys give the panel room and each view
+  closes its gaps, so Bars, Vibe, Layers, Sound and More are reachable at
+  360x640 and 320x568. Both Known issues off the list; `tools/rows.mjs`
+  holds them. Listen for nothing. No album loop.
+- #453, accessibility to WCAG 2.2 AA (item 114, session 30f, v197), preview
+  URL: <https://claude-s30f-a11y-driftloom.nowmichaelclark.workers.dev> (the branch's): contrast
+  as rendered in every theme and in forced colors, focus that is seen and
+  follows the view, sliders that say their values, both orientations,
+  Android's font size as the page's root size. `tools/a11y.mjs` holds it
+  (the export workflow's `a11y` job). Listen for nothing. No album loop.
+- #454, the final pass, one app (item 114, session 30f, v198), preview URL:
+  <https://claude-s30f-design-driftloom.nowmichaelclark.workers.dev> (the branch's): the
+  titles' rings, Track length's infinity, solid popups, one dimmed state,
+  the speed test in the app's type with a way back, Android's bars in the
+  theme's color. Left for Mikey: the two screen reader passes, the sheets,
+  the letter shortcuts, 400% zoom (`docs/notes/for-mikey.md`). Listen for
+  nothing. No album loop.

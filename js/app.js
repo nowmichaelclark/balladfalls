@@ -8,6 +8,7 @@
 //                                  lock screen
 //                 cover { data }   the loop's own cover (a base64 PNG)
 //                 export { on, name, percent }   a file is being made
+//                 theme { color }  the theme's color, for the system's bars
 //                 save { id, name, mime, need, seek }   Android's own picker
 //                                  for a new file; save-write, save-header,
 //                                  save-close, save-abort { id, data } (base64);
@@ -102,6 +103,11 @@ class AppLink {
       console.info(`DriftloomApp action ${m.action}`);
       if (fn && this.handlers[fn]) this.handlers[fn]();
     }
+  }
+
+  // The theme's color, for the system's bars behind the page.
+  theme(color) {
+    this.send({ type: 'theme', color });
   }
 
   // What is playing. While it plays the page holds a Web Lock: Chromium

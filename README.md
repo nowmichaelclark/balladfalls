@@ -73,8 +73,9 @@ between Layers and Sound.
 - **Save** is saving and sharing. A saved loop always lives in at least one
   album: tap Favorite Loops (or any album) to save it there. Taking a loop
   out of its last album deletes it. A saved loop that has changed since
-  offers Update or Save as new. Its Share tab holds loop codes, MIDI export
-  and pasting a code in; a pasted loop lands in Imported Loops.
+  offers Update or Save as new. Its Share tab is keys: copy code, paste code (a
+  pasted loop lands in Imported Loops), export audio (flac, opus, midi),
+  share link and seed album.
 - **Library** holds albums (Favorite Loops and Imported Loops built in),
   every loop, and under More: backups, the processor switch and Diagnostics.
   Album tracks can be moved to another album, and Add loops picks loops in

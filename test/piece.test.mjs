@@ -112,9 +112,9 @@ console.log('\nWhere the playhead is');
   check('before, from near a mark\'s start, is the one before it', neighbor(model, peak.bar + 1, -1).bar < peak.bar && neighbor(model, peak.bar + 2, -1).bar < peak.bar);
   check('none before the first, none after the last', neighbor(model, 0, -1) === null && neighbor(model, model.marks[model.marks.length - 1].bar, 1) === null);
   const words = placeWords(model, { bar: 811.4, bars: 3072, played: 4323.2, left: 7800, section: 50 });
-  check('the words: bar 812 of 3,072, time played and time left', words.bars === 'bar 812 of 3,072' && words.times === '1:12:03 played · 2:10:00 left', JSON.stringify(words));
+  check('the words: bar 812 of 3,072, time played and time left', words.bars === 'bar 812/3,072' && words.times === '1:12:03 · \u22122:10:00' && /^bar 812 of 3,072,.*1:12:03 played, 2:10:00 left$/.test(words.said), JSON.stringify(words));
   const endless = placeWords(modelNow(newSpec(SEED, 'bars=endless,journey=wander')), { bar: 811.4, bars: null, played: 4323.2, left: null, section: 50 });
-  check('Endless: time played, no time left', endless.bars === 'bar 812' && endless.times === '1:12:03 played', JSON.stringify(endless));
+  check('Endless: time played, no time left', endless.bars === 'bar 812' && endless.times === '1:12:03' && /played$/.test(endless.said), JSON.stringify(endless));
   check('a clock past a day: 27:18:00', clock(27 * 3600 + 18 * 60) === '27:18:00' && clock(247) === '4:07');
 }
 

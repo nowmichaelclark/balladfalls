@@ -553,3 +553,16 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   a new setting drawn per loop draws nothing below its own; one version a
   release (`released`). Left for the page: `docs/notes/105e-page.md` (it
   drops a code's version). Listen for nothing. No album loop.
+- #449, fewer words (item 113, session 30e, v195), preview URL:
+  <https://claude-s30e-fewer-words-1fdc78-driftloom.nowmichaelclark.workers.dev>
+  (the branch's): Share is keys (copy code, paste code, export audio, share
+  link, seed album); export audio opens Export, a key a format (flac, opus,
+  midi). Every screen and popup by Mikey's rule of 2026-11-22, one word or a
+  symbol where it will do: a die for roll, the infinity sign for on and on,
+  + for new album and add loops, arrows for Next and back to, Lite, the long
+  pieces' lines in symbols; no popup for what the screen shows; the app's
+  description his new sentence. A screen reader still hears it all:
+  `tools/names.mjs` holds every control's name and description on 39
+  screens. Android draws its own boxes to type in (one look on the phone).
+  The before and after table is in `docs/notes/for-mikey.md`. Listen for
+  nothing. No album loop.

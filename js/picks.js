@@ -276,7 +276,7 @@ function lineButton(cls, onClick) {
 function trackKey(state, plainLine) {
   const t = trackOfSpec(state.spec);
   const b = lineButton('pk-track', () => api.openTrack());
-  const text = t.secs != null ? clock(t.secs) : 'plays on';
+  const text = t.secs != null ? clock(t.secs) : '\u221e';
   if (plainLine) {
     const sep = document.createElement('span');
     sep.className = 'pk-any pk-sep';
@@ -359,7 +359,11 @@ export function renderPanel() {
         const note = document.createElement('span');
         note.className = 'pk-any pk-cant';
         note.setAttribute('role', 'status');
-        note.textContent = `can't do that: ${cant}`;
+        // The reason alone on screen (session 30e).
+        const lead = document.createElement('span');
+        lead.className = 'vh';
+        lead.textContent = "can't do that: ";
+        note.append(lead, cant);
         vals.append(note);
       }
     } else if (line.id === 'key' && !isAny.key) {

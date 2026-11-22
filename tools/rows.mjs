@@ -53,8 +53,9 @@
 //                       core's own and leaning on it; held again after a
 //                       reload
 //   export MIDI         a MIDI file
-//   export audio        (queue item 104b and 104c) the sheet: Lossless and,
-//                       where the browser can encode Opus, Small (hidden
+//   export audio        (queue items 104b, 104c and 113) the Export view
+//                       behind Share's export audio: export flac and, where
+//                       the browser can encode Opus, export opus (hidden
 //                       where it can't: tested with the encoder taken
 //                       away), the lengths for a loop that plays on; a minute
 //                       exported to the file chosen (the save picker,
@@ -76,6 +77,8 @@
 //                       rendered, the browser decoding it to that length),
 //                       its size near the constant bit rate, Cancel, the
 //                       private file and a disk that fills
+//   share               (queue item 113) keys and no explainer; export
+//                       audio and album from seed open their views and back
 //   share code          the code decodes to the loop the core plays
 //   codes (session 23)  version 2 only, in a tab of its own: a version 1
 //                       code pasted gets the "older" line, a newer build's
@@ -461,7 +464,10 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   const share = () => ev(() => {
     if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
     document.querySelector('[data-stab="share"]').click();
+    document.getElementById('goExport').click();
   });
+  // A format's key starts its export (session 30e).
+  const exportKey = (format) => ev((f) => document.querySelector(`[data-format="${f}"]`).click(), format);
   const sheet = () => ev(() => ({
     choose: !document.getElementById('exportChoose').hidden,
     run: !document.getElementById('exportRun').hidden,
@@ -470,7 +476,8 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     why: document.getElementById('exportWhy').textContent,
     saved: document.getElementById('exportSaved').textContent,
     about: document.getElementById('exportAbout').textContent,
-    asks: document.getElementById('exportAudio').dataset.asks || '',
+    asks: document.querySelector('[data-format="lossless"]').dataset.asks || '',
+    hint: document.getElementById('exportHint').textContent,
     lossless: !document.querySelector('[data-format="lossless"]').hidden,
     small: !document.querySelector('[data-format="small"]').hidden,
   }));
@@ -507,21 +514,21 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await sleep(1200);
   let s = await sheet();
   const exportsBefore = await count();
-  await clickId('exportAudio');
+  await exportKey('lossless');
   await sleep(400);
   const asked = await ev(() => !document.getElementById('viewTrack').hidden);
   await clickId('trkCancel');
   await sleep(400);
-  const back = await ev(() => !document.getElementById('viewSave').hidden && !document.getElementById('exportChoose').hidden);
-  row('export audio: the sheet offers Lossless and Small (this browser can encode Opus); a loop that plays on asks how long first, its key opening the Track length view, cancel back to the sheet with nothing started',
-    s.choose && s.lossless && s.small && s.asks === 'length' && /set how long first/.test(s.about) && asked && back && (await count()) === exportsBefore, `${s.about}; asked ${asked}, back ${back}`);
+  const back = await ev(() => !document.getElementById('viewExport').hidden && !document.getElementById('exportChoose').hidden);
+  row('export audio: export flac and export opus (this browser can encode Opus); a loop that plays on asks how long first (nothing on screen, its key\'s description saying so), its key opening the Track length view, cancel back to the Export view with nothing started',
+    s.choose && s.lossless && s.small && s.asks === 'length' && s.about === '' && /set how long first/.test(s.hint) && asked && back && (await count()) === exportsBefore, `${s.hint}; asked ${asked}, back ${back}`);
   // A minute: the sheet says it, and done in the view from the export goes
   // on to export it (the rows below set it from the Vibe panel).
   await trackTo(ev, 60);
   await share();
   await sleep(600);
   s = await sheet();
-  row('export audio: with a track length set, the export is as long as the track, and says so', s.asks === '' && /^As long as the track: 1 min\. About \d+ MB\./.test(s.about), s.about);
+  row('export audio: with a track length set, the export is as long as the track, and says so', s.asks === '' && /^1 min · flac ~\d+ MB, opus ~\d+ MB$/.test(s.about) && /^As long as the track: 1 min\./.test(s.hint), `${s.about}; ${s.hint}`);
 
   // A minute, both speeds.
   const speeds = {};
@@ -531,7 +538,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     await share();
     const from = await count();
     const progress = await ev(() => window.__rows.exportProgress);
-    await clickId('exportAudio');
+    await exportKey('lossless');
     const done = await said(['done', 'failed', 'cancelled'], from, 240000);
     const meanwhile = await playing();
     const start = await ev(() => window.__rows.exportStart);
@@ -558,13 +565,13 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await trackTo(ev, 600);
   await share();
   let from = await count();
-  await clickId('exportAudio');
+  await exportKey('lossless');
   await sleep(1500);
   await clickId('exportCancel');
   let m = await said(['cancelled', 'done', 'failed'], from, 30000);
   s = await sheet();
   let files = await ev(() => window.__rows.opfs());
-  row('export audio: Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && /Nothing was saved/.test(s.why) && !files.includes('picked.flac') && (await playing()) && nothingLate(await lateLine()),
+  row('export audio: Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && s.why === 'Canceled.' && !files.includes('picked.flac') && (await playing()) && nothingLate(await lateLine()),
     `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}`);
   await clickId('exportOk');
 
@@ -575,11 +582,11 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await share();
   from = await count();
   const before = await ev(() => window.__rows.exportStart);
-  await clickId('exportAudio');
+  await exportKey('lossless');
   await sleep(1500);
   s = await sheet();
   const after = await ev(() => window.__rows.exportStart);
-  row('export audio: free space checked first: too little says so plainly, and nothing starts', s.failed && /^There isn't enough free space for this/.test(s.why) && JSON.stringify(before) === JSON.stringify(after) && (await count()) === from,
+  row('export audio: free space checked first: too little says so plainly, and nothing starts', s.failed && /^Not enough space: needs /.test(s.why) && JSON.stringify(before) === JSON.stringify(after) && (await count()) === from,
     s.why);
   await cdp.send('Storage.overrideQuotaForOrigin', { origin });
   await clickId('exportOk');
@@ -588,12 +595,12 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   // Small (104c): a minute to the file chosen, then Cancel.
   await trackTo(ev, 60);
   await share();
-  await ev(() => document.querySelector('[data-format="small"]').click());
+  await sleep(400);
   s = await sheet();
   const smallAbout = s.about;
   from = await count();
   const progress0 = await ev(() => window.__rows.exportProgress);
-  await clickId('exportAudio');
+  await exportKey('small');
   const small = await said(['done', 'failed', 'cancelled'], from, 240000);
   const smallMeanwhile = await playing();
   const smallStart = await ev(() => window.__rows.exportStart);
@@ -618,21 +625,44 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     && ogg && ogg.beginning && ogg.tagged && ogg.end && ogg.ordered && ogg.channels === 2 && ogg.preSkip > 0 && ogg.frames === small.frames && smallGot.decoded === small.frames
     && small.seconds >= 60 && small.seconds < 60 + 30 && smallMoved >= 2 && !small.counts.late && !small.counts.missed && !small.counts.dropped && s.done && smallMeanwhile && nothingLate(smallLine),
     `${small && small.type} ${small && small.why || ''}, ${smallGot.size} bytes, ${ogg ? `${ogg.pages} pages, ${ogg.packets} packets, pre-skip ${ogg.preSkip}, ${ogg.frames} frames` : oggWhy}; the browser decoded ${smallGot.decoded} frames; ${small && small.seconds && small.seconds.toFixed(1)} s in ${small && small.took && small.took.toFixed(1)} s; ${smallMoved} progress reports; ${s.saved}; ${smallLine}`);
-  row('export audio (small): the size is the constant bit rate (96 kbit/s stereo, 12,000 bytes a second and the pages) and the sheet said about so', rate > 11500 && rate < 12700 && /^As long as the track: 1 min\. About \d+ MB\./.test(smallAbout), `${Math.round(rate)} bytes a second; ${smallAbout}`);
+  row('export audio (small): the size is the constant bit rate (96 kbit/s stereo, 12,000 bytes a second and the pages) and the sheet said about so', rate > 11500 && rate < 12700 && /opus ~\d+ MB$/.test(smallAbout), `${Math.round(rate)} bytes a second; ${smallAbout}`);
   await clickId('exportDoneBtn');
   await trackTo(ev, 600);
   await share();
   from = await count();
-  await clickId('exportAudio');
+  await exportKey('small');
   await sleep(1500);
   await clickId('exportCancel');
   m = await said(['cancelled', 'done', 'failed'], from, 30000);
   s = await sheet();
   files = await ev(() => window.__rows.opfs());
-  row('export audio (small): Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && /Nothing was saved/.test(s.why) && !files.includes('picked.opus') && (await playing()) && nothingLate(await lateLine()),
+  row('export audio (small): Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && s.why === 'Canceled.' && !files.includes('picked.opus') && (await playing()) && nothingLate(await lateLine()),
     `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}`);
   await clickId('exportOk');
-  await ev(() => document.querySelector('[data-format="lossless"]').click());
+
+  // The format pressed is kept through the Track length view, and an export
+  // under way is still there on the way back into Export (session 30e).
+  await trackTo(ev, null);
+  await share();
+  from = await count();
+  await exportKey('small');
+  await sleep(400);
+  await ev(() => {
+    const n = document.getElementById('trkNum');
+    n.value = '10:00';
+    n.dispatchEvent(new Event('blur'));
+    document.getElementById('trkDone').click();
+  });
+  await sleep(1500);
+  const went = await ev(() => ({ view: !document.getElementById('viewExport').hidden, format: window.__rows.exportStart && window.__rows.exportStart.job.format }));
+  await clickId('exportBack');
+  const atShare = await ev(() => !document.getElementById('viewSave').hidden && !document.getElementById('saveShare').hidden);
+  await clickId('goExport');
+  const again = await sheet();
+  await clickId('exportCancel');
+  m = await said(['cancelled', 'done', 'failed'], from, 30000);
+  row('export view: done in Track length goes on with the format pressed; back to Share and in again, the export is still under way', went.view && went.format === 'opus' && atShare && again.run && m && m.type === 'cancelled', `${JSON.stringify(went)}, share ${atShare}, running ${again.run}, ${m && m.type}`);
+  await clickId('exportOk');
   await probe();
 
   // The private file, and a disk that fills while it is written: another
@@ -649,15 +679,17 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   const tshare = () => tev(() => {
     if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
     document.querySelector('[data-stab="share"]').click();
+    document.getElementById('goExport').click();
   });
+  const tkey = (format) => tev((f) => document.querySelector(`[data-format="${f}"]`).click(), format);
   // A finite piece with no track length set exports whole (session 30c).
   await tev((code) => { window.__rows.clip = code; }, LOOPS.piece.code);
   await tev(() => document.getElementById('pasteCode').click());
   await sleep(3000);
   await tshare();
   await sleep(1500);
-  const whole = await tev(() => ({ about: document.getElementById('exportAbout').textContent, asks: document.getElementById('exportAudio').dataset.asks || '' }));
-  row('export audio: a finite piece with no track length set exports whole, and says so', whole.asks === '' && /^The whole piece, \d+ h/.test(whole.about), whole.about);
+  const whole = await tev(() => ({ about: document.getElementById('exportAbout').textContent, asks: document.querySelector('[data-format="lossless"]').dataset.asks || '' }));
+  row('export audio: a finite piece with no track length set exports whole, and says so', whole.asks === '' && /^\d+ h/.test(whole.about), whole.about);
   await tev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
   await tev(() => document.getElementById('pasteCode').click());
   await sleep(3000);
@@ -665,7 +697,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await tshare();
   await sleep(1200);
   const blobs = await tev(() => window.__rows.blobs.length);
-  await tev(() => document.getElementById('exportAudio').click());
+  await tkey('lossless');
   let t0 = Date.now();
   let done = null;
   while (Date.now() - t0 < 240000 && !done) {
@@ -687,7 +719,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await trackTo(tev, 1800);
   await tshare();
   const n0 = (await tev(() => window.__rows.exports)).length;
-  await tev(() => document.getElementById('exportAudio').click());
+  await tkey('lossless');
   t0 = Date.now();
   while (Date.now() - t0 < 30000 && (await tev(() => window.__rows.exportProgress)) < 3) await sleep(250);
   const used = await tev(async () => (await navigator.storage.estimate()).usage);
@@ -703,17 +735,16 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   const why = await tev(() => document.getElementById('exportWhy').textContent);
   const tp = await tev(() => window.__rows.probe());
   const tl = await tev(async () => { let w = 0; for (let i = 0; i < 15; i++) { w = Math.max(w, window.__rows.level()); await new Promise((r) => setTimeout(r, 100)); } return w; });
-  row('export audio: a disk that fills mid-export ends with the plain message, no file left, the music playing', end && end.type === 'failed' && end.why === 'space' && /ran out of space/.test(why) && !files.some((f) => f.startsWith('exports/') && f.endsWith('.flac')) && tp && tp.player.state === 3 && tl > 1e-4,
+  row('export audio: a disk that fills mid-export ends with the plain message, no file left, the music playing', end && end.type === 'failed' && end.why === 'space' && /^Out of space/.test(why) && !files.some((f) => f.startsWith('exports/') && f.endsWith('.flac')) && tp && tp.player.state === 3 && tl > 1e-4,
     `${end && end.type} ${end && end.why || ''}; ${why}; files ${files.join(',') || 'none'}`);
   await tev(() => document.getElementById('exportOk').click());
 
   // Small in the same tab: the private file, and a disk that fills.
   await trackTo(tev, 60);
   await tshare();
-  await tev(() => document.querySelector('[data-format="small"]').click());
   const blobs2 = await tev(() => window.__rows.blobs.length);
   const n1 = (await tev(() => window.__rows.exports)).length;
-  await tev(() => document.getElementById('exportAudio').click());
+  await tkey('small');
   t0 = Date.now();
   let done2 = null;
   while (Date.now() - t0 < 240000 && !done2) {
@@ -737,7 +768,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await trackTo(tev, 3600);
   await tshare();
   const n2 = (await tev(() => window.__rows.exports)).length;
-  await tev(() => document.getElementById('exportAudio').click());
+  await tkey('small');
   t0 = Date.now();
   while (Date.now() - t0 < 30000 && (await tev(() => window.__rows.exportProgress)) < 6) await sleep(250);
   const used2 = await tev(async () => (await navigator.storage.estimate()).usage);
@@ -752,7 +783,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   files = await tev(() => window.__rows.opfs());
   const why2 = await tev(() => document.getElementById('exportWhy').textContent);
   const tp2 = await tev(() => window.__rows.probe());
-  row('export audio (small): a disk that fills mid-export ends with the plain message, no file left, the music playing', end2 && end2.type === 'failed' && end2.why === 'space' && /ran out of space/.test(why2) && !files.some((f) => f.startsWith('exports/') && f.endsWith('.opus')) && tp2 && tp2.player.state === 3,
+  row('export audio (small): a disk that fills mid-export ends with the plain message, no file left, the music playing', end2 && end2.type === 'failed' && end2.why === 'space' && /^Out of space/.test(why2) && !files.some((f) => f.startsWith('exports/') && f.endsWith('.opus')) && tp2 && tp2.player.state === 3,
     `${end2 && end2.type} ${end2 && end2.why || ''}; ${why2}; files ${files.join(',') || 'none'}`);
   row('export audio: no page errors in the tab with no save picker', bad.length === 0, bad.join('; '));
   await tab.close();
@@ -791,15 +822,16 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await bare.evaluate(() => {
     if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
     document.querySelector('[data-stab="share"]').click();
+    document.getElementById('goExport').click();
   });
   await sleep(1500);
   const seen = await bare.evaluate(() => ({
     lossless: !document.querySelector('[data-format="lossless"]').hidden,
     small: !document.querySelector('[data-format="small"]').hidden,
-    go: !document.getElementById('exportAudio').disabled,
+    go: !document.querySelector('[data-format="lossless"]').disabled,
     about: document.getElementById('exportAbout').textContent,
   }));
-  row('export audio: where the browser has no Opus encoder, Small is not offered and Lossless still is', seen.lossless && !seen.small && seen.go && /^(This plays on and on, so you set how long first|As long as the track: .*? About \d+ MB)\./.test(seen.about) && bareBad.length === 0, `${JSON.stringify(seen)} ${bareBad.join('; ')}`);
+  row('export audio: where the browser has no Opus encoder, Small is not offered and Lossless still is', seen.lossless && !seen.small && seen.go && /^$|^[^·]+ · flac ~\d+ MB$/.test(seen.about) && bareBad.length === 0, `${JSON.stringify(seen)} ${bareBad.join('; ')}`);
   await bare.close();
 }
 
@@ -1010,8 +1042,8 @@ async function longRows(browser, port, errors) {
     bars: document.getElementById('pieceBars').textContent,
     times: document.getElementById('pieceTimes').textContent,
   }));
-  // "1:12:03 played" in seconds.
-  const secs = (t) => { const m = /^([\d:]+) played/.exec(t); return m ? m[1].split(':').reduce((a, v) => a * 60 + Number(v), 0) : NaN; };
+  // "1:12:03 · −2:10:00": the time played, in seconds.
+  const secs = (t) => { const m = /^([\d:]+)( \u00b7|$)/.exec(t); return m ? m[1].split(':').reduce((a, v) => a * 60 + Number(v), 0) : NaN; };
   const jumps = () => ev(() => window.__rows.posts.filter((m) => m.type === 'playJump'));
   // Seconds from the page's jump to the core's Jump event arriving.
   const landed = async (count) => {
@@ -1038,7 +1070,7 @@ async function longRows(browser, port, errors) {
   const perBar = spb * (60 / Number(p.d.bpm) / 4);
   let w = await words();
   row('long piece: Now Playing says where you are: bar of how many, time played and time left, the line in the rail\'s place',
-    w.shown && !w.rail && /^bar [\d,]+ of 32,768/.test(w.bars) && /^[\d:]+ played \u00b7 [\d:]+ left$/.test(w.times), `${w.bars}; ${w.times}`);
+    w.shown && !w.rail && /^bar [\d,]+\/32,768/.test(w.bars) && /^[\d:]+ \u00b7 \u2212[\d:]+$/.test(w.times), `${w.bars}; ${w.times}`);
 
   // The markers are the map's: a fresh call of the core's map, drawn.
   const m = await ev(async () => {
@@ -1090,7 +1122,7 @@ async function longRows(browser, port, errors) {
     return { want: mark ? piece.ROLE_WORDS[mark.role] : null, section: mark ? mark.section : null };
   }, now.bar);
   row('long piece: where you are after the jump: the bar, the time played and left, and the section\'s word are the core\'s place and the map\'s',
-    Math.abs(shownBar - (Math.floor(now.bar) + 1)) <= 3 && Math.abs(secs(w.times) - now.played) < 6 && /left$/.test(w.times) && word.want && w.bars.endsWith(word.want), `${w.bars}; ${w.times}; place bar ${now.bar.toFixed(1)}`);
+    Math.abs(shownBar - (Math.floor(now.bar) + 1)) <= 3 && Math.abs(secs(w.times) - now.played) < 6 && /\u2212[\d:]+$/.test(w.times) && word.want && w.bars.endsWith(word.want), `${w.bars}; ${w.times}; place bar ${now.bar.toFixed(1)}`);
   row('long piece: nothing late across the jump', nothingLate(await diag()), (await diag()).split('\n').find((l) => l.startsWith('engine:')));
 
   // The next-section key goes to the map's next section.
@@ -1139,7 +1171,7 @@ async function longRows(browser, port, errors) {
     return { endless: !!(model && model.endless), wander: roles.has('holding') && !roles.has('peak') && !roles.has('opening'), window: model ? model.last - model.first : 0 };
   });
   row('long piece: Endless: bar and time played, no time left, a window of the map with a wander\'s holds',
-    end.endless && end.wander && end.window > 0 && /^bar [\d,]+( \u00b7 [a-z ]+)?$/.test(w.bars) && !/ of /.test(w.bars) && /^[\d:]+ played$/.test(w.times), `${w.bars}; ${w.times}; ${JSON.stringify(end)}`);
+    end.endless && end.wander && end.window > 0 && /^bar [\d,]+( \u00b7 [a-z ]+)?$/.test(w.bars) && !/\//.test(w.bars) && /^[\d:]+$/.test(w.times), `${w.bars}; ${w.times}; ${JSON.stringify(end)}`);
 
   // The Library says each loop's length: from 4 bars to 27 hours, or
   // Endless. Four loops saved (the page's own storage, as a Save would), the
@@ -1238,7 +1270,7 @@ async function main() {
 
     console.log(`\nThe app's controls and displays on the core's player (queue item 94b)`);
     // Play, from a fixed loop: a share code pasted through the page's own
-    // "paste a code" (the clipboard is the harness's), which plays it. A
+    // "paste code" (the clipboard is the harness's), which plays it. A
     // loop drawn at random could be a sparse one, or ring on after a mute.
     await ev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
     await clickId('pasteCode');
@@ -1408,6 +1440,32 @@ async function main() {
     }
     await ev(() => document.getElementById('vibesClear').click());
 
+    // Share (session 30e): keys, and nothing else on screen.
+    {
+      await ev(() => {
+        if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+        document.querySelector('[data-stab="share"]').click();
+      });
+      await sleep(400);
+      const screen = await ev(() => {
+        const pane = document.querySelector('#saveShare .scroll');
+        return {
+          words: pane.innerText.split('\n').map((x) => x.trim()).filter(Boolean),
+          keys: [...pane.querySelectorAll('button')].map((b) => b.textContent.trim()),
+          scrolls: pane.scrollHeight > pane.clientHeight + 1,
+        };
+      });
+      row('share: just keys, copy code, paste code and export audio first, no explainer and nothing scrolling',
+        screen.keys.slice(0, 3).join() === 'copy code,paste code,export audio' && screen.words.join() === screen.keys.join() && !screen.scrolls, JSON.stringify(screen));
+      await clickId('goSeedAlbum');
+      const seed = await ev(() => !document.getElementById('viewSeed').hidden);
+      await clickId('seedBack');
+      const back = await ev(() => !document.getElementById('saveShare').hidden && !document.getElementById('viewSave').hidden);
+      await clickId('goExport');
+      await sleep(800);
+      const keys = await ev(() => [...document.querySelectorAll('#exportChoose button')].filter((b) => !b.hidden).map((b) => b.textContent.trim()).join());
+      row('share: album from seed and export audio open their views; Export is a key a format, export midi among them', seed && back && /^flac,(opus,)?midi$/.test(keys), `seed ${seed}, back ${back}, ${keys}`);
+    }
     // Export MIDI and a share code.
     await clickId('exportMidi');
     await sleep(500);
@@ -1569,7 +1627,7 @@ async function codeRows(browser) {
       await tev(() => { window.__rows.clip = ''; });
       await openAlbum(title);
       await sleep(300);
-      await heroKey('share');
+      await heroKey('copy code');
       for (let w = 0; w < 20; w++) {
         const c = await clip();
         if (c) return c;
@@ -1587,13 +1645,13 @@ async function codeRows(browser) {
   // What can't be opened says so in one plain line.
   await paste('DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR');
   let t = await toast();
-  row('codes: a version 1 code pasted: it is from an older Driftloom and can\'t be opened', t === 'That code is from an older Driftloom and can\'t be opened.', t);
+  row('codes: a version 1 code pasted: it is from an older Driftloom and can\'t be opened', t === 'Code too old', t);
   const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
   let h = 0;
   for (const c of 'GRiSNBA') h = (h * 64 + A.indexOf(c) + 1) % 4093;
   await paste(`GRiSNBA${A[h & 63]}${A[h >> 6]}`);
   t = await toast();
-  row('codes: a newer build\'s code pasted: it needs a newer Driftloom', t === 'That code needs a newer Driftloom.', t);
+  row('codes: a newer build\'s code pasted: it needs a newer Driftloom', t === 'Needs update', t);
 
   // An album's code pasted lands in the Library and plays; shared again, it
   // is the same album.
@@ -1603,12 +1661,12 @@ async function codeRows(browser) {
   const albumCode = encodeAlbum('Rainy Sunday', tracks);
   await paste(albumCode);
   t = await toast();
-  row('codes: an album\'s code pasted lands in the Library', t === 'Added Rainy Sunday · 3 loops' && await openAlbum('Rainy Sunday'), t);
+  row('codes: an album\'s code pasted lands in the Library', t === 'Imported' && await openAlbum('Rainy Sunday'), t);
   let again = null;
   try { again = decodeAlbum(await shareAlbum('Rainy Sunday')); } catch (err) { again = { error: err.message }; }
   const same = (a) => a && a.title === 'Rainy Sunday' && a.specs && a.specs.length === 3 && a.specs.every((s, i) => s.seed === tracks[i].seed && s.name === tracks[i].name && encodeSong(s) === encodeSong(tracks[i]));
   row('codes: the album shared again from the Library is the same album, its first track\'s Thai name with it', same(again), JSON.stringify(again && again.title));
-  await heroKey('play album');
+  await heroKey('play');
   await sleep(3500);
   let p = await tev(() => window.__rows.probe());
   let d = about(p && p.about);
@@ -1644,7 +1702,7 @@ async function codeRows(browser) {
   // The Library after a reload: the album there, the renamed loop renamed.
   await open(true);
   const kept = await openAlbum('Rainy Sunday');
-  await heroKey('play album');
+  await heroKey('play');
   await sleep(3500);
   p = await tev(() => window.__rows.probe());
   d = about(p && p.about);
@@ -1666,7 +1724,7 @@ async function codeRows(browser) {
   t = await toast();
   const back = await openAlbum('Rainy Sunday');
   const after = await shareAlbum('Rainy Sunday');
-  row('codes: a backup restored brings the Library back: the album\'s code the same as before', gone && /^Restored \d+ loops/.test(t) && back && after === before && /^[A-Za-z0-9_-]+$/.test(after), `${t}; ${after === before ? 'same code' : `${before} / ${after}`}`);
+  row('codes: a backup restored brings the Library back: the album\'s code the same as before', gone && /^Restored \d+/.test(t) && back && after === before && /^[A-Za-z0-9_-]+$/.test(after), `${t}; ${after === before ? 'same code' : `${before} / ${after}`}`);
   row('codes: no page errors in their tab', !bad.length, bad.join('; '));
   await tab.close();
 }
@@ -1712,7 +1770,7 @@ async function linkRows(browser) {
   const loopLink = linkOf(`${ORIGIN}/`, loopCode);
   let tab = await fresh(loopLink);
   let st = await state(tab);
-  row('links: a loop\'s link opens the loop on the card, ready and not playing, its code out of the address', st.card === spec.name && !st.playing && st.hash === '' && /Imported Loops/.test(st.toast), JSON.stringify(st));
+  row('links: a loop\'s link opens the loop on the card, ready and not playing, its code out of the address', st.card === spec.name && !st.playing && st.hash === '' && /^Imported/.test(st.toast), JSON.stringify(st));
   await tab.reload();
   await sleep(1500);
   st = await state(tab);
@@ -1740,12 +1798,12 @@ async function linkRows(browser) {
   await sleep(600);
   const seedCode = await share.evaluate(() => window.__rows.clip);
   const toastCode = await share.evaluate(() => document.getElementById('toast').textContent);
-  row('links: an album from one seed of 12 tracks has a code under 20 characters', typeof seedCode === 'string' && /^[A-Za-z0-9_-]{5,19}$/.test(seedCode) && /^Code copied/.test(toastCode), `${seedCode} ${toastCode}`);
+  row('links: an album from one seed of 12 tracks has a code under 20 characters', typeof seedCode === 'string' && /^[A-Za-z0-9_-]{5,19}$/.test(seedCode) && /^Copied/.test(toastCode), `${seedCode} ${toastCode}`);
   await share.evaluate(() => document.getElementById('seedAlbumLink').click());
   await sleep(600);
   const seedLink = await share.evaluate(() => window.__rows.clip);
   const linkCode = String(seedLink).slice(`${ORIGIN}/#c=`.length);
-  row('links: its link is the address with the code after #c= (a fresh seed each press), and "Link copied" says so', String(seedLink).startsWith(`${ORIGIN}/#c=`) && /^[A-Za-z0-9_-]{5,19}$/.test(linkCode) && /^Link copied/.test(await share.evaluate(() => document.getElementById('toast').textContent)), seedLink);
+  row('links: its link is the address with the code after #c= (a fresh seed each press), and "Copied" says so', String(seedLink).startsWith(`${ORIGIN}/#c=`) && /^[A-Za-z0-9_-]{5,19}$/.test(linkCode) && /^Copied/.test(await share.evaluate(() => document.getElementById('toast').textContent)), seedLink);
   await share.close();
   const want = decodeAlbum(linkCode);
   const second = await fresh(seedLink);
@@ -1769,12 +1827,12 @@ async function linkRows(browser) {
   const damaged = `${ORIGIN}/#c=${loopCode.slice(0, 4)}${loopCode[4] === 'A' ? 'B' : 'A'}${loopCode.slice(5)}`;
   tab = await fresh(damaged);
   st = await state(tab);
-  row('links: a link with a damaged code says so in one plain line', st.toast === 'That link\'s code can\'t be read.' && st.hash === '', JSON.stringify(st));
+  row('links: a link with a damaged code says so in one plain line', st.toast === 'Bad link' && st.hash === '', JSON.stringify(st));
   await tab.evaluate((c) => { window.__rows.clip = c; }, loopCode);
   await tab.evaluate(() => document.getElementById('pasteCode').click());
   await sleep(1500);
   st = await state(tab);
-  row('links: and the app still works: a code pasted after it opens', st.card === spec.name && /Imported Loops/.test(st.toast), JSON.stringify(st));
+  row('links: and the app still works: a code pasted after it opens', st.card === spec.name && /^Imported/.test(st.toast), JSON.stringify(st));
   // A link pasted is its code.
   await tab.evaluate((c) => { window.__rows.clip = `try this: ${c}`; }, loopLink);
   await tab.evaluate(() => document.getElementById('pasteCode').click());
@@ -1789,7 +1847,7 @@ async function linkRows(browser) {
   await tab.evaluate(() => document.getElementById('shareSong').click());
   await sleep(600);
   const copied = await tab.evaluate(() => ({ clip: window.__rows.clip, toast: document.getElementById('toast').textContent }));
-  row('links: share link without a share sheet copies the link', /^http:\/\/127\.0\.0\.1:\d+\/#c=[A-Za-z0-9_-]+$/.test(copied.clip) && /^Link copied/.test(copied.toast), JSON.stringify(copied));
+  row('links: share link without a share sheet copies the link', /^http:\/\/127\.0\.0\.1:\d+\/#c=[A-Za-z0-9_-]+$/.test(copied.clip) && /^Copied/.test(copied.toast), JSON.stringify(copied));
   await tab.close();
   tab = await fresh(`${ORIGIN}/`, { init: () => { navigator.share = async (d) => { window.__shared = d; }; } });
   await tab.evaluate(() => document.getElementById('shareSong').click());
@@ -1806,11 +1864,11 @@ async function linkRows(browser) {
   const newer = `GRiSNBA${A[h & 63]}${A[h >> 6]}`;
   const newerTab = await fresh(`${ORIGIN}/#c=${newer}`);
   st = await state(newerTab);
-  row('links: a link from a newer build says it needs a newer Driftloom', st.toast === 'That code needs a newer Driftloom.', st.toast);
+  row('links: a link from a newer build says it needs a newer Driftloom', st.toast === 'Needs update', st.toast);
   await newerTab.close();
   const olderTab = await fresh(`${ORIGIN}/#c=DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR`);
   st = await state(olderTab);
-  row('links: a link with a version 1 code says it is from an older Driftloom', st.toast === 'That code is from an older Driftloom and can\'t be opened.', st.toast);
+  row('links: a link with a version 1 code says it is from an older Driftloom', st.toast === 'Code too old', st.toast);
   await olderTab.close();
   await tab.close();
   row('links: no page errors in their tabs', !bad.length, bad.join('; '));
@@ -1864,7 +1922,7 @@ async function paceRows(browser) {
       if (r) r.querySelector('.lrow-main').click();
     });
     await sleep(300);
-    await tab.evaluate(() => { const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'share'); if (b) b.click(); });
+    await tab.evaluate(() => { const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'copy code'); if (b) b.click(); });
     for (let w = 0; w < 20 && !code; w++) {
       code = await tab.evaluate(() => window.__rows.clip) || null;
       await sleep(150);
@@ -2002,7 +2060,7 @@ async function previousRows(browser) {
       if (r) r.querySelector('.lrow-main').click();
     }, title);
     await sleep(300);
-    await heroKey('play album');
+    await heroKey('play');
     await sleep(500);
     await tev(() => { if (!document.getElementById('viewLibrary').hidden) document.getElementById('saveBtn').click(); });
     await sleep(300);
@@ -2081,7 +2139,7 @@ async function previousRows(browser) {
   // its start, there once a new loop makes some.
   await tev(() => document.getElementById('nowBtn').click());
   await sleep(400);
-  const offered = await tev(() => { const a = document.getElementById('nowAction'); const ok = !!a && !a.hidden && a.textContent === 'leave album'; if (ok) a.click(); return ok; });
+  const offered = await tev(() => { const a = document.getElementById('nowAction'); const ok = !!a && !a.hidden && a.textContent === 'leave'; if (ok) a.click(); return ok; });
   await sleep(500);
   const left = await tev(() => document.getElementById('prevBtn').disabled);
   row('previous in an album: after leaving the album, Previous is as the history says (off at its start)', offered && left, `${offered} ${left}`);
@@ -2116,7 +2174,7 @@ async function plainRows(browser) {
       return { ...seen, bad };
     };
     const none = await plain((tab) => tab.addInitScript(() => { Object.defineProperty(globalThis, 'WebAssembly', { value: undefined }); }));
-    row('plain line: a browser with no WebAssembly is told it can\'t play', none.shown && none.text === 'This browser can\'t play Driftloom; try a recent Chrome, Firefox or Safari' && !none.bad.length, `${none.text} ${none.bad.join('; ')}`);
+    row('plain line: a browser with no WebAssembly is told it can\'t play', none.shown && none.text === 'Can\'t play here. Try recent Chrome, Firefox or Safari.' && !none.bad.length, `${none.text} ${none.bad.join('; ')}`);
     const lost = await plain((tab) => tab.route('**/js/dlplayer.wasm', (r) => r.abort('failed')));
     row('plain line: a module that never arrives says to refresh', lost.shown && lost.text === 'Please refresh.' && !lost.bad.length, `${lost.text} ${lost.bad.join('; ')}`);
   }
@@ -2209,12 +2267,12 @@ async function trackRows(browser) {
   await sleep(300);
   const line = await tev(() => document.querySelector('#picksList .pk-line-pace').innerText.replace(/\s+/g, ' ').trim());
   let v = await shown();
-  row('track length: its key on the Vibe panel\'s pace line, beside "any tempo" and "any bars", says the loop plays on', /any tempo · any bars · plays on/.test(line) && v.keyLabel === 'Track length: plays on', line);
+  row('track length: its key on the Vibe panel\'s pace line, beside "any tempo" and "any bars", says the loop plays on', /any tempo · any bars · \u221e/.test(line) && v.keyLabel === 'Track length: plays on', line);
   const before = await tracks();
   await tab.click('#picksList .pk-track');
   await sleep(300);
   v = await shown();
-  row('track length: open, on and on lit, fade in off and fade out on (dimmed while it plays on)', v.view === 'track' && v.num === 'on and on' && v.on && !v.fadeIn && v.fadeOut && v.outDimmed, JSON.stringify(v));
+  row('track length: open, on and on lit, fade in off and fade out on (dimmed while it plays on)', v.view === 'track' && v.num === '\u221e' && v.on && !v.fadeIn && v.fadeOut && v.outDimmed, JSON.stringify(v));
 
   // Typed: h:mm:ss, m:ss, and digits a timer's way.
   const type = async (text) => {
@@ -2260,7 +2318,7 @@ async function trackRows(browser) {
   const on = await shown();
   await click('trkOn');
   const off = await shown();
-  row('track length: on and on lit (the fade out dimmed), pressed again the time it showed', on.on && on.num === 'on and on' && on.outDimmed && !off.on && off.num === '12:00:00' && !off.outDimmed, `${on.num} | ${off.num}`);
+  row('track length: on and on lit (the fade out dimmed), pressed again the time it showed', on.on && on.num === '\u221e' && on.outDimmed && !off.on && off.num === '12:00:00' && !off.outDimmed, `${on.num} | ${off.num}`);
   // The fades, each pressed on or off.
   await click('trkFadeIn');
   const f1 = await shown();
@@ -2275,7 +2333,7 @@ async function trackRows(browser) {
   await sleep(300);
   v = await shown();
   let p = await probe();
-  row('track length: cancel goes back to the Vibe panel, nothing sent, the loop still on and on', v.view === 'vibe' && v.key === 'plays on' && (await tracks()) === before && p.trackAt < 0, `${v.view} ${v.key}, trackAt ${p.trackAt}`);
+  row('track length: cancel goes back to the Vibe panel, nothing sent, the loop still on and on', v.view === 'vibe' && v.key === '\u221e' && (await tracks()) === before && p.trackAt < 0, `${v.view} ${v.key}, trackAt ${p.trackAt}`);
 
   // Done: 1:23:45 with its fade in, on the core to the second.
   await tab.click('#picksList .pk-track');
@@ -2350,7 +2408,7 @@ async function trackRows(browser) {
   }
   await sleep(1500);
   v = await tev(() => { document.getElementById('vibesBtn').click(); return document.querySelector('#picksList .pk-track').textContent; });
-  row('track length: the loop after it (the core\'s own) plays on, as after the Length slider', v === 'plays on', v);
+  row('track length: the loop after it (the core\'s own) plays on, as after the Length slider', v === '\u221e', v);
   const line2 = (await tev(() => document.getElementById('diagRefresh').click() || document.getElementById('diagOut').textContent)).split('\n').find((l) => l.startsWith('engine:')) || '';
   row('track length: nothing late across it', /late: 0\s+missed: 0\s+dropped: 0/.test(line2), line2);
   // Short phones: every control inside the view and touchable at its top,

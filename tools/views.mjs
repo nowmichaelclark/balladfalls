@@ -374,6 +374,23 @@ const PHASES = [
     await click(tab, '#pasteCode');
     await sleep(5000);
   } },
+  // Share's two views (session 30e, queue item 113).
+  { view: 'export', run: async (tab) => {
+    await go(tab, 'save');
+    await click(tab, '[data-stab="share"]');
+    await click(tab, '#goExport');
+    if (!(await view(tab, 'export'))) throw new Error('could not reach export');
+    await sleep(4000);
+    await click(tab, '#exportBack');
+    await sleep(800);
+  } },
+  { view: 'album from seed', run: async (tab) => {
+    await click(tab, '#goSeedAlbum');
+    if (!(await view(tab, 'seed'))) throw new Error('could not reach seed');
+    await sleep(4000);
+    await click(tab, '#seedBack');
+    await sleep(800);
+  } },
   { view: 'sounds', run: async (tab) => { await go(tab, 'sounds'); await sleep(1500); await scroll(tab, 600); await sleep(3000); } },
   { view: 'layers', run: async (tab) => { await go(tab, 'layers'); await sleep(6000); } },
   { view: 'switching quickly', run: async (tab) => {

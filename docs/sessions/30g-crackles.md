@@ -16,7 +16,6 @@
   screen off (Kotlin), the screen-off job reading the new counts
   (`NativeCore.kt`, `android/background.mjs`).
 - Step 7 (Play after two minutes paused, `android/background.mjs`).
-- If Mikey minds the 222 ms latency on Pause and Next: a follow-up item.
 - The nightly by hand on main after the last merge, and read.
 
 Written by brain B-parallel 3 on 2026-11-22, after Mikey heard crackles in

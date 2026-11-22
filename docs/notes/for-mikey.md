@@ -239,9 +239,8 @@ or off.
 
 **Heard (2026-11-23): no more crackles** on v201 (f6c3ce0's APK, #458),
 with headphones, after hearing them on v195 first; `docs/notes/115-crackles.md`
-has your words and your Diagnostics. Item 115 closed with #458. One
-thing left to say if it bothers you: Pause and Next are heard about a fifth
-of a second later now (222 ms).
+has your words and your Diagnostics. Item 115 closed with #458. Pause and
+Next are heard about 0.2 s later now; you didn't notice, so it stays.
 
 ## The Android app, screen off (item 107d, v188, PR #431)
 

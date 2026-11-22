@@ -208,5 +208,5 @@ copied while playing, about eleven minutes in:
   the 50% line that moves it to Lite; render stereo 13.6% of real time; late,
   missed and dropped 0.
 
-Not yet asked when this was written: whether Pause and Next feel late at
-222 ms. If they do, that is a follow-up, not a reason to hold the fix.
+Asked afterward whether Pause and Next felt slow in v201 (about 0.2 s later
+than before): "Didn't notice". The 222 ms is accepted; no follow-up.

@@ -102,8 +102,9 @@ the points where the next step is yours.
 ## The Android app on F-Droid (item 107e, session 29): make your key, then submit after 31
 
 Nothing here is submitted or signed yet and no account was made. The signing
-is chosen (your own key); the submission waits until after session 31, because the
-merge request to F-Droid is public and carries the app's new name.
+is chosen (your own key); the submission waits until after session 31,
+because the merge request to F-Droid is public and carries the app's new
+name.
 
 **Google's developer verification (brain B4, 2026-11-18; read before you
 submit):** since 2026-09-30 certified Android phones in Thailand, Brazil,

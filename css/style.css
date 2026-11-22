@@ -2583,11 +2583,11 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
    either way) under that, so the number keeps the width at 360 px; the
    coarse slider; then on and on and the two fades, lit the app's way. A
    Painter session restyles it later. */
-.v-track .ln-body { gap: 13px; }
+.v-track .ln-body { gap: 18px; }
 .tk-num { width: 100%; }
 .tk-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .tk-steps .ln-step { min-height: 44px; padding: 2px 4px; white-space: nowrap; }
-.vkey.tk-on { flex: 0 0 auto; min-height: 48px; }
+.vkey.word.tk-on { flex: 0 0 auto; min-width: 72px; min-height: 48px; padding: 2px 12px; font-size: min(0.75rem, 18px); }
 .vkey.tk-on[aria-pressed="true"] { color: var(--text-primary); font-weight: 700; box-shadow: inset 0 0 0 2px var(--text-primary), var(--btn-mini-shadow); }
 .tk-fades { justify-content: flex-end; }
 .tk-fades #trkFadeOut:disabled { opacity: 0.4; }

@@ -66,3 +66,10 @@ words: 30f, 30, B5. The before and after of every line is in
   reached), and a phone on its side (about 60 px of panel at 844 x 390: too
   little for Bars, Track length, Export and Seed album): older than 113,
   session 30f's. Track length's short phones are 30c's fix in #448.
+- F-Droid's CI, seen while this PR's CI ran, for session 30: the clean-clone
+  build's Maven download is refused now and then (twice on 2026-11-22, the
+  release jobs' too); and `android/fdroid/compare-apks.sh` passes with "no
+  F-Droid build to compare with" when `f/` holds no APK, so "the same bytes"
+  was green on da2def1's re-run having compared only machines a and b. The
+  re-run's stale artifact behind that is fixed here (`overwrite: true`); the
+  silent pass is not.

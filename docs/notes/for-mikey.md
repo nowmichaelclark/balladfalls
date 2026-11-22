@@ -42,9 +42,12 @@ the points where the next step is yours.
   change no longer moves when a track ends; a pause waits.
 - **Your saved loops and backups** turned their passes or bars into the
   time they came to at their tempo, fading out. An album's code now carries
-  the time and both fades; older album links still open, their tracks a few
-  seconds each, so the three in `docs/ALBUMS.md` are written again with
-  their times (Batch 6, Nearer chords, Long pieces).
+  the time and both fades.
+- **An album link with track lengths made before v193** (v189 to v192,
+  passes or bars set, like the one you shared to check it) still opens, but
+  now plays each track for only a few seconds: open the album, set each
+  track's time, and share it again. The three in `docs/ALBUMS.md` are
+  written again with their times (Batch 6, Nearer chords, Long pieces).
 
 ## The info card: whole lines, the rest a tap away, a round playhead (item 112, v192, PR #446)
 

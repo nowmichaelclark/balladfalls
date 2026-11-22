@@ -17,8 +17,7 @@ the points where the next step is yours.
 - **Look at the sheets,** before and after, every screen: the branch
   [`s30f-shots`](https://github.com/nowmichaelclark/driftloom/tree/s30f-shots)
   (light and dark at 360 px and a tablet's width; after also has every
-  theme, a short phone and a phone on its side). Then turn your phone on
-  its side: the card and keys at the left, the panel at the right.
+  theme, a short phone and a phone on its side).
 - **TalkBack in the Android app (five minutes):**
   1. Settings, Accessibility, TalkBack, on; open the app.
   2. Swipe right from the top: the name, the details, the panel, the seven
@@ -42,6 +41,14 @@ the points where the next step is yours.
   artifact `driftloom-debug-apk` of the
   [newest Android run on that PR's branch](https://github.com/nowmichaelclark/driftloom/actions/workflows/android.yml?query=branch%3Aclaude%2Fs30f-cover)).
   The small status bar icon stays Driftloom's.
+
+- **Sideways, your review (v200; not seen on a phone yet):** in Chrome and
+  in DuckDuckGo open <https://claude-s30f-sideways-driftloom.nowmichaelclark.workers.dev>,
+  turn the phone, and:
+  1. The panel at the left, card and keys at the right, the same gap at
+     both ends. (A screenshot if not: it says which insets that browser gave.)
+  2. A small swipe up on the panel puts the address bar away and the boxes
+     grow; a swipe down brings it back. Sliders and lists don't move the page.
 
 **Yours to decide (nothing waits on them):**
 

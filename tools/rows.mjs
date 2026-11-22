@@ -94,6 +94,10 @@
 //                       playing loop's own cover: on first Play, Next,
 //                       Previous, an album track, a track's end, a rename
 //                       and out of an album
+//   sideways            (session 30f, Mikey's review) the panel at the
+//                       left, centered with no insets, double-counted ones
+//                       and real ones; a scroll puts a browser's bar away
+//                       and nothing else moves the page
 //   plain line          a browser with no WebAssembly, and a module that
 //                       never arrives: one plain line each, nothing played
 //   long piece          (queue item 106b; a page of its own, opened on a
@@ -1583,6 +1587,7 @@ async function main() {
     if (!APP) await previousRows(browser);
     if (!APP) await artRows(browser);
     if (!APP) await trackRows(browser);
+    if (!APP) await sidewaysRows(browser);
   } finally {
     if (browser) await browser.close();
     if (server) server.close();
@@ -2283,6 +2288,133 @@ async function artRows(browser) {
   row('now playing art: out of the album, a new loop: the cover on the card', fresh.ok && fresh.title !== 'renamed' && fresh.src !== renamed.src, say(fresh));
   row('now playing art: no page errors', !bad.length, `${bad.join('; ')}`);
   await tab.close();
+}
+
+// A phone on its side in a browser (session 30f; Mikey's review,
+// 2026-11-22): the insets as a browser reports them (DevTools' override),
+// the screen's size apart from the page's, real touch gestures.
+async function sidewaysRows(browser) {
+  console.log('\n  a phone on its side, and the browser\'s bar (session 30f)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const phone = async ({ page: [width, height], screen: [sw, sh], insets: [top, right, bottom, left] = [0, 0, 0, 0], url = '/' }) => {
+    const ctx = await browser.newContext({ viewport: { width, height }, screen: { width: sw, height: sh }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+    const tab = await ctx.newPage();
+    tab.on('pageerror', (e) => bad.push(e.message));
+    const cdp = await ctx.newCDPSession(tab);
+    if (top || right || bottom || left) {
+      await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top, topMax: top, right, rightMax: right, bottom, bottomMax: bottom, left, leftMax: left } });
+    }
+    await tab.goto(url.startsWith('http') ? url : `${ORIGIN}${url}`);
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1000);
+    return { ctx, tab, cdp };
+  };
+
+  // The boxes, against the part of the page that is really the app's.
+  const CASES = [
+    ['no insets', { page: [800, 360], screen: [800, 360] }, [0, 0, 0, 0]],
+    ['no insets, small', { page: [568, 320], screen: [568, 320] }, [0, 0, 0, 0]],
+    ['no insets, wide', { page: [1000, 420], screen: [1000, 420] }, [0, 0, 0, 0]],
+    ['the window\'s insets, already outside (Mikey\'s phone)', { page: [804, 303], screen: [895, 393], insets: [25, 49, 0, 0] }, [0, 0, 0, 0]],
+    ['the same, the bar away', { page: [804, 368], screen: [895, 393], insets: [25, 49, 0, 0] }, [0, 0, 0, 0]],
+    ['real ones: a notch each side and a home bar', { page: [852, 343], screen: [852, 393], insets: [0, 59, 21, 59] }, [0, 59, 21, 59]],
+    ['real ones: edge to edge, the bar at one side', { page: [895, 393], screen: [895, 393], insets: [25, 49, 0, 0] }, [25, 49, 0, 0]],
+  ];
+  for (const [name, how, [top, right, bottom, left]] of CASES) {
+    try {
+      const { ctx, tab } = await phone(how);
+      const b = await tab.evaluate(() => {
+        const r = (s) => document.querySelector(s).getBoundingClientRect();
+        return { panel: r('.dynamic-inner'), card: r('.info-inner'), next: r('#nextBtn'), prev: r('#prevBtn'), last: r('#viewBtn'), w: document.documentElement.clientWidth, h: innerHeight };
+      });
+      await ctx.close();
+      const gap = {
+        left: b.panel.left - left, right: b.w - right - b.card.right,
+        top: b.panel.top - top, cardTop: b.card.top - top, bottom: b.h - bottom - b.panel.bottom, keysBottom: b.h - bottom - b.last.bottom,
+      };
+      const said = JSON.stringify(Object.fromEntries(Object.entries(gap).map(([k, v]) => [k, Math.round(v * 10) / 10])));
+      row(`sideways, ${name}: the panel at the left, the card and the keys at the right`, b.panel.right <= b.card.left && b.panel.right <= b.prev.left && Math.abs(b.next.right - b.card.right) <= 1, said);
+      row(`sideways, ${name}: centered in the room, and filling it`,
+        Math.abs(gap.left - gap.right) <= 2 && gap.left >= 0 && gap.left <= 14 && Math.abs(b.panel.width - b.card.width) <= 2
+        && [gap.top, gap.cardTop, gap.bottom, gap.keysBottom].every((v) => v >= 0 && v <= 10), said);
+    } catch (e) {
+      row(`sideways, ${name}: measured`, false, e.message.split('\n')[0]);
+    }
+  }
+
+  // The scroll that puts the bar away.
+  const long = linkOf(`${ORIGIN}/`, encodeSong(newSpec(11, { length: 1024 })));
+  for (const [width, height, sw, sh] of [[804, 303, 895, 393], [360, 640, 360, 760]]) {
+    const at = `${width}x${height}`;
+    try {
+      const { ctx, tab, cdp } = await phone({ page: [width, height], screen: [sw, sh], url: long });
+      const home = async () => {
+        await tab.evaluate(() => scrollTo(0, 0));
+        await sleep(250);
+      };
+      const swipe = async (selector, dx, dy) => {
+        await home();
+        const p = await tab.evaluate((s) => {
+          const r = document.querySelector(s).getBoundingClientRect();
+          return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+        }, selector);
+        await cdp.send('Input.synthesizeScrollGesture', { x: p.x, y: p.y, xDistance: dx, yDistance: dy, gestureSourceType: 'touch', speed: 900 });
+        await sleep(400);
+        return tab.evaluate(() => scrollY);
+      };
+      const press = async (selector) => {
+        await tab.evaluate((s) => document.querySelector(s).click(), selector);
+        await sleep(350);
+      };
+      const by = await swipe('#nowBig', 0, -120);
+      row(`the bar, ${at}: a swipe on the panel scrolls the document (what puts a browser's bar away)`, by >= 40, `${by} px`);
+      await tab.evaluate(() => scrollTo(0, 1e5));
+      await sleep(250);
+      const still = await tab.evaluate(() => {
+        const app = document.getElementById('app').getBoundingClientRect();
+        const keys = [...document.querySelectorAll('.zone-buttons button')].map((b) => b.getBoundingClientRect());
+        return { top: app.top, height: app.height, h: innerHeight, in: keys.every((r) => r.top >= 0 && r.bottom <= innerHeight + 1), wide: document.documentElement.scrollWidth - innerWidth };
+      });
+      row(`the bar, ${at}: scrolled to the end, the app fills the screen, every key on it`, Math.abs(still.top) <= 1 && Math.abs(still.height - still.h) <= 1 && still.in && still.wide <= 0, JSON.stringify(still));
+      const line = await swipe('#pieceLine', 0, -100);
+      row(`the bar, ${at}: a finger on the piece's line doesn't move the page`, line === 0, `${line} px`);
+      await home();
+      for (let i = 0; i < 3 && await tab.evaluate(() => document.getElementById('viewSounds').hidden); i++) await press('#viewBtn');
+      const slider = await swipe('#warmth', 0, -100);
+      row(`the bar, ${at}: a finger on a slider doesn't move the page`, slider === 0, `${slider} px`);
+      const was = await tab.evaluate(() => document.getElementById('warmth').value);
+      await cdp.send('Input.synthesizeScrollGesture', {
+        ...await tab.evaluate(() => {
+          const el = document.getElementById('warmth');
+          const r = el.getBoundingClientRect();
+          return { x: Math.round(r.left + 12 + (r.width - 24) * Number(el.value)), y: Math.round(r.top + r.height / 2) };
+        }),
+        xDistance: was > 0.5 ? -60 : 60, yDistance: 0, gestureSourceType: 'touch', speed: 600,
+      });
+      await sleep(400);
+      const now = await tab.evaluate(() => document.getElementById('warmth').value);
+      row(`the bar, ${at}: the slider still slides`, now !== was, `${was} to ${now}`);
+      await press('#libraryBtn');
+      await press('[data-tab="albums"]');
+      const short = await swipe('#libPane .scroll', 0, -100);
+      row(`the bar, ${at}: the Library's list, with nothing more to scroll, doesn't move the page`, short === 0, `${short} px`);
+      await press('[data-tab="more"]');
+      await press('#goAdvanced');
+      const list = await swipe('#libAdvanced .scroll', 0, -900);
+      row(`the bar, ${at}: Advanced scrolls to its end and the page stays`, list === 0 && await tab.evaluate(() => document.querySelector('#libAdvanced .scroll').scrollTop > 100), `${list} px`);
+      await ctx.close();
+    } catch (e) {
+      row(`the bar, ${at}: measured`, false, e.message.split('\n')[0]);
+    }
+  }
+  const desk = await browser.newPage({ viewport: { width: 1180, height: 820 } });
+  await desk.goto(`${ORIGIN}/`);
+  await sleep(800);
+  const extra = await desk.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+  row('the bar: with a mouse the page doesn\'t scroll at all', extra <= 1, `${extra} px`);
+  await desk.close();
+  row('sideways and the bar: no page errors', !bad.length, bad.join('; '));
 }
 
 // The plain lines, each in a tab of its own.

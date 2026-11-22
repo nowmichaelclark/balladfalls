@@ -43,8 +43,10 @@ h1, h2, h3, h4, h5, p { margin: 0; }
   width: 100%;
   height: 100vh;
   height: 100dvh;
-  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
-           env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  /* The safe area, less what is already outside the page (js/viewport.js
+     sets an --inset-* to 0 there). */
+  padding: var(--inset-top, env(safe-area-inset-top, 0px)) var(--inset-right, env(safe-area-inset-right, 0px))
+           var(--inset-bottom, env(safe-area-inset-bottom, 0px)) var(--inset-left, env(safe-area-inset-left, 0px));
   position: relative;
   overflow: hidden;
   display: flex;
@@ -2643,7 +2645,7 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 /* ---------- the toast -------------------------------------------- */
 .toast {
   position: absolute; left: 50%; z-index: 40;
-  bottom: calc(min(240px, 34dvh) + 12px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(min(240px, 34dvh) + 12px + var(--inset-bottom, env(safe-area-inset-bottom, 0px)));
   transform: translate(-50%, 8px);
   max-width: min(90%, 420px);
   padding: 10px 16px; border-radius: 12px;
@@ -2704,7 +2706,7 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 @media (max-height: 700px) {
   .zone-buttons { flex-basis: max(172px, 28dvh); padding-bottom: 8px; }
   .row-1 { flex-grow: 1.15; }
-  .toast { bottom: calc(max(172px, 28dvh) + 12px + env(safe-area-inset-bottom, 0px)); }
+  .toast { bottom: calc(max(172px, 28dvh) + 12px + var(--inset-bottom, env(safe-area-inset-bottom, 0px))); }
 }
 @media (max-height: 600px) {
   .zone-info { padding-top: 6px; }
@@ -2714,23 +2716,26 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   .name, .name-edit { font-size: min(1.375rem, 28px); }
 }
 
-/* A phone on its side: two columns. The card over the keys at the left,
-   the panel the screen's whole height at the right, as wide as a small
-   phone's. Previous, Play and Next are fixed in place there as upright. */
+/* A phone on its side: two columns (Mikey, 2026-11-22). The panel the
+   screen's whole height at the left, the card over the keys at the right,
+   under the thumb. They share the safe area's whole width, up to 560px a
+   side. Previous, Play and Next are fixed in place there as upright. The
+   reading and Tab order is upright's: card, panel, keys. */
 @media (min-width: 480px) and (max-height: 519.98px) {
   .phone {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 480px));
+    grid-template-columns: repeat(2, minmax(0, 560px));
     grid-template-rows: auto minmax(0, 1fr);
-    grid-template-areas: "info middle" "keys middle";
+    grid-template-areas: "middle info" "middle keys";
     justify-content: center;
     gap: 8px 0;
   }
+  .phone > .zone-info, .phone > .zone-dynamic, .phone > .zone-buttons { max-width: none; }
   .phone > .zone-info { grid-area: info; }
   .phone > .zone-dynamic { grid-area: middle; padding-block: 8px; }
   .phone > .zone-buttons { grid-area: keys; padding-bottom: 8px; min-height: 0; }
   .zone-info { padding-top: 8px; }
-  .toast { left: calc(50% + min(25%, 240px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); max-width: min(46%, 420px); }
+  .toast { left: calc(50% - min(25%, 280px)); bottom: calc(12px + var(--inset-bottom, env(safe-area-inset-bottom, 0px))); max-width: min(46%, 420px); }
 }
 @media (min-width: 480px) and (max-height: 349.98px) {
   .info-inner { padding-block: 10px; }
@@ -2914,3 +2919,34 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 .phone.unplayable > :is(.zone-dynamic, .zone-buttons) { display: none; }
 .phone.unplayable > .zone-info { flex: 0 0 auto; grid-area: auto; grid-column: 1 / -1; align-self: center; padding: 12px; }
 .phone.unplayable .info-inner { padding: 22px 14px; }
+
+/* ============================================================
+   PAINTER 30f: THE BROWSER'S BAR PUT AWAY BY A SCROLL
+   Mikey, 2026-11-22: "I would thing the user could just be able to scroll
+   down a bit". The one exception to the two scrolling places, and only in
+   a touch browser's tab (js/viewport.js): the document is a bar taller
+   than the screen and the app is stuck to its top at the screen's height,
+   so nothing in it moves or is cut; it only grows as the bar goes.
+   ============================================================ */
+html.bar-scroll {
+  height: auto;
+  overflow-x: hidden; overflow-y: auto;
+  scrollbar-width: none;
+  background: var(--page-back, #08060c);
+}
+html.bar-scroll body {
+  height: calc(100lvh + 80px);
+  overflow: visible;
+  background: var(--page-back, #08060c);
+}
+html.bar-scroll .phone { position: sticky; top: 0; }
+/* A finger on a slider or the piece's line moves that, not the page; and a
+   list keeps its scroll to itself, even one too short to scroll (it is a
+   pixel taller than its box, so its overscroll stays in it). */
+html.bar-scroll .phone input[type="range"] { touch-action: none; }
+html.bar-scroll .vb-list { position: relative; }
+html.bar-scroll :is(.scroll, .vb-list)::after {
+  content: ''; position: absolute; left: 0; top: 0;
+  width: 1px; height: calc(100% + 1px);
+  pointer-events: none;
+}

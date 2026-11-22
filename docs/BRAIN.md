@@ -303,11 +303,14 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   (44995399978) and v194 (45000684305); v195's (45012032493) was read
   before #451 merged, its result in #451's body. The archive pass is done.
   **Next:** 30f (`30f-painter-final.md`, alone, started), then 30g
-  (`30g-crackles.md`, beside 30f on the audio path: item 115, a 1.0 blocker), then 30 (alone),
-  then B5. **Mikey's v195 test on the Moto (2026-11-22):** the lock
+  (`30g-crackles.md`, beside 30f on the audio path: item 115, a 1.0
+  blocker), then 30 (alone), then B5. **Mikey's v195 test on the Moto (2026-11-22):** the lock
   screen's cover and the Name box right; a few crackles, only screen-off
-  (`docs/notes/115-crackles.md`); ten minutes screen-off still to do. **Mikey's answers:** DECISIONS, 2026-11-22: a code's
-  version kept before the first new sound, not before 1.0; item 113's words.
+  (`docs/notes/115-crackles.md`); ten minutes screen-off still to do (30g's test).
+  v196's nightly (45027671732) is green. **Mikey's answers:** DECISIONS,
+  2026-11-22: a code's version kept before the first new sound, not before
+  1.0; item 113's words; their own signing key; the fades fine; 400% zoom may
+  scroll; the keyboard as Spotify's and a DAW's, no bare letters (#457).
   **Learned:** read a PR body back from GitHub (30c reported edits it hadn't
   made); measure screens at 360x640 and 320x568, not only 360x780; rows ten
   take 60 to 80 minutes (`-f jobs=all -f repeat=10` runs views beside them);

@@ -108,6 +108,9 @@ const heartbeats = () => logcat('DriftloomService').filter((l) => l.includes('he
 // ------------------------------------------------------------ on the glass
 
 const screencap = (name) => fs.writeFileSync(path.join(SHOTS, `${name}.png`), execFileSync('adb', ['exec-out', 'screencap', '-p'], { maxBuffer: 64 * 1024 * 1024 }));
+// The keyguard, as the window manager's policy has it.
+const keyguard = () => sh('dumpsys', 'window').split('\n').filter((l) => /keyguard|^\s*showing=/i.test(l)).map((l) => l.trim());
+const locked = () => keyguard().some((l) => /^showing=true|(mKeyguardShowing|isKeyguardShowing|mDreamingLockscreen)=true/.test(l));
 // The notification's large icon, as the system holds it: a bitmap, not a
 // resource (the app's icon would be one).
 const largeIcon = () => (/android\.largeIcon=[^\n]*/.exec(notification()) || ['none'])[0];
@@ -272,13 +275,20 @@ try {
     screencap('notification');
     sh('cmd', 'statusbar', 'collapse');
     await sleep(1000);
+    // The emulator comes with no lock screen: without one the picture was
+    // the home screen's. One for the picture, then as it was.
+    const had = sh('locksettings', 'get-disabled').trim();
+    sh('locksettings', 'set-disabled', 'false');
     await screenOff();
-    await sleep(2000);
+    // (A screen gone to sleep can take five seconds to lock.)
+    await sleep(8000);
     // On, and left locked.
     sh('input', 'keyevent', 'KEYCODE_WAKEUP');
     await sleep(5000);
+    check('the lock screen is what the picture shows', locked(), `disabled was ${had}; ${keyguard().join(' | ').slice(0, 1500)}`);
     screencap('lock-screen');
     fact('screenshots', fs.readdirSync(SHOTS).join(', '));
+    if (had === 'true') sh('locksettings', 'set-disabled', 'true');
     try { sh('wm', 'dismiss-keyguard'); } catch { /* none */ }
     await sleep(1000);
   }

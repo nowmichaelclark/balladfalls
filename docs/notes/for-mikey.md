@@ -24,6 +24,10 @@ the points where the next step is yours.
   Endless) opens the view first, and done there exports. Plain, in the
   app's style; the Painter's session restyles it. Say if anything is in an
   odd place on your phone or the tablet.
+- **On a short phone** (360x640, 320x568) the time takes the title's
+  place between cancel and done, and its words and the slider's labels are
+  left out, so every key fits without scrolling. A phone on its side has
+  no room for the view yet (a Known issue, for the Painter's session).
 - **How the fades sound (for your ears):** the fade in rises from silence
   over 3 s; the fade out reaches silence on the last second over the 8 s
   before it, the notes and the room falling together, so its last couple

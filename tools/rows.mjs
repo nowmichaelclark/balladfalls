@@ -2195,6 +2195,27 @@ await main();
 // on its own clock (a tempo change doesn't move it); a short track ending on
 // its second with the next loop there, with and without its fade out; and
 // the Sound view's Length slider gone.
+// What can't be touched in the Track length view, as it is on the screen
+// (run in the page).
+function covered() {
+  const view = document.getElementById('viewTrack');
+  const box = view.getBoundingClientRect();
+  const out = [];
+  for (const el of view.querySelectorAll('button, input')) {
+    const r = el.getBoundingClientRect();
+    if (r.width < 24 || r.height < 24) out.push(`${el.id} is ${Math.round(r.width)}x${Math.round(r.height)}`);
+    if (r.top < box.top - 1 || r.bottom > box.bottom + 1 || r.left < box.left - 1 || r.right > box.right + 1) out.push(`${el.id} is outside the view`);
+    for (const [at, y] of [['top', r.top + 3], ['middle', r.top + r.height / 2], ['bottom', r.bottom - 3]]) {
+      const hit = document.elementFromPoint(r.left + r.width / 2, y);
+      if (!hit || !(hit === el || el.contains(hit))) out.push(`${el.id}'s ${at} is under ${hit ? hit.id || hit.className : 'nothing'}`);
+    }
+  }
+  for (const el of [view, view.querySelector('.ln-body')]) {
+    if (/auto|scroll/.test(getComputedStyle(el).overflowY)) out.push(`${el.id || el.className} scrolls`);
+  }
+  return out;
+}
+
 async function trackRows(browser) {
   console.log('\n  track length, its own view (session 30c)');
   const ORIGIN = `http://127.0.0.1:${PORT}`;
@@ -2390,6 +2411,23 @@ async function trackRows(browser) {
   row('track length: the loop after it (the core\'s own) plays on, as after the Length slider', v === '\u221e', v);
   const line2 = (await tev(() => document.getElementById('diagRefresh').click() || document.getElementById('diagOut').textContent)).split('\n').find((l) => l.startsWith('engine:')) || '';
   row('track length: nothing late across it', /late: 0\s+missed: 0\s+dropped: 0/.test(line2), line2);
+  // Short phones: every control inside the view and touchable at its top,
+  // middle and bottom (what is there by elementFromPoint), with a time set
+  // and on and on, and nothing in the view to scroll.
+  if ((await shown()).view !== 'vibe') await tab.click('#vibesBtn');
+  await tab.click('#picksList .pk-track');
+  for (const [width, height] of [[360, 640], [320, 568], [360, 740]]) {
+    await tab.setViewportSize({ width, height });
+    await sleep(400);
+    for (const endless of [false, true]) {
+      // (Pressed by script: the key itself may be the one covered.)
+      if ((await shown()).on !== endless) await tev(() => document.getElementById('trkOn').click());
+      await sleep(250);
+      const out = await tev(covered);
+      row(`track length: at ${width}x${height}, ${endless ? 'on and on' : 'a time set'}, every control can be reached, nothing to scroll`, !out.length, out.join('; ') || 'all reached');
+    }
+  }
+  await tev(() => document.getElementById('trkCancel').click());
   row('track length: no page errors', !bad.length, bad.join('; '));
   await tab.close();
 }

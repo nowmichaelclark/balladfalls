@@ -2195,10 +2195,10 @@ await main();
 // on its own clock (a tempo change doesn't move it); a short track ending on
 // its second with the next loop there, with and without its fade out; and
 // the Sound view's Length slider gone.
-// What can't be touched in the Track length view, as it is on the screen
-// (run in the page).
-function covered() {
-  const view = document.getElementById('viewTrack');
+// What can't be touched in a view (Track length's, Bars'; session 30f), as
+// it is on the screen (run in the page).
+function covered(id = 'viewTrack') {
+  const view = document.getElementById(id);
   const box = view.getBoundingClientRect();
   const out = [];
   for (const el of view.querySelectorAll('button, input')) {
@@ -2427,7 +2427,54 @@ async function trackRows(browser) {
       row(`track length: at ${width}x${height}, ${endless ? 'on and on' : 'a time set'}, every control can be reached, nothing to scroll`, !out.length, out.join('; ') || 'all reached');
     }
   }
+  // A phone on its side (session 30f): the panel beside the card and the
+  // keys, and Track length usable in it.
+  const SIDEWAYS = [[640, 360], [800, 360], [844, 390], [915, 412], [568, 320]];
+  for (const [width, height] of SIDEWAYS) {
+    await tab.setViewportSize({ width, height });
+    await sleep(400);
+    const tall = await tev(() => Math.round(document.getElementById('viewport').getBoundingClientRect().height));
+    row(`a phone on its side, ${width}x${height}: the panel has the screen's height`, tall >= height - 24, `${tall} px`);
+    for (const endless of [false, true]) {
+      if ((await shown()).on !== endless) await tev(() => document.getElementById('trkOn').click());
+      await sleep(250);
+      const out = await tev(covered);
+      row(`track length: at ${width}x${height}, ${endless ? 'on and on' : 'a time set'}, every control can be reached, nothing to scroll`, !out.length, out.join('; ') || 'all reached');
+    }
+  }
   await tev(() => document.getElementById('trkCancel').click());
+  // Bars, the same way, upright and on its side (session 30f): any, a
+  // number and Endless.
+  await tev(() => document.querySelector('#picksList .pk-line-pace button.pk-val:not(.pk-track)').click());
+  for (const [width, height] of [[360, 640], [320, 568], [360, 740], [360, 780], ...SIDEWAYS]) {
+    await tab.setViewportSize({ width, height });
+    await sleep(400);
+    for (const mode of ['any', 'a number', 'endless']) {
+      await tev((to) => {
+        const $ = (id) => document.getElementById(id);
+        const endless = $('lenEndless').getAttribute('aria-pressed') === 'true';
+        if (endless !== (to === 'endless')) $('lenEndless').click();
+        if (to === 'any') $('lenAny').click();
+        if (to === 'a number') {
+          $('lenSlide').value = '6';
+          $('lenSlide').dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }, mode);
+      await sleep(250);
+      const out = await tev(covered, 'viewLength');
+      row(`bars: at ${width}x${height}, ${mode}, every control can be reached, nothing to scroll`, !out.length, out.join('; ') || 'all reached');
+    }
+  }
+  await tev(() => document.getElementById('lenCancel').click());
+  // Closing the gaps takes nothing from a key that has the room (session 30f).
+  await tab.setViewportSize({ width: 360, height: 640 });
+  await sleep(300);
+  const anyKeys = await tev(() => [...document.querySelectorAll('#picksList .pk-anykey')].map((k) => [k.getBoundingClientRect().height, k.parentElement.getBoundingClientRect().height]));
+  row('vibe: at 360x640 each any key is as tall as its line lets it be', anyKeys.every(([k, line]) => k >= Math.min(44, line - 4) - 1), anyKeys.map(([k]) => Math.round(k)).join(', '));
+  for (let i = 0; i < 3 && await tev(() => document.getElementById('viewLayers').hidden); i++) await tev(() => document.getElementById('viewBtn').click());
+  await sleep(300);
+  const layerKeys = await tev(() => [...document.querySelectorAll('.layer button')].map((k) => k.getBoundingClientRect().height));
+  row('layers: at 360x640 each key is 44 px or more', layerKeys.length === 10 && layerKeys.every((h) => h >= 44), layerKeys.map(Math.round).join(', '));
   row('track length: no page errors', !bad.length, bad.join('; '));
   await tab.close();
 }

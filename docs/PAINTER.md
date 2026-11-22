@@ -28,6 +28,28 @@ used soon. The rest waits for its phase of the core work.
   (letters, digits, `-` and `_`); no emoji in codes.
 - It must run smoothly on old Android phones and weak chips.
 
+## What the final pass settled (session 30f, item 114, v196 to v198)
+
+- **Two layouts.** Upright: card, panel, keys. Under 520 px high and 480 or
+  wider (a phone on its side): card over keys at the left, panel at the
+  right. A design is drawn for both, and at 360x640 and 320x568.
+- **The panel asks its own height** (the container `middle`: 340, 300,
+  240 px): a view closes its gaps by it, and never scrolls to fit.
+- **Targets:** 44 px where there is room, never under 24.
+- **The bar is WCAG 2.2 AA** in every theme and in forced colors, held by
+  `tools/a11y.mjs`: text 4.5:1 (3:1 large), marks and rings 3:1. A hue used
+  for words has its own deeper token (`--mark-text`).
+- **State is a shape as well as a color:** pressed is a ring, muted notes
+  are rings, a soft note keeps its ring at full color. Off is one dimming,
+  0.55, never doubled.
+- **Focus:** a 2 px ring on everything, whole; a view opened puts the focus
+  on its way out, closed on the key that opened it.
+- **A popup is solid.** A screen that can do nothing shows no keys.
+- **Text size is the root size** (rem, the pixel caps holding), in the
+  browser and in the Android app.
+- The baked spec (`design/driftloom_v20.html`) predates this: bake it again
+  before designing on it.
+
 ## 1. Next-loop picks (soonest: can be designed now)
 
 **Designed (Mikey chose it, 2026-10-13):** `design/next-picks.md`, from
@@ -80,7 +102,7 @@ rail becomes the piece's line (ticks for the map, a bead for you), under it
 "bar 812/3,072 · peak" and the time played and left (a minus before it), with a key each way
 for the section before or after; press the line to jump. The journey (arc,
 wander) sits beside the Bars picker's ∞ and any. The Library's lists end in each
-loop's length. A Painter session may restyle all of it.
+loop's length. The final pass (30f) kept it.
 
 - **Where you are.** For a long piece: bar 812 of 3,072, time played
   and time left; something calm that fits the info card.

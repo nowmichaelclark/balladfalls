@@ -4,6 +4,7 @@ This folder is the **design spec** for the one-screen phone app. It is not part 
 
 ## What this is
 
+- **The app has moved on (session 30f, v196 to v198):** a second layout for a phone on its side, the panel's height steps, and the accessibility pass (`docs/PAINTER.md`, "What the final pass settled"). Bake again before designing on the file below.
 - **Current file:** `driftloom_v20.html` (v20, Painter session 6: the vibe key, and any and ∞ in the Length picker; v19 is in `archive/`). One phone, exactly as the app draws it, at 340 × 780. Use it like the app: the bottom keys move between views, **Library › More** picks the theme, Play starts the playhead. Review controls beside the phone switch the view, text size (100 / 130 / 150 / 200%), insets (iPhone, Android, this device), touch-target outlines and reduced motion, and an audit line re-measures the phone after every change.
 - **It is baked from the app (since v18, Painter session 5).** `test-kit/bake.mjs` runs the real app in headless Chromium, seeds a library, plays an album, visits every view at each text size and copies what the app drew. The phone's stylesheet is `css/style.css` itself. So the spec stays in step with the app as long as it is baked again after every change to the look.
 - **Until v17 it went the other way:** the spec was drawn by hand (nine phones, one per theme) and the app followed it. v17 and its full handover (sessions 1–12, v13–v17) are kept unchanged in `archive/driftloom_v17_library.html`.
@@ -101,5 +102,5 @@ The chosen next-picks design (`next-picks.md`) is in the app and baked as three 
 1. **Measure the app against the standard.** Port the v17 test kit (`test-kit/`) to the v18 file: one phone, a theme at a time, through `window.spec`. Since the file is the app's own drawing, that measures the app. Until then the v17 numbers describe the v17 drawings, not the app.
 2. **Decide: the Info card drops lines when it is full.** v17's rule was that nothing in it is ever dropped (lines took turns, the WCAG 2.2.2 mechanism). The app folds the lesser feelings and styles away.
 3. **The Info card can cut off its last lines.** Its text column is as tall as the art (118px). With the sample loop the readout fits at 100%, but from 130% the meter and album lines are hidden, even after folding as far as it goes. Seen in the app itself; the spec's audit line flags it.
-4. **The Play / Pause glyph is under 3:1** in Dawn, Tidal, Olive and Night Light (found in v17).
+4. **The Play / Pause glyph's contrast:** fixed in the app in v197 (session 30f: a dark edge in those four and Ember); `tools/a11y.mjs` holds it.
 5. **After the design is locked:** Safari, Firefox, VoiceOver and TalkBack.

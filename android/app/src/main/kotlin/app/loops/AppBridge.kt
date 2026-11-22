@@ -32,6 +32,7 @@ import java.util.concurrent.Executors
  *  - `media` { playing, name, subtitle }: what is playing, for the service,
  *    its notification and the lock screen; `cover` { data }: the loop's own
  *    cover as a base64 PNG, drawn by the page (js/cover.js);
+ *  - `theme` { color }: the page's theme, `#rrggbb`, for the system's bars;
  *  - `export` { on, name, percent }: a file is being made, for the
  *    notification and the wake lock;
  *  - `save` { id, name, mime, need, seek }: Android's own picker for a new
@@ -47,7 +48,11 @@ import java.util.concurrent.Executors
  * it may show its notification (Android 13 and later), at the first Play, with
  * the app in front.
  */
-class AppBridge(private val activity: Activity, private val view: AppWebView) {
+class AppBridge(
+    private val activity: Activity,
+    private val view: AppWebView,
+    private val paintBars: (String) -> Unit,
+) {
     private val main = Handler(Looper.getMainLooper())
 
     // Files are written on a thread of their own, one call at a time, in the order they came.
@@ -141,6 +146,7 @@ class AppBridge(private val activity: Activity, private val view: AppWebView) {
                 }
                 if (on != was) view.refreshVisibility()
             }
+            "theme" -> paintBars(m.optString("color"))
             "save" -> chooseNewFile(m)
             "save-view" -> sendSaved(open = true, id = m.optInt("id"))
             "save-share" -> sendSaved(open = false, id = m.optInt("id"))

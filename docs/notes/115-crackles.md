@@ -21,8 +21,18 @@ loop, it just seemed to be easy to reproduce the crackles with this loop"):
 | the app, Lite | clean | crackles |
 
 The site in Chrome: "On the website, it's not making any crackles" (whether
-the screen was off for that is not said). Not yet known: that, and the
-speaker or wired.
+the screen was off for that is not said).
+
+**His third answer, the same evening:** it was the phone's speaker. Asked
+whether the lock screen's Play starts after two minutes paused: "Yes playing
+and pausing from the lock screen works fine". And, not sure of it: "I think I
+do also sometimes hear some very brief crackles while the screen is locked
+but it's not at the black lock screen and I can still see my phone
+background. But those crackles are very brief so I'm not even sure if they
+are there or I am hearing something that's not there."
+
+Not yet known: Chrome with the screen off; the app behind another with the
+screen on (Home); headphones.
 
 Diagnostics after it (copied paused, the stream stopped): late, missed,
 dropped and underruns all 0 again, so **the counters don't see these
@@ -82,9 +92,17 @@ reset-on-fork), reopens 0.
   (<https://android.googlesource.com/platform/external/oboe/+/7d25f15f%5E/docs/notes/glitches.md>);
   a report of the same crackles on other phones eased with the mode None
   (<https://github.com/google/oboe/issues/564>). Neither is about the screen.
+- **Or the app not being in front, the dark screen only making it worse**
+  (if the faint crackles on the lit lock screen are real). Android moves an
+  app that isn't on top to fewer or smaller cores, a foreground service's too,
+  and a real-time thread stays within the cores it is given. Crackles after
+  Home, the screen on, would show it.
+- The speaker's own path (its protection and processing) adds to it:
+  headphones would show that.
 - A paused page is frozen after a minute with the screen off, and the lock
   screen's Play is only posted to the page (`Playback.toPage`), so Play may
   do nothing after a longer pause. `background.mjs` presses Play after 11 s.
+  He says Play works fine on his phone, so this is for the test to hold.
 - The init is the 227% callback.
 - A switch by hand clicks: `buildAudio` (js/main.js) disposes of the old
   output at once, and `Dispose` clears the core with no fade, where the

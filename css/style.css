@@ -2657,7 +2657,7 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   .toast { transition: none; }
 }
 
-/* Short screens: the Sound rows get closer so all seven fit. */
+/* Short screens: the Sound rows get closer so all six fit. */
 @media (max-height: 700px) {
   .phone input[type="range"] { height: 28px; }
 }
@@ -2670,3 +2670,141 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   .v-sheet .hint { margin: 2px 0 4px; }
   .export-bar { margin: 2px 0; height: 8px; }
 }
+
+/* ============================================================
+   PAINTER 30f: EVERY SCREEN FITS
+   The panel asks its own height (what the card and the keys leave it),
+   so a view closes its gaps by the room it has, not by the phone's
+   name. Nothing here scrolls, and no target goes under 24px.
+   ============================================================ */
+.dynamic-inner { container: middle / size; }
+/* The slider's labels sit on its lower edge and don't take its touches. */
+.ln-ticks { pointer-events: none; }
+/* A layer's two keys are 48px, and never taller than their row. */
+.layer { grid-template-rows: minmax(0, 1fr); }
+.layer .btn-roll, .layer .btn-on { height: min(48px, 100%); min-height: 24px; align-self: center; }
+.phone.fit-stack .layer { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+@container phone (max-width: 17.5em) {
+  .layer { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+}
+
+/* The layer's name keeps its column at any text size; on a wide screen
+   the stacking asks the panel's width, which the zones hold at 480px. */
+.layer { grid-template-columns: max(48px, 3rem) minmax(0, 1fr) 48px 48px; }
+.phone.fit-stack .layer { grid-template-columns: minmax(0, 1fr) 48px 48px; }
+@container phone (max-width: 17.5em) {
+  .layer { grid-template-columns: minmax(0, 1fr) 48px 48px; }
+}
+@media (min-width: 480px) {
+  .phone > .zone-dynamic { container: phone / inline-size; }
+}
+
+/* A short phone upright: the keys give the panel what they can spare and
+   stay 44px; on the smallest the card's art is 100px, room for four of its lines. */
+@media (max-height: 700px) {
+  .zone-buttons { flex-basis: max(172px, 28dvh); padding-bottom: 8px; }
+  .row-1 { flex-grow: 1.15; }
+  .toast { bottom: calc(max(172px, 28dvh) + 12px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-height: 600px) {
+  .zone-info { padding-top: 6px; }
+  .info-inner { padding-block: 10px; }
+  .info-row { grid-template-columns: 100px minmax(0, 1fr); grid-template-rows: 100px; }
+  .cover { width: 100px; height: 100px; }
+  .name, .name-edit { font-size: min(1.375rem, 28px); }
+}
+
+/* A phone on its side: two columns. The card over the keys at the left,
+   the panel the screen's whole height at the right, as wide as a small
+   phone's. Previous, Play and Next are fixed in place there as upright. */
+@media (min-width: 480px) and (max-height: 519.98px) {
+  .phone {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 480px));
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "info middle" "keys middle";
+    justify-content: center;
+    gap: 8px 0;
+  }
+  .phone > .zone-info { grid-area: info; }
+  .phone > .zone-dynamic { grid-area: middle; padding-block: 8px; }
+  .phone > .zone-buttons { grid-area: keys; padding-bottom: 8px; min-height: 0; }
+  .zone-info { padding-top: 8px; }
+  .toast { left: calc(50% + min(25%, 240px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); max-width: min(46%, 420px); }
+}
+@media (min-width: 480px) and (max-height: 349.98px) {
+  .info-inner { padding-block: 10px; }
+  .info-row { grid-template-columns: 100px minmax(0, 1fr); grid-template-rows: 100px; }
+  .cover { width: 100px; height: 100px; }
+  .name, .name-edit { font-size: min(1.375rem, 28px); }
+}
+
+/* Upright and under 440px high (the keyboard up, a split screen): the
+   card steps aside for the panel, unless its name is being typed or it
+   holds a plain line. By height alone, never by focus: nothing moves from
+   under a finger as a box loses it. Play stays. */
+@media (max-width: 479.98px) and (max-height: 440px) {
+  .phone:not(:has(.name-edit:not([hidden]), .info-inner.plain)) > .zone-info { display: none; }
+  .zone-dynamic { padding-top: 6px; }
+  .zone-buttons { flex-basis: max(100px, 28dvh); }
+}
+
+/* Under 340px of panel: Bars and Vibe close their gaps. */
+@container middle (max-height: 339.98px) {
+  #viewLength .ln-body { gap: 8px; padding-block: 2px; }
+  .pk-line { flex: 1 0 auto; min-height: 44px; }
+  .ln-num { gap: 0; }
+}
+/* Under 300px (360x640, and a phone on its side). */
+@container middle (max-height: 299.98px) {
+  .v-length, .v-picks { padding-top: 0; }
+  .v-length .ln-head .vkey, .pk-head .vkey { min-height: 40px; }
+  #viewLength .ln-body { gap: 2px; padding-block: 0; justify-content: space-evenly; }
+  #viewLength .ln-input { font-size: min(1.875rem, 34px); min-height: 36px; }
+  #viewLength :is(.ln-step, .ln-keys .vkey) { min-height: 40px; height: 40px; }
+  #viewLength .ln-slide input[type="range"] { height: 30px; }
+  .ln-time { line-height: 1.15; }
+  .pk-head { margin-bottom: 0; }
+  .pk-line { flex: 1 1 0; min-height: min-content; padding: 1px 0; }
+  .pk-val, .vkey.word.pk-anykey { min-height: 28px; }
+  .pk-line .vkey.word.pk-anykey { align-self: stretch; max-height: 44px; padding-block: 0; }
+  .pk-vals { row-gap: 0; }
+  .pk-list .pk-pill { min-height: 24px; padding-block: 1px; }
+  .v-now { padding-block: 0; }
+  .v-now .np-mid { gap: 6px; }
+  .v-now .np-time { font-size: min(2.5rem, 44px); }
+  .v-now .np-picks { margin-top: 0; padding-block: 2px; }
+  .np-head { align-items: center; }
+  .np-head .np-top { padding-top: 0; gap: 2px; }
+  .v-now .vkey { min-height: 44px; }
+  .more { gap: 5px; }
+  .themes { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-auto-rows: minmax(0, 44px); flex: 0 1 auto; min-height: 0; }
+  .themes .sw { min-height: 24px; }
+  .sw-card { left: 10%; right: 10%; top: 30%; bottom: 30%; gap: 2px; padding: 0 3px; }
+  .sw-card i:nth-child(3) { display: none; }
+  .sw-card b { width: 9px; }
+  .more .go { min-height: 44px; }
+  .tabs { margin: 0 0 4px; }
+  .tab { min-height: 44px; }
+  .page-head, .vb-head { margin-bottom: 2px; }
+  .v-sounds { align-content: space-evenly; padding: 0; }
+  .v-sounds .srow span { line-height: 1.15; }
+}
+/* Under 240px (320x568, or a browser's bars over a phone on its side). */
+@container middle (max-height: 239.98px) {
+  .v-sounds input[type="range"] { height: 26px; }
+  .v-sounds .srow span { font-size: min(0.75rem, 16px); }
+  .v-now .np-time { font-size: min(2rem, 34px); }
+  #viewLength .ln-input { font-size: min(1.625rem, 28px); min-height: 30px; }
+  .themes { grid-auto-rows: minmax(0, 34px); }
+}
+/* A narrow panel: Bars' four keys still stand in one row. */
+@container middle (max-width: 299.98px) {
+  #viewLength .ln-keys, #viewLength .ln-journey { gap: 4px; }
+  #viewLength .ln-keys :is(.vkey.ln-inf, .vkey.word.pk-anykey) { min-width: 48px; padding-inline: 6px; }
+  #viewLength .ln-journey .vkey.word { min-width: 48px; padding-inline: 4px; }
+  .v-track .tk-steps { gap: 5px; }
+  .v-track .tk-steps .ln-step { font-size: min(0.8125rem, 14px); padding-inline: 1px; }
+}
+/* The ∞ that opens Track length is a glyph wide: its key is a finger's. */
+.pk-val.pk-track { min-width: 44px; justify-content: center; }

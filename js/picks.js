@@ -412,7 +412,7 @@ export function renderPanel() {
 // until they fit, never below the 100% size; then take the lines'
 // padding away.
 const CAPS = [1.5, 1.3, 1.15, 1];
-function fitPanel() {
+export function fitPanel() {
   const view = el('viewVibe');
   const list = el('picksList');
   const fits = () => list.scrollHeight <= list.clientHeight + 0.5;

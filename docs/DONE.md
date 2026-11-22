@@ -517,8 +517,21 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   `tools/rows.mjs --only previous`: 12 rows. Listen for nothing; press
   Previous in an album on the phone and in the Android app. Previous a few
   seconds in still goes to the track before, not the start: for Mikey's ears.
+- #446, the info card (item 112, session 30d, v192), preview URL: the
+  branch's preview (no hash kept): every detail line is whole at any width or
+  text size (320 px to a tablet, 200% text; Thai and emoji names), what does not
+  fit is left off whole, least important first (pass count, third feeling,
+  third style, shape word, second feeling, second style, first feeling, album
+  playing, first style, meter, then bars, tempo, key), and a tap on the
+  details shows the rest in the same place; a dot a page says there is more
+  (a thin track when the dots won't fit). A fact too wide for the column on its
+  own is said in fewer words (a style without its percent). The playhead is a
+  row of round dots, the lit one bigger with the layers' ring and halo.
+  `tools/card.mjs`: 198 views, nothing cut, clipped, wrapped or overlapping.
+  Look at the card on the phone and the tablet; the beats in 6/8 are still
+  every fourth step: for Mikey's eyes.
 - #448, Track length, its own view, to the second (item 111, session 30c,
-  v192), preview URL: the branch's preview (no hash kept): the pace line's
+  v193), preview URL: the branch's preview (no hash kept): the pace line's
   third key opens Track length (h:mm:ss typed or by a timer's digits, a
   second and a minute either way, a coarse slider to a day, on and on, fade
   in, fade out); the core counts a time on its own clock (a tempo change

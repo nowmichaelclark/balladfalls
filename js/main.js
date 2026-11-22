@@ -13,7 +13,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v192';
+const BUILD = 'v193';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -739,6 +739,7 @@ function setTrackLength(track) {
   if (state.engine) state.engine.trackChanged(nextForEnd());
   state.passCount = 0;
   renderNow();
+  refreshCard();
   updateSaveButton();
 }
 
@@ -806,8 +807,11 @@ function refreshCard() {
 // which album is playing, as a reminder of where Next goes.
 function renderLoopWords() {
   const pl = state.playlist;
+  // The track length set (session 30c), as a time.
+  const t = tracklen.trackOfSpec(state.spec);
   ui.renderReadout(state.spec, state.pattern, {
     album: pl && pl.ids.length ? `${pl.title} ${pl.index + 1}/${pl.ids.length}` : '',
+    length: t.secs != null ? `track ${tracklen.clock(t.secs)}` : '',
   });
 }
 
@@ -1742,7 +1746,7 @@ function applyTheme(cls, save = true) {
     sw.setAttribute('aria-checked', String(on));
     sw.tabIndex = on ? 0 : -1;
   }
-  requestAnimationFrame(() => ui.fitName());
+  requestAnimationFrame(() => ui.fitCard());
 }
 
 function initThemes() {
@@ -1860,6 +1864,8 @@ function wire() {
     else setView(state.lastEdit);
   });
 
+  // The details of the card: a tap shows the rest of them (session 30d).
+  ui.el('metaMore').addEventListener('click', () => ui.moreDetails());
   const nameEl = ui.el('loopName');
   nameEl.addEventListener('click', startRename);
   nameEl.addEventListener('keydown', (e) => {
@@ -2179,7 +2185,7 @@ function wire() {
   updateSaveButton();
 
   // The name's size depends on the card's width.
-  window.addEventListener('resize', () => ui.fitName());
+  window.addEventListener('resize', () => ui.fitCard());
 }
 
 if (noGenerator) {

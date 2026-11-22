@@ -39,6 +39,9 @@
 //                       the core's loop is the card's
 //   Previous            back to the loop before, by its seed, request and edits
 //   roll a layer        made again in place: its seed re-rolled, the steps go on
+//   the keyboard        (session 30f) each shortcut does its one thing, once
+//                       however long it is held; each old key, and a key in
+//                       a box to type in, does nothing
 //   mutes               all five off: silence; on: sound
 //   tempo               the core's tempo and its steps' spacing
 //   tone                the core's tone
@@ -1346,11 +1349,11 @@ async function main() {
     p = await probe();
     row('Previous: back to the loop before', (await name()) === first && p.d.name === first, p.d.name);
 
-    // Roll a layer (key 1, the drums): made again in place.
+    // Roll a layer (Alt+Shift+1, the drums): made again in place.
     await ev(() => document.getElementById('viewBtn').click());
     const seedsBefore = p.d.layer_seeds.split('|');
     const stepBefore = (await steps()).filter((e) => e[1] === kinds.step).pop()[3];
-    await key('1');
+    await key('Alt+Shift+Digit1');
     await sleep(2000);
     {
       p = await probe();
@@ -1446,9 +1449,16 @@ async function main() {
       const index = sent ? sent.ask.vibes.map(([i]) => i) : [];
       row('picks: sent as a command and held by the core, the loop playing left as it is', sent && p.picksTag === sent.tag && index.length === 1 && p.d.seed === playingSeed, `tag ${p.picksTag}, ${JSON.stringify(sent && sent.ask.vibes)}`);
     }
-    // N, a new loop (Next would walk forward through the history first).
-    await key('n');
-    await sleep(3000);
+    // A new loop by Next's keys: through the history to its end, and one more.
+    {
+      const lastOwn = async () => JSON.stringify((await owns()).pop() || null);
+      const had = await lastOwn();
+      for (let i = 0; i < 8; i++) {
+        await key('Alt+Shift+ArrowRight');
+        await sleep(3000);
+        if (await lastOwn() !== had) break;
+      }
+    }
     {
       p = await probe();
       const own = (await owns()).pop();
@@ -1588,6 +1598,7 @@ async function main() {
     if (!APP) await artRows(browser);
     if (!APP) await trackRows(browser);
     if (!APP) await sidewaysRows(browser);
+    if (!APP) await keyboardRows(browser);
   } finally {
     if (browser) await browser.close();
     if (server) server.close();
@@ -2162,7 +2173,7 @@ async function previousRows(browser) {
   await sleep(500);
   const left = await tev(() => document.getElementById('prevBtn').disabled);
   row('previous in an album: after leaving the album, Previous is as the history says (off at its start)', offered && left, `${offered} ${left}`);
-  await tev(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', code: 'KeyN', bubbles: true })));
+  await tev(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', code: 'ArrowRight', altKey: true, shiftKey: true, bubbles: true, cancelable: true })));
   await sleep(2500);
   const afterNew = await prevOn();
   row('previous in an album: and on again once a new loop has made a history', afterNew, String(afterNew));
@@ -2293,6 +2304,98 @@ async function artRows(browser) {
 // A phone on its side in a browser (session 30f; Mikey's review,
 // 2026-11-22): the insets as a browser reports them (DevTools' override),
 // the screen's size apart from the page's, real touch gestures.
+async function keyboardRows(browser) {
+  console.log('\n  the keyboard (session 30f)');
+  const ctx = await browser.newContext({ viewport: { width: 1180, height: 820 }, serviceWorkers: 'block' });
+  const tab = await ctx.newPage();
+  const bad = [];
+  tab.on('pageerror', (e) => bad.push(e.message));
+  try {
+    await tab.goto(`http://127.0.0.1:${PORT}/`);
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1000);
+    await tab.evaluate(() => {
+      addEventListener('keydown', (e) => { window.keyEvent = e; }, true);
+    });
+    const state = () => tab.evaluate(() => ({
+      name: document.getElementById('loopName').textContent,
+      play: document.getElementById('playBtn').getAttribute('aria-label'),
+      said: document.querySelector('.toast').textContent,
+      saves: localStorage.getItem('driftloom.saves.v1') || '',
+    }));
+    const press = async (k, wait = 700) => {
+      await tab.evaluate(() => {
+        window.keyEvent = null;
+        document.querySelector('.toast').textContent = '';
+      });
+      await tab.keyboard.press(k);
+      await sleep(wait);
+      return { ...await state(), heard: await tab.evaluate(() => !!window.keyEvent), taken: await tab.evaluate(() => !!window.keyEvent && window.keyEvent.defaultPrevented) };
+    };
+
+    let s = await press('Space', 3000);
+    row('keyboard: Space plays', s.play === 'Pause' && s.taken, JSON.stringify(s.play));
+    const was = s;
+    for (const k of ['n', 'Shift+N', 's', 'Shift+S', '1', '2', '3', '4', '5', 'Shift+Digit1', 'Shift+Digit5', 'Control+Alt+KeyS', 'Control+Alt+Digit1', 'Alt+Shift+KeyB']) {
+      s = await press(k);
+      row(`keyboard: ${k} does nothing`, s.heard && !s.taken && s.name === was.name && s.play === was.play && s.said === '' && s.saves === was.saves, JSON.stringify({ taken: s.taken, said: s.said, name: s.name }));
+    }
+
+    const first = s.name;
+    s = await press('Alt+Shift+ArrowRight', 3000);
+    const second = s.name;
+    row('keyboard: Alt+Shift+Right is Next', s.taken && second !== first, `${first} to ${second}`);
+    s = await press('Alt+Shift+ArrowLeft', 3000);
+    row('keyboard: Alt+Shift+Left is Previous', s.taken && s.name === first, `${second} to ${s.name}`);
+    const layers = await tab.evaluate(() => [...document.querySelectorAll('#layerList .layer')].map((e) => e.dataset.layer));
+    for (let i = 0; i < 5; i++) {
+      s = await press(`Alt+Shift+Digit${i + 1}`, 1200);
+      row(`keyboard: Alt+Shift+${i + 1} rolls ${layers[i]}`, s.taken && s.said === `Rolled ${layers[i]}` && s.name === first, s.said);
+    }
+    s = await press('Control+KeyS');
+    row('keyboard: Ctrl+S saves to Favorite Loops, not the page', s.taken && s.said === 'Saved' && s.saves !== was.saves, s.said);
+    s = await press('Alt+Shift+KeyS');
+    row('keyboard: Alt+Shift+S is the same Save', s.taken && s.said === 'Already saved', s.said);
+
+    const held = await tab.evaluate(() => {
+      const one = (code, key, mods) => {
+        const e = new KeyboardEvent('keydown', { code, key, ...mods, repeat: true, bubbles: true, cancelable: true });
+        document.body.dispatchEvent(e);
+        return e.defaultPrevented;
+      };
+      document.querySelector('.toast').textContent = '';
+      return [one('ArrowRight', 'ArrowRight', { altKey: true, shiftKey: true }), one('KeyS', 's', { ctrlKey: true }), one('Space', ' ', {})];
+    });
+    await sleep(1500);
+    s = await state();
+    row('keyboard: a key held down acts once', held.every(Boolean) && s.name === first && s.said === '' && s.play === 'Pause', JSON.stringify({ held, said: s.said }));
+
+    // A control with arrows of its own lets the chord through, and stays.
+    await tab.evaluate(() => document.getElementById('libraryBtn').click());
+    await sleep(400);
+    await tab.evaluate(() => document.querySelector('[data-tab="albums"]').focus());
+    s = await press('Alt+Shift+ArrowRight', 3000);
+    row('keyboard: on a tab the chord is Next, and the tab stays', s.name !== first && await tab.evaluate(() => document.activeElement.dataset.tab === 'albums'), s.name);
+
+    await tab.evaluate(() => document.getElementById('loopName').click());
+    await sleep(400);
+    const typing = await tab.evaluate(() => document.activeElement.id);
+    const named = await state();
+    for (const k of ['Alt+Shift+Digit1', 'Alt+Shift+ArrowLeft', 'Control+KeyS']) {
+      s = await press(k);
+      row(`keyboard: typing a name, ${k} is left alone`, typing === 'nameEdit' && s.heard && !s.taken && s.said === '' && s.name === named.name && s.saves === named.saves, JSON.stringify({ typing, taken: s.taken, said: s.said }));
+    }
+
+    const said = await tab.evaluate(() => ['playBtn', 'nextBtn', 'prevBtn', 'saveBtn'].map((id) => document.getElementById(id).getAttribute('aria-keyshortcuts'))
+      .concat(document.querySelector('.btn-roll').getAttribute('aria-keyshortcuts')));
+    row('keyboard: the five controls say their keys', said.join() === 'Space,Alt+Shift+ArrowRight,Alt+Shift+ArrowLeft,Control+S Alt+Shift+S,Alt+Shift+1', said.join());
+  } catch (e) {
+    row('keyboard: measured', false, e.message.split('\n')[0]);
+  }
+  row('keyboard: no page errors', !bad.length, bad.join('; '));
+  await ctx.close();
+}
+
 async function sidewaysRows(browser) {
   console.log('\n  a phone on its side, and the browser\'s bar (session 30f)');
   const ORIGIN = `http://127.0.0.1:${PORT}`;

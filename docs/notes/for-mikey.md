@@ -51,14 +51,14 @@ the points where the next step is yours.
   2. A small swipe up on the panel puts the address bar away and the boxes
      grow; a swipe down brings it back. Sliders and lists don't move the page.
 
+- **The keyboard, as you asked (#457):** Space plays; Alt+Shift+arrows are
+  Next and Previous; Ctrl+S (Cmd+S on a Mac) or Alt+Shift+S saves;
+  Alt+Shift+1 to 5 roll. N, S and the bare numbers are gone. Spotify's
+  Alt+Shift+B is Edge's favorites bar, so Save took S instead. Say if any
+  should change.
+
 **Yours to decide (nothing waits on them):**
 
-- **The letter shortcuts (a computer's keyboard only).** Today N makes
-  something new, S saves and 1 to 5 re-roll a layer. Someone steering by
-  voice types letters by accident and sets them off, so WCAG 2.1.4 (level
-  A) wants them able to be turned off, or on Ctrl or Alt, or gone. Shift
-  alone doesn't count: a capital letter is still a letter. Nothing built;
-  until you choose, the app can't be called all of WCAG A and AA.
 - **Text stops at 1.5x in the views that don't scroll** (the card, the
   keys, the pickers), as since Painter 5, so they fit; browser zoom still
   takes them to 200%, and the lists and Advanced go all the way. The
@@ -657,7 +657,7 @@ the last one (same key). On the **Moto** and on the **tablet**:
 | Advanced | Normally leave at zero | (gone) |
 | Advanced | Select the text above and copy it manually | Copy from box |
 | Advanced | Speed test: how fast this device plays the busiest loops (a few minutes). | speed test (a key) |
-| Advanced | Space plays. N makes something new (or Next, outside an album). S keeps it in Favorite Loops. 1 to 5 re-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device. | Space play · N new · S save · 1-5 roll |
+| Advanced | Space plays. N makes something new (or Next, outside an album). S keeps it in Favorite Loops. 1 to 5 re-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device. | Space play · Ctrl+S save · Alt+Shift+←/→ skip · Alt+Shift+1-5 roll (v200; v195: Space play · N new · S save · 1-5 roll; read out, every key in full) |
 | Advanced | Lighter on processor | Lite |
 | Advanced | back up all | back up |
 | Advanced | reset counters | reset |

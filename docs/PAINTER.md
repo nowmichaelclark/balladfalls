@@ -47,6 +47,9 @@ used soon. The rest waits for its phase of the core work.
 - **The panel asks its own height** (the container `middle`: 340, 300,
   240 px): a view closes its gaps by it, and never scrolls to fit.
 - **Targets:** 44 px where there is room, never under 24.
+- **Keys:** no letter, number or symbol does anything alone or with Shift
+  (Mikey, 2026-11-22; WCAG 2.1.4): a shortcut has Alt or Ctrl, and
+  `js/shortcuts.js` lists them.
 - **The bar is WCAG 2.2 AA** in every theme and in forced colors, held by
   `tools/a11y.mjs`: text 4.5:1 (3:1 large), marks and rings 3:1. A hue used
   for words has its own deeper token (`--mark-text`).

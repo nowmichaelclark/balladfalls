@@ -599,6 +599,8 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   <https://claude-s30f-sideways-driftloom.nowmichaelclark.workers.dev> (the
   branch's): the panel at the left, the card and keys at the right; insets
   already outside the page aren't counted twice; in a browser's tab on a
-  touch screen a small scroll puts the address bar away. Not proven on a
-  phone: two steps in `docs/notes/for-mikey.md`. Listen for nothing. No
+  touch screen a small scroll puts the address bar away; 400% zoom scrolls;
+  the keyboard's shortcuts as a music player's, none a bare letter or
+  number (`js/shortcuts.js`). Not proven on a phone: two steps in
+  `docs/notes/for-mikey.md`. Listen for nothing. No
   album loop.

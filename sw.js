@@ -26,6 +26,7 @@ const FILES = [
   './js/ui.js',
   // The safe area and the browser's bar (session 30f).
   './js/viewport.js',
+  './js/shortcuts.js',
   './js/characters.js',
   './js/media.js',
   './js/app.js',

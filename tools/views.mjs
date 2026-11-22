@@ -246,27 +246,38 @@ async function click(tab, selector) {
   await tab.press(selector);
 }
 
-// Scroll the visible list down and back up, with a finger (a touch scroll
-// gesture, as a phone sends it), so the compositor does what it would.
+// Scroll the visible list down and back up, with a finger move by move, as a
+// phone sends it, so the compositor does what it would. (Not
+// Input.synthesizeScrollGesture: headless Chromium gets a touch start from
+// it and no move, and nothing scrolled.) A list with room that doesn't move
+// fails its view.
 async function scroll(tab, distance = 900) {
-  const box = await tab.evaluate(`(() => {
+  const list = () => tab.evaluate(`(() => {
     const sc = [...document.querySelectorAll('.view:not([hidden]) .scroll, .view:not([hidden]) .vb-list')]
       .find((s) => s.offsetParent && s.clientHeight > 40);
     if (!sc) return null;
     const r = sc.getBoundingClientRect();
-    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    return { x: r.right - 5, y: r.top + r.height / 2, h: r.height, top: sc.scrollTop, room: sc.scrollHeight - sc.clientHeight - sc.scrollTop };
   })()`);
+  const box = await list();
   if (!box) return false;
-  for (const d of [-distance, distance]) {
-    try {
-      await tab.send('Input.synthesizeScrollGesture', {
-        x: Math.round(box.x), y: Math.round(box.y), yDistance: d, speed: 1200, gestureSourceType: 'touch', repeatCount: 1,
-      });
-    } catch {
-      await tab.send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: box.x, y: box.y, deltaX: 0, deltaY: -d });
+  const reach = Math.max(30, box.h * 0.8);
+  let down = null;
+  for (const way of [-1, 1]) {
+    for (let left = distance; left > 0; left -= reach) {
+      const from = box.y - (way * reach) / 2;
+      const moves = Math.ceil(reach / 20);   // 20 px a frame: 1200 px a second
+      await tab.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: box.x, y: from }] });
+      for (let i = 1; i <= moves; i++) {
+        await tab.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: box.x, y: from + (way * reach * i) / moves }] });
+        await sleep(16);
+      }
+      await tab.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     }
     await sleep(400);
+    if (!down) down = await list();
   }
+  if (box.room > 20 && down && Math.abs(down.top - box.top) < 5) throw new Error('the finger did not scroll the list');
   return true;
 }
 

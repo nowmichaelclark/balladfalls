@@ -41,6 +41,7 @@ on:
       - 'js/main.js'
       - 'js/media.js'
       - 'js/viewport.js'
+      - 'js/shortcuts.js'
       - 'js/covers.js'
       - 'js/cover-worker.js'
       - 'js/piece.js'

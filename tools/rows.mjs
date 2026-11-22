@@ -2281,6 +2281,11 @@ async function trackRows(browser) {
   // the fade out, quiet as it reaches it; without, playing to it.
   for (const fadeOut of [false, true]) {
     const secs = fadeOut ? 10 : 6;
+    // A busy loop of the corpus, so its level is there to fall from (the
+    // core's own next loop may open near silence).
+    await tev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
+    await tev(() => document.getElementById('pasteCode').click());
+    await sleep(3000);
     await trackTo(tev, secs, { fadeIn: false, fadeOut });
     await sleep(200);
     p = await probe();

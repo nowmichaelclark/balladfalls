@@ -1,5 +1,10 @@
 # Brain session B5: the release check
 
+**Changed by brain B-parallel 3 (2026-11-22):** the prompt said "Merge only
+docs-only changes", stale since Mikey's line of 2026-11-18 (the brain merges
+any PR that is green and checked; `docs/DECISIONS.md`); and step 1 now names
+what a code check must know (`docs/notes/105e-page.md`).
+
 - **Model:** Opus 5.5. **Effort:** high. In the claude.ai Driftloom Project.
 - **Start after:** hands session 30 is merged, and Mikey has tried the Android app on his phone and tablet.
 
@@ -10,11 +15,11 @@ Brain session B5 for Driftloom's road to 1.0 (Opus 5.5, high): the release check
 
 Start as docs/BRAIN.md says ("Start here"). Then read docs/sessions/README.md (the plan the hands are working through: the order, who does what, and what is ticked), docs/QUEUE.md (status and "The road to 1.0"), docs/notes/for-mikey.md, docs/DONE.md's lines since your last session, and docs/DECISIONS.md's newest lines.
 
-You are overseeing a run of hands sessions that Mikey starts one at a time from the prompts in docs/sessions/. Your job is what the brain's always is: verify what merged against what was asked, with your own measurements where a claim matters; keep the queue, the decisions and the plan true; build the listening albums; turn what Mikey says into decisions and into briefs; and never write app or core code. Merge only docs-only changes.
+You are overseeing a run of hands sessions that Mikey starts one at a time from the prompts in docs/sessions/. Your job is what the brain's always is: verify what merged against what was asked, with your own measurements where a claim matters; keep the queue, the decisions and the plan true; build the listening albums; turn what Mikey says into decisions and into briefs; and never write app or core code. You may merge any PR once CI is green on its last commit and it checks out against its prompt (Mikey, 2026-11-18); read its body and logs from GitHub, not only a session's report.
 
 This session decides whether 1.0 is ready.
 
-1. Everything on the road, once more, briefly: each item's yardsticks met (docs/DONE.md and the PRs), the nightly green on every target, the gate, the balance lock, promise 1 on the site and in the Android app (Mikey's and the testers' Diagnostics), promise 11 for long pieces, codes that round-trip and refuse plainly.
+1. Everything on the road, once more, briefly: each item's yardsticks met (docs/DONE.md and the PRs), the nightly green on every target, the gate, the balance lock, promise 1 on the site and in the Android app (Mikey's and the testers' Diagnostics), promise 11 for long pieces, codes that round-trip and refuse plainly (the app dropping a code's version doesn't hold 1.0: Mikey, 2026-11-22, "Before first new sound", docs/notes/105e-page.md; check only that no member has joined data/codes.txt before that fix).
 2. docs/notes/for-mikey.md: every line answered or explicitly left for after 1.0 (say which, and why that is safe). Mark any that block the release.
 3. The Android app against F-Droid's rules, the recipe building from source, the signing choice made, the listing's words.
 4. If it is ready, write "1.0: go (brain, date)" in the queue's status, so session 31 can start; if not, write what is missing as the smallest set of sessions, with prompts in docs/sessions/, and tell Mikey the order.

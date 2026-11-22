@@ -102,6 +102,7 @@ queue is `docs/QUEUE.md`. The notes the hands left on these items are in
 - [82. The player](#82-the-player-a-loop-from-a-seed-in-the-core)
 - [106. Long pieces on screen (done, hands, 2026-11-18)](#106-long-pieces-on-screen-done-hands-2026-11-18)
 - [104. Audio export (done, hands, 2026-11-18)](#104-audio-export-done-hands-2026-11-18)
+- [109 to 113. Mikey's seven](#109-to-113-mikeys-seven-done-hands-2026-11-18-to-22)
 
 ## Old status notes (until 2026-10-25)
 
@@ -4233,3 +4234,36 @@ export on the Moto-class figures in `tools/autolite.mjs`'s slow case
 finishes with flat memory and nothing glitching in what plays; the file
 decodes and nulls against a straight render; cancel and a full disk leave
 nothing broken.
+
+## 109 to 113. Mikey's seven (done, hands, 2026-11-18 to 22)
+
+- **109. Previous works in an album** (his 2; session 30a). Previous does
+  nothing in an album. Likely cause, to confirm: Previous is disabled at the
+  history's start, and an album's tracks don't enter the history. In an
+  album Previous goes to the track before, from every button (screen,
+  keyboard, headset, lock screen, Android's notification). **Yardsticks:**
+  rows for it, ten passes.
+- **110. The layers show what is heard** (his 5; session 30b). The layers
+  draw each pass as composed, so a note left out, faded or in a quiet
+  section is drawn, and a layer fading in may be heard before it is drawn.
+  The core reports each layer's notes as heard (after the section's level,
+  the fades and the refusals); the page draws them when and as loud as
+  heard; the cursor's latency checked on the web and on Android. Nothing
+  heard moves. **Yardsticks:** a tool measuring drawn against heard, before
+  and after, near zero after; the baseline unchanged; the tablet's margin.
+- **111. Track length, its own view, to the second** (his 6; session 30c).
+  A view like Bars, its key beside "any tempo" and "any bars"; the time to
+  the second; the core's track a time, its close landing on that second;
+  a fade in and a fade out, each on or off; the Sound view's Length slider
+  and the export's "How much" gone (an export is the track length; with none
+  set it opens the view first). **Yardsticks:** a track ends on its second at any
+  tempo, on a loop, a piece and Endless; the export that long.
+- **112. The info card** (his 3 and 4; session 30d). Every detail line
+  shown is whole on any display; what doesn't fit is left off, and a tap
+  shows the rest. Its playhead round, like the layers' dots, a little bigger.
+  **Yardsticks:** no line clipped from 320 px to a tablet and at 200% text.
+- **113. Fewer words** (his 1; session 30e). Icons, switches and two- or
+  three-word phrases for explaining sentences, across the app; the share
+  screen as keys (copy code, paste code, export audio), export audio a view
+  of a key a format (flac, midi, the small one). Screen readers keep full
+  names. **Yardsticks:** a before and after table for Mikey.

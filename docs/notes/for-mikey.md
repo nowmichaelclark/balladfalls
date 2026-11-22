@@ -14,10 +14,10 @@ the points where the next step is yours.
 
 ## Track length, its own view (item 111, v193, PR #448)
 
-- **Look at the view:** Vibe, then the pace line's third key ("plays on",
+- **Look at the view:** Vibe, then the pace line's third key (the infinity sign,
   or the time set) opens **Track length**: the time to the second (type
   1:23:45, or 12345 as a timer's keys go), −1 min, −1 s, +1 s, +1 min, a
-  coarse slider to a whole day, **on and on**, **fade in**, **fade out**,
+  coarse slider to a whole day, **∞**, **fade in**, **fade out**,
   cancel and done. The Sound view's Length slider is gone, and so is the
   export's "How much": an export is as long as the track, with its fades;
   with none set a finite piece exports whole, and a loop that plays on (or
@@ -98,12 +98,6 @@ the points where the next step is yours.
   and the long pieces, as links the app plays (`docs/ALBUMS.md`, "Three
   albums in the app"). You heard them all as clips; this is them on your
   own devices. One word a track only if something sounds wrong.
-- **Removed sounds (item 105e, v194, PR #450):** nothing to do or hear. A
-  code naming something since taken out plays something close: twang's slow
-  and bright are gone, and a code or saved loop that pinned either plays
-  soft. Every code you have reads as before, and none gets longer. The app
-  keeping a code's version is set for before the first new sound, as you
-  said (`docs/notes/105e-page.md`).
 
 ## The Android app on F-Droid (item 107e, session 29): choose the signing, then submit after 31
 
@@ -195,7 +189,7 @@ Install the universal APK from the PR's `driftloom-debug-apk` artifact over
 the last one (same key). On the **Moto** and on the **tablet**:
 
 - **Ten minutes with the screen off.** Play a loop, set Track length to one
-  minute (Sounds), press Home, switch the screen off, put the phone down for
+  minute (Vibe, its third key), press Home, switch the screen off, put the phone down for
   ten minutes. Listen for: no gap, no crackle, the loops changing on the
   minute; the notification and the lock screen show the loop's **own cover**
   and its name, changing with each loop. Then in Diagnostics (screen on):
@@ -209,9 +203,9 @@ the last one (same key). On the **Moto** and on the **tablet**:
   only lower it for a moment.
 - **A long piece and an export with the screen off.** Start a long piece
   (a Journey, a few minutes) and an export (Save, Share, export audio: pick a
-  place in the system's picker, a 30-minute length, **lossless**), then switch
-  the screen off. Both should finish: the export says "Saved where you chose"
-  and the file plays. Try **small** too where the choice shows, and a MIDI
+  place in the system's picker, a 30-minute length, **flac**), then switch
+  the screen off. Both should finish: the export says "Saved" and the file's name,
+  and the file plays. Try **opus** too where its key shows, and a MIDI
   export and a backup (they use the same picker now), and "Restore" (it opens
   Android's file picker).
 - **The notification question** (Android 13 and later): the first Play asks
@@ -266,30 +260,23 @@ the last one (same key). On the **Moto** and on the **tablet**:
   (512 px, `icons/icon-512.png`) as a small card. A Painter may draw a
   wider picture. Paste the site's address into Discord to see it (it shows
   after this deploys; Discord caches a preview for a while).
-- **Album from one seed:** Save, Share, "Album from one seed": a Tracks
-  slider (2 to 48), each track asked the picks now set; 12 tracks is a
-  14-character code. Its album has no name (it opens as "Untitled").
-- **The plain lines** (a toast each): "That code needs a newer Driftloom.",
-  "That code needs an instrument this device doesn't have." (wired to the
-  core's refusal; it can't show yet, since the core says "needs a newer
-  version" for any id it lacks, and B4 settles playing something close
-  instead), the older-code line, and "That link's code can't be read."
-  The name comes from the page's one constant. At the rename (31a) change
-  `APP_NAME`/`APP_URL` in `js/main.js`, index.html's preview tags and the
-  manifest together: `test/preview.test.mjs` fails if they disagree.
+- **Album from one seed:** Save, Share, **seed album**: a Tracks slider (2
+  to 48), each track asked the picks now set; 12 tracks is a 14-character
+  code. Its album has no name (it opens as "Untitled"). (The plain lines'
+  words are item 113's now: the table under Decisions.)
 
 ## Small audio export (item 104c, v184, PR #424)
 
-- **Listen to a Small export.** Save, Share, Audio: pick **small**, a few
+- **Listen to a Small export.** Save, Share, export audio: press **opus**, a few
   minutes of a loop you know, and play the file (`.opus`) in the player you
-  use, on your phone and in VLC. Compare with the lossless file of the same
+  use, on your phone and in VLC. Compare with the flac file of the same
   loop. It is Opus at a constant 96 kbit/s stereo (64 mono): meant to be the
   same to your ears; if you hear a difference (a soft top end, a shimmer in
-  the reverb), say where, and the rate goes up (for Mikey's ears). Small
+  the reverb), say where, and the rate goes up (for Mikey's ears). opus
   shows only where the browser can encode Opus: tested in Chromium and
   Firefox on desktop; not tested on a phone or in Safari, so say whether the
   choice shows on the Moto, the tablet and an iPhone (where it doesn't,
-  Lossless is the only one, by design).
+  flac is the only one, by design).
 
 ## The listening album
 

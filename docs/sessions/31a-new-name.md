@@ -8,6 +8,9 @@ opening message** (the brain keeps them in the Driftloom Project's private
 docs). Everything before this session keeps the old name and writes it from
 one place, so this is a short list of edits.
 
+**Changed by brain B-parallel 3 (2026-11-22):** the rename's one check,
+which session 24 had left only in for-mikey, is now in the first step.
+
 - **Model:** Opus 5.5. **Effort:** high.
 - **Start after:** brain session B5's "go", the domain bought and attached
   to the Worker (`docs/notes/for-mikey.md`, Accounts), and session 29.
@@ -31,7 +34,7 @@ The new name is a surprise for the testers until 1.0: pushing to main deploys, s
 
 The work, one PR:
 
-- The visible name everywhere it shows: the page's title and its one name constant, the manifest (name, short name, the icon's text if any), the card and About, the link preview, README.md and CHANGELOG.md, the Android app's name and label, its release id (applicationId for release builds; test builds keep the working id), fastlane's title and descriptions, the F-Droid recipe's id and name. Identifiers inside the code (dlcore, dl_ exports, js/dlplayer.wasm, the dlrender and dlgen tools) stay: renaming them would move nothing a listener sees.
+- The visible name everywhere it shows (change APP_NAME and APP_URL in js/main.js, index.html's preview tags and the manifest together: test/preview.test.mjs fails if they disagree): the page's title and its one name constant, the manifest (name, short name, the icon's text if any), the card and About, the link preview, README.md and CHANGELOG.md, the Android app's name and label, its release id (applicationId for release builds; test builds keep the working id), fastlane's title and descriptions, the F-Droid recipe's id and name. Identifiers inside the code (dlcore, dl_ exports, js/dlplayer.wasm, the dlrender and dlgen tools) stay: renaming them would move nothing a listener sees.
 - The site on the new domain (wrangler.jsonc's custom domain, as Cloudflare's docs say for a Worker), and the old address answering every path with a redirect to the same path on the new one, the link's code kept (it is in the fragment or query, as session 24 chose: check it survives).
 - The old address's service worker steps aside: testers have the app installed at the old address, so a last version of sw.js there must stop serving the cached app and send them on (and the installed app's start page says where it went).
 - The testers' Library: storage is per address, so their saved loops and albums would not follow. Carry them: the old address offers, once, to move the Library to the new one (the backup, handed over by a link or a file, as js/storage.js's backup and restore already do), and the new address takes it. Nothing is lost if they decline: the old backup still works.

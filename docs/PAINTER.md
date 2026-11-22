@@ -98,14 +98,15 @@ loop's length. A Painter session may restyle all of it.
 Saving a loop as an audio file to keep or share. Safety comes first:
 an export must never crash or break anything, even on an old phone.
 
-- **The export sheet.** Choose the format each time: **Lossless** (full
-  quality, larger) or **Small** (much smaller, for sharing).
+- **The Export view** (session 30e; behind Share's export audio). A key a
+  format, named by it, and pressing it starts: **export flac** (lossless),
+  **export opus** (much smaller, for sharing), **export midi**.
 - **Its length is the track's** (session 30c): the Track length view's time
   and fades; with none, a finite piece exports whole, and a loop that plays
   on (or Endless) opens the Track length view first.
 - **Not enough space.** A clear message before anything starts.
-- **Progress.** Calm progress with Cancel; a note that it keeps going
-  if the app goes to the background.
+- **Progress.** Calm progress with Cancel, and one line: closing the app
+  stops it.
 - **Done and failed.** Open or share the file when done; a plain,
   kind message if it failed.
 

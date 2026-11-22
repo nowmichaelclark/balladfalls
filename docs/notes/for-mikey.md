@@ -370,7 +370,7 @@ the last one (same key). On the **Moto** and on the **tablet**:
 
 - **Codes, version 2 (item 105b, session 23, #427, v186):** on the phone,
   rename a loop in Thai with an emoji (the box takes it; an invisible
-  character it won't), copy its code (Save, Share, copy its code) and paste
+  character it won't), copy its code (Save, Share, copy code) and paste
   it in the tablet: the same loop, the name with it. Old codes from chats
   (DL1-, DLA1-) now get "from an older Driftloom" and don't open; your
   Library is untouched (and any album in it shares with a new short code).
@@ -391,8 +391,8 @@ the last one (same key). On the **Moto** and on the **tablet**:
   site the line should show within about a minute of playing; send its
   `slow:` and `busiest:` lines either way.
 - **Audio export (item 104b, session 20, #416):** on the Moto and the
-  tablet, in the browser: play a loop, then Save, the Share tab, Audio.
-  Pick 30 min and **export audio**; let the music play on, turn the screen
+  tablet, in the browser: play a loop, then Save, the Share tab, export audio,
+  **export flac**; set 30:00 and done; let the music play on, turn the screen
   off for a few minutes, come back. It should finish while the music never
   stutters, and download a `.flac` (the Files app plays it; so does VLC).
   Then once with "lighter on processor" off. Send back, for each device:
@@ -414,6 +414,15 @@ the last one (same key). On the **Moto** and on the **tablet**:
   scroll. Screenshots at 360 px and a tablet's width, dark and light, are on
   the branch `s18-shots` (linked in the PR).
 
+- **Fewer words (item 113, session 30e):** on the phone, in this order:
+  Save, the Share tab (five keys and nothing under them; your three first);
+  export audio (the Export view: export flac, export opus, export midi, a
+  key starts its export; on a loop that plays on it opens Track length
+  first, then goes on); album from seed; Vibe, then Track length; Save's
+  Save tab (ticks, no line); Library, an album open; More, Advanced to its
+  end. With TalkBack on, if you like: each key still says what its line
+  used to. The words themselves are yours to approve, under Decisions.
+
 ## Accounts
 
 - **The new name (2026-11-18: the domain is bought, on Cloudflare):** attach
@@ -423,7 +432,16 @@ the last one (same key). On the **Moto** and on the **tablet**:
 
 ## Decisions
 
-Nothing open here.
+- **The words, fewer (item 113, session 30e): approve in one look.** Every
+  line changed or removed, before and after. Anything "(gone)" is still
+  read to a screen reader, as its key's description, where it explained a
+  key. Say a row to put it back or word it differently. Three calls to
+  look at: **share link** and **album from seed** stay on Share as keys
+  after your three (else those two would be lost); the sizes stay under
+  Export's keys, as numbers, since a long FLAC can be gigabytes; "can't
+  play here" no longer names the app.
+
+
 
 (A shared loop's name, the export sheet's words and the export's ending
 were decided 2026-11-17, `docs/DECISIONS.md`, "Share codes, requests and

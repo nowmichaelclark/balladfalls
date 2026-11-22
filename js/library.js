@@ -372,8 +372,16 @@ function count(n, word) {
   return `${n}${NB}${word}${n === 1 ? '' : 's'}`;
 }
 
-function empty(text) {
-  return make('p', 'empty', text);
+// An empty list's line; `more` is only for a screen reader.
+function empty(text, more = '') {
+  const p = make('p', 'empty', text);
+  if (more) p.appendChild(make('span', 'vh', `. ${more}`));
+  return p;
+}
+
+// A row's meta on an armed delete: why, for a screen reader, before the line.
+function warned(r, why) {
+  r.querySelector('.lrow-meta').prepend(make('span', 'vh', `${why}: `));
 }
 
 // Albums worth listing: Imported Loops only when it has something in it.
@@ -382,13 +390,13 @@ function listedAlbums(alsoShow = null) {
 }
 
 function newAlbumThen(after) {
-  const title = prompt('Name this album', 'Untitled');
+  const title = prompt('Album name', 'Untitled');
   if (!title || !title.trim()) return;
   // An album's name travels with its code: only what a code can carry.
   const name = fitName(title, store.NAME_MAX);
-  if (!name) { ui.toast("That name can't be shared; try another"); return; }
+  if (!name) { ui.toast("Can't use that name"); return; }
   const album = store.createAlbum(name);
-  if (!album) { ui.toast('Could not create the album'); return; }
+  if (!album) { ui.toast("Can't make album"); return; }
   after(album);
 }
 
@@ -420,7 +428,7 @@ function renderAlbums() {
   const actions = make('div', 'lib-actions');
   actions.append(
     key('new album', () => newAlbumThen((a) => { ui.toast(`Created ${a.title}`); render(); })),
-    key('paste a code', () => lib.app.pasteCode()),
+    key('paste code', () => lib.app.pasteCode()),
   );
   const rows = listedAlbums().map((album) => {
     const n = album.ids.filter((id) => byId.has(id)).length;
@@ -451,8 +459,8 @@ function renderAlbum(album) {
     here ? key('stop album', () => lib.app.leaveAlbum())
       : key('play album', () => lib.app.playAlbum(album.id, 0)),
     key('add loops', () => { lib.mode = 'pick'; render(); }),
-    key('share', () => lib.app.shareAlbum(album.id)),
-    key('link', () => lib.app.shareAlbumLink(album.id)),
+    key('copy code', () => lib.app.shareAlbum(album.id), { aria: `copy code of ${album.title}` }),
+    key('share link', () => lib.app.shareAlbumLink(album.id), { aria: `share link to ${album.title}` }),
   );
   hero.append(artFor(album, byId, true), meta, keys);
 
@@ -472,7 +480,7 @@ function renderAlbum(album) {
       last ? `delete? Press again to delete ${spec.name}` : `sure? Press again to remove ${spec.name} from ${album.title}`,
       () => {
         const res = store.removeFromAlbum(album.id, id);
-        if (!res.ok) { ui.toast('Could not change that album'); return; }
+        if (!res.ok) { ui.toast("Can't change album"); return; }
         if (res.deleted && lib.app.state.currentId === id) lib.app.state.currentId = null;
         ui.toast(res.deleted ? `Deleted ${spec.name}` : 'Removed from album');
         lib.app.savedChanged();
@@ -483,13 +491,14 @@ function renderAlbum(album) {
   });
 
   const parts = [hero, rows.length ? lrows(`Loops in ${album.title}`, rows)
-    : empty('Nothing in here yet. Tap add loops to pick from your loops.')];
+    : empty('Empty album', 'Press add loops to pick from your loops.')];
   if (!store.isBuiltin(album.id)) {
     const k = `del-album:${album.id}`;
     const going = store.onlyHere(album.id).length;
-    const ask = going ? `delete it and ${count(going, 'loop')} only here?` : 'delete album?';
+    const ask = going ? `delete with ${count(going, 'loop')}?` : 'delete album?';
+    const all = going ? ` and the ${count(going, 'loop')} that ${going === 1 ? 'is' : 'are'} only in it` : '';
     const end = make('div', 'end-keys');
-    end.appendChild(confirmKey(k, 'delete album', ask, `${ask} Press again to delete ${album.title}`, () => {
+    end.appendChild(confirmKey(k, 'delete album', ask, `${ask} Press again to delete ${album.title}${all}`, () => {
       const pl = lib.app.state.playlist;
       if (pl && pl.albumId === album.id) lib.app.state.playlist = null;
       store.removeAlbum(album.id);
@@ -512,7 +521,7 @@ function renderMove(album) {
   if (!entry) { lib.mode = null; render(); return; }
   const done = () => { lib.mode = null; lib.moving = null; render(); };
   const go = (target) => {
-    if (!store.moveToAlbum(entry.id, album.id, target.id)) { ui.toast('Could not move it'); return; }
+    if (!store.moveToAlbum(entry.id, album.id, target.id)) { ui.toast("Can't move it"); return; }
     ui.toast(`Moved to ${target.title}`);
     lib.app.savedChanged();
     lib.app.cardChanged();
@@ -527,7 +536,7 @@ function renderMove(album) {
   });
   mount(el('libPane'), [page(
     pageHead(backKey(album.title, done, `Back to ${album.title}`), `Move ${entry.spec.name} to…`),
-    scroller(`move:${album.id}`, rows.length ? lrows('Albums', rows) : empty('No other albums yet. Make one with new album.')),
+    scroller(`move:${album.id}`, rows.length ? lrows('Albums', rows) : empty('No other albums', 'Make one with new album.')),
     foot(key('new album', () => newAlbumThen(go)), key('cancel', done)),
   )]);
 }
@@ -543,7 +552,7 @@ function renderPicker(album) {
     const last = inAlbum && store.albumsOf(entry.id).length <= 1;
     const k = `pick:${album.id}:${entry.id}`;
     const warn = last && isArmed(k);
-    const r = row(entry.spec.name, warn ? 'only here: tap again to delete' : keyOf(entry.spec), () => {
+    const r = row(entry.spec.name, warn ? 'tap again to delete' : keyOf(entry.spec), () => {
       if (!inAlbum) {
         store.addToAlbum(album.id, entry.id);
       } else if (last && !armed(k)) {
@@ -559,6 +568,7 @@ function renderPicker(album) {
       lib.app.savedChanged();
       lib.app.cardChanged();
     }, { current: entry.id === lib.app.state.currentId });
+    if (warn) warned(r, 'only here');
     if (inAlbum) r.classList.add('in');
     r.querySelector('.lrow-main').setAttribute('aria-pressed', String(inAlbum));
     r.querySelector('.lrow-main').appendChild(mark(inAlbum, warn));
@@ -572,7 +582,7 @@ function renderPicker(album) {
   keys.push(key('done', done));
   mount(el('libPane'), [page(
     pageHead(backKey(album.title, done, `Back to ${album.title}`), 'Add loops'),
-    scroller(`pick:${album.id}`, rows.length ? lrows('Your loops', rows) : empty('No loops yet. Save one you like and it will show up here.')),
+    scroller(`pick:${album.id}`, rows.length ? lrows('Your loops', rows) : empty('No loops yet', 'Save one you like and it will show up here.')),
     foot(...keys),
   )]);
 }
@@ -589,7 +599,7 @@ function renderLoops() {
       { current: entry.id === currentId });
   });
   mount(el('libPane'), [page(scroller('loops',
-    rows.length ? lrows('All loops', rows) : empty('No loops yet. Save one you like and it will show up here.')))]);
+    rows.length ? lrows('All loops', rows) : empty('No loops yet', 'Save one you like and it will show up here.')))]);
 }
 
 // ----------------------------------------------------------------- save
@@ -603,24 +613,29 @@ export function renderSave() {
   if (share) return;
   const app = lib.app;
   const spec = app.state.spec;
-  if (!spec) { mount(el('savePane'), [empty('Press play to make a loop first.')]); return; }
+  if (!spec) { mount(el('savePane'), [empty('Press play first', 'It makes a loop to save.')]); return; }
   const kept = app.isSaved();
   const id = kept ? app.state.currentId : null;
 
   // A saved loop that has been re-rolled or tweaked since: say so, and offer
   // both ways forward rather than guessing.
+  // A tick says saved (session 30e): the line shows only for a changed
+  // loop, and a screen reader hears it all, on each album's tick.
   const head = make('div', 'save-head');
+  let said;
   if (kept && app.isChanged()) {
     const homes = store.albumsOf(id).length;
     head.classList.add('changed');
-    head.append(make('p', 'hint', 'Changed since you saved it.'),
-      key(homes > 1 ? `update in ${homes} albums` : 'update it', () => app.updateSaved()),
+    said = make('p', 'hint', 'Changed');
+    said.appendChild(make('span', 'vh', ' since you saved it.'));
+    head.append(said,
+      key(homes > 1 ? `update in ${homes} albums` : 'update', () => app.updateSaved(), { aria: homes > 1 ? `update in ${homes} albums` : 'update the saved loop' }),
       key('save as new', () => app.saveAsNew()));
-  } else if (!kept) {
-    head.append(make('p', 'hint', `Tick an album to save ${spec.name} to it.`));
   } else {
-    head.append(make('p', 'hint', `${spec.name} is saved. Untick to take it out.`));
+    said = make('p', 'vh', kept ? `${spec.name} is saved. Untick to take it out.` : `Tick an album to save ${spec.name} to it.`);
+    head.append(said);
   }
+  said.id = 'saveHint';
 
   const byId = loopsById();
   const albums = listedAlbums(store.IMPORTED);
@@ -630,16 +645,18 @@ export function renderSave() {
     const last = inAlbum && store.albumsOf(id).length <= 1;
     const k = `save:${album.id}:${id}`;
     const warn = last && isArmed(k);
-    const meta = warn ? 'only album: tap again to delete' : count(album.ids.filter((x) => byId.has(x)).length, 'loop');
+    const meta = warn ? 'tap again to delete' : count(album.ids.filter((x) => byId.has(x)).length, 'loop');
     const r = row(album.title, meta, () => {
       if (!inAlbum) { app.saveIn(album.id); return; }
       if (last && !armed(k)) { renderSave(); return; }
       app.unsaveFrom(album.id);
     }, { art: artFor(album, byId) });
+    if (warn) warned(r, 'only album');
     if (inAlbum) r.classList.add('in');
     const main = r.querySelector('.lrow-main');
     main.setAttribute('role', 'checkbox');
     main.setAttribute('aria-checked', String(inAlbum));
+    main.setAttribute('aria-describedby', 'saveHint');
     main.appendChild(mark(inAlbum, warn));
     return r;
   });

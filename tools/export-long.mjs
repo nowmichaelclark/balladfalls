@@ -197,10 +197,11 @@ async function main() {
     await ev(() => {
       if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
       document.querySelector('[data-stab="share"]').click();
+      document.getElementById('goExport').click();
     });
     await sleep(1500);
     if (SMALL) {
-      const small = await ev(() => { const b = document.querySelector('[data-format="small"]'); if (b && !b.hidden) b.click(); return !!b && !b.hidden; });
+      const small = await ev(() => { const b = document.querySelector('[data-format="small"]'); return !!b && !b.hidden; });
       if (!small) throw new Error('the sheet does not offer Small in this browser');
     }
     if (set === 'plays on') throw new Error(`no track length of ${LENGTH} s`);
@@ -209,7 +210,7 @@ async function main() {
     const behind0 = await ev(() => window.__long.behind);
     const download = page.waitForEvent('download', { timeout: 0 });
     console.log(`export-long: ${LENGTH / 3600} hours of ${LOOPS.shatter.name}, ${SMALL ? 'small (Opus)' : 'lossless'}, burn ${BURN} us, lighter on processor ${LITE ? 'on' : 'off'}`);
-    await ev(() => document.getElementById('exportAudio').click());
+    await ev((f) => document.querySelector(`[data-format="${f}"]`).click(), SMALL ? 'small' : 'lossless');
     const t0 = Date.now();
     const samples = [];
     let end = null;

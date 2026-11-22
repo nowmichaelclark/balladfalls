@@ -684,7 +684,7 @@ export function download(blob, filename) {
   // (js/app.js, session 28).
   const app = appLink();
   if (app) {
-    app.saveBlob(blob, safe).then((r) => toast(r.name ? `Saved ${r.name}` : r.why === 'cancelled' ? 'Nothing saved' : 'Could not save that file'));
+    app.saveBlob(blob, safe).then((r) => toast(r.name ? `Saved ${r.name}` : r.why === 'cancelled' ? 'Nothing saved' : "Can't save file"));
     return;
   }
   const url = URL.createObjectURL(blob);

@@ -25,8 +25,8 @@ const BURN = Number(new URLSearchParams(location.search).get('burn')) || 0;
 // note on the audio thread, and js/player.js sends it commands and draws its
 // events. There is nothing else to play on (queue item 97): a browser whose
 // core will not run is told so in a plain line, in the info card's place
-// (Mikey, 2026-11-07).
-const CANT_PLAY = "This browser can't play Driftloom; try a recent Chrome, Firefox or Safari";
+// (Mikey, 2026-11-07; shorter in session 30e, the same meaning).
+const CANT_PLAY = "Can't play here. Try a recent Chrome, Firefox or Safari.";
 // And where the browser could run the core but the core did not arrive (a
 // first visit with no connection, a server error): not the browser's fault,
 // so not the line above.
@@ -45,17 +45,20 @@ const APP_NAME = 'Driftloom';
 // preview tags carry the same address and name (test/preview.test.mjs holds
 // them, the manifest and these two together).
 const APP_URL = 'https://driftloom.nowmichaelclark.workers.dev/';
-const OLD_CODE = `That code is from an older ${APP_NAME} and can't be opened.`;
-const NEWER_CODE = `That code needs a newer ${APP_NAME}.`;
-const NOT_A_CODE = `That doesn't look like a ${APP_NAME} code.`;
+const OLD_CODE = `Can't open older ${APP_NAME} codes.`;
+const NEWER_CODE = `Needs a newer ${APP_NAME}.`;
+const NOT_A_CODE = `Not a ${APP_NAME} code.`;
+const NOT_A_BACKUP = `Not a ${APP_NAME} backup.`;
 // The core's refusal for a code that names an instrument this device does
 // not have (it can't say so yet: today it says "needs a newer version" for
 // any id it lacks, and session B4 settles whether it plays something close
 // instead). share.codeKind answers 'instrument' for such a refusal.
-const INSTRUMENT_CODE = `That code needs an instrument this device doesn't have.`;
+const INSTRUMENT_CODE = `Can't open: missing instrument.`;
 // A link whose code is damaged (cut short, or a character changed).
-const BAD_LINK = `That link's code can't be read.`;
-const GET_APP = 'Get the Driftloom app.';
+const BAD_LINK = `Can't read that link.`;
+// Storage refused (a private window, or the site's storage full).
+const CANT_SAVE = "Can't save: storage blocked";
+const GET_APP = 'Get the app.';
 const APP_LINK = '';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
@@ -391,7 +394,14 @@ function showLiteSource() {
   if (!hint) return;
   const auto = (prefs.lite === undefined || prefs.lite === null) && prefs.liteAuto;
   hint.hidden = !auto;
-  if (auto) hint.textContent = prefs.liteAuto.lite ? 'Turned on by itself: this device was working hard at full quality.' : 'Turned off by itself: this device has room to spare.';
+  // The switch's description reads it, hidden or not: empty where it is yours.
+  hint.textContent = '';
+  if (!auto) return;
+  hint.textContent = prefs.liteAuto.lite ? 'Turned on by itself' : 'Turned off by itself';
+  const why = document.createElement('span');
+  why.className = 'vh';
+  why.textContent = prefs.liteAuto.lite ? ': this device was working hard at full quality.' : ': this device has room to spare.';
+  hint.append(why);
 }
 
 // -------------------------------------------------------------- history
@@ -846,10 +856,10 @@ function saveIn(albumId) {
   if (!state.spec) return;
   if (!isSaved()) {
     const entry = store.save(state.spec);
-    if (!entry) { ui.toast('Could not save it - this browser is refusing to store data'); return; }
+    if (!entry) { ui.toast(CANT_SAVE); return; }
     state.currentId = entry.id;
   }
-  if (!store.addToAlbum(albumId, state.currentId)) { ui.toast('Could not change that album'); return; }
+  if (!store.addToAlbum(albumId, state.currentId)) { ui.toast("Can't change album"); return; }
   const album = store.loadAlbums().find((a) => a.id === albumId);
   ui.toast(`Saved to ${album ? album.title : 'the album'}`);
   savedChanged();
@@ -860,12 +870,12 @@ function unsaveFrom(albumId) {
   if (!isSaved()) return;
   const name = state.spec.name;
   const res = store.removeFromAlbum(albumId, state.currentId);
-  if (!res.ok) { ui.toast('Could not change that album'); return; }
+  if (!res.ok) { ui.toast("Can't change album"); return; }
   if (res.deleted) {
     state.currentId = null;
     ui.toast(`Deleted ${name}`);
   } else {
-    ui.toast('Taken out of that album');
+    ui.toast('Removed from album');
   }
   savedChanged();
   refreshCard();
@@ -874,7 +884,7 @@ function unsaveFrom(albumId) {
 function updateSaved() {
   if (!isSaved()) return;
   if (!store.replaceSpec(state.currentId, state.spec)) {
-    ui.toast('Could not save - this browser is refusing to store data');
+    ui.toast(CANT_SAVE);
     return;
   }
   ui.toast(`Updated ${state.spec.name}`);
@@ -886,10 +896,10 @@ function updateSaved() {
 function saveAsNew() {
   if (!state.spec) return;
   const entry = store.save(state.spec);
-  if (!entry) { ui.toast('Could not save - this browser is refusing to store data'); return; }
+  if (!entry) { ui.toast(CANT_SAVE); return; }
   state.currentId = entry.id;
   store.addToAlbum(store.FAVORITES, entry.id);
-  ui.toast(`Saved ${state.spec.name} as a new loop in Favorite Loops`);
+  ui.toast('Saved as new');
   savedChanged();
 }
 
@@ -898,7 +908,7 @@ function saveQuick() {
   if (!state.spec) return;
   if (!isSaved()) saveIn(store.FAVORITES);
   else if (isChanged()) updateSaved();
-  else ui.toast(`${state.spec.name} is saved`);
+  else ui.toast('Already saved');
 }
 
 // The bookmark is filled once the loop lives in an album, and becomes an
@@ -975,7 +985,12 @@ function renderVibes() {
   const on = new Set(state.vibes);
   for (const b of list.children) b.setAttribute('aria-pressed', on.has(b.dataset.vibe) ? 'true' : 'false');
   const n = state.vibes.length;
-  ui.el('vibesCount').textContent = n ? `${n} for new loops` : 'none: new loops as usual';
+  const count = ui.el('vibesCount');
+  count.textContent = n ? `${n} picked` : 'any mood';
+  const more = document.createElement('span');
+  more.className = 'vh';
+  more.textContent = n ? ', for new loops' : ': new loops as usual';
+  count.append(more);
   ui.el('vibesClear').disabled = !n;
   updateVibesKey();
 }
@@ -1275,7 +1290,7 @@ function startRename() {
     const name = share.fitName(input.value, store.NAME_MAX);
     if (!commit || !name || name === h.textContent) return;
     if (albumId) {
-      if (!store.renameAlbum(albumId, name)) { ui.toast('Could not rename'); return; }
+      if (!store.renameAlbum(albumId, name)) { ui.toast("Can't rename"); return; }
       library.refresh();
       refreshCard();
       return;
@@ -1312,7 +1327,7 @@ function leaveAlbum() {
   renderNow();
   armNext();
   updateHistoryButtons();
-  ui.toast('Left the album. Next makes new loops');
+  ui.toast('Left album');
 }
 
 function playAlbum(albumId, index = 0, play = true) {
@@ -1320,7 +1335,7 @@ function playAlbum(albumId, index = 0, play = true) {
   if (!album) return;
   const saved = new Set(store.loadAll().map((e) => e.id));
   const present = album.ids.filter((id) => saved.has(id));
-  if (!present.length) { ui.toast('That album is empty'); return; }
+  if (!present.length) { ui.toast('Empty album'); return; }
   state.playlist = { albumId: album.id, title: album.title, ids: present, index: index - 1 };
   advancePlaylist(1, play);
 }
@@ -1330,7 +1345,7 @@ async function shareAlbum(albumId, asLink = false) {
   if (!album) return;
   const byId = new Map(store.loadAll().map((e) => [e.id, e]));
   const specs = album.ids.map((id) => byId.get(id)).filter(Boolean).map((e) => e.spec);
-  if (!specs.length) { ui.toast('That album is empty'); return; }
+  if (!specs.length) { ui.toast('Empty album'); return; }
   try {
     const code = share.encodeAlbum(album.title, specs);
     const label = `${album.title} · ${specs.length} loops`;
@@ -1338,7 +1353,7 @@ async function shareAlbum(albumId, asLink = false) {
     else await offerCode(code, label);
   } catch (err) {
     console.warn('Could not build an album code', err);
-    ui.toast('Could not build a code for this album');
+    ui.toast("Can't make code");
   }
 }
 
@@ -1346,16 +1361,20 @@ async function shareAlbum(albumId, asLink = false) {
 // box below is the one that still works when the clipboard is refused.
 async function offerCode(code, label, what = 'Code') {
   const out = ui.el('shareOut');
-  out.hidden = false;
-  out.textContent = `${label}\n\n${code}`;
   try {
     await navigator.clipboard.writeText(code);
+    out.hidden = true;
     ui.toast(`${what} copied`);
   } catch {
-    // The box lives under Save > Share; take them to it.
+    // The box, only now (session 30e), holds the code alone, so all of it
+    // selected is the code. It lives under Save > Share; take them to it.
+    out.textContent = code;
+    out.setAttribute('aria-label', `${what} to copy: ${label}`);
+    out.hidden = false;
     setView('save');
     library.showShare();
-    ui.toast('Copy it from the box below');
+    out.scrollIntoView({ block: 'nearest' });
+    ui.toast('Copy from the box');
   }
 }
 
@@ -1392,7 +1411,7 @@ async function seedAlbum(asLink) {
     else await offerCode(code, label);
   } catch (err) {
     console.warn('Could not make an album', err);
-    ui.toast(err instanceof RequestError ? err.message : 'Could not make that album');
+    ui.toast(err instanceof RequestError ? err.message : "Can't make album");
   }
 }
 
@@ -1412,7 +1431,7 @@ function openSaved(entry) {
     loadSpec(cloneSpec(entry.spec), { id: entry.id, pushToHistory: false });
   } catch (err) {
     console.warn('Could not open saved loop', err);
-    ui.toast('That saved loop could not be opened');
+    ui.toast("Can't open loop");
     return;
   }
   if (!state.engine.playing) togglePlay();
@@ -1643,7 +1662,7 @@ async function pasteCode() {
   // A link pasted is its code.
   text = share.codeOfLink(text);
   if (!share.codeKind(text)) {
-    text = share.codeOfLink(prompt(`Paste a ${APP_NAME} code`) || '');
+    text = share.codeOfLink(prompt('Paste code') || '');
   }
   openCode(text, { play: true });
 }
@@ -1689,14 +1708,14 @@ function openCode(text, { play, link = false }) {
         const ids = store.addSpecs([spec]);
         if (ids) store.addToAlbum(store.IMPORTED, ids[0]);
         loadSpec(spec, { id: ids ? ids[0] : null });
-        ui.toast(ids ? `Added ${spec.name} to Imported Loops` : `Playing ${spec.name} (could not save it)`);
+        ui.toast(ids ? 'Added to Imported Loops' : 'Opened, not saved');
       }
       if (play && !state.engine.playing) togglePlay();
     } else {
       const { title, specs } = share.decodeAlbum(text);
       const ids = store.addSpecs(specs);
       if (!ids) {
-        ui.toast('Could not save those loops');
+        ui.toast("Can't save loops");
         return;
       }
       const album = store.createAlbum(title);
@@ -1874,7 +1893,20 @@ function wire() {
 
   ui.el('playBtn').addEventListener('click', togglePlay);
   ui.el('exportMidi').addEventListener('click', () => exportMidi());
-  // Exporting audio (queue item 104b): the sheet in the Share tab, the loop
+  // Share's two views (session 30e): Export, and an album from one seed.
+  // The focus goes in on the title and comes back on the key.
+  for (const [key, view, id, back] of [['goExport', 'export', 'viewExport', 'exportBack'], ['goSeedAlbum', 'seed', 'viewSeed', 'seedBack']]) {
+    ui.el(key).addEventListener('click', () => {
+      setView(view);
+      ui.el(id).querySelector('.page-title').focus({ preventScroll: true });
+    });
+    ui.el(back).addEventListener('click', () => {
+      setView('save');
+      library.showShare();
+      ui.el(key).focus({ preventScroll: true });
+    });
+  }
+  // Exporting audio (queue item 104b): the Export view, the loop
   // playing as the core plays it, "lighter on processor" its speed.
   state.audioExport = new AudioExport({
     spec: () => state.spec,
@@ -1887,11 +1919,11 @@ function wire() {
   tracklen.wireTrack({
     done: (track, from) => {
       setTrackLength(track);
-      setView(from === 'export' ? 'save' : 'vibe');
+      setView(from === 'export' ? 'export' : 'vibe');
       // From the export, it goes on once something ends it.
       if (from === 'export' && state.audioExport && state.spec && tracklen.ends(state.spec)) state.audioExport.start();
     },
-    cancel: (from) => setView(from === 'export' ? 'save' : 'vibe'),
+    cancel: (from) => setView(from === 'export' ? 'export' : 'vibe'),
   });
   ui.el('prevBtn').addEventListener('click', goBack);
   ui.el('nextBtn').addEventListener('click', goForward);
@@ -2036,7 +2068,7 @@ function wire() {
       viewsReset();
       ui.toast('Diagnostics copied');
     } catch {
-      ui.toast('Select the text above and copy it manually');
+      ui.toast('Copy from the box');
     }
   });
 
@@ -2046,7 +2078,7 @@ function wire() {
       await offerCode(share.encodeSong(sharedSpec()), state.spec.name);
     } catch (err) {
       console.warn('Could not build a code', err);
-      ui.toast('Could not build a code for this loop');
+      ui.toast("Can't make code");
     }
   });
 
@@ -2057,7 +2089,7 @@ function wire() {
       await shareLink(share.encodeSong(sharedSpec()), state.spec.name);
     } catch (err) {
       console.warn('Could not build a link', err);
-      ui.toast('Could not build a link for this loop');
+      ui.toast("Can't make link");
     }
   });
   ui.el('seedCount').addEventListener('input', () => { ui.el('seedCountVal').textContent = ui.el('seedCount').value; });
@@ -2067,9 +2099,9 @@ function wire() {
   ui.el('copyBackup').addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(await store.exportAll().text());
-      ui.toast('Backup copied. Paste it somewhere safe.');
+      ui.toast('Backup copied');
     } catch {
-      ui.toast('This browser will not let the page reach the clipboard');
+      ui.toast('Clipboard blocked');
     }
   });
 
@@ -2078,17 +2110,17 @@ function wire() {
     try {
       text = await navigator.clipboard.readText();
     } catch {
-      text = prompt('Paste your backup here') || '';
+      text = prompt('Paste backup') || '';
     }
     if (!text.trim()) return;
     try {
       const res = store.importAll(text);
       savedChanged();
-      if (res.failed) ui.toast('Could not save the restored loops');
+      if (res.failed) ui.toast("Can't save restored loops");
       else if (res.added) ui.toast(`Restored ${res.added} loops${res.rejected ? `, skipped ${res.rejected}` : ''}`);
-      else ui.toast(res.rejected ? `Skipped ${res.rejected} unreadable loops` : 'Nothing new in that backup');
+      else ui.toast(res.rejected ? `Skipped ${res.rejected} unreadable` : 'Nothing new');
     } catch {
-      ui.toast('That does not look like a Driftloom backup');
+      ui.toast(NOT_A_BACKUP);
     }
   });
   ui.el('importFile').addEventListener('change', async (e) => {
@@ -2097,11 +2129,11 @@ function wire() {
     try {
       const res = store.importAll(await file.text());
       savedChanged();
-      if (res.failed) ui.toast('Could not save the restored loops');
+      if (res.failed) ui.toast("Can't save restored loops");
       else if (res.added) ui.toast(`Restored ${res.added} loops${res.rejected ? `, skipped ${res.rejected}` : ''}`);
-      else ui.toast(res.rejected ? `Skipped ${res.rejected} unreadable loops` : 'Nothing new in that file');
+      else ui.toast(res.rejected ? `Skipped ${res.rejected} unreadable` : 'Nothing new');
     } catch {
-      ui.toast('That file could not be read');
+      ui.toast("Can't read file");
     }
     e.target.value = '';
   });

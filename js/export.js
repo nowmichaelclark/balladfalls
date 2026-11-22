@@ -1,5 +1,5 @@
 // Exporting audio (queue item 104b; docs/PAINTER.md, "Exporting audio"): the
-// sheet in Save's Share tab, and the Worker that makes the file
+// Export view (from Save's Share tab: export audio), and the Worker that makes the file
 // (js/export-worker.js, its own instance of the core).
 //
 // Safety first (Mikey, 2026-10-13): an export must never crash or break
@@ -15,7 +15,8 @@
 // it to gentle, and they never move the app to lite (the export's load is
 // not the device's).
 //
-// The format is chosen each time: Lossless (FLAC, the core's own writer) or
+// The format is chosen each time, by the key that starts it (session 30e:
+// "export flac", "export opus"): Lossless (FLAC, the core's own writer) or
 // Small (queue item 104c: Opus through the browser's own encoder, written
 // into an Ogg file by js/ogg.js, in the Worker). Small shows only where the
 // Worker says the browser can encode Opus (never a fallback that could fail
@@ -53,29 +54,36 @@ const BUSY_LINE = 0.5;
 
 // The sheet's words (for Mikey to approve: docs/notes/for-mikey.md).
 export const WORDS = {
-  intro: 'Save what plays as an audio file, to keep or to play anywhere.',
-  lossless: 'Lossless: full quality, as a FLAC file.',
-  small: 'Small: much smaller, as an Opus file, for sharing and for phones.',
+  whole: (t) => `whole piece ${t}`,
+  track: (t) => `track ${t}`,
+  sized: (format, s) => `${format} ~${s}`,
+  memoryLong: (t) => `${t} at most here`,
+  progress: (pct, left) => `${pct}%${left ? ` · ${left} left` : ''}`,
+  cancelling: 'Canceling...',
+  background: 'Closing the app stops it.',
+  saved: (name, size, t) => `Saved ${name} · ${size} · ${t}`,
+  cancelled: 'Canceled. Nothing saved.',
+  space: (need, free) => `Not enough space: needs ${need}, ${free} free.`,
+  space_app: (need, free) => `Not enough space there: needs ${need}, ${free} free.`,
+  seek: "Can't save there. Try Downloads or Documents.",
+  spaceLate: 'Out of space. Nothing saved.',
+  memoryFull: 'Too long for this browser. Nothing saved.',
+  failed: 'Export failed. Nothing saved.',
+  cant: "This browser can't export audio.",
+};
+
+// What the format keys' description says to a screen reader (session 30e:
+// fewer words on screen, never fewer for a listener who can't see it).
+const SPOKEN = {
   whole: (t) => `The whole piece, ${t}.`,
   track: (t) => `As long as the track: ${t}.`,
   ask: 'This plays on and on, so you set how long first.',
   memoryLong: (t) => `This browser can keep ${t} at most: set a shorter track length.`,
+  memory: (t) => `This browser can't write a file as it goes, so it keeps the export in memory: ${t} at most.`,
   gentle: 'Lighter on processor is on, so it goes gently: slower, and the music never stutters.',
   fast: 'It goes as fast as this device safely can.',
   picker: 'You choose where it goes.',
-  space_app: (need, free) => `There isn't enough free space in that place: this needs about ${need}, and it has about ${free}. Pick another place, or a shorter length.`,
-  seek: "That place can't take a file as it is made. Pick one on this device, such as Downloads or Documents.",
   private: 'It downloads when it is done.',
-  memory: (t) => `This browser can't write a file as it goes, so it keeps the export in memory: ${t} at most.`,
-  progress: (pct, left) => `${pct}% done${left ? `, about ${left} left` : ''}.`,
-  background: 'It keeps going in the background while the music plays. Closing the app stops it, and nothing is saved.',
-  saved: (name, size, t) => `Saved: ${name}, ${size}, ${t}.`,
-  savedPicked: (name, size, t) => `Saved where you chose: ${name}, ${size}, ${t}.`,
-  cancelled: 'Cancelled. Nothing was saved.',
-  space: (need, free) => `There isn't enough free space for this: it needs about ${need}, and this device has about ${free}. A shorter length would fit.`,
-  spaceLate: "This device ran out of space before the export finished, so nothing was saved. Free some space, or try a shorter length. The music wasn't touched.",
-  memoryFull: 'That was more than this browser can hold, so nothing was saved. Try a shorter length.',
-  failed: "Something went wrong making the file, so nothing was saved. The music wasn't touched; you can try again.",
   cant: "This browser can't export audio. A recent Chrome, Firefox or Safari can.",
 };
 
@@ -159,23 +167,20 @@ export class AudioExport {
   }
 
   wire() {
-    el('exportIntro').textContent = WORDS.intro;
-    el('exportFormat').textContent = WORDS.lossless;
     for (const b of document.querySelectorAll('[data-format]')) {
       b.addEventListener('click', () => {
         if (b.hidden || this.running) return;
         this.format = b.dataset.format;
-        this.refresh();
+        this.start();
       });
     }
-    el('exportAudio').addEventListener('click', () => this.start());
     el('exportCancel').addEventListener('click', () => this.cancel());
     el('exportOk').addEventListener('click', () => this.show('choose'));
     el('exportDoneBtn').addEventListener('click', () => this.show('choose'));
     el('exportSave').addEventListener('click', () => this.save());
     el('exportOpen').addEventListener('click', () => this.open());
     el('exportShare').addEventListener('click', () => this.share());
-    for (const b of document.querySelectorAll('[data-stab="share"]')) b.addEventListener('click', () => this.refresh());
+    for (const b of document.querySelectorAll('[data-stab="share"], #goExport')) b.addEventListener('click', () => this.refresh());
     // While the sheet's choice shows, it follows the loop playing (a track
     // that ended, a loop picked elsewhere): a look every second and a half,
     // and none while it is out of sight.
@@ -251,42 +256,61 @@ export class AudioExport {
     if (which === 'choose') this.refresh();
   }
 
-  // The choice, for the loop playing now.
+  // The choice, for the loop playing now: its length and each format's size
+  // on screen, the rest in the keys' description.
   refresh() {
     this.boot();
     const spec = this.host.spec();
-    const about = el('exportAbout');
-    const go = el('exportAudio');
+    const keys = [...document.querySelectorAll('[data-format]')];
     if (this.mode === false || !spec) {
-      about.textContent = this.mode === false ? WORDS.cant : '';
-      go.disabled = true;
+      const cant = this.mode === false;
+      this.about(cant ? WORDS.cant : '', cant ? SPOKEN.cant : '');
+      for (const b of keys) b.disabled = true;
       return;
     }
-    // Small shows only where it works; chosen where it doesn't, Lossless.
-    if (!this.opus) this.format = 'lossless';
-    const small = document.querySelector('[data-format="small"]');
-    small.hidden = !this.opus;
-    for (const b of document.querySelectorAll('[data-format]')) {
-      b.setAttribute('aria-checked', String(b.dataset.format === this.format));
-      b.disabled = !!this.running;
-    }
-    el('exportFormat').textContent = this.format === 'small' ? WORDS.small : WORDS.lossless;
+    // Small shows only where it works.
+    document.querySelector('[data-format="small"]').hidden = !this.opus;
     const plan = planOf(spec);
     const memory = this.mode === 'memory';
-    const tooLong = memory && plan && plan.seconds > MEMORY_SECONDS;
+    const tooLong = memory && !!plan && plan.seconds > MEMORY_SECONDS;
     const lanes = this.host.mono() ? 1 : 2;
-    const lines = [];
-    if (!plan) lines.push(WORDS.ask);
-    else if (plan.key === 'whole') lines.push(WORDS.whole(words(plan.seconds)));
-    else lines.push(WORDS.track(words(plan.seconds)));
-    if (tooLong) lines.push(WORDS.memoryLong(words(MEMORY_SECONDS)));
-    else if (plan) lines.push(`About ${size((plan.seconds + TAIL_MAX) * FORMATS[this.format].bytes[lanes])}.`);
-    lines.push(this.mode === 'picker' || this.mode === 'app' ? WORDS.picker : this.mode === 'private' ? WORDS.private : this.mode === 'memory' && !tooLong ? WORDS.memory(words(MEMORY_SECONDS)) : '');
-    lines.push(this.pace() === 'gentle' ? WORDS.gentle : WORDS.fast);
-    about.textContent = lines.filter(Boolean).join(' ');
-    // With no end, or too long to keep, the key opens the Track length view.
-    go.disabled = this.mode == null || !!this.running;
-    go.dataset.asks = !plan || tooLong ? 'length' : '';
+    const most = words(MEMORY_SECONDS);
+    const shown = [];
+    const said = [];
+    if (plan) {
+      const key = plan.key === 'whole' ? 'whole' : 'track';
+      shown.push(WORDS[key](words(plan.seconds)));
+      said.push(SPOKEN[key](words(plan.seconds)));
+    } else {
+      said.push(SPOKEN.ask);
+    }
+    if (tooLong) {
+      shown.push(WORDS.memoryLong(most));
+      said.push(SPOKEN.memoryLong(most));
+    } else if (plan) {
+      const sizes = (this.opus ? ['lossless', 'small'] : ['lossless'])
+        .map((f) => [FORMATS[f].ext, size((plan.seconds + TAIL_MAX) * FORMATS[f].bytes[lanes])]);
+      shown.push(sizes.map(([f, n]) => WORDS.sized(f, n)).join(', '));
+      said.push(sizes.map(([f, n]) => `${f.toUpperCase()}: about ${n}.`).join(' '));
+    }
+    if (this.mode === 'picker' || this.mode === 'app') said.push(SPOKEN.picker);
+    else if (this.mode === 'private') said.push(SPOKEN.private);
+    else if (memory && !tooLong) said.push(SPOKEN.memory(most));
+    said.push(this.pace() === 'gentle' ? SPOKEN.gentle : SPOKEN.fast);
+    this.about(shown.join(' · '), said.join(' '));
+    // With no end, or too long to keep, a key opens the Track length view.
+    for (const b of keys) {
+      b.disabled = this.mode == null || !!this.running;
+      b.dataset.asks = !plan || tooLong ? 'length' : '';
+    }
+  }
+
+  // The line under the format keys, and their description.
+  about(shown, said) {
+    const line = el('exportAbout');
+    line.textContent = shown;
+    line.hidden = !shown;
+    el('exportHint').textContent = said;
   }
 
   // "Lighter on processor" on: gentle. Off: as fast as is safe, which on a
@@ -396,7 +420,7 @@ export class AudioExport {
     this.running = { name, sink, handle, chosen, format, began: performance.now(), slowed: false, spec };
     if (saved) this.app.exporting(true, name, 0);
     this.result = null;
-    el('exportFill').style.width = '0%';
+    this.fill(0);
     el('exportProgress').textContent = WORDS.progress(0, null);
     el('exportNote').textContent = WORDS.background;
     this.show('run');
@@ -410,15 +434,20 @@ export class AudioExport {
     const took = (performance.now() - r.began) / 1000;
     const left = share > 0.02 ? (took / share) * (1 - share) : null;
     if (r.sink === 'app') this.app.exporting(true, r.name, pct);
-    el('exportFill').style.width = `${pct}%`;
+    this.fill(pct);
     el('exportProgress').textContent = WORDS.progress(pct, left != null ? words(left) : null);
     r.progress = m;
+  }
+
+  fill(pct) {
+    el('exportFill').style.width = `${pct}%`;
+    el('exportFill').parentElement.setAttribute('aria-valuenow', String(pct));
   }
 
   cancel() {
     if (!this.running) return;
     this.worker.postMessage({ type: 'cancel' });
-    el('exportProgress').textContent = 'Cancelling...';
+    el('exportProgress').textContent = WORDS.cancelling;
   }
 
   done(m) {
@@ -428,7 +457,7 @@ export class AudioExport {
     this.result = { ...m, name: r.name, sink: r.sink, handle: r.handle, format: r.format, url: null };
     const t = words(m.seconds);
     const placed = r.sink === 'handle' || r.sink === 'app';
-    el('exportSaved').textContent = placed ? WORDS.savedPicked(r.name, size(m.bytes), t) : WORDS.saved(r.name, size(m.bytes), t);
+    el('exportSaved').textContent = WORDS.saved(r.name, size(m.bytes), t);
     el('exportSave').hidden = placed;
     this.show('done');
     el('exportShare').hidden = !this.canShare();

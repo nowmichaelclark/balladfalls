@@ -41,7 +41,8 @@ crackles".
 | the app | clean (full and Lite) | clean | crackles (full and Lite) |
 | the site in Chrome | clean (full and Lite) | not tried | clean (full and Lite) |
 
-Not yet known: headphones.
+Asked which browser that was: "chrome for the crackle-free test" (their
+DuckDuckGo screenshot was the Painter's test). Not yet known: headphones.
 
 Diagnostics after it (copied paused, the stream stopped): late, missed,
 dropped and underruns all 0 again, so **the counters don't see these

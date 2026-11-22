@@ -99,10 +99,10 @@ the points where the next step is yours.
   albums in the app"). You heard them all as clips; this is them on your
   own devices. One word a track only if something sounds wrong.
 
-## The Android app on F-Droid (item 107e, session 29): choose the signing, then submit after 31
+## The Android app on F-Droid (item 107e, session 29): make your key, then submit after 31
 
-Nothing here is submitted or signed yet and no account was made. Two choices
-are yours; the submission itself waits until after session 31, because the
+Nothing here is submitted or signed yet and no account was made. The signing
+is chosen (your own key); the submission waits until after session 31, because the
 merge request to F-Droid is public and carries the app's new name.
 
 **Google's developer verification (brain B4, 2026-11-18; read before you
@@ -117,26 +117,12 @@ developers not to register, and Google lets a store that signs apps itself
 register its key. Nothing to do now; it matters for Play later, and it is
 one more reason to keep the app's id yours (31a).
 
-**1. Who signs the app (decide before 31; it can wait until you submit).**
+**1. Who signs the app: you chose your own key (2026-11-22).** One app, one
+key, from F-Droid, GitHub or Play; keep it safe for good (lose it and the app
+can never be updated). The build must stay reproducible
+(`docs/notes/107-reproducible.md`; CI checks it). Make it before you submit:
 
-- *F-Droid signs it* (the default). F-Droid builds the app from the tagged
-  commit and signs the APK with its own key. You do nothing more. Cost: the
-  F-Droid app's copy is signed with F-Droid's key, not yours, so a copy from
-  somewhere else (a GitHub release, Play later) will not install over it or be
-  replaced by it (Android refuses a different key). Choose this if you only
-  want people to get the app from F-Droid.
-- *Your own key plus reproducible builds*. You sign the release APK with a key
-  only you hold. F-Droid builds it too and, because the two files match byte
-  for byte, publishes yours: one app, one key, whether it comes from F-Droid,
-  GitHub or Play. Cost: you keep the key safe for good (lose it and the app
-  can never be updated), and the build must stay reproducible
-  (`docs/notes/107-reproducible.md`: CI checks it on every Android change).
-- **Recommendation:** your own key, because the build is reproducible (see
-  that note for the checked result) and because you plan Play later. If you
-  would rather not hold a key, F-Droid signing is fine and you can still move
-  later by releasing under a new app id.
-
-If you choose your own key (do this on your computer, never in CI, never in a
+(Do this on your computer, never in CI, never in a
 chat or the repo):
 
 1. Make the key: `keytool -genkeypair -v -keystore release.jks -alias release

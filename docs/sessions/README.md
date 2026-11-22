@@ -110,7 +110,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 30g | `30g-crackles.md` | 115: no crackles in the Android app (a 1.0 blocker, Mikey 2026-11-22) | Opus 5.5, high | 29 | 30f (the app's audio path only, merging after it) | |
 | 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | 18, 21, 24, 24c, 29, B4, 30f, 30g | none | |
 | B5 | `brain-5-release.md` | Brain: the release check | Opus 5.5, high | 30 | none | |
-| | **you** | The signing choice (`docs/notes/for-mikey.md` will have the steps); buy the new name's domain and attach it to the Worker, if not done. **31a waits for this.** | | 29 | | |
+| | **you** | Your signing key (chosen 2026-11-22: your own; the steps are in `docs/notes/for-mikey.md`); buy the new name's domain and attach it to the Worker, if not done. **31a waits for this.** | | 29 | | |
 | 31a | `31a-new-name.md` | The new name, built and left open (you paste the name, the domain and the id) | Opus 5.5, high | B5, the row above | none | |
 | 31 | `31-one-point-oh.md` | 108: 1.0 (merges 31a first) | Sonnet 5.5, medium | B5, 31a open and green | none | |
 | | **you** | Rename the repo; the F-Droid submission (its merge request is public, so after 1.0) | | 31 | | |

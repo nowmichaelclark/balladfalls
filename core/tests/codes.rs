@@ -4,18 +4,20 @@
 //! walk of the request's whole list, as the pins' test walks them, and a few
 //! thousand random requests); every generation golden's case written as a
 //! code and read back generates its same hashes; codes from a newer build,
-//! or naming what this build lacks, are refused plainly; and corrupt or
+//! or naming what no build gave, are refused plainly; one naming what was
+//! taken out plays something close (item 105e); and corrupt or
 //! truncated codes never panic. A name travels with its code in any script
 //! and with emoji, capped in bytes, and what a name refuses is refused
 //! (session 23). The dummy build's test (`tests/dummy.rs`) holds the
 //! version rule: what joins later moves no older code.
 
 use dlcore::code::{self, ALPHABET, Album, BAD_NAME, BAD_PACE, Kind, Loop, MARKS_MOST, NAME_MOST, NEEDS_NEWER, NOT_A_CODE, Name, PACE_MOST, Pace};
-use dlcore::generator::data::{self, CHARACTERS, CHOICES, Ids, MOODS, VIBES};
+use dlcore::fades::Fades;
+use dlcore::generator::data::{self, CHARACTERS, CHOICES, Ids, MOODS, Member, Numbers, VIBES};
 use dlcore::generator::request::{self, Journey, LAYER_NAMES, LENGTH_MOST, LayerAsk, Length, PROFILE_ORDER, Pins, Request, VOICE_ORDER};
 use dlcore::generator::rng::{Rng, seed_name};
 use dlcore::generator::theory::SCALES;
-use dlcore::generator::{Generator, Part};
+use dlcore::generator::{Generator, Part, choices, planing};
 use dlcore::space;
 
 /// Run `f` on a thread with room for the generator's frames.
@@ -58,14 +60,43 @@ fn asked(r: Result<Request, &'static str>) -> Loop {
 
 // -------------------------------------------------------------- the ids
 
-/// `names` each have one row in `list`, and `list` names nothing else.
+/// `names` each have one row in `list` that is here, and a row that is
+/// here names nothing else. A gone one's row stays and names nothing.
 fn covers(what: &str, list: Ids, names: &[&str]) {
     for n in names {
-        assert!(list.iter().any(|e| e.0 == *n), "{what}: '{n}' has no row in data/codes.txt");
+        assert!(here(list, n), "{what}: '{n}' has no row in data/codes.txt, or a gone one");
     }
     for e in list {
-        assert!(names.contains(&e.0), "{what}: data/codes.txt names '{}', which is none", e.0);
+        assert!(e.3 != Member::Here || names.contains(&e.0), "{what}: data/codes.txt names '{}', which is none and is not gone", e.0);
     }
+}
+
+/// Whether `name` has a row in `list` that is here.
+fn here(list: Ids, name: &str) -> bool {
+    list.iter().any(|e| e.0 == name && e.3 == Member::Here)
+}
+
+/// Every list in data/codes.txt, by name.
+fn lists() -> Vec<(String, Ids)> {
+    let mut all: Vec<(String, Ids)> = [
+        ("vibes", data::CODE_VIBES),
+        ("profiles", data::CODE_PROFILES),
+        ("moods", data::CODE_MOODS),
+        ("scales", data::CODE_SCALES),
+        ("layers", data::CODE_LAYERS),
+        ("journeys", data::CODE_JOURNEYS),
+        ("tones", data::CODE_TONES),
+        ("bassStyles", data::CODE_BASS_STYLES),
+        ("choices", data::CODE_CHOICES),
+        ("settings", data::CODE_SETTINGS),
+    ]
+    .into_iter()
+    .map(|(name, list)| (name.to_string(), list))
+    .collect();
+    all.extend(LAYER_NAMES.iter().zip(data::CODE_VOICES).map(|(l, list)| (format!("voices {l}"), list)));
+    all.extend(data::CODE_OPTIONS.iter().map(|&(name, list)| (format!("options {name}"), list)));
+    all.extend(data::CODE_WORDS.iter().map(|&(name, list)| (format!("words {name}"), list)));
+    all
 }
 
 #[test]
@@ -85,7 +116,11 @@ fn every_member_has_an_id_and_a_version() {
         let list = data::CODE_OPTIONS.iter().find(|e| e.0 == c.id).map_or_else(|| panic!("{}: no [options]", c.id), |e| e.1);
         covers(c.id, list, &c.options.iter().map(|o| o.0).collect::<Vec<_>>());
     }
-    assert_eq!(data::CODE_OPTIONS.len(), CHOICES.len(), "an [options] block for no choice");
+    // A choice taken out keeps its options, so a code holding it still reads.
+    for e in data::CODE_CHOICES {
+        assert!(!data::options_of(e.0).is_empty(), "{}: no [options]", e.0);
+    }
+    assert_eq!(data::CODE_OPTIONS.len(), data::CODE_CHOICES.len(), "an [options] block for no choice");
     // The settings a pin names, and each setting's words.
     let mut settings = Vec::new();
     let mut worded = Vec::new();
@@ -100,38 +135,145 @@ fn every_member_has_an_id_and_a_version() {
         }
     }
     covers("settings", data::CODE_SETTINGS, &settings);
-    assert_eq!(data::CODE_WORDS.len(), worded.len(), "a [words] block for no setting of words");
+    // A setting of words taken out keeps them; a setting here of numbers
+    // has none.
+    for (name, _) in data::CODE_WORDS {
+        let gone = data::CODE_SETTINGS.iter().any(|e| e.0 == *name && e.3 != Member::Here);
+        assert!(gone || worded.contains(name), "a [words] block for no setting of words: {name}");
+    }
     assert_eq!(settings.len(), request::SETTINGS.len() + space::n::COUNT);
     // Each layer's voices: everything a request can ask, and every name a
     // profile's pool draws from.
     let pools: [fn(&data::Character) -> Option<data::Pool>; 5] = [|c| c.kits, |c| c.bass_voices, |c| c.chord_voices, |c| c.melody_voices, |c| c.textures];
     for (layer, list) in data::CODE_VOICES.iter().enumerate() {
-        for v in VOICE_ORDER[layer] {
-            assert!(list.iter().any(|e| e.0 == *v), "{}: '{v}' has no row", LAYER_NAMES[layer]);
-        }
+        // The names the core's own pools hold (the fallback kits and
+        // textures, the choir's two).
+        let mut names: Vec<&str> = [&["machine"][..], &[], &["vowel", "hum"], &["vowel", "hum"], &["none"]][layer].to_vec();
+        names.extend(VOICE_ORDER[layer]);
         for c in &CHARACTERS {
-            for (name, _) in pools[layer](c).unwrap_or(&[]) {
-                assert!(list.iter().any(|e| e.0 == *name), "{}: '{name}' ({}) has no row", LAYER_NAMES[layer], c.id);
-            }
+            names.extend(pools[layer](c).unwrap_or(&[]).iter().map(|e| e.0));
+        }
+        covers(LAYER_NAMES[layer], list, &names);
+        for &(name, _, _, member) in *list {
+            let Member::StandIn(to) = member else { continue };
+            let plays = list.iter().find(|e| e.1 == to).expect("a row").0;
+            assert!(VOICE_ORDER[layer].contains(&plays), "{name}'s stand-in '{plays}' is no voice a request can ask");
         }
     }
-    for c in &CHARACTERS {
-        for (name, _) in c.bass_styles.unwrap_or(&[]) {
-            assert!(data::CODE_BASS_STYLES.iter().any(|e| e.0 == *name), "bass style '{name}' has no row");
+    let styles: Vec<&str> = CHARACTERS.iter().flat_map(|c| c.bass_styles.unwrap_or(&[]).iter().map(|e| e.0)).collect();
+    covers("bass styles", data::CODE_BASS_STYLES, &styles);
+}
+
+#[test]
+fn every_id_ever_given_has_its_row() {
+    // The rows of version 2, list by list: none is ever deleted (gone or
+    // not), and a list that came later has none.
+    let first = [
+        ("vibes", 88), ("profiles", 16), ("moods", 8), ("scales", 19), ("layers", 5), ("journeys", 2), ("tones", 3), ("bassStyles", 5),
+        ("choices", 16), ("settings", 63), ("voices drums", 4), ("voices bass", 6), ("voices chords", 20), ("voices melody", 28), ("voices texture", 7),
+        ("options glass", 2), ("options dubStab", 2), ("options organ", 2), ("options wash", 2), ("options arc", 2), ("options tunedKick", 3),
+        ("options subDuck", 3), ("options lateFloor", 3), ("options floorDrop", 2), ("options pedalBass", 2), ("options padSweep", 4),
+        ("options padWow", 2), ("options widePad", 3), ("options tripletKit", 2), ("options dottedPulse", 3), ("options colorTone", 2),
+        ("words arc.shape", 2), ("words lateFloor.order", 3), ("words progression.kind", 2), ("words lowBell.kind", 3), ("words lowBell.drops", 2),
+        ("words twang.kind", 4),
+    ];
+    let all = lists();
+    for (what, count) in first {
+        let list = all.iter().find(|l| l.0 == what).unwrap_or_else(|| panic!("{what}: the list is gone")).1;
+        assert_eq!(list.iter().filter(|e| e.2 == 2).count(), count, "{what}: a row of version 2 is gone or came late");
+    }
+    for (what, list) in &all {
+        let mut ids: Vec<u32> = list.iter().map(|e| e.1).collect();
+        ids.sort_unstable();
+        assert!(ids.iter().zip(0..).all(|(&id, next)| id == next), "{what}: an id skipped, or its row deleted");
+    }
+}
+
+#[test]
+fn one_version_a_release() {
+    // Every member added since the last release shares the next version, so
+    // a code's head stays a character long (version 15 and under).
+    let next = data::CODE_RELEASED + 1;
+    assert!(data::CODE_NEWEST <= next, "newest is past released + 1");
+    let mut joined = data::CODE_RELEASED;
+    for (what, list) in lists() {
+        for e in list {
+            assert!(e.2 <= next, "{what}: {} joined at {}, past released + 1", e.0, e.2);
+            joined = joined.max(e.2);
+        }
+    }
+    assert!(joined <= data::CODE_NEWEST, "a member past newest");
+}
+
+#[test]
+fn every_number_a_field_takes_has_been_written_down() {
+    // A range widened widens its row; one narrowed leaves it.
+    let held = |name: &str, [lo, hi]: [f64; 2], whole: bool| {
+        let Some(Numbers::Range([least, most], ever_whole)) = data::numbers(name) else { panic!("{name}: no range in [code numbers]") };
+        assert!(least <= lo && hi <= most, "{name}: {lo} to {hi} is past its row, {least} to {most}");
+        assert!(whole || !ever_whole, "{name}: its row is of whole numbers alone");
+    };
+    held("tempo", request::TEMPO_LIMIT, true);
+    held("bpm", request::TEMPO_LIMIT, false);
+    held("tone", [0.0, 1.0], false);
+    held("length", [1.0, LENGTH_MOST], true);
+    for number in request::CHOICE_PINS..request::PINS_MAX {
+        let Some((prefix, name)) = Pins::name(number) else { continue };
+        let full = format!("{prefix}{name}");
+        if let Some((range, whole)) = Pins::range(number) {
+            held(&full, range, whole);
+        } else if let Some(values) = Pins::values(number) {
+            let ever = data::numbers(&full).unwrap_or_else(|| panic!("{full}: no list in [code numbers]"));
+            for &(x, _) in values {
+                assert!(ever.wrote(x), "{full}: {x} is not in its row");
+            }
         }
     }
 }
 
 #[test]
+fn every_drawn_setting_draws_nothing_below_its_version() {
+    // Version 1 is before every member's: each setting drawn per loop, as a
+    // later one is for a version 2 loop (tests/dummy.rs has one that is).
+    roomy(|| {
+        let (p, mut r) = (Pins::NONE, Rng::new(20_261_009));
+        let (mut g, mut drew) = (Box::new(Generator::new()), [0; 5]);
+        for _ in 0..500 {
+            let seed = r.seed32();
+            g.load_with(seed, &Request::new());
+            let mut spec = *g.spec();
+            spec.version = 1;
+            assert!(choices::tuning_of(seed, None, &p, 1) == 0.0, "{seed}: tuning");
+            assert_eq!(choices::low_bell_of(seed, true, None, &p, 1), 0, "{seed}: lowBell");
+            assert!(!choices::spotlight_of(seed, 1, true, None, &p, 1), "{seed}: dropSpotlight");
+            assert_eq!(choices::twang_of(seed, true, None, &p, 1), 0, "{seed}: twang");
+            assert!(!planing::planes(&spec), "{seed}: planing");
+            spec.version = 2;
+            for (n, on) in drew.iter_mut().zip([
+                choices::tuning_of(seed, None, &p, 2) != 0.0,
+                choices::low_bell_of(seed, true, None, &p, 2) != 0,
+                choices::spotlight_of(seed, 1, true, None, &p, 2),
+                choices::twang_of(seed, true, None, &p, 2) != 0,
+                planing::planes(&spec),
+            ]) {
+                *n += usize::from(on);
+            }
+        }
+        assert!(drew.iter().all(|&n| n > 0), "{drew:?}: each draws at its own version");
+    });
+}
+
+#[test]
 fn ids_today_are_the_old_numbers() {
-    // The first ids were given in today's orders, so a host that numbered
-    // them by place still names the same thing (they are frozen from here).
-    for (i, v) in VIBES.iter().enumerate() {
-        assert_eq!(data::CODE_VIBES.iter().find(|e| e.0 == v.id).map(|e| e.1), Some(u32::try_from(i).unwrap()), "{}", v.id);
-    }
-    for (i, c) in CHOICES.iter().enumerate() {
-        assert_eq!(data::CODE_CHOICES.iter().find(|e| e.0 == c.id).map(|e| e.1), Some(u32::try_from(i).unwrap()), "{}", c.id);
-    }
+    // The first ids were given in today's orders, and new members go last:
+    // those here stand in their ids' order, the gone ones' left out.
+    let in_order = |list: Ids| {
+        let mut rows: Vec<(u32, &str)> = list.iter().filter(|e| e.3 == Member::Here).map(|e| (e.1, e.0)).collect();
+        rows.sort_unstable();
+        rows.into_iter().map(|e| e.1).collect::<Vec<_>>()
+    };
+    assert_eq!(in_order(data::CODE_VIBES), VIBES.iter().map(|v| v.id).collect::<Vec<_>>());
+    assert_eq!(in_order(data::CODE_CHOICES), CHOICES.iter().map(|c| c.id).collect::<Vec<_>>());
 }
 
 // ------------------------------------------------------- short and plain
@@ -518,39 +660,93 @@ fn pace_round_trip(tracks: &[String], paces: &[Pace], title: &Name) -> String {
     album
 }
 
+/// A time's pace, `seconds` with the fades `f` (bit 1 the fade in, bit 2 the
+/// fade out).
+fn time(seconds: u32, f: u32) -> Pace {
+    Pace::Time { seconds, fades: Fades { fade_in: f & 1 != 0, fade_out: f & 2 != 0 } }
+}
+
 #[test]
 fn every_pace_round_trips() {
-    // Every kind, every count a listener's slider gives (a day of the
-    // shortest pass is about 72,000; a time shorter than a pass, bars), and
-    // the ends; on a track alone and beside tracks of another pace (where it
-    // writes its own) and of the same (where the album writes it once).
+    // Every time a listener's Track length view gives, to the second (to a
+    // day: session 30c), with each pair of fades, and on and on with and
+    // without a fade in; on a track alone and beside tracks of another pace
+    // (where it writes its own) and of the same (where the album writes it
+    // once).
     let mut r = Rng::new(24);
     let tracks: Vec<String> = (0..3).map(|_| write(&random_loop(&mut r))).collect();
-    let mut counts: Vec<u32> = (1..=2048).collect();
-    counts.extend([4095, 4096, 72_000, 86_400, 1 << 20, PACE_MOST - 1, PACE_MOST]);
+    let mut counts: Vec<u32> = (1..=1200).collect();
+    counts.extend([3599, 3600, 5025, 7207, 43_200, PACE_MOST - 1, PACE_MOST]);
     let mut walked = 0;
     for count in counts {
-        for pace in [Pace::Passes(count), Pace::Bars(count)] {
+        for f in 0..4 {
+            let pace = time(count, f);
             assert_eq!(Pace::of(pace.kind(), pace.count()), Some(pace));
             pace_round_trip(&tracks[..1], &[pace], &Name::NONE);
             pace_round_trip(&tracks, &[pace, Pace::On, Pace::On], &Name::NONE);
-            pace_round_trip(&tracks, &[pace, pace, Pace::Bars(3)], &name("Side B"));
+            pace_round_trip(&tracks, &[pace, pace, time(3, 2)], &name("Side B"));
             walked += 1;
         }
     }
-    // And on and on: "until moved on", the slider at its start.
+    // And on and on: "until moved on", with or without its fade in.
     assert_eq!(Pace::of(0, 0), Some(Pace::On));
-    pace_round_trip(&tracks, &[Pace::On, Pace::Passes(2), Pace::Passes(2)], &Name::NONE);
+    assert_eq!(Pace::of(4, 0), Some(Pace::OnFadingIn));
+    pace_round_trip(&tracks, &[Pace::On, time(120, 2), time(120, 2)], &Name::NONE);
+    pace_round_trip(&tracks, &[Pace::OnFadingIn, Pace::OnFadingIn, Pace::On], &Name::NONE);
     pace_round_trip(&tracks, &[Pace::On; 3], &Name::NONE);
     assert!(walked > 4000);
-    // What no slider gives is no pace: refused as it is written.
-    for (kind, count) in [(1, 0), (2, 0), (0, 1), (3, 1), (1, PACE_MOST + 1), (2, u32::MAX)] {
+    // What no view gives is no pace: refused as it is written (whole passes
+    // and bars among them since session 30c, and a fade out with no end).
+    for (kind, count) in [(1, 2), (2, 8), (0, 1), (3, 0), (8, 0), (3, PACE_MOST + 1), (16 | 3, 5), (3, u32::MAX)] {
         assert_eq!(Pace::of(kind, count), None, "{kind} {count}");
     }
     let mut out = [0u8; 256];
-    for bad in [Pace::Passes(0), Pace::Bars(0), Pace::Passes(PACE_MOST + 1)] {
+    for bad in [time(0, 0), time(PACE_MOST + 1, 2)] {
         assert_eq!(code::write_album(tracks.iter().take(1).map(|t| (t.as_bytes(), bad)), &Name::NONE, &mut out).err(), Some(BAD_PACE), "{bad:?}");
     }
+    // As a host writes them in text.
+    let t = tracks[0].as_bytes();
+    for (text, pace) in [("", Pace::On), (":i", Pace::OnFadingIn), (":t5025", time(5025, 0)), (":t1i", time(1, 1)), (":t7207o", time(7207, 2)), (":t86400io", time(86_400, 3))] {
+        let whole = [t, text.as_bytes()].concat();
+        assert_eq!(code::paced(&whole), Ok((t, pace)), "{text}");
+    }
+    for text in [":p2", ":b8", ":t0", ":t05", ":t86401", ":t", ":toi", ":t5x", ":o"] {
+        let whole = [t, text.as_bytes()].concat();
+        assert_eq!(code::paced(&whole).err(), Some(BAD_PACE), "{text}");
+    }
+}
+
+#[test]
+fn an_album_code_from_before_times_still_reads() {
+    // Session 30c (Mikey, 2026-11-18: "it's okay if those codes aren't
+    // exact"): a pace was whole passes or bars before, and its numbers now
+    // read as times of a few seconds; every such album still reads, its
+    // tracks as they were. The fixtures as they stood (session 24b), and
+    // every album code in docs/ALBUMS.md.
+    let old = [
+        ("FADGRiSNBAGAAAAAAI_____DWSWDYD", 3),
+        ("FADNNBAAAABuBCbOBMNBAAAAEmBOWAJNBAAAAGHBWHeEUmFpbgMd", 3),
+        ("FACPNBAAAAF__CHAWgBONBAAAAICCEJCAAWBQD", 2),
+    ];
+    // (The old fixture of 72,000 passes and 2^31 - 1 bars, past any time a
+    // pace carries now, is no code: no slider ever set it.)
+    assert_eq!(code::read_album(b"FACGAAAAAAO_____DW-_____DW_zsExI").err(), Some(NOT_A_CODE));
+    for (album, count) in old {
+        let a = code::read_album(album.as_bytes()).unwrap_or_else(|e| panic!("{album}: {e}"));
+        assert_eq!(a.count, count);
+        let _ = album_tracks(album);
+        let _ = album_paces(album);
+    }
+    let doc = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../docs/ALBUMS.md")).expect("the albums");
+    let mut read = 0;
+    for code in doc.split("#c=").skip(1).map(|r| r.split(|c: char| !(c.is_ascii_alphanumeric() || c == '-' || c == '_')).next().unwrap_or("")) {
+        if code.starts_with('F') {
+            assert!(code::read_album(code.as_bytes()).is_ok(), "{code}");
+            let _ = album_paces(code);
+            read += 1;
+        }
+    }
+    assert!(read >= 3, "the albums in docs/ALBUMS.md");
 }
 
 #[test]
@@ -564,16 +760,16 @@ fn a_few_thousand_random_albums_round_trip() {
             let tracks: Vec<String> = (0..count).map(|_| pool[r.pick_index(pool.len())].clone()).collect();
             // Paces as albums have them: most tracks one, a few another,
             // some on and on, now and then every track its own.
-            let common = [Pace::On, Pace::Passes(2), Pace::Passes(1 + u32::try_from(r.pick_index(40)).unwrap()), Pace::Bars(1 + u32::try_from(r.pick_index(64)).unwrap())][r.pick_index(4)];
+            let common = [Pace::On, time(120, 2), time(1 + u32::try_from(r.pick_index(3600)).unwrap(), 2), time(1 + u32::try_from(r.pick_index(600)).unwrap(), u32::try_from(r.pick_index(4)).unwrap())][r.pick_index(4)];
             let wild = r.f() < 0.1;
             let paces: Vec<Pace> = (0..count)
                 .map(|_| {
-                    let most = if r.f() < 0.9 { 30 } else { 100_000 };
+                    let most = if r.f() < 0.9 { 900 } else { 86_400 };
                     let n = 1 + u32::try_from(r.pick_index(most)).unwrap();
                     match r.pick_index(if wild { 3 } else { 8 }) {
                         0 => Pace::On,
-                        1 => Pace::Passes(n),
-                        2 => Pace::Bars(n),
+                        1 => time(n, u32::try_from(r.pick_index(4)).unwrap()),
+                        2 => Pace::OnFadingIn,
                         _ => common,
                     }
                 })
@@ -613,25 +809,25 @@ fn an_album_without_pacing_is_its_code_as_before() {
 }
 
 #[test]
-fn twelve_tracks_of_two_passes_cost_a_few_characters() {
+fn twelve_tracks_of_two_minutes_cost_a_few_characters() {
     let mut r = Rng::new(12);
     let tracks: Vec<String> = (0..12).map(|_| write(&random_loop(&mut r))).collect();
     let plain = paced_album(&tracks, &[Pace::On; 12], &Name::NONE);
-    let two = pace_round_trip(&tracks, &[Pace::Passes(2); 12], &Name::NONE);
+    let two = pace_round_trip(&tracks, &[time(120, 2); 12], &Name::NONE);
     // Written once, for the album: its tag and its number.
-    assert_eq!(two.len() - plain.len(), 2, "{plain} {two}");
-    // Under about 20 longer however the slider was set on each (the
-    // brief's yardstick), with a pace shared: twelve tracks of 2 passes
-    // but one of 9 bars and one of 30 passes.
-    let mut mixed = [Pace::Passes(2); 12];
-    mixed[3] = Pace::Bars(9);
-    mixed[7] = Pace::Passes(30);
+    assert_eq!(two.len() - plain.len(), 3, "{plain} {two}");
+    // Under about 20 longer however the view was set on each (the brief's
+    // yardstick), with a pace shared: twelve tracks of two minutes but one
+    // of 45 seconds and one of half an hour.
+    let mut mixed = [time(120, 2); 12];
+    mixed[3] = time(45, 0);
+    mixed[7] = time(1800, 2);
     let some = pace_round_trip(&tracks, &mixed, &Name::NONE);
-    assert!(some.len() - plain.len() <= 8, "{}", some.len() - plain.len());
-    // And each track its own time of a day's length: still a few each.
-    let own: Vec<Pace> = (1..=12).map(|i| Pace::Passes(i * 997)).collect();
+    assert!(some.len() - plain.len() <= 12, "{}", some.len() - plain.len());
+    // And each track its own time, to a day: still a few each.
+    let own: Vec<Pace> = (1..=12).map(|i| time(i * 7200, 3)).collect();
     let each = pace_round_trip(&tracks, &own, &Name::NONE);
-    assert!(each.len() - plain.len() <= 12 * 5, "{}", each.len() - plain.len());
+    assert!(each.len() - plain.len() <= 12 * 6, "{}", each.len() - plain.len());
 }
 
 #[test]
@@ -641,10 +837,11 @@ fn an_album_has_one_code_for_its_paces() {
     let head = |n: usize| format!("{}{}{}", uv(5), uv(0), uv(n as u64));
     let track = |b: &str, extra: &str| format!("{}{b}{extra}", uv((b.len() + extra.len()) as u64));
     let pace = |p: u64| format!("{}{}", uv(22), uv(p));
-    // What the writer writes reads: two passes shared, a track's own 9 bars.
-    let good = sealed(&format!("{}{}{}{}{}", head(3), track(&bodies[0], ""), track(&bodies[1], &pace(18)), track(&bodies[2], ""), pace(3)));
-    assert_eq!(good, paced_album(&tracks, &[Pace::Passes(2), Pace::Bars(9), Pace::Passes(2)], &Name::NONE));
-    assert_eq!(album_paces(&good), [Pace::Passes(2), Pace::Bars(9), Pace::Passes(2)]);
+    // What the writer writes reads: two minutes fading out shared (480), a
+    // track's own nine seconds (34).
+    let good = sealed(&format!("{}{}{}{}{}", head(3), track(&bodies[0], ""), track(&bodies[1], &pace(34)), track(&bodies[2], ""), pace(480)));
+    assert_eq!(good, paced_album(&tracks, &[time(120, 2), time(9, 0), time(120, 2)], &Name::NONE));
+    assert_eq!(album_paces(&good), [time(120, 2), time(9, 0), time(120, 2)]);
     // Anything else saying the same is no code's: on and on written for the
     // album; a track's own pace that is the album's; the album's not the one
     // most tracks share; a pace twice, or after the album's name; a pace in
@@ -652,22 +849,25 @@ fn an_album_has_one_code_for_its_paces() {
     let refused = [
         format!("{}{}{}{}{}", head(3), track(&bodies[0], ""), track(&bodies[1], ""), track(&bodies[2], ""), pace(0)),
         format!("{}{}{}{}", head(3), track(&bodies[0], &pace(0)), track(&bodies[1], ""), track(&bodies[2], "")),
-        format!("{}{}{}{}{}", head(3), track(&bodies[0], &pace(3)), track(&bodies[1], &pace(18)), track(&bodies[2], ""), pace(3)),
-        format!("{}{}{}{}{}", head(3), track(&bodies[0], &pace(18)), track(&bodies[1], &pace(18)), track(&bodies[2], ""), pace(3)),
-        format!("{}{}{}{}", head(3), track(&bodies[0], &pace(3)), track(&bodies[1], &pace(3)), track(&bodies[2], "")),
-        format!("{}{}{}{}{}{}", head(3), track(&bodies[0], ""), track(&bodies[1], ""), track(&bodies[2], ""), pace(3), pace(3)),
-        format!("{}{}{}{}{}{}", head(3), track(&bodies[0], ""), track(&bodies[1], ""), track(&bodies[2], ""), name_field(b"x"), pace(3)),
-        format!("{}{}{}{}", head(3), track(&bodies[0], &format!("{}{}", pace(3), pace(5))), track(&bodies[1], ""), track(&bodies[2], "")),
+        format!("{}{}{}{}{}", head(3), track(&bodies[0], &pace(480)), track(&bodies[1], &pace(34)), track(&bodies[2], ""), pace(480)),
+        format!("{}{}{}{}{}", head(3), track(&bodies[0], &pace(34)), track(&bodies[1], &pace(34)), track(&bodies[2], ""), pace(480)),
+        format!("{}{}{}{}", head(3), track(&bodies[0], &pace(480)), track(&bodies[1], &pace(480)), track(&bodies[2], "")),
+        format!("{}{}{}{}{}{}", head(3), track(&bodies[0], ""), track(&bodies[1], ""), track(&bodies[2], ""), pace(480), pace(480)),
+        format!("{}{}{}{}{}{}", head(3), track(&bodies[0], ""), track(&bodies[1], ""), track(&bodies[2], ""), name_field(b"x"), pace(480)),
+        format!("{}{}{}{}", head(3), track(&bodies[0], &format!("{}{}", pace(480), pace(5))), track(&bodies[1], ""), track(&bodies[2], "")),
     ];
     for (i, chars) in refused.iter().enumerate() {
         assert_eq!(code::read_album(sealed(chars).as_bytes()).err(), Some(NOT_A_CODE), "{i}: {chars}");
     }
-    assert_eq!(code::read_loop(sealed(&format!("{}{}", &tracks[0][..tracks[0].len() - 2], pace(3))).as_bytes()).err(), Some(NOT_A_CODE));
+    assert_eq!(code::read_loop(sealed(&format!("{}{}", &tracks[0][..tracks[0].len() - 2], pace(480))).as_bytes()).err(), Some(NOT_A_CODE));
     let mut out = [0u8; 64];
     let n = code::write_seed_album(3, 4, &Request::new(), &Name::NONE, &mut out).expect("an album");
     let seeded = core::str::from_utf8(&out[..n]).unwrap();
     assert_eq!(album_paces(seeded), [Pace::On; 4]);
-    assert_eq!(code::read_album(sealed(&format!("{}{}", &seeded[..seeded.len() - 2], pace(3))).as_bytes()).err(), Some(NOT_A_CODE));
+    assert_eq!(code::read_album(sealed(&format!("{}{}", &seeded[..seeded.len() - 2], pace(480))).as_bytes()).err(), Some(NOT_A_CODE));
+    // Past the most a pace counts: no code.
+    let far = sealed(&format!("{}{}{}{}{}", head(3), track(&bodies[0], ""), track(&bodies[1], ""), track(&bodies[2], ""), pace(2 + 4 * u64::from(PACE_MOST))));
+    assert_eq!(code::read_album(far.as_bytes()).err(), Some(NOT_A_CODE));
     // A field this build lacks after the tracks is a newer build's.
     assert_eq!(code::read_album(sealed(&format!("{}{}{}{}{}", head(3), track(&bodies[0], ""), track(&bodies[1], ""), track(&bodies[2], ""), uv(25))).as_bytes()).err(), Some(NEEDS_NEWER));
     // A track read from the album is the loop it was, its pace left out.
@@ -677,10 +877,10 @@ fn an_album_has_one_code_for_its_paces() {
 #[test]
 fn a_track_and_its_pace_in_text() {
     assert_eq!(code::paced(b"ENBAAAAEmBO_7"), Ok((&b"ENBAAAAEmBO_7"[..], Pace::On)));
-    assert_eq!(code::paced(b"ENBAAAAEmBO_7:p2"), Ok((&b"ENBAAAAEmBO_7"[..], Pace::Passes(2))));
-    assert_eq!(code::paced(b"ENBAAAAEmBO_7:b16"), Ok((&b"ENBAAAAEmBO_7"[..], Pace::Bars(16))));
-    assert_eq!(code::paced(format!("X:p{PACE_MOST}").as_bytes()), Ok((&b"X"[..], Pace::Passes(PACE_MOST))));
-    for bad in ["X:", "X:p", "X:p0", "X:p02", "X:x2", "X:p2x", "X:b-1", "X:p 2", "X:p2147483648", "X:p99999999999"] {
+    assert_eq!(code::paced(b"ENBAAAAEmBO_7:t5025o"), Ok((&b"ENBAAAAEmBO_7"[..], time(5025, 2))));
+    assert_eq!(code::paced(b"ENBAAAAEmBO_7:i"), Ok((&b"ENBAAAAEmBO_7"[..], Pace::OnFadingIn)));
+    assert_eq!(code::paced(format!("X:t{PACE_MOST}io").as_bytes()), Ok((&b"X"[..], time(PACE_MOST, 3))));
+    for bad in ["X:", "X:t", "X:t0", "X:t02", "X:x2", "X:t2x", "X:t-1", "X:t 2", "X:t86401", "X:t99999999999", "X:p2", "X:b16", "X:t5oi", "X:io"] {
         assert_eq!(code::paced(bad.as_bytes()).err(), Some(BAD_PACE), "{bad}");
     }
 }
@@ -716,23 +916,100 @@ fn a_newer_builds_code_is_refused_plainly() {
     assert_eq!(code::read_loop(sealed(&format!("{}{seed}", uv(newer * 2))).as_bytes()).err(), Some(NEEDS_NEWER));
     assert_eq!(code::read_album(sealed(&format!("{}A{}{}", uv(newer * 2 + 1), uv(1), &plain[..7])).as_bytes()).err(), Some(NEEDS_NEWER));
     assert_eq!(code::read_loop(sealed(&format!("{}{seed}", uv(1 << 40))).as_bytes()).err(), Some(NEEDS_NEWER));
-    // An id this build lacks: a vibe, a choice, a setting, a voice, a field.
+    // An id with no row (a vibe, a choice, an option, a setting, a word, a
+    // voice, a journey): a newer build's at the version still open, which it
+    // shares, and no code's at a released one, whose ids are all here
+    // (item 105e; tests/dummy.rs reads both).
+    let open = data::CODE_NEWEST > data::CODE_RELEASED;
     let head = &plain[..7];
     for fields in [
         format!("{}{}", uv(1), uv(9999)),
         format!("{}{}{}", uv(15), uv(999), uv(1)),
         format!("{}{}{}", uv(15), uv(0), uv(99)),
         format!("{}{}{}", uv(16), uv(999), uv(0)),
+        format!("{}{}{}", uv(16), uv(22), uv(9)),
         format!("{}{}{}{}", uv(11), uv(3), uv(1), uv(200)),
         format!("{}{}", uv(7), uv(7)),
-        uv(25),
-        uv(31),
     ] {
+        let why = if open { NEEDS_NEWER } else { NOT_A_CODE };
+        assert_eq!(code::read_loop(sealed(&format!("{head}{fields}")).as_bytes()).err(), Some(why), "{fields}");
+    }
+    // A field this build lacks.
+    for fields in [uv(25), uv(31)] {
         assert_eq!(code::read_loop(sealed(&format!("{head}{fields}")).as_bytes()).err(), Some(NEEDS_NEWER), "{fields}");
     }
     assert_eq!(code::kind(sealed(&format!("{}{seed}", uv(newer * 2))).as_bytes()), None);
     // The line names no app: the host says whose build it is.
     assert_eq!(NEEDS_NEWER, "needs a newer version");
+}
+
+#[test]
+fn twangs_slow_and_bright_play_soft() {
+    // Written by main at v193, before slow and bright were taken out (item
+    // 105e): corpus 20261009's first loop that plays twang, pinned to each.
+    roomy(|| {
+        let (soft, slow, bright) = ("ENqAy3DQWBWo", "ENqAy3DQWCXo", "ENqAy3DQWDYo");
+        let mut g = Box::new(Generator::new());
+        let want = code::read_loop(soft.as_bytes()).expect("soft");
+        assert_eq!(write(&want), soft);
+        let hashed = hashes(&mut g, &want);
+        assert_eq!(g.settings().twang, 1, "it plays twang");
+        for old in [slow, bright] {
+            let back = code::read_loop(old.as_bytes()).unwrap_or_else(|e| panic!("{old}: {e}"));
+            assert_eq!(back.request.pins().word("twang.kind"), Some("soft"), "{old}");
+            assert_eq!(write(&back), soft, "{old}: written again");
+            assert_eq!(hashes(&mut g, &back), hashed, "{old}: plays soft");
+            assert_eq!(g.lost(), 0);
+        }
+        // An album that holds both, as it was written then.
+        let album = "FACJNqAy3DQWCJNqAy3DQWDRd";
+        assert_eq!(code::read_album(album.as_bytes()).map(|a| a.count), Ok(2));
+        for track in album_tracks(album) {
+            assert_eq!(code::read_loop(track.as_bytes()).expect("a track").request.pins().word("twang.kind"), Some("soft"));
+        }
+    });
+}
+
+#[test]
+fn every_field_ever_written_is_still_read() {
+    // A tag this build stops writing is read and set aside, never refused
+    // and never given again (item 105e): one of each, as version 2 wrote it.
+    let seed = "NBAAAA";
+    let one = uv(1);
+    let fields = [
+        (1, uv(27)),
+        (2, format!("{}{}{}", uv(27), uv(14), uv(1))),
+        (3, uv(38)),
+        (4, format!("{}{}", uv(38), uv(14))),
+        (5, uv(63)),
+        (6, String::new()),
+        (7, uv(1)),
+        (8, format!("{one}{}", uv(2))),
+        (9, format!("{one}{}", uv(0))),
+        (10, format!("{one}{}", uv(0))),
+        (11, format!("{}{one}{}", uv(3), uv(19))),
+        (12, format!("{one}{}", uv(0))),
+        (13, format!("{one}{}", uv(0))),
+        (14, "AAAAAA".to_string()),
+        (15, format!("{}{one}", uv(2))),
+        (16, format!("{}{one}", uv(22))),
+        (17, format!("{}AAAAAA", uv(0))),
+        (18, format!("{}{}{}", uv(0), uv(12), uv(1))),
+        (19, format!("{}{}", uv(176), uv(0))),
+        (20, format!("{one}{}", uv(0))),
+        (21, "BAAAAA".to_string()),
+        (30, format!("{one}eA")),
+    ];
+    for (t, value) in &fields {
+        let text = sealed(&format!("E{seed}{}{value}", uv(*t)));
+        assert!(code::read_loop(text.as_bytes()).is_ok(), "tag {t}: {text}");
+    }
+    // Those an album's alone holds (a track's pace, and the album's): a
+    // track of nine seconds beside two of two minutes.
+    let track = |extra: &str| format!("{}{seed}{extra}", uv((seed.len() + extra.len()) as u64));
+    let own = format!("{}{}", uv(22), uv(34));
+    let album = sealed(&format!("FA{}{}{}{}{}{}", uv(3), track(""), track(&own), track(""), uv(22), uv(480)));
+    assert_eq!(code::read_album(album.as_bytes()).map(|a| a.count), Ok(3), "tag 22: {album}");
 }
 
 #[test]
@@ -777,7 +1054,7 @@ fn corrupt_and_truncated_codes_never_panic() {
     let album = String::from_utf8(out[..n].to_vec()).unwrap();
     let n = code::write_seed_album(3, 5, &Request::parse("cozy,bars=8").unwrap(), &Name::NONE, &mut out).expect("an album");
     let seeded = String::from_utf8(out[..n].to_vec()).unwrap();
-    let set = [Pace::Passes(2), Pace::Passes(2), Pace::Bars(9), Pace::On, Pace::Passes(2), Pace::Passes(40), Pace::Bars(1), Pace::Passes(2), Pace::On, Pace::Passes(1)];
+    let set = [time(120, 2), time(120, 2), time(9, 0), Pace::On, time(120, 2), time(5025, 3), time(1, 1), time(120, 2), Pace::OnFadingIn, time(86_400, 2)];
     let with_paces = paced_album(&codes[10..20], &set, &Name::NONE);
     let mut all = codes.clone();
     all.push(album);

@@ -4,15 +4,16 @@
 //! by its voice (`blocks::twang`). What it holds to (the batch's yardstick):
 //! it goes only to loops that play a chord and have no kit busier than a
 //! soft one, to about its share of them, every one soft (Mikey's Batch 6 Album,
-//! 2026-11-17; the draw weighs the three versions as before, each leaned
-//! by its own vibes); a pin plays a version or keeps it off, and nothing the
+//! 2026-11-17, slow and bright taken out by item 105e; the draw weighs the
+//! three versions as before, each leaned by its own vibes); a pin plays it
+//! or keeps it off, and nothing the
 //! generator decides but twang moves; in the player, at each chord whose
 //! lowest note changes (or the same after `regap` seconds) that note's pitch
 //! class between E2 and D#3, its fifth and its tenth (`spread` beats apart:
 //! together, as the approved clips played them), 82 to 400 Hz, six strings
 //! at most, never in a full stop and let go there;
 //! and the voice: the pick's share above 1 kHz falling to a third or less by
-//! 0.3 s, the level swinging 30 to 55% at 4 to 6 Hz or two cycles a beat,
+//! 0.3 s, the level swinging about 35% at 4.5 Hz,
 //! its level following the chords channel, and nothing under 60 Hz.
 
 // Counts of loops are shares as floats; steps and pitches copied, not
@@ -57,17 +58,16 @@ fn may(g: &Generator) -> bool {
 }
 
 /// Of `n` corpus loops as `request` asks them: how many may play twang, and
-/// how many of those play each version (soft, slow, bright).
-fn versions(g: &mut Generator, request: &Request, n: usize) -> (usize, [usize; 3]) {
-    let (mut of, mut on) = (0, [0; 3]);
+/// how many of those play it (soft, the one version).
+fn versions(g: &mut Generator, request: &Request, n: usize) -> (usize, usize) {
+    let (mut of, mut on) = (0, 0);
     for seed in corpus(n) {
         g.load_with(seed, request);
         let v = g.settings().twang;
         if may(g) {
             of += 1;
-            if v > 0 {
-                on[usize::from(v) - 1] += 1;
-            }
+            assert!(v <= 1, "seed {seed}: a version but soft");
+            on += usize::from(v);
         } else {
             assert_eq!(v, 0, "seed {seed}: no chord or a busy kit, no twang");
         }
@@ -79,15 +79,15 @@ fn versions(g: &mut Generator, request: &Request, n: usize) -> (usize, [usize; 3
 fn it_goes_to_its_share_of_the_loops_it_may_play_in_all_soft() {
     roomy(|| {
         let mut g = Box::new(Generator::new());
-        let (of, on) = versions(&mut g, &Request::new(), 2000);
-        let all: usize = on.iter().sum();
+        let (of, all) = versions(&mut g, &Request::new(), 2000);
         let f = all as f64 / of as f64;
-        println!("twang on 2000 corpus loops: {on:?} (soft, slow, bright) of {of} that may play it ({f:.3}); {:.3} of all", all as f64 / 2000.0);
+        println!("twang on 2000 corpus loops: {all} soft of {of} that may play it ({f:.3}); {:.3} of all", all as f64 / 2000.0);
         assert!(of > 600 && (f - TWANG.share).abs() < 0.03, "{f:.3} of the loops, not near {}", TWANG.share);
         // Soft alone (Mikey's Batch 6 Album, 2026-11-17): the draw still
         // weighs the three as the batch did, so the share is as it was, and
         // every loop it lands on plays soft.
-        assert!(all > 0 && on[1] == 0 && on[2] == 0, "{on:?}: a loop playing slow or bright");
+        assert!(all > 0, "no loop plays twang");
+        assert_eq!(TWANG_KINDS.iter().map(|k| k.0).collect::<Vec<_>>(), ["today", "soft"], "slow and bright are gone (item 105e)");
     });
 }
 
@@ -97,8 +97,7 @@ fn the_vibes_lean_its_share_never_to_none() {
         let mut g = Box::new(Generator::new());
         let mut of = |vibe: &str| {
             let (n, on) = versions(&mut g, &ask(vibe), 1500);
-            assert!(on[1] == 0 && on[2] == 0, "{vibe} {on:?}: a loop playing slow or bright");
-            on[0] as f64 / n as f64
+            on as f64 / n as f64
         };
         let (wistful, meditative, cruising, zany) = (of("wistful"), of("meditative"), of("cruising"), of("zany"));
         println!("soft: wistful {wistful:.3}, meditative {meditative:.3}, cruising {cruising:.3}, zany {zany:.3}");
@@ -122,7 +121,9 @@ fn gives_way(on: &[&str], off: &[&str]) -> bool {
 #[test]
 fn a_pin_plays_its_version_or_keeps_it_off_and_nothing_else_moves() {
     roomy(|| {
-        assert_eq!(Request::parse("twang.kind=loud").err(), Some(BAD_SETTING));
+        for none in ["loud", "slow", "bright"] {
+            assert_eq!(Request::parse(&format!("twang.kind={none}")).err(), Some(BAD_SETTING), "{none}");
+        }
         let mut g = Box::new(Generator::new());
         let mut a = Box::new(Generator::new());
         let (mut busy, mut played, mut gave) = (0, 0, 0);
@@ -160,12 +161,12 @@ fn a_pin_plays_its_version_or_keeps_it_off_and_nothing_else_moves() {
 }
 
 /// A host that renders nothing and writes down every twang pick (time,
-/// midi, parts, its extra values) and every let-go to the chords channel
+/// midi, its tremolo's zero) and every let-go to the chords channel
 /// (time, the picks it reaches up to, its fall).
 #[derive(Default)]
 struct Heard {
     frame: u64,
-    picks: Vec<(f64, f64, u32, [f64; 2])>,
+    picks: Vec<(f64, f64, f64)>,
     let_go: Vec<(f64, f64, f64)>,
 }
 
@@ -175,9 +176,10 @@ impl Host for Heard {
     }
     fn key(&mut self, _: Key) {}
     fn note(&mut self, voice: u32, channel: u32, time: f64, midi: f64, _: f64, _: f64, parts: u32, x: [f64; EXTRA]) {
+        assert!(voice != VOICE || parts == 0, "twang has one version");
         if voice == VOICE {
             assert_eq!(channel, CHORDS);
-            self.picks.push((time, midi, parts, [x[twang::BEATS], x[twang::ZERO]]));
+            self.picks.push((time, midi, x[twang::ZERO]));
         }
     }
     fn event(&mut self, channel: u32, e: Event) {
@@ -210,15 +212,15 @@ fn play(seed: u32, text: &str, wander: f64, seconds: u64) -> Heard {
     host
 }
 
-const PINS: [&str; 3] = ["twang.kind=soft,tuning.cents=0", "twang.kind=slow,tuning.cents=0", "twang.kind=bright,tuning.cents=0"];
+const PINNED: &str = "twang.kind=soft,tuning.cents=0";
 
 #[test]
 fn it_picks_the_chord_s_lowest_note_its_fifth_and_its_tenth() {
     roomy(|| {
         let mut g = Box::new(Generator::new());
         let (mut loops, mut roots, mut want_roots, mut later) = (0, 0, 0, 0);
-        for (n, seed) in corpus(160).into_iter().enumerate() {
-            let text = PINS[n % 3];
+        for seed in corpus(160) {
+            let text = PINNED;
             g.load_with(seed, &ask(text));
             if g.settings().twang == 0 || g.render().form.is_some() {
                 continue;
@@ -231,7 +233,7 @@ fn it_picks_the_chord_s_lowest_note_its_fifth_and_its_tenth() {
             let cycle = spec.cycles.of(2).filter(|&c| c > 0.0).unwrap_or(spec.bars * spec.steps_per_bar);
             // As composed (no wander): every slot whose chords play.
             let heard = play(seed, text, 0.0, 30);
-            let Some(&(t0, _, _, _)) = heard.picks.first() else { panic!("seed {seed}: no pick") };
+            let Some(&(t0, _, _)) = heard.picks.first() else { panic!("seed {seed}: no pick") };
             let first = r.harmony.slots.iter().find(|s| r.chords.iter().any(|e| e.vel != 0.0 && e.step >= s.start_step && e.step < s.start_step + s.length_steps)).map_or(0.0, |s| s.start_step);
             // Each root picked (time, its note, its tenth's offset), as the
             // chords come: where the root changes, or after `regap`.
@@ -263,7 +265,7 @@ fn it_picks_the_chord_s_lowest_note_its_fifth_and_its_tenth() {
             // The picks well inside what was listed (the player's clock from
             // its first pick).
             let end = 29.0 - 4.0 * (4.0 * sd);
-            let got: Vec<(f64, f64)> = heard.picks.iter().map(|&(t, m, _, _)| (t - t0, m)).filter(|g| g.0 <= end).collect();
+            let got: Vec<(f64, f64)> = heard.picks.iter().map(|&(t, m, _)| (t - t0, m)).filter(|g| g.0 <= end).collect();
             want.retain(|w| w.0 <= end);
             for &(t, m) in &got {
                 let hz = 440.0 * 2f64.powf((m - 69.0) / 12.0);
@@ -277,10 +279,6 @@ fn it_picks_the_chord_s_lowest_note_its_fifth_and_its_tenth() {
             let picked = want.iter().filter(|w| got.iter().any(|g| (g.0 - w.0).abs() < 0.02 && g.1 == w.1)).count();
             roots += picked;
             want_roots += want.len();
-            for &(_, _, parts, [beats, _]) in &heard.picks {
-                assert_eq!(parts, (n % 3) as u32, "seed {seed}: its version");
-                assert!((beats - spec.bpm / 60.0).abs() < 1e-9, "seed {seed}: the loop's beats a second");
-            }
             loops += 1;
         }
         println!("{loops} loops: {roots} roots picked of {want_roots} chords that call for one; {later} fifths and tenths, {} beats after", TWANG.spread);
@@ -294,15 +292,15 @@ fn six_strings_ring_at_most_and_one_tremolo_moves_them() {
     roomy(|| {
         let mut g = Box::new(Generator::new());
         let (mut loops, mut taken) = (0, 0);
-        for (n, seed) in corpus(120).into_iter().enumerate() {
-            let text = PINS[n % 3];
+        for seed in corpus(120) {
+            let text = PINNED;
             g.load_with(seed, &ask(text));
             if g.settings().twang == 0 {
                 continue;
             }
             let heard = play(seed, text, 1.0, 40);
-            let zero = heard.picks.first().map_or(0.0, |p| p.3[1]);
-            for (i, &(t, _, _, [_, z])) in heard.picks.iter().enumerate() {
+            let zero = heard.picks.first().map_or(0.0, |p| p.2);
+            for (i, &(t, _, z)) in heard.picks.iter().enumerate() {
                 assert_eq!(z, zero, "seed {seed}: one tremolo for the loop");
                 // The strings still ringing as this one is picked: picked
                 // before, not let go by now, and within their ring.
@@ -336,7 +334,7 @@ fn never_in_a_full_stop_and_let_go_there() {
             // The loop's first step, the player's `START` on.
             let start = 0.05;
             let into = |t: f64| ((t - start) % total + total) % total;
-            for &(t, _, _, _) in &heard.picks {
+            for &(t, _, _) in &heard.picks {
                 assert!(!quiet.iter().any(|&q| into(t) >= q - 1e-6 && into(t) < q + bar - 1e-6), "seed {seed}: a pick at {t:.2} s in a full stop");
             }
             // Each full stop that comes while a string may ring lets them go.
@@ -357,11 +355,11 @@ fn never_in_a_full_stop_and_let_go_there() {
     });
 }
 
-/// One pick alone through the core (`parts` its version, at 60 BPM, the
+/// One pick alone through the core (the
 /// tremolo's phase 0 at the start; a pad played on the chords channel first
 /// when `under`, so the core stamps a louder level), and the pick's samples
 /// from 1 s.
-fn pick_alone(midi: f64, parts: u32, under: bool) -> Vec<f32> {
+fn pick_alone(midi: f64, under: bool) -> Vec<f32> {
     let run = |pick: bool| {
         let mut core = Box::new(Core::new());
         core.start(48_000.0, 1).expect("a core");
@@ -374,9 +372,8 @@ fn pick_alone(midi: f64, parts: u32, under: bool) -> Vec<f32> {
         }
         if pick {
             let mut x = [f64::NAN; EXTRA];
-            x[twang::BEATS] = 1.0;
             x[twang::ZERO] = 0.0;
-            core.note(VOICE, CHORDS, 1.0, midi, twang::ring(), 1.0, parts, x);
+            core.note(VOICE, CHORDS, 1.0, midi, twang::ring(), 1.0, 0, x);
         }
         let mut out = Vec::new();
         let mut block = vec![0.0f32; QUANTUM];
@@ -420,8 +417,9 @@ fn share(x: &[f32], lo: f64, hi: f64) -> f64 {
 #[test]
 fn the_pick_falls_to_a_rounder_tail() {
     roomy(|| {
-        for (name, parts, midi) in [("soft", 0, 45.0), ("slow", twang::SLOW, 40.0), ("bright", twang::BRIGHT, 47.0)] {
-            let x = pick_alone(midi, parts, false);
+        {
+            let (name, midi) = ("soft", 45.0);
+            let x = pick_alone(midi, false);
             let w = |a: f64| &x[(a * 48_000.0) as usize..((a + 0.05) * 48_000.0) as usize];
             let (pick, tail) = (1.0 - share(w(0.0), 0.0, 1000.0), 1.0 - share(w(0.3), 0.0, 1000.0));
             let low = share(&x[..48_000], 0.0, 60.0);
@@ -444,8 +442,9 @@ fn its_tremolo_swings_30_to_55_percent_at_its_rate() {
         // saws' own slow beat (4 cents apart: 0.1 Hz there, 0.25 Hz at 110
         // Hz, where its null lands 2 s in) stays out of the reading: the
         // tremolo is the voice's, the same at every pitch.
-        for (name, parts, hz, asked) in [("soft", 0, 4.5f64, 0.35f64), ("slow", twang::SLOW, 2.0, 0.55), ("bright", twang::BRIGHT, 5.5, 0.45)] {
-            let x = pick_alone(28.0, parts, false);
+        {
+            let (name, hz, asked) = ("soft", 4.5f64, 0.35f64);
+            let x = pick_alone(28.0, false);
             let frame = 960;
             let level: Vec<f64> = x[(0.3 * 48_000.0) as usize..(1.9 * 48_000.0) as usize].chunks(frame).map(db).map(|d| 10f64.powf(d / 20.0)).collect();
             let per = (50.0 / hz).round() as usize;
@@ -487,8 +486,8 @@ fn its_tremolo_swings_30_to_55_percent_at_its_rate() {
 #[test]
 fn its_level_follows_the_chords_channel() {
     roomy(|| {
-        let alone = db(&pick_alone(45.0, 0, false)[..48_000]);
-        let over = db(&pick_alone(45.0, 0, true)[..48_000]);
+        let alone = db(&pick_alone(45.0, false)[..48_000]);
+        let over = db(&pick_alone(45.0, true)[..48_000]);
         println!("a pick alone {alone:.1} dB, over a held chord {over:.1} dB");
         assert!(over > alone + 1.0, "louder over a louder chord layer");
         // Never past the most: 0.16 against the floor's 0.06.

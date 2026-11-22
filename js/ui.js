@@ -78,12 +78,12 @@ function feelParts(spec) {
 // their own. In that order of rank:
 //   key, tempo, bars, meter, the first style, the album playing, the first
 //   feeling, the second style, the second feeling, the shape word, the
-//   third style, the third feeling, the pass count.
+//   third style, the third feeling, the track length set (session 30c).
 // The first three are the loop (never off before the rest), the last is
 // what goes first.
 const RANK = {
   key: 100, tempo: 99, bars: 98, meter: 97, mix: [96, 93, 90], album: 95,
-  feel: [94, 92, 89], shape: 91, pass: 80,
+  feel: [94, 92, 89], shape: 91, length: 80,
 };
 
 // An atom may carry `alts`: shorter words for the same fact, used only where
@@ -108,7 +108,7 @@ function loopFacts(spec, pattern, extra) {
   facts.push({ pack: true, atoms: tempo });
   facts.push({ pack: true, atoms: [atom(meter, RANK.meter), atom(barsText(spec), RANK.bars)] });
   if (extra.album) facts.push({ cls: 'album-line', atoms: [atom(extra.album, RANK.album, albumAlts(extra.album))] });
-  if (extra.pass) facts.push({ cls: 'faint', atoms: [atom(extra.pass, RANK.pass)] });
+  if (extra.length) facts.push({ cls: 'faint', atoms: [atom(extra.length, RANK.length, [extra.length.replace(/^track /, '')])] });
   return facts;
 }
 
@@ -119,8 +119,9 @@ function albumAlts(line) {
 }
 
 // The card's words for a loop: `extra` adds the album being played and the
-// pass count when a track length is set; both are what someone glancing at
-// the card would otherwise have to go looking for.
+// track length when one is set ("track 1:23:45", session 30c: the time set);
+// both are what someone glancing at the card would otherwise have to go
+// looking for.
 export function renderReadout(spec, pattern, extra = {}) {
   setName(spec.name);
   setFacts(loopFacts(spec, pattern, extra));
@@ -190,32 +191,6 @@ export function passSeconds(spec) {
 // One bar, in seconds.
 export function barSeconds(spec) {
   return (spec.stepsPerBar || 16) * (60 / spec.bpm / 4);
-}
-
-// Track length is chosen as a time, which is how anyone thinks of it, and
-// stored as passes (a track ends on a whole loop), worked out at this tempo
-// when the slider moves; a time shorter than one pass (a long loop's pass
-// can be hours) as bars, and the track ends at the first phrase line after
-// them (queue item 88b; `trackLength`). The stops are curated: fine at the
-// short end, where people actually set it, and reaching a whole day at the
-// top. Here, beside the passes and bars they come to, so a test walks them
-// (session 24b: an album's code carries each).
-export const TRACK_TIMES = [
-  0, 60, 120, 180, 300, 600, 900, 1200, 1800, 2700,
-  3600, 5400, 7200, 10800, 14400, 21600, 28800, 43200, 86400,
-];
-
-// The slider's time, `secs` (0 for off), as the spec keeps it: whole passes
-// where it is a pass or longer, as ever; shorter than a pass, the bars it
-// comes to, rounded up (queue item 88b: the track ends at the first phrase
-// line after them, its notes fading).
-export function trackLength(spec, secs) {
-  spec.playFor = null;
-  delete spec.playBars;
-  if (!secs) return;
-  const pass = passSeconds(spec);
-  if (secs >= pass) spec.playFor = Math.max(1, Math.round(secs / pass));
-  else spec.playBars = Math.max(1, Math.ceil(secs / barSeconds(spec) - 1e-9));
 }
 
 export function formatTime(secs) {

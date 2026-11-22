@@ -215,12 +215,17 @@ try {
   sh('pm', 'grant', pkg, 'android.permission.POST_NOTIFICATIONS');
   sh('logcat', '-c');
 
-  // One minute for each track, so the core hands the music from loop to loop
-  // by itself while the page is hidden.
+  // One minute for the track (the Track length view, session 30c), so the
+  // core hands the music from loop to loop by itself while the page is
+  // hidden.
   await ev(() => {
-    const r = document.getElementById('trackLen');
-    r.value = '1';
-    r.dispatchEvent(new Event('input', { bubbles: true }));
+    document.getElementById('vibesBtn').click();
+    document.querySelector('.pk-track').click();
+    const n = document.getElementById('trkNum');
+    n.value = '1:00';
+    n.dispatchEvent(new Event('blur'));
+    document.getElementById('trkDone').click();
+    document.getElementById('picksClose').click();
   });
 
   // ---------------------------------------------------------------- play
@@ -341,6 +346,17 @@ try {
   if (EXPORT) {
     log('\n-- an export into a file chosen in Android\'s picker, finishing with the screen off --');
     const exportOne = async (format, length) => {
+      // The export is as long as the track (session 30c): set in the Track
+      // length view, to the second, as a listener sets it.
+      await ev((t) => {
+        document.getElementById('vibesBtn').click();
+        document.querySelector('#picksList .pk-track').click();
+        const n = document.getElementById('trkNum');
+        const two = (x) => String(x).padStart(2, '0');
+        n.value = `${Math.floor(t / 3600)}:${two(Math.floor((t % 3600) / 60))}:${two(t % 60)}`;
+        n.dispatchEvent(new Event('blur'));
+        document.getElementById('trkDone').click();
+      }, length);
       await ev(() => {
         if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
         document.querySelector('[data-stab="share"]').click();
@@ -355,14 +371,19 @@ try {
       }
       const missing = await ev(([f, l]) => {
         const pick = (sel) => { const e = document.querySelector(sel); if (e) e.click(); return e ? '' : sel; };
-        return [pick(`[data-format="${f}"]`), pick(`#exportLengths [data-length="${l}"]`)].filter(Boolean).join(', ')
-          || ((document.getElementById('exportAudio').disabled && `exportAudio is disabled: ${document.getElementById('exportAbout').textContent}`) || '');
+        const t = Number(l);
+        const two = (x) => String(x).padStart(2, '0');
+        const shown = t >= 3600 ? `${Math.floor(t / 3600)}:${two(Math.floor((t % 3600) / 60))}:${two(t % 60)}` : `${Math.floor(t / 60)}:${two(t % 60)}`;
+        const key = document.querySelector('#picksList .pk-track');
+        return [pick(`[data-format="${f}"]`), key && key.textContent === shown ? '' : `the track length ${shown} (the key says ${key && key.textContent})`].filter(Boolean).join(', ')
+          || ((document.getElementById('exportAudio').disabled && `exportAudio is disabled: ${document.getElementById('exportAbout').textContent}`) || '')
+          || (document.getElementById('exportAudio').dataset.asks ? `the export asks how long: ${document.getElementById('exportAbout').textContent}` : '');
       }, [format, String(length)]);
       if (missing) {
         const sheet = await ev(() => ({
           about: document.getElementById('exportAbout').textContent,
           choose: !document.getElementById('exportChoose').hidden,
-          keys: [...document.querySelectorAll('#exportLengths .vkey')].map((b) => b.dataset.length).join(' '),
+          key: (document.querySelector('#picksList .pk-track') || {}).textContent,
           worker: typeof Worker,
         }));
         check(`${format}: the export sheet has what the run clicks`, false, `${missing}; ${JSON.stringify(sheet)}`);

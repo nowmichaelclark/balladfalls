@@ -613,9 +613,9 @@ spotlightLeast = 2
 # outside the list of choices and counted against a loop's changes (above), as the
 # low bell is: for a loop that plays a chord and has no kit busier than a
 # soft one (`kitMost` hits a second, the corpus's quietest tenth of kits: the
-# sketch was heard only on loops without one; for Mikey's ears). `soft` is a
-# 4.5 Hz tremolo 35% deep, `slow` two cycles a beat 55% deep and rounder,
-# `bright` 5.5 Hz 45% deep with a brighter pick; a third each.
+# sketch was heard only on loops without one; for Mikey's ears). It is soft,
+# a 4.5 Hz tremolo 35% deep; the batch's slow and bright are gone (item
+# 105e).
 [setting twang]
 # The share of the loops it may play in that play it before the vibes lean
 # it: 0.15, the batch's conservative share, for Mikey's ears.
@@ -624,8 +624,9 @@ share = 0.15
 # Album: "I only liked the soft version"). `drawn` is the draw as the batch
 # made it, every version by weight, so the loops that play twang are the
 # ones that did; a loop whose draw lands on a version not in `kinds` plays
-# the first of them. The code for slow and bright stays (a request's
-# `twang.kind` pin still reaches it).
+# the first of them. The core has no slow or bright since item 105e (a
+# code that pins either plays soft: data/codes.txt); their weights and
+# vibes here only choose which loops play twang.
 kinds = soft 1
 drawn = soft 1, slow 1, bright 1
 # The batch's [JUDGMENT] rows, one a version drawn (never 0): each leans its

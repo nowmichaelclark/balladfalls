@@ -14,7 +14,7 @@ pub struct Scale {
 }
 
 /// `SCALES`, with `SCALE_BRIGHTNESS`.
-pub static SCALES: [Scale; 19] = [
+pub static SCALES: [Scale; 19 + cfg!(feature = "dummy") as usize] = [
     Scale { id: "dorian", steps: &[0.0, 2.0, 3.0, 5.0, 7.0, 9.0, 10.0], bright: 0.46 },
     Scale { id: "aeolian", steps: &[0.0, 2.0, 3.0, 5.0, 7.0, 8.0, 10.0], bright: 0.24 },
     Scale { id: "ionian", steps: &[0.0, 2.0, 4.0, 5.0, 7.0, 9.0, 11.0], bright: 0.92 },
@@ -34,6 +34,10 @@ pub static SCALES: [Scale; 19] = [
     Scale { id: "yo", steps: &[0.0, 2.0, 5.0, 7.0, 9.0], bright: 0.82 },
     Scale { id: "ritusen", steps: &[0.0, 2.0, 5.0, 7.0, 10.0], bright: 0.68 },
     Scale { id: "akebono", steps: &[0.0, 2.0, 3.0, 7.0, 9.0], bright: 0.48 },
+    // The dummy build's (tests/dummy.rs): the notes of a mode here, so a
+    // relative key could land on it.
+    #[cfg(feature = "dummy")]
+    Scale { id: "dummymode", steps: &[0.0, 1.0, 3.0, 5.0, 6.0, 8.0, 10.0], bright: 0.3 },
 ];
 
 /// A mode by name.

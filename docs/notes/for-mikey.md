@@ -12,6 +12,47 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## Track length, its own view (item 111, v193, PR #448)
+
+- **Look at the view:** Vibe, then the pace line's third key ("plays on",
+  or the time set) opens **Track length**: the time to the second (type
+  1:23:45, or 12345 as a timer's keys go), −1 min, −1 s, +1 s, +1 min, a
+  coarse slider to a whole day, **on and on**, **fade in**, **fade out**,
+  cancel and done. The Sound view's Length slider is gone, and so is the
+  export's "How much": an export is as long as the track, with its fades;
+  with none set a finite piece exports whole, and a loop that plays on (or
+  Endless) opens the view first, and done there exports. Plain, in the
+  app's style; the Painter's session restyles it. Say if anything is in an
+  odd place on your phone or the tablet.
+- **On a short phone** (360x640, 320x568) the time takes the title's
+  place between cancel and done, and its words and the slider's labels are
+  left out, so every key fits without scrolling. A phone on its side has
+  no room for the view yet (a Known issue, for the Painter's session).
+- **How the fades sound (for your ears):** the fade in rises from silence
+  over 3 s; the fade out reaches silence on the last second over the 8 s
+  before it, the notes and the room falling together, so its last couple
+  of seconds are already near silence (on a short track each fade takes at
+  most a third of it). Fade out on and fade in off are the defaults, as the
+  old close and start. Try a 0:45 track each way; say if a fade is too
+  long, too short, or should be a different shape.
+- **Without the fade out** the track stops on its second: nothing after it
+  is played, what was sounding rings out (as an export ends), and the next
+  track starts on that second (a long piece without it stops where it is,
+  with no close composed). With a fade in on the next track, that ring is
+  taken down with it.
+- **The same as the slider did:** the time is the loop's own. A saved loop
+  keeps it, each album track and the history's loops play their own, and a
+  new loop (Next, or the one that follows a track's end) plays on. A tempo
+  change no longer moves when a track ends; a pause waits.
+- **Your saved loops and backups** turned their passes or bars into the
+  time they came to at their tempo, fading out. An album's code now carries
+  the time and both fades.
+- **An album link with track lengths made before v193** (v189 to v192,
+  passes or bars set, like the one you shared to check it) still opens, but
+  now plays each track for only a few seconds: open the album, set each
+  track's time, and share it again. The three in `docs/ALBUMS.md` are
+  written again with their times (Batch 6, Nearer chords, Long pieces).
+
 ## The info card: whole lines, the rest a tap away, a round playhead (item 112, v192, PR #446)
 
 - **Look at the card on your phone and your tablet** (portrait and on its
@@ -57,9 +98,12 @@ the points where the next step is yours.
   and the long pieces, as links the app plays (`docs/ALBUMS.md`, "Three
   albums in the app"). You heard them all as clips; this is them on your
   own devices. One word a track only if something sounds wrong.
-- **Removed sounds:** after 24c, a code naming something since taken out
-  (first: twang's slow and bright) plays something close (soft) instead of
-  "needs a newer version". No code gets longer.
+- **Removed sounds (item 105e, v194, PR #450):** nothing to do or hear. A
+  code naming something since taken out plays something close: twang's slow
+  and bright are gone, and a code or saved loop that pinned either plays
+  soft. Every code you have reads as before, and none gets longer. The app
+  keeping a code's version is set for before the first new sound, as you
+  said (`docs/notes/105e-page.md`).
 
 ## The Android app on F-Droid (item 107e, session 29): choose the signing, then submit after 31
 
@@ -200,9 +244,9 @@ the last one (same key). On the **Moto** and on the **tablet**:
 - **Left out on purpose:** a single loop's code carries no length (it sounds
   the same however long it plays; when your app moves on is yours), nor does
   an album from one seed (its tracks are drawn, and a slider's passes would
-  be a different time on each). Session 30c may turn a track's length into
-  a time to the second; this field then carries seconds instead, before the
-  codes freeze. Say if you want a single loop's code to carry it too.
+  be a different time on each). Since session 30c the field carries the
+  time to the second and both fades, before the codes freeze. Say if you
+  want a single loop's code to carry it too.
 - `docs/ALBUMS.md`: the six old albums that set lengths have them back.
 
 ## Links, an album from one seed, the plain lines (item 105c, v187)

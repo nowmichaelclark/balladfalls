@@ -21,19 +21,29 @@
 //! holding only what had joined by then, so an addition never moves an older
 //! code's picks.
 //!
+//! **What was taken out plays something close** (queue item 105e; Mikey,
+//! 2026-11-17: no code rot). An id's row stays after its member goes, so an
+//! id with a row is this build's, gone or not: a gone one plays its
+//! stand-in, or goes without (an option, its choice's today). A number a
+//! field once took and no longer does plays the nearest it takes.
+//!
 //! **Refused in plain words, never played wrong:** a code from a newer build
-//! (its version, or an id this build does not have) is `NEEDS_NEWER`; one
-//! that is no code (a character outside the alphabet, a typo the check
-//! catches, a field out of place) is `NOT_A_CODE`. Nothing a code holds can
-//! panic the reader: every number is bounded and every slice checked.
+//! (its version, a field this build does not have, or an id with no row in
+//! a code of the version since the last release, which newer builds share)
+//! is `NEEDS_NEWER`; one that is no code (a character outside the alphabet,
+//! a typo the check catches, a field out of place, an id with no row at a
+//! released version, a number no build wrote) is `NOT_A_CODE`. Nothing a
+//! code holds can panic the reader: every number is bounded and every slice
+//! checked.
 //!
 //! Nothing here allocates: codes are written into the caller's bytes and
 //! read from them.
 
-use crate::generator::data::{self, CHOICES, Ids, VIBE_COUNT, VIBES};
+use crate::generator::data::{self, CHOICES, Ids, Member, VIBE_COUNT, VIBES};
 use crate::generator::request::{self, FIRST_VERSION, Journey, LAYER_NAMES, LENGTH_MOST, LayerAsk, Length, PROFILE_ORDER, Pins, Request, TONE_NAMES, VOICE_ORDER};
 use crate::generator::rng::Rng;
 use crate::generator::theory::SCALES;
+use crate::fades::{Fades, KIND_FADE_IN, KIND_FADE_OUT, TRACK_MOST};
 
 pub use crate::generator::request::NEEDS_NEWER;
 pub use name::{BAD_NAME, MARKS_MOST, NAME_MOST, Name, TAGS_MOST};
@@ -51,8 +61,9 @@ pub const NO_ROOM: &str = "no room for the code";
 pub const NOT_AT_VERSION: &str = "asks for something its version does not have";
 /// The line for an album of no tracks, or more than `ALBUM_MOST`.
 pub const BAD_ALBUM: &str = "a bad album";
-/// The line for a track's pace a code can't carry: a count of none, or past
-/// `PACE_MOST`, or a kind the player has no track for.
+/// The line for a track's pace a code can't carry: a time of none, or past
+/// `PACE_MOST`, or a kind the player has no such track for (whole passes and
+/// bars among them, since session 30c).
 pub const BAD_PACE: &str = "a bad track length";
 
 /// The alphabet, a character a sextet (its value, 0 to 63, by place).
@@ -63,11 +74,19 @@ pub const LOOP_MOST: usize = 4096;
 /// The most tracks an album holds.
 pub const ALBUM_MOST: usize = 1024;
 
+/// The bpm a tempo's number counts from: the format's own, so a tempo reads
+/// the same whatever range the request takes (`request::TEMPO_LIMIT`).
+const TEMPO_FROM: f64 = 32.0;
+/// How many rows the vibes' list has, gone ones' too.
+const VIBE_ROWS: usize = data::CODE_VIBES.len();
+
 /// The check's modulus: the largest prime below 4096, so two characters hold
 /// it, any one character changed or two side by side swapped changes it.
 const CHECK_PRIME: u32 = 4093;
 
 /// The fields' tags, in the order a code writes them (`core/README.md`).
+/// One this build stops writing keeps its tag and its reading, set aside
+/// (queue item 105e): a tag is never given again, and never refused.
 mod tag {
     pub const VERSION: u64 = 0;
     pub const VIBE: u64 = 1;
@@ -122,41 +141,52 @@ impl Loop {
     }
 }
 
-/// The most passes or bars a track's pace counts: room for a day of the
-/// shortest pass many times over, and every pace's number (`Pace::number`)
-/// a 32-bit one.
-pub const PACE_MOST: u32 = (1 << 31) - 1;
+/// The most seconds a track's pace counts: a day, as the player's longest
+/// time (`fades::TRACK_MOST`; session 30c).
+pub const PACE_MOST: u32 = TRACK_MOST;
 
 /// How long an album's track plays before the next (session 24b; Mikey,
 /// 2026-11-18: "an album's code should carry track lengths and all
-/// necessary info"): the app's length slider as the album's maker had it,
-/// as the player takes it (`player::Track`; `spec.playFor` and
-/// `spec.playBars` in the app), so an album plays as its maker heard it. A
-/// loop's own code carries none: one loop sounds the same however long the
-/// listener lets it play, and when the listener's app moves on from it is
-/// the listener's (#412).
+/// necessary info"): the Track length view as the album's maker had it, as
+/// the player takes it (`player::Track`, `player::Fades`; `spec.track` in
+/// the app), so an album plays as its maker heard it. Since session 30c a
+/// time to the second, with its fade in and fade out (Mikey, 2026-11-18:
+/// "Should be able to set track length to an exact second"), where it was
+/// whole passes or bars. A loop's own code carries none: one loop sounds
+/// the same however long the listener lets it play, and when the listener's
+/// app moves on from it is the listener's (#412).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Pace {
     /// On and on: the track plays until the listener moves on.
     #[default]
     On,
-    /// This many whole passes, 1 to `PACE_MOST`.
-    Passes(u32),
-    /// This many bars, ended on the next phrase line, 1 to `PACE_MOST`.
-    Bars(u32),
+    /// On and on, up from silence at its start (its fade in).
+    OnFadingIn,
+    /// This many seconds, 1 to `PACE_MOST`, with its fades.
+    Time {
+        /// How long it plays.
+        seconds: u32,
+        /// Its fade in and its fade out.
+        fades: Fades,
+    },
 }
 
+/// The numbers a pace is written as, all of them (`Pace::number`): 0 and 1
+/// on and on, and four for each second (its two fades).
+const PACE_NUMBERS: u64 = 2 + 4 * PACE_MOST as u64;
+
 impl Pace {
-    /// The pace of the player's track kind and count (`Player::set_track`,
-    /// js/player.js's `trackOf`): kind 0 on and on (count 0), 1 whole
-    /// passes, 2 bars to a phrase line (count 1 to `PACE_MOST`). `None` for
-    /// anything else.
+    /// The pace of the player's track kind and count (`Player::set_track_with`,
+    /// `player::Track::of`, js/player.js's `trackOf`): kind 0 on and on
+    /// (count 0; 4 added for its fade in), 3 a time of `count` seconds (1 to
+    /// `PACE_MOST`; 4 added for a fade in, 8 for a fade out). `None` for
+    /// anything else: whole passes and bars are no pace a code carries.
     #[must_use]
     pub const fn of(kind: u32, count: u32) -> Option<Pace> {
-        match (kind, count) {
-            (0, 0) => Some(Pace::On),
-            (1, 1..=PACE_MOST) => Some(Pace::Passes(count)),
-            (2, 1..=PACE_MOST) => Some(Pace::Bars(count)),
+        let fades = Fades { fade_in: kind & KIND_FADE_IN != 0, fade_out: kind & KIND_FADE_OUT != 0 };
+        match (kind & !(KIND_FADE_IN | KIND_FADE_OUT), count, fades.fade_out) {
+            (0, 0, false) => Some(if fades.fade_in { Pace::OnFadingIn } else { Pace::On }),
+            (3, 1..=PACE_MOST, _) => Some(Pace::Time { seconds: count, fades }),
             _ => None,
         }
     }
@@ -166,8 +196,8 @@ impl Pace {
     pub const fn kind(self) -> u32 {
         match self {
             Pace::On => 0,
-            Pace::Passes(_) => 1,
-            Pace::Bars(_) => 2,
+            Pace::OnFadingIn => KIND_FADE_IN,
+            Pace::Time { fades, .. } => 3 | if fades.fade_in { KIND_FADE_IN } else { 0 } | if fades.fade_out { KIND_FADE_OUT } else { 0 },
         }
     }
 
@@ -175,59 +205,74 @@ impl Pace {
     #[must_use]
     pub const fn count(self) -> u32 {
         match self {
-            Pace::On => 0,
-            Pace::Passes(n) | Pace::Bars(n) => n,
+            Pace::On | Pace::OnFadingIn => 0,
+            Pace::Time { seconds, .. } => seconds,
         }
     }
 
-    /// The number a code writes: 0 on and on, `2n - 1` for `n` passes, `2n`
-    /// for `n` bars, so a pace of up to 16 passes or 15 bars is one
-    /// character. `None` for a count a code can't carry.
+    /// The number a code writes: 0 on and on, 1 on and on fading in, and
+    /// `2 + 4 (s - 1) + f` for `s` seconds with fades `f` (1 the fade in, 2
+    /// the fade out), so a track of up to four seconds is one character,
+    /// and of up to an hour and a quarter three. `None` for a time a code
+    /// can't carry.
     const fn number(self) -> Option<u32> {
         match self {
             Pace::On => Some(0),
-            Pace::Passes(n @ 1..=PACE_MOST) => Some(2 * n - 1),
-            Pace::Bars(n @ 1..=PACE_MOST) => Some(2 * n),
-            _ => None,
+            Pace::OnFadingIn => Some(1),
+            Pace::Time { seconds: s @ 1..=PACE_MOST, fades } => {
+                Some(2 + 4 * (s - 1) + if fades.fade_in { 1 } else { 0 } + if fades.fade_out { 2 } else { 0 })
+            }
+            Pace::Time { .. } => None,
         }
     }
 
-    /// The pace of a number `number` wrote.
+    /// The pace of a number `number` wrote (every number below
+    /// `PACE_NUMBERS` is one: a code made before session 30c, whose numbers
+    /// were passes and bars, still reads, as times of a few seconds).
     const fn from_number(p: u32) -> Pace {
-        if p == 0 {
-            Pace::On
-        } else if p % 2 == 1 {
-            Pace::Passes(p / 2 + 1)
-        } else {
-            Pace::Bars(p / 2)
+        match p {
+            0 => Pace::On,
+            1 => Pace::OnFadingIn,
+            _ => {
+                let v = p - 2;
+                Pace::Time { seconds: v / 4 + 1, fades: Fades { fade_in: v & 1 != 0, fade_out: v & 2 != 0 } }
+            }
         }
     }
 }
 
 /// A track as a host writes it beside its pace, in text (`dl_album_write`,
 /// `dl_code_album_write`, `node tools/codes.mjs album`): the loop's code,
-/// then `:p` and the passes or `:b` and the bars where it has a pace
-/// (`ENBAAAAEmBO_7:p2`), nothing where it plays on. Split here into the
-/// code and its pace.
+/// then `:t` and the seconds where it has a time, `i` after them for its
+/// fade in and `o` for its fade out (`ENBAAAAEmBO_7:t5025o`), `:i` alone for
+/// one that plays on and on fading in, nothing where it plays on. Split
+/// here into the code and its pace.
 ///
 /// # Errors
-/// `BAD_PACE` for a pace written any other way (a count of 0, one with a 0
-/// before it, one past `PACE_MOST`).
+/// `BAD_PACE` for a pace written any other way (a time of 0, one with a 0
+/// before it, one past `PACE_MOST`, the fades out of order).
 pub fn paced(text: &[u8]) -> Result<(&[u8], Pace), &'static str> {
     let Some(at) = text.iter().rposition(|&b| b == b':') else { return Ok((text, Pace::On)) };
     let (code, rest) = (&text[..at], &text[at + 1..]);
-    let kind = match rest.first() {
-        Some(b'p') => 1,
-        Some(b'b') => 2,
-        _ => return Err(BAD_PACE),
-    };
-    let digits = &rest[1..];
-    if digits.is_empty() || digits.len() > 10 || digits[0] == b'0' || !digits.iter().all(u8::is_ascii_digit) {
+    if rest == b"i" {
+        return Ok((code, Pace::OnFadingIn));
+    }
+    let Some(rest) = rest.strip_prefix(b"t") else { return Err(BAD_PACE) };
+    let digits = rest.iter().take_while(|b| b.is_ascii_digit()).count();
+    let (digits, flags) = rest.split_at(digits);
+    if digits.is_empty() || digits.len() > 10 || digits[0] == b'0' {
         return Err(BAD_PACE);
     }
+    let fades = match flags {
+        b"" => Fades::NONE,
+        b"i" => Fades { fade_in: true, fade_out: false },
+        b"o" => Fades { fade_in: false, fade_out: true },
+        b"io" => Fades { fade_in: true, fade_out: true },
+        _ => return Err(BAD_PACE),
+    };
     let n = digits.iter().fold(0u64, |n, &d| n * 10 + u64::from(d - b'0'));
-    let pace = u32::try_from(n).ok().and_then(|n| Pace::of(kind, n)).ok_or(BAD_PACE)?;
-    Ok((code, pace))
+    let seconds = u32::try_from(n).ok().filter(|n| (1..=PACE_MOST).contains(n)).ok_or(BAD_PACE)?;
+    Ok((code, Pace::Time { seconds, fades }))
 }
 
 /// The pace most of `paces` share (their numbers), the smaller on a tie:
@@ -453,9 +498,10 @@ impl<const N: usize> core::fmt::Write for Text<N> {
     }
 }
 
-/// `name`'s id in `list`.
+/// `name`'s id in `list`: a member still here (one taken out is never
+/// written).
 fn id_of(list: Ids, name: &str, version: u32) -> Result<u32, &'static str> {
-    let e = list.iter().find(|e| e.0 == name).ok_or(NOT_AT_VERSION)?;
+    let e = list.iter().find(|e| e.0 == name && e.3 == Member::Here).ok_or(NOT_AT_VERSION)?;
     if data::joined(e.2, version) { Ok(e.1) } else { Err(NOT_AT_VERSION) }
 }
 
@@ -522,7 +568,7 @@ fn body(w: &mut Out, song: &Loop, version: u32, own_version: Option<u32>, picks_
     // A tempo pinned, its bpm; a range, its low and how far past it.
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // whole bpm, 32 to 190
     if let Some([lo, hi]) = req.tempo() {
-        let low = (lo - request::TEMPO_LIMIT[0]) as u64;
+        let low = (lo - TEMPO_FROM) as u64;
         let span = (hi - lo) as u64;
         if span == 0 {
             w.uv(tag::TEMPO);
@@ -664,7 +710,7 @@ fn pins(w: &mut Out, p: &Pins, version: u32) -> Result<(), &'static str> {
         if number < request::CHOICE_PINS {
             let c = CHOICES.get(number).ok_or(NOT_AT_VERSION)?;
             let option = c.options.get(place).ok_or(NOT_AT_VERSION)?.0;
-            choices[nc] = (id_of(data::CODE_CHOICES, c.id, version)?, id_of(options_of(c.id), option, version)?);
+            choices[nc] = (id_of(data::CODE_CHOICES, c.id, version)?, id_of(data::options_of(c.id), option, version)?);
             nc += 1;
         } else {
             let mut full = Text::<64>::new();
@@ -673,7 +719,7 @@ fn pins(w: &mut Out, p: &Pins, version: u32) -> Result<(), &'static str> {
             let full = core::str::from_utf8(full.as_bytes()).unwrap_or("");
             let id = id_of(data::CODE_SETTINGS, full, version)?;
             let value = match Pins::words(number) {
-                Some(words) => Value::Word(id_of(words_of(full), words.get(place).ok_or(NOT_AT_VERSION)?.0, version)?),
+                Some(words) => Value::Word(id_of(data::words_of(full).unwrap_or(&[]), words.get(place).ok_or(NOT_AT_VERSION)?.0, version)?),
                 None => Value::Number(x),
             };
             settings[ns] = (id, value);
@@ -696,16 +742,6 @@ fn pins(w: &mut Out, p: &Pins, version: u32) -> Result<(), &'static str> {
         }
     }
     Ok(())
-}
-
-/// Choice `id`'s options' list in `data/codes.txt`.
-fn options_of(id: &str) -> Ids {
-    data::CODE_OPTIONS.iter().find(|e| e.0 == id).map_or(&[], |e| e.1)
-}
-
-/// Setting `name`'s words' list in `data/codes.txt`.
-fn words_of(name: &str) -> Ids {
-    data::CODE_WORDS.iter().find(|e| e.0 == name).map_or(&[], |e| e.1)
 }
 
 /// Write `l`'s code into `out`: its length in bytes (plain ASCII).
@@ -768,9 +804,9 @@ impl In<'_> {
         if x < most { Ok(x) } else { Err(NOT_A_CODE) }
     }
 
-    /// An id (any 32-bit number: one this build lacks is a newer build's).
+    /// An id (`id32`).
     fn id(&mut self) -> Result<u32, &'static str> {
-        u32::try_from(self.uv()?).map_err(|_| NEEDS_NEWER)
+        self.uv().map(id32)
     }
 
     fn seed(&mut self) -> Result<u32, &'static str> {
@@ -800,28 +836,139 @@ impl In<'_> {
                 None => gap,
                 Some(l) => l.checked_add(gap).and_then(|x| x.checked_add(1)).ok_or(NOT_A_CODE)?,
             };
-            *slot = u32::try_from(id).map_err(|_| NEEDS_NEWER)?;
+            *slot = id32(id);
             last = Some(id);
         }
         Ok(n)
     }
 }
 
-/// The name of `id` in `list`, at `version`: an id this build lacks is a
-/// newer build's; one that joined after the code's version, no code's.
-fn name_of(list: Ids, id: u32, version: u32) -> Result<&'static str, &'static str> {
-    let e = list.iter().find(|e| e.1 == id).ok_or(NEEDS_NEWER)?;
-    if data::joined(e.2, version) { Ok(e.0) } else { Err(NOT_A_CODE) }
+/// A number as an id: one past 32 bits is `u32::MAX`, which no row has, so
+/// `member` refuses it as it does any id with no row.
+fn id32(x: u64) -> u32 {
+    u32::try_from(x).unwrap_or(u32::MAX)
 }
 
-/// A name's place in `names` (the request's own lists), or a newer build's.
-fn place(names: &[&str], name: &str) -> Result<usize, &'static str> {
-    names.iter().position(|&n| n == name).ok_or(NEEDS_NEWER)
+/// A member a code names, as this build has it (queue item 105e).
+#[derive(Clone, Copy)]
+struct Named {
+    /// Its place in its list in `data/codes.txt`.
+    row: usize,
+    /// The name of its row, whose options or words a code's value is read
+    /// by, gone or not.
+    name: &'static str,
+    /// The member that plays for it: itself, its stand-in, or none.
+    plays: Option<&'static str>,
+    /// Whether it plays itself (it is not gone).
+    own: bool,
 }
 
-/// A layer by its id.
+/// The member of `id` in `list`, named by a code at `version`. An id with a
+/// row is this build's, gone or not; one that joined after the code's
+/// version is no code's. An id with no row is a newer build's where the
+/// code's version is still open (past the last release, shared by every
+/// member added since: `data/codes.txt`), and no code's at a released
+/// version, whose every id this build has.
+fn member(list: Ids, id: u32, version: u32) -> Result<Named, &'static str> {
+    let Some(row) = list.iter().position(|e| e.1 == id) else {
+        return Err(if version > data::CODE_RELEASED { NEEDS_NEWER } else { NOT_A_CODE });
+    };
+    let (name, _, since, state) = list[row];
+    if !data::joined(since, version) {
+        return Err(NOT_A_CODE);
+    }
+    let plays = match state {
+        Member::Here => Some(name),
+        Member::Gone => None,
+        Member::StandIn(to) => list.iter().find(|e| e.1 == to).map(|e| e.0),
+    };
+    Ok(Named { row, name, plays, own: state == Member::Here })
+}
+
+/// Where `find` has the member that plays for `named`; none where none
+/// does. A member here that the request can't ask yet is a newer build's.
+fn placed(named: Named, find: impl FnOnce(&str) -> Option<usize>) -> Result<Option<usize>, &'static str> {
+    let Some(name) = named.plays else { return Ok(None) };
+    match find(name) {
+        None if named.own => Err(NEEDS_NEWER),
+        at => Ok(at),
+    }
+}
+
+/// A layer by its id (the five are the format's: none is ever taken out).
 fn layer_of(id: u32, version: u32) -> Result<usize, &'static str> {
-    place(&LAYER_NAMES, name_of(data::CODE_LAYERS, id, version)?)
+    let named = member(data::CODE_LAYERS, id, version)?;
+    LAYER_NAMES.iter().position(|&n| n == named.name).ok_or(NEEDS_NEWER)
+}
+
+/// A number read in the field called `name`: one no build ever wrote there
+/// is no code's (`[code numbers]`).
+fn wrote(name: &str, x: f64) -> Result<f64, &'static str> {
+    if data::numbers(name).is_some_and(|ever| ever.wrote(x)) { Ok(x) } else { Err(NOT_A_CODE) }
+}
+
+/// A choice's pin as read (its id, then its option's), in `req`. A choice
+/// gone with no stand-in leaves the request, an option gone with none is
+/// its choice's today. A stand-in never overrules what the code itself asks.
+fn read_choice(r: &mut In, req: &mut Request, key: u64, version: u32) -> Result<(), &'static str> {
+    let choice = member(data::CODE_CHOICES, id32(key), version)?;
+    let option = member(data::options_of(choice.name), r.id()?, version)?;
+    let Some(number) = placed(choice, |name| CHOICES.iter().position(|c| c.id == name))? else { return Ok(()) };
+    if number >= request::CHOICE_PINS {
+        return Err(NEEDS_NEWER);
+    }
+    if !choice.own && req.pins().at(number).is_some() {
+        return Ok(());
+    }
+    let found = option.plays.and_then(|name| CHOICES[number].options.iter().position(|o| o.0 == name));
+    if found.is_none() && choice.own && option.own {
+        return Err(NEEDS_NEWER);
+    }
+    *req = met(req.with_pin(number, crate::generator::js::num(found.unwrap_or(0))))?;
+    Ok(())
+}
+
+/// A setting's pin as read (its id, then its word's or its number), in
+/// `req`. What follows the id is the row's, gone or not: a word where the
+/// setting has `[words]`. A setting or a word gone with no stand-in leaves
+/// the request; a number plays the nearest the setting takes.
+fn read_setting(r: &mut In, req: &mut Request, key: u64, version: u32) -> Result<(), &'static str> {
+    let setting = member(data::CODE_SETTINGS, id32(key), version)?;
+    let (word, number_read) = match data::words_of(setting.name) {
+        Some(list) => (Some(member(list, r.id()?, version)?), None),
+        None => (None, Some(wrote(setting.name, r.dec()?)?)),
+    };
+    let Some(number) = placed(setting, Pins::number)? else { return Ok(()) };
+    if !setting.own && req.pins().at(number).is_some() {
+        return Ok(());
+    }
+    let value = match (Pins::words(number), word, number_read) {
+        (Some(words), Some(word), _) => {
+            let place = words.iter().position(|w| Some(w.0) == word.plays);
+            if place.is_none() && setting.own && word.own {
+                return Err(NEEDS_NEWER);
+            }
+            place.map(crate::generator::js::num)
+        }
+        (None, _, Some(x)) => Pins::nearest(number, x),
+        // A stand-in that takes the other kind of value: without.
+        _ => None,
+    };
+    if let Some(x) = value {
+        *req = met(req.with_pin(number, x))?;
+    }
+    Ok(())
+}
+
+/// `x`, or the end of `[lo, hi]` nearest it.
+fn nearest(x: f64, [lo, hi]: [f64; 2]) -> f64 {
+    if x < lo {
+        lo
+    } else if x > hi {
+        hi
+    } else {
+        x
+    }
 }
 
 /// A refusal of the request's own (a value outside what it takes) is no
@@ -905,6 +1052,9 @@ fn read_body(r: &mut In, version: u32, fields: Fields) -> Result<(Loop, Option<O
     let mut ids = [0u32; 64];
     let mut first = true;
     let mut pace = None;
+    // The vibes named, by row: one that stands in for another may be named
+    // itself as well.
+    let mut vibes_named = [false; VIBE_ROWS];
     while !r.done() {
         let from = r.at;
         let t = r.uv()?;
@@ -944,20 +1094,34 @@ fn read_body(r: &mut In, version: u32, fields: Fields) -> Result<(Loop, Option<O
                 version = v;
             }
             tag::VIBE | tag::VIBE_WEIGHTED => {
-                let id = u32::try_from(k).map_err(|_| NEEDS_NEWER)?;
-                let i = data::vibe_index(name_of(data::CODE_VIBES, id, version)?).ok_or(NEEDS_NEWER)?;
+                let named = member(data::CODE_VIBES, id32(k), version)?;
                 // A vibe twice (with a weight and without) is no code's.
-                if req.vibe(i).is_some() {
+                let twice = vibes_named.get_mut(named.row).ok_or(NOT_A_CODE)?;
+                if core::mem::replace(twice, true) {
                     return Err(NOT_A_CODE);
                 }
-                req = if t == tag::VIBE_WEIGHTED { met(req.with_weight(i, r.dec()?))? } else { req.with(i) };
+                let weight = if t == tag::VIBE_WEIGHTED {
+                    // A weight is 0 or more, whatever became of its vibe.
+                    Some(r.dec().and_then(|w| if w >= 0.0 { Ok(w) } else { Err(NOT_A_CODE) })?)
+                } else {
+                    None
+                };
+                // A stand-in never overrules the vibe asked by its own name.
+                if let Some(i) = placed(named, data::vibe_index)?
+                    && (named.own || req.vibe(i).is_none())
+                {
+                    req = match weight {
+                        Some(w) => met(req.with_weight(i, w))?,
+                        None => req.with(i),
+                    };
+                }
             }
             tag::TEMPO | tag::TEMPO_RANGE => {
-                let lo = r.below(200)?;
-                let hi = if t == tag::TEMPO { lo } else { lo + 1 + r.below(200)? };
-                #[allow(clippy::cast_precision_loss)] // below 400
-                let (lo, hi) = (lo as f64 + request::TEMPO_LIMIT[0], hi as f64 + request::TEMPO_LIMIT[0]);
-                req = met(req.with_tempo(lo, hi))?;
+                let low = r.uv()?;
+                let high = if t == tag::TEMPO { low } else { low.saturating_add(1).saturating_add(r.uv()?) };
+                #[allow(clippy::cast_precision_loss)] // past 2^53 is no tempo, whichever way it rounds
+                let bpm = |x: u64| wrote("tempo", x as f64 + TEMPO_FROM).map(|x| nearest(x, request::TEMPO_LIMIT));
+                req = met(req.with_tempo(bpm(low)?, bpm(high)?))?;
             }
             tag::LENGTH | tag::ENDLESS => {
                 if req.length().is_some() {
@@ -966,20 +1130,21 @@ fn read_body(r: &mut In, version: u32, fields: Fields) -> Result<(Loop, Option<O
                 let length = if t == tag::ENDLESS {
                     Length::Endless
                 } else {
-                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // LENGTH_MOST is 2^53 - 1
-                    let most = LENGTH_MOST as u64;
+                    let bars = r.below(1 << 53)?;
                     #[allow(clippy::cast_precision_loss)] // below 2^53: exact
-                    let bars = r.below(most)? as f64 + 1.0;
-                    Length::Bars(bars)
+                    let bars = wrote("length", bars as f64 + 1.0)?;
+                    Length::Bars(nearest(bars, [1.0, LENGTH_MOST]))
                 };
                 req = met(req.with_length(length))?;
             }
             tag::JOURNEY => {
-                req = req.with_journey(match name_of(data::CODE_JOURNEYS, r.id()?, version)? {
-                    "arc" => Journey::Arc,
-                    "wander" => Journey::Wander,
-                    _ => return Err(NEEDS_NEWER),
-                });
+                // One gone with no stand-in leaves the piece, as long as
+                // asked, to the generator's own draw.
+                const ALL: [Journey; 2] = [Journey::Arc, Journey::Wander];
+                let named = member(data::CODE_JOURNEYS, r.id()?, version)?;
+                if let Some(at) = placed(named, |name| ALL.iter().position(|j| j.name() == name))? {
+                    req = req.with_journey(ALL[at]);
+                }
             }
             tag::KEYS => {
                 let n = r.set(&mut ids)?;
@@ -996,21 +1161,22 @@ fn read_body(r: &mut In, version: u32, fields: Fields) -> Result<(Loop, Option<O
                 let n = r.set(&mut ids)?;
                 let mut bits = 0u32;
                 for &id in &ids[..n] {
-                    bits |= 1 << if t == tag::SCALES {
-                        let name = name_of(data::CODE_SCALES, id, version)?;
-                        SCALES.iter().position(|s| s.id == name).ok_or(NEEDS_NEWER)?
+                    let at = if t == tag::SCALES {
+                        placed(member(data::CODE_SCALES, id, version)?, |name| SCALES.iter().position(|s| s.id == name))?
                     } else {
-                        place(&PROFILE_ORDER, name_of(data::CODE_PROFILES, id, version)?)?
+                        placed(member(data::CODE_PROFILES, id, version)?, |name| PROFILE_ORDER.iter().position(|&p| p == name))?
                     };
+                    bits |= at.map_or(0, |at| 1 << at);
                 }
                 req = met(if t == tag::SCALES { req.with_scales(bits) } else { req.with_styles(bits) })?;
             }
             tag::VOICES => {
-                let layer = layer_of(u32::try_from(k).map_err(|_| NEEDS_NEWER)?, version)?;
+                let layer = layer_of(id32(k), version)?;
                 let n = r.set(&mut ids)?;
                 let mut bits = 0u32;
                 for &id in &ids[..n] {
-                    bits |= 1 << place(VOICE_ORDER[layer], name_of(data::CODE_VOICES[layer], id, version)?)?;
+                    let named = member(data::CODE_VOICES[layer], id, version)?;
+                    bits |= placed(named, |name| VOICE_ORDER[layer].iter().position(|&v| v == name))?.map_or(0, |at| 1 << at);
                 }
                 req = met(req.with_voices(layer, bits))?;
             }
@@ -1036,40 +1202,21 @@ fn read_body(r: &mut In, version: u32, fields: Fields) -> Result<(Loop, Option<O
                 }
             }
             tag::THEME => req = req.with_theme(r.seed()?),
-            tag::CHOICE => {
-                let name = name_of(data::CODE_CHOICES, u32::try_from(k).map_err(|_| NEEDS_NEWER)?, version)?;
-                let number = CHOICES.iter().position(|c| c.id == name).ok_or(NEEDS_NEWER)?;
-                if number >= request::CHOICE_PINS {
-                    return Err(NEEDS_NEWER);
-                }
-                let option = name_of(options_of(name), r.id()?, version)?;
-                let o = CHOICES[number].options.iter().position(|x| x.0 == option).ok_or(NEEDS_NEWER)?;
-                req = met(req.with_pin(number, crate::generator::js::num(o)))?;
-            }
-            tag::SETTING => {
-                let name = name_of(data::CODE_SETTINGS, u32::try_from(k).map_err(|_| NEEDS_NEWER)?, version)?;
-                let number = Pins::number(name).ok_or(NEEDS_NEWER)?;
-                let value = match Pins::words(number) {
-                    Some(words) => {
-                        let word = name_of(words_of(name), r.id()?, version)?;
-                        crate::generator::js::num(words.iter().position(|x| x.0 == word).ok_or(NEEDS_NEWER)?)
-                    }
-                    None => r.dec()?,
-                };
-                req = met(req.with_pin(number, value))?;
-            }
+            tag::CHOICE => read_choice(r, &mut req, k, version)?,
+            tag::SETTING => read_setting(r, &mut req, k, version)?,
             tag::SEED => {
-                let layer = layer_of(u32::try_from(k / 2).map_err(|_| NEEDS_NEWER)?, version)?;
+                let layer = layer_of(id32(k / 2), version)?;
                 if req.edits().seed(layer).is_some() {
                     return Err(NOT_A_CODE);
                 }
                 req = met(req.with_layer_seed(layer, r.seed()?, k % 2 == 1))?;
             }
             tag::TONE => {
-                let name = name_of(data::CODE_TONES, u32::try_from(k).map_err(|_| NEEDS_NEWER)?, version)?;
-                req = met(req.with_tone(place(&TONE_NAMES, name)?, r.dec()?))?;
+                let name = member(data::CODE_TONES, id32(k), version)?.name;
+                let which = TONE_NAMES.iter().position(|&n| n == name).ok_or(NEEDS_NEWER)?;
+                req = met(req.with_tone(which, nearest(wrote("tone", r.dec()?)?, [0.0, 1.0])))?;
             }
-            tag::BPM => req = met(req.with_bpm(r.dec()?))?,
+            tag::BPM => req = met(req.with_bpm(nearest(wrote("bpm", r.dec()?)?, request::TEMPO_LIMIT)))?,
             tag::SALT => {
                 salt = r.seed()?;
                 if salt == 0 {
@@ -1078,7 +1225,7 @@ fn read_body(r: &mut In, version: u32, fields: Fields) -> Result<(Loop, Option<O
             }
             tag::PACE => {
                 #[allow(clippy::cast_possible_truncation)] // below 2^32
-                let number = r.below(2 * u64::from(PACE_MOST) + 1)? as u32;
+                let number = r.below(PACE_NUMBERS)? as u32;
                 pace = Some(OwnPace { number, from, to: r.at });
             }
             tag::NAME => name = Name::read(r)?,
@@ -1200,7 +1347,7 @@ fn album_of(code: &[u8]) -> Result<Tracks<'_>, &'static str> {
                 match t {
                     tag::PACE => {
                         #[allow(clippy::cast_possible_truncation)] // below 2^32
-                        let p = r.below(2 * u64::from(PACE_MOST) + 1)? as u32;
+                        let p = r.below(PACE_NUMBERS)? as u32;
                         // On and on is no field's: an album without one.
                         if p == 0 {
                             return Err(NOT_A_CODE);

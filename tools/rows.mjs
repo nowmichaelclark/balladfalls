@@ -2284,28 +2284,37 @@ async function trackRows(browser) {
     await trackTo(tev, secs, { fadeIn: false, fadeOut });
     await sleep(200);
     p = await probe();
+    // The probe's time is the next step decided, up to a lookahead and a
+    // step ahead of the core's clock: the time counts from the clock.
     const set = p.player.time;
     const end = p.trackAt;
     const levels = [];
     const t0 = Date.now();
+    // When the end sounds, on the wall clock (the step time ahead, and the
+    // output's own delay, about a quarter of a second): listened to past it.
+    const heardEnd = end - set + 0.25;
     let got = null;
-    while (Date.now() - t0 < (secs + 6) * 1000 && !got) {
+    while (Date.now() - t0 < (heardEnd + 1.5) * 1000 || (!got && Date.now() - t0 < (secs + 6) * 1000)) {
       levels.push({ at: (Date.now() - t0) / 1000, level: await tev(() => window.__rows.level()) });
-      const e = await events();
-      const ended = e.find((x) => x[1] === END && Math.abs(x[0] - end) < 0.5);
-      const next = ended && e.find((x) => x[1] === LOOP && Math.abs(x[0] - end) < 1e-6);
-      got = ended && next ? { ended, next } : null;
+      if (!got) {
+        const e = await events();
+        const ended = e.find((x) => x[1] === END && Math.abs(x[0] - end) < 0.5);
+        const next = ended && e.find((x) => x[1] === LOOP && Math.abs(x[0] - end) < 1e-6);
+        got = ended && next ? { ended, next } : null;
+      }
       await sleep(50);
     }
-    const near = (from, to) => Math.max(0, ...levels.filter((l) => l.at >= from && l.at < to).map((l) => l.level));
-    const late = near(secs - 0.6, secs - 0.15);
-    const early = near(1, secs - 3);
-    // (The output's level, read every 50 ms: the fade out's last half second
-    // is under a third of the loop's; without it, within 26 dB of it.)
-    const quiet = fadeOut ? late < early * 0.3 : late > early * 0.05;
-    row(`track length: a track of ${secs} s ${fadeOut ? 'with' : 'without'} its fade out ends on its second, to the sample, the next loop starting there; ${fadeOut ? 'quiet as it reaches it' : 'playing to it'}`,
-      got && Math.abs(end - set - secs) < 0.5 && Math.abs(got.ended[0] - end) < 1e-6 && quiet,
-      got ? `set at ${set.toFixed(3)}, end ${end.toFixed(6)} (${(end - set).toFixed(3)} s), told ${got.ended[0].toFixed(6)}, next ${got.next[0].toFixed(6)}; level ${early.toFixed(4)} then ${late.toFixed(4)}` : 'no end seen');
+    const within = (from, to) => levels.filter((l) => l.at >= from && l.at < to).map((l) => l.level);
+    const early = Math.max(0, ...within(1, heardEnd - 4));
+    // (The output's level, read every 50 ms.) With the fade out, a dip to
+    // near silence where it ends, before the next loop comes in; without,
+    // the loop still sounding in its last second.
+    const dip = Math.min(1, ...within(heardEnd - 1.2, heardEnd + 0.6));
+    const last = Math.max(0, ...within(heardEnd - 1.3, heardEnd - 0.35));
+    const quiet = fadeOut ? dip < early * 0.05 : last > early * 0.1;
+    row(`track length: a track of ${secs} s ${fadeOut ? 'with' : 'without'} its fade out ends on its second, to the sample, the next loop starting there; ${fadeOut ? 'falling to silence there' : 'playing to it'}`,
+      got && end - set > secs - 0.75 && end - set <= secs + 0.05 && Math.abs(got.ended[0] - end) < 1e-6 && quiet,
+      got ? `set at ${set.toFixed(3)}, end ${end.toFixed(6)} (${(end - set).toFixed(3)} s after the next step), told ${got.ended[0].toFixed(6)}, next ${got.next[0].toFixed(6)}; level ${early.toFixed(4)}, ${fadeOut ? `at the end ${dip.toFixed(4)}` : `its last second ${last.toFixed(4)}`}` : 'no end seen');
   }
   await sleep(1500);
   v = await tev(() => { document.getElementById('vibesBtn').click(); return document.querySelector('#picksList .pk-track').textContent; });

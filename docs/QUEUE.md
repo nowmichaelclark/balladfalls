@@ -655,7 +655,8 @@ changelog, codes frozen (105), the nightly's checks back as merge gates
 **Hands:** session 30g (`docs/sessions/30g-crackles.md`), after 30f and
 before 30; then Mikey's ears, which alone close it. He heard a few crackles
 in v195's app on the moto g stylus 5G (2022), and it moved to Lite by
-itself; "Yes, blocker". The evidence, the suspects apart from what is known:
+itself; "Yes, blocker". His second test: only with the screen off, on full
+and Lite alike (none heard in Chrome). The evidence, the suspects apart from what is known:
 `docs/notes/115-crackles.md`. **Yardsticks:** the album's native renders
 free of discontinuities, no command on the audio thread past promise 1, a
 switch without a click, then a clean listen on that phone.

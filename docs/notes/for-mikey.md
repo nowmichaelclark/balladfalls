@@ -185,12 +185,14 @@ merge request is faster and keeps the recipe in this repository.
 
 ## Crackles in the Android app (item 115, a 1.0 blocker, session 30g)
 
-Three short checks on the Moto, whenever you can (30g reads your answers):
+Your checks of 2026-11-22 found it: only with the screen off, on full and
+Lite alike; Chrome had none. 30g will ask for one listen to its fix. Three
+small ones, whenever you can:
 
-- **The Batch 6 album again, Lite off:** the same spot each time, or random?
-  Which track, at a track's change or not, screen on or off, speaker or wired?
-- **A few minutes of it with Lite on:** any crackle?
-- **The same album on the site in Chrome, Lite off:** any crackle?
+- **Chrome:** was the screen off when you heard none there?
+- **Speaker or wired** when it crackled?
+- **Play after a long pause:** pause from the lock screen, leave the screen
+  off two minutes, press Play there. Does it start?
 
 ## The Android app, screen off (item 107d, v188, PR #431)
 

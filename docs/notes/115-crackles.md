@@ -9,8 +9,26 @@ v195's debug APK (run 44999015260, ec33bdb) on a moto g stylus 5G (2022),
 Android 13, WebView 157, playing the Batch 6 album: "I did hear a few
 crackles, at some point it turned to lite processing and then I switched it
 back. The crackles were a bit concerning this close to 1.0". The rest was
-"mostly right". Not yet known: which tracks, the same spot or random, at a
-track change or not, screen on or off, speaker or wired, on Lite, in Chrome.
+"mostly right".
+
+**His second test, the same day, narrows it to the screen being off.** Loop
+`E9T-ZxDxj` ("I don't necessarily [think] it had to do with this particular
+loop, it just seemed to be easy to reproduce the crackles with this loop"):
+
+| | screen on | screen off |
+|---|---|---|
+| the app, full | clean | crackles |
+| the app, Lite | clean | crackles |
+
+The site in Chrome: "On the website, it's not making any crackles" (whether
+the screen was off for that is not said). Not yet known: that, and the
+speaker or wired.
+
+Diagnostics after it (copied paused, the stream stopped): late, missed,
+dropped and underruns all 0 again, so **the counters don't see these
+crackles**; busiest callback 252.2%, mean 24.50%; sound 313.8 s; hidden and
+paused 191.0 s, the page frozen by the system 60 s into that and resumed
+only when shown.
 
 ## His Diagnostics, two copies a few minutes apart
 
@@ -48,9 +66,25 @@ reset-on-fork), reopens 0.
   four others, not the album's; 50 s each, best of three runs a block): the
   worst block 1.2 to 2.0 times the mean, the busiest quarter-second at most
   1.6 times. The phone's 227% is about ten times its mean.
+- The two players ask Android for different paths: the site
+  `latencyHint: 'playback'` (js/main.js), the app AAudio's low-latency path
+  (`PERFORMANCE_MODE_LOW_LATENCY`, aaudio.rs: 4 ms callbacks at this burst).
+  The app asks for no other mode and sets no buffer size.
+- The emulator's ten minutes with the screen off passes: it has no phone's
+  power saving, and it reads the same xrun count that read 0 here.
 
 ## What is suspected, not shown
 
+- **The first suspect: the low-latency path with the screen off.** The CPU's
+  clocks and cores drop, and 4 ms callbacks miss where a music player's
+  larger, slower path would not. Oboe's glitch notes describe the clock
+  lagging a load by about 100 ms and losing it at a core's change
+  (<https://android.googlesource.com/platform/external/oboe/+/7d25f15f%5E/docs/notes/glitches.md>);
+  a report of the same crackles on other phones eased with the mode None
+  (<https://github.com/google/oboe/issues/564>). Neither is about the screen.
+- A paused page is frozen after a minute with the screen off, and the lock
+  screen's Play is only posted to the page (`Playback.toPage`), so Play may
+  do nothing after a longer pause. `background.mjs` presses Play after 11 s.
 - The init is the 227% callback.
 - A switch by hand clicks: `buildAudio` (js/main.js) disposes of the old
   output at once, and `Dispose` clears the core with no fade, where the
@@ -58,8 +92,9 @@ reset-on-fork), reopens 0.
 - The rule that moved it to Lite (`OVER`, 50% of a quarter-second) is the
   browser's, never measured for the app's 32 ms buffer and real-time thread.
   His choice since ("yours") hides the reason it moved.
-- `AAudioStream_getXRunCount` misses glitches on this phone's path, or the
-  crackle is in the samples. Nothing here tells the two apart yet.
+- `AAudioStream_getXRunCount` misses glitches on this phone's path. The
+  samples themselves are unlikely to be at fault: the same loop is clean with
+  the screen on.
 - The long tasks are the blocking boxes (`prompt`: paste code, Name) waiting
   for him, not work.
 

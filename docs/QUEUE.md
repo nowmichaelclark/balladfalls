@@ -803,6 +803,18 @@ stay channel sources until an ears session needs a voice's note-by-note play
   `data/codes.txt` until the app keeps a code's version
   (`docs/notes/105e-page.md`, 1): until then an addition would move every
   older code played in the app.
+- **A drawn loop can refuse to play; for session 30** (hands 30f, 2026-11-22,
+  on main's generator, ab1b9d7): about 1 loop in 84,000 (3 in 253,456) is
+  drawn with a warmth a little over 1 (`core/src/generator/spec.rs`, the
+  tone's range times `0.6 + feel.warmth * 0.6`, not held to 1). The page
+  shows it, then `render` gives it back as the tone's edit, `with_tone`
+  refuses it and the page throws: nothing plays. Seeds 983236608, 720091369
+  and 2840407293 show it (`gen.render(gen.newSpec(seed))` in Node; with the
+  warmth held to 1 they play). It only says "can't do that": `take` notes
+  the reason in `REFUSED`, and `dl_play_refusal` reads `PICKS_REFUSED`.
+  Holding it to 1 may move those loops' sound and goldens. It may be what
+  failed #454's rows once (job 137211756616, the codes rows, the page's
+  opening loop drawn at random: the same error, the seed not logged).
 - **"Let the loop wander" repeats itself since item 44** (Mikey,
   2026-10-18). Since #211 each pass's wandering is drawn from the loop's
   code and the pass number, so replaying a saved loop wanders exactly as

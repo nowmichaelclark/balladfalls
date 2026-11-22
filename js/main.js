@@ -1871,19 +1871,37 @@ function setSwitch(id, on) {
   b.firstElementChild.textContent = on ? 'on' : 'off';
 }
 
-// The root text size changed under the running page (the Android app's font
-// size): Chromium (141, measured by tools/a11y.mjs) leaves a container query
-// in em at the size it loaded with, until the container is set again.
-let rootTextSize = '';
-function followTextSize() {
-  const px = getComputedStyle(document.documentElement).fontSize;
-  if (px === rootTextSize) return;
-  rootTextSize = px;
+// The text's two steps, where Layers stacks and rows wrap their keys: the
+// width there is, in ems of the text as it is now. Measured here, not by a
+// container query in em: Chromium 141 leaves one at the size the page
+// loaded with when the text size changes under it (the Android app's font
+// size, a browser's setting; measured by tools/a11y.mjs).
+function stepText() {
   const app = ui.el('app');
-  const containers = [app, app.querySelector('.zone-dynamic')];
-  for (const c of containers) c.style.containerType = 'normal';
-  app.getBoundingClientRect();
-  for (const c of containers) c.style.containerType = '';
+  const box = matchMedia('(min-width: 480px)').matches ? app.querySelector('.zone-dynamic') : app;
+  const style = getComputedStyle(box);
+  const room = box.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  if (!(room > 0)) return;
+  const ems = room / parseFloat(getComputedStyle(app).fontSize);
+  app.classList.toggle('text-large', ems <= 17.5);
+  app.classList.toggle('text-larger', ems <= 15.5);
+}
+
+// A text size changed with no resize (a browser's setting): a probe a rem
+// wide says so.
+function watchTextSize(changed) {
+  if (typeof ResizeObserver === 'undefined') return;
+  const probe = document.createElement('i');
+  probe.setAttribute('aria-hidden', 'true');
+  probe.style.cssText = 'position:absolute;left:0;top:0;width:1rem;height:1rem;visibility:hidden;pointer-events:none';
+  document.body.appendChild(probe);
+  let was = probe.getBoundingClientRect().width;
+  new ResizeObserver(() => {
+    const now = probe.getBoundingClientRect().width;
+    if (now === was) return;
+    was = now;
+    changed();
+  }).observe(probe);
 }
 
 // ---------------------------------------------------------------- boot
@@ -1901,6 +1919,7 @@ function wire() {
   ui.setIcon(ui.el('nowBtn'), 'now');
   ui.setIcon(ui.el('saveBtn'), 'saveShare');
   for (const n of document.querySelectorAll('[data-ico]')) n.innerHTML = ui.icon(n.dataset.ico);
+  stepText();
   initThemes();
   setPlayButton(false);
   store.ensureAlbums();
@@ -2323,14 +2342,16 @@ function wire() {
 
   // A turned phone or a resized window: what is measured is measured again
   // (the name, the card's lines, the sliders' stops, the panel's fit).
-  window.addEventListener('resize', () => {
-    followTextSize();
+  const refit = () => {
+    stepText();
     ui.fitCard();
     if (state.view === 'length') picks.renderLength();
     else if (state.view === 'track') tracklen.renderTrack();
     else if (state.view === 'vibe') picks.fitPanel();
     else if (state.view === 'now') fitNow();
-  });
+  };
+  window.addEventListener('resize', refit);
+  watchTextSize(refit);
 }
 
 if (noGenerator) {

@@ -810,6 +810,18 @@ stay channel sources until an ears session needs a voice's note-by-note play
 
 ## Known issues
 
+- **CI's flakes and weak checks; for session 30** (brain B-parallel 3,
+  2026-11-22). Flakes, worst first: the Kotlin Gradle plugin's download
+  (four times in a day); the F-Droid emulator check counts UiAutomation's
+  own crash as the app's (twice); `android/smoke.mjs`'s blocked-page check
+  plays a random loop and fails on a quiet one (2 of 106 loops on main's own
+  core: give it a fixed loop); `tests/longform.rs`'s "a section costs the
+  same at one and at a billion", and `tools/longform.mjs`'s "no section
+  line's block over the loop's own worst audio block", are timings. Weak,
+  found by 30c: `tools/views.mjs` exits 0 when a view fails, and CI never
+  runs it on Endless; `tools/export-long.mjs`'s "no fill-ins" passes with no
+  count; `tools/track-fades.mjs`'s "first 5 ms silence" passes with the fade
+  in off.
 - **F-Droid's CI passes a byte check it didn't make; for session 30** (hands
   30e, 2026-11-22, #449): `android/fdroid/compare-apks.sh` exits 0 with "no
   F-Droid build to compare with" when that APK is missing, so "the same

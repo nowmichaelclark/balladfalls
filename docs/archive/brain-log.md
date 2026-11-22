@@ -6,6 +6,13 @@ one-line history of the early PRs, as they stood in `docs/BRAIN.md` before
 log. Nothing here is live; the live state is `docs/BRAIN.md`, "Start here".
 
 ## The log
+**Brain B-parallel 3, the seven's end (Opus 5.5, in Claude Code, 2026-11-18
+to 22).** Ran 30d and 30c, then 24c and 30e, checked and merged them (v192
+to v195). Held 30c for keys covered on short phones and a PR body reported
+edited that wasn't; showed 24c's red smoke check was the test's. Recorded
+Mikey's answers on old codes and item 113's words. Stopped at Mikey's usage
+limit in the close-out.
+
 **Brain B-parallel 2, the chains' ends and the seven begun (Opus 5.5, a
 cloud thread of Mikey's claude.ai project, 2026-11-18).** Ran 24b, 29, 30b
 and 30a as project threads, two at a time, and checked and merged them

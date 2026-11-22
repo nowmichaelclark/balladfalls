@@ -430,6 +430,10 @@ the last one (same key). On the **Moto** and on the **tablet**:
   end. With TalkBack on, if you like: each key still says what its line
   used to. The words themselves are yours to approve, under Decisions.
 
+- **The Android app's type-in box (item 113, v195, #449):** in the app, tap
+  + in the Library: the box should be titled "Name", with no web address.
+  It has not been seen on a device.
+
 ## Accounts
 
 - **The new name (2026-11-18: the domain is bought, on Cloudflare):** attach

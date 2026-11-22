@@ -292,6 +292,29 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 
 ### Start here (for the next brain)
 
+- **Brain B-parallel 3 (Opus 5.5, 2026-11-22, in Claude Code; its usage ran
+  out in the close-out, #451).** **Merged:** 30d (#446, v192), 30c (#448,
+  v193, df5ff16), 24c (#450, v194, 7cd44c4), 30e (#449, v195, 998f64b, live).
+  No hands session is running. **Checked here:** #450 against main, 50 codes
+  and 2,000 loops' notes the same, 106 random loops' audio sample for sample;
+  Track length's 11 controls reachable at 360x640 and 320x568 on #448's and
+  #449's previews; each PR's gate and rows read from CI's logs (30d's from
+  its checks and body). The nightly is green on v193 (44995399978).
+  **Left at the end:** read v194's nightly (45000684305, running) and main's
+  core run on 998f64b (running), then start a nightly on main (v195; not
+  while one runs: a dispatch cancels it); merge #451 when green (a brain
+  session bound to it may auto-archive as it merges); finish the archive
+  pass (B-parallel's older bullets here to the log, for-mikey's answered
+  lines out); B5's prompt still says merge only docs-only (stale since
+  2026-11-18, DECISIONS). **Next:** 30f (`30f-painter-final.md`, alone), then
+  30 (alone), then B5. **Mikey's answers:** DECISIONS, 2026-11-22: a code's
+  version kept before the first new sound, not before 1.0; item 113's words.
+  **Learned:** read a PR body back from GitHub (30c reported edits it hadn't
+  made); measure screens at 360x640 and 320x568, not only 360x780; rows ten
+  take about 62 minutes (`-f jobs=all -f repeat=10` runs views beside them);
+  Auto-fix wakes a session only on red, so the brain waits for green; a
+  session auto-archives when its PR merges; give a pair its version numbers
+  up front.
 - **Brain B4 (Opus 5.5, 2026-11-18, a cloud thread of the project): export,
   the screens and the codes checked; the albums again.** On main (c5b2862,
   v189), measured here: `cargo test --test codes` 26 of 26 and `--features

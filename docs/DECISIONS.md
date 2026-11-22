@@ -93,6 +93,7 @@ stays, marked superseded, with the date. Long reasoning goes to
 
 ## Share codes, requests and exports
 
+- 2026-11-22 -- **Old codes keep their draws (Mikey, 2026-11-22):** "Before first new sound": the app keeps a code's version before any member joins `data/codes.txt`; 1.0 doesn't wait (`docs/notes/105e-page.md`, #450).
 - 2026-11-18 -- **An album's link with track lengths, heard working (Mikey, 2026-11-18, after #438):** "Link sharing an album with track lengths set works :)" (105d's device check, v189).
 - 2026-11-18 -- **One code version a release (Mikey, 2026-11-18, brain B4's call):** "it's okay if those codes aren't exact": a code made between releases may move when another addition joins before the release; session 24c.
 - 2026-11-18 -- **An album's code carries how each track plays (Mikey, 2026-11-18):** "Yes, an album's code should carry track lengths and all necessary info." (#427's question: version 2 left the length slider out.) Session 24b, before B4.

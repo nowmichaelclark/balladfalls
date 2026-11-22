@@ -310,7 +310,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   v196's nightly (45027671732) is green. **Mikey's answers:** DECISIONS,
   2026-11-22: a code's version kept before the first new sound, not before
   1.0; item 113's words; their own signing key; the fades fine; 400% zoom may
-  scroll. The letter shortcuts are still open.
+  scroll; the keyboard as Spotify's and a DAW's, no bare letters (#457).
   **Learned:** read a PR body back from GitHub (30c reported edits it hadn't
   made); measure screens at 360x640 and 320x568, not only 360x780; rows ten
   take 60 to 80 minutes (`-f jobs=all -f repeat=10` runs views beside them);

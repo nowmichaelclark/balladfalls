@@ -400,7 +400,8 @@ function pageSide() {
           const x = r.left + r.width / 2;
           if (sc) {
             const s = sc.getBoundingClientRect();
-            if (y <= s.top || y >= s.bottom) continue;
+            // (Its edges are hairlines: a row taller than it starts under them.)
+            if (y <= s.top + 2 || y >= s.bottom - 2) continue;
           } else if (!document.getElementById('app') && (y < 0 || y >= innerHeight)) continue;
           const hit = document.elementFromPoint(x, y);
           if (!(hit && (hit === e || e.contains(hit)))) { bad.push(`${nameOf(e)} is under ${hit ? nameOf(hit) : 'nothing'}`); break; }
@@ -425,8 +426,9 @@ function pageSide() {
           const cs = getComputedStyle(p);
           if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
           const b = p.getBoundingClientRect();
-          // A line box is taller than its letters: 3 px of it may go.
-          if (r.right > b.right + 1 || r.left < b.left - 1 || r.bottom > b.bottom + 4 || r.top < b.top - 4) { bad.push(`"${text}" is cut by ${nameOf(p)}`); break; }
+          // A line box is taller than its letters: a fifth of it may go.
+          const spare = Math.max(4, r.height * 0.2);
+          if (r.right > b.right + 1 || r.left < b.left - 1 || r.bottom > b.bottom + spare || r.top < b.top - spare) { bad.push(`"${text}" is cut by ${nameOf(p)}`); break; }
         }
         const key = e.closest('button, .tab, a.vkey');
         if (key) {

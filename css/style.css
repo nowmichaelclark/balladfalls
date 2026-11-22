@@ -2876,4 +2876,16 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   .page-head .page-title { font-size: min(0.8125rem, 16px); }
   .page-head { row-gap: 0; }
   .page-foot { padding-top: 4px; }
+  .save-head { flex-wrap: nowrap; padding-bottom: 2px; }
+  .save-head .hint { flex: 0 1 auto; font-size: min(0.6875rem, 13px); }
+  .save-head .vkey { font-size: min(0.75rem, 14px); min-height: 40px; min-width: 0; padding-inline: 4px; }
+}
+/* A narrow panel (a small phone, or its side): the tabs' and the heads'
+   words stop growing where they would run into each other. */
+@container middle (max-width: 299.98px) {
+  .tab { font-size: min(0.75rem, 14px); padding-inline: 2px; gap: 4px; }
+  .v-sheet .ln-head { grid-template-columns: auto minmax(0, 1fr); }
+  .v-sheet .ln-title { font-size: min(0.8125rem, 16px); }
+  .v-sheet .ln-head .vkey { font-size: min(0.75rem, 14px); }
+  .page-foot .vkey, .page-head .vkey { font-size: min(0.75rem, 15px); }
 }

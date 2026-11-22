@@ -150,7 +150,9 @@ export function renderAlbumCard(title, specs, extra = {}) {
     const hi = Math.max(...bpms);
     facts.push({ atoms: [atom(lo === hi ? `${lo} bpm` : `${lo}-${hi} bpm`, 98)] });
     const secs = specs.reduce((t, s) => t + passSeconds(s), 0);
-    facts.push({ atoms: [atom(Number.isFinite(secs) ? `~${formatTime(secs)} once through` : 'endless', 97)] });
+    facts.push({ atoms: [Number.isFinite(secs)
+      ? atom(`~${formatTime(secs)} once through`, 97, [`~${formatTime(secs)}`])
+      : atom('endless', 97)] });
   }
   if (extra.playing) facts.push({ cls: 'album-line', atoms: [atom(extra.playing, 96)] });
   setFacts(facts);

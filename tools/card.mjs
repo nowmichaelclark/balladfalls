@@ -326,7 +326,7 @@ async function main() {
             for (const part of fact.split(' \u00b7 ')) {
               // A fact too wide for the column is said in fewer words: a style
               // or feeling without its percent, an album's title or its place.
-              const short = [part, part.replace(/^\d+% /, ''), part.replace(/ \d+\/\d+$/, ''), (/(\d+\/\d+)$/.exec(part) || [])[1]];
+              const short = [part, part.replace(/^\d+% /, ''), part.replace(/ \d+\/\d+$/, ''), part.replace(/ once through$/, ''), (/(\d+\/\d+)$/.exec(part) || [])[1]];
               if (!short.some((t) => t && text.includes(t))) pageProblems.push(`"${part}" is on no page`);
             }
           }

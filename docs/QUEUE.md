@@ -652,8 +652,8 @@ changelog, codes frozen (105), the nightly's checks back as merge gates
 
 ## 115. No crackles in the Android app (a 1.0 blocker; 2026-11-22)
 
-**Hands:** session 30g (`docs/sessions/30g-crackles.md`), after 30f and
-before 30; then Mikey's ears, which alone close it. He heard a few crackles
+**Hands:** session 30g (`docs/sessions/30g-crackles.md`), beside 30f on
+the audio path and before 30; then Mikey's ears, which alone close it. He heard a few crackles
 in v195's app on the moto g stylus 5G (2022), and it moved to Lite by
 itself; "Yes, blocker". His second test: only with the screen off, on full
 and Lite alike (none heard in Chrome). The evidence, the suspects apart from what is known:

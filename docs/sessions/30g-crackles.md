@@ -4,8 +4,9 @@ Written by brain B-parallel 3 on 2026-11-22, after Mikey heard crackles in
 v195's Android app and made them a 1.0 blocker ("Yes, blocker").
 
 - **Model:** Opus 5.5. **Effort:** high.
-- **Start after:** session 30f (all four of its PRs). Nothing runs alongside
-  it, and session 30 waits for it.
+- **Start after:** session 29. It may run alongside 30f, on the app's audio
+  path only (Mikey, 2026-11-22: "do as you recommend", to starting now and
+  merging after 30f's three open PRs). Session 30 waits for it.
 - **Queue item:** item 115.
 
 Paste everything in the block as the session's first message.
@@ -15,7 +16,7 @@ Hands session 30g on the road to Driftloom's 1.0 (Opus 5.5, high): no crackles i
 
 Read first: AGENTS.md; core/AGENTS.md; android/README.md; docs/sessions/README.md (the order, and "Rules for every session": they are part of this prompt); docs/QUEUE.md (status, standing rules, merge policy, Known issues, item 115); docs/CORE.md (promises 1 and 2); docs/notes/115-crackles.md (the evidence: what is known and what is only suspected); docs/notes/for-mikey.md (item 115's three checks, and any answer to them); android/native/src/ (engine.rs, aaudio.rs, bridge.rs); js/quality.js, js/native.js, js/output.js, js/main.js (buildAudio, autoQuality, Diagnostics); docs/ALBUMS.md (the Batch 6 album in the app).
 
-Check your place: in docs/sessions/README.md every row in session 30g's After column should be ticked, and no other hands session running. If not, stop and say so. If this file has a "Left" list at its top, an earlier session with this prompt stopped partway: start from that list.
+Check your place: in docs/sessions/README.md every row in session 30g's After column should be ticked, and no hands session running but 30f. If not, stop and say so. While 30f runs (until its row is ticked on main): change only android/native/ and the stream's own lines in js/native.js and js/output.js (and BUILD and CACHE), nothing 30f's branches change (js/main.js, android/background.mjs, MainActivity, AppBridge, css among them); steps 4, 6 and 7, and what else needs those files, wait for the tick. Merge nothing before #453, #454 and #455 have merged (#456, the docs, goes in with or after them); your first version is v201, or the next after main's at your merge. Heavy runs are CI's, not this machine's. Don't wait for a merge to get the stream's change to Mikey's ears: open the draft PR, let CI build its APK, and end your turn with the run's link. If this file has a "Left" list at its top, an earlier session with this prompt stopped partway: start from that list.
 
 Mikey (2026-11-22, on the moto g stylus 5G (2022)): "I did hear a few crackles, at some point it turned to lite processing and then I switched it back. The crackles were a bit concerning this close to 1.0". Asked whether to make them a 1.0 blocker: "Yes, blocker". Their second test that day, on loop E9T-ZxDxj: in the app it crackles only with the screen off, on full and on Lite alike; screen on is clean. The site in Chrome is clean with the screen on and off, full and Lite, so the phone can play this with the screen off and the app's own way out to Android is at fault. Every counter read 0 through it. It was the phone's speaker, and they may also hear very brief crackles on the lit lock screen (not sure of those), but behind the home screen or another app, screen on, it stays clean: being in the background isn't enough, the screen going off or locking is. Find out what path Chrome's playback hint gets on Android and compare the app's with it.
 

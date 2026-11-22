@@ -303,7 +303,7 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   (44995399978) and v194 (45000684305); v195's (45012032493) was read
   before #451 merged, its result in #451's body. The archive pass is done.
   **Next:** 30f (`30f-painter-final.md`, alone, started), then 30g
-  (`30g-crackles.md`, alone: item 115, a 1.0 blocker), then 30 (alone),
+  (`30g-crackles.md`, beside 30f on the audio path: item 115, a 1.0 blocker), then 30 (alone),
   then B5. **Mikey's v195 test on the Moto (2026-11-22):** the lock
   screen's cover and the Name box right; a few crackles, only screen-off
   (`docs/notes/115-crackles.md`); ten minutes screen-off still to do. **Mikey's answers:** DECISIONS, 2026-11-22: a code's

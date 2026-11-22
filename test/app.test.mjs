@@ -53,6 +53,9 @@ check('found, and one link a page', link && appLink() === link);
 check('hello first', app.sent[0] && app.sent[0].type === 'hello');
 check('base64 of a megabyte matches Buffer', toBase64(new Uint8Array(1 << 20).fill(7)) === Buffer.from(new Uint8Array(1 << 20).fill(7)).toString('base64'));
 
+link.theme('#f0dccc');
+check('the theme\'s color is told', app.sent.some((m) => m.type === 'theme' && m.color === '#f0dccc'));
+
 console.log('\nWhat is playing, for the lock screen');
 const ctx = { native: true };
 const media = new MediaBridge(ctx);

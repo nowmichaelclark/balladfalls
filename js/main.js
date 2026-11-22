@@ -8,13 +8,13 @@ import { picksAsk, PlayerEngine } from './player.js';
 import { patternToMidi } from './midi.js';
 import { AudioExport } from './export.js';
 import { MediaBridge } from './media.js';
-import { appBridge } from './app.js';
+import { appBridge, appLink } from './app.js';
 import * as share from './share.js';
 
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v197';
+const BUILD = 'v198';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -1821,6 +1821,9 @@ function applyTheme(cls, save = true) {
   const th = THEMES.find((t) => t[0] === cls);
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta && th) meta.content = th[3];
+  // The Android app's bars behind the page take the theme's color too.
+  const link = appLink();
+  if (link && th) link.theme(th[3]);
   if (save) store.setPrefs({ theme: cls });
   ui.el('themeName').textContent = th ? th[2] : '';
   for (const sw of document.querySelectorAll('#themes .sw')) {
@@ -2317,6 +2320,7 @@ function wire() {
 if (noGenerator) {
   // No loop can be made or shown here (js/gen.js): the page is the line.
   state.coreError = noGenerator;
+  ui.el('app').classList.add('unplayable');
   ui.plainLine(coreUnsupported() ? CANT_PLAY : NOT_LOADED);
 } else {
   wire();

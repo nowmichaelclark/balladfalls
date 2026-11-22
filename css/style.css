@@ -1811,7 +1811,8 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 #exportSaved { overflow-wrap: anywhere; }
 #exportSheet .hint { text-align: center; }
 /* Neither view scrolls, so their words stop growing at 1.5x, as Bars' do. */
-.v-sheet :is(.vkey, .hint, .srow span) { font-size: min(0.6875rem, 16.5px); }
+.v-sheet :is(.hint, .srow span) { font-size: min(0.6875rem, 16.5px); }
+.v-sheet .vkey { font-size: min(0.75rem, 18px); }
 .share-keys .vkey { font-size: min(0.75rem, 18px); }
 .setrow { display: flex; align-items: center; gap: 12px; }
 .setrow-text { flex: 1; min-width: 0; }
@@ -1928,7 +1929,7 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 .np-piece.idle .pc-line { cursor: default; }
 .pc-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
 .pc-key { min-width: 44px; width: 44px; min-height: 44px; padding: 0; }
-.pc-key:disabled { opacity: 0.4; }
+.pc-key:disabled { opacity: 0.55; }
 .pc-text { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
 .pc-bars { font-size: min(0.8125rem, 19.5px); font-weight: 600; line-height: 1.25; color: var(--text-primary); overflow-wrap: anywhere; }
 .pc-times { font-size: min(0.6875rem, 16.5px); font-weight: 500; line-height: 1.25; color: var(--text-secondary); min-height: 1.25em; }
@@ -2552,7 +2553,6 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 .ln-journey { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 120ms ease; }
 .ln-journey .vkey.word { flex: 0 1 auto; min-width: 64px; min-height: 48px; padding: 2px 10px; font-size: min(0.75rem, 18px); }
 .ln-journey .vkey[aria-pressed="true"] { color: var(--text-primary); font-weight: 700; box-shadow: inset 0 0 0 2px var(--text-primary), var(--btn-mini-shadow); }
-.ln-journey.off { opacity: 0.4; }
 /* On the mid-tone light panels the length colour is under 3:1 against
    the panel (Ember 2.45, Tidal 2.89, measured), so in the light themes
    the slider thumb also gets a 1px edge in the text colour, which is
@@ -2565,7 +2565,7 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   box-shadow: 0 0 0 3px var(--pk-length), 0 0 0 4px var(--pk-edge), 0 1px 4px rgba(0,0,0,0.3);
 }
 /* Endless on: the number reads ∞ and the bar controls dim and rest. */
-.v-length.endless :is(.ln-step, .ln-slide) { opacity: 0.4; }
+.v-length.endless :is(.ln-step, .ln-slide) { opacity: 0.55; }
 .v-length.endless .ln-slide input { cursor: default; }
 .v-length.endless .ln-time { font-weight: 600; }
 /* Any: the number reads "any" in the secondary colour, without its
@@ -2580,22 +2580,21 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 .v-length.any .ln-slide input[type="range"]::-moz-range-thumb {
   background: transparent; box-shadow: inset 0 0 0 2px var(--text-secondary);
 }
-.ln-step:disabled { opacity: 0.4; }
+.ln-step:disabled { opacity: 0.55; }
 /* ---------- the Track length view (session 30c) ------------------ */
 /* Built on the Bars view's parts: the time as the big number (h:mm:ss),
    its words under it; a row of four step keys (a minute and a second
    either way) under that, so the number keeps the width at 360 px; the
-   coarse slider; then on and on and the two fades, lit the app's way. A
-   Painter session restyles it later. */
+   coarse slider; then on and on and the two fades, lit the app's way
+   (the final pass, 30f: the ∞ as large and as plain as Bars'). */
 .v-track .ln-body { gap: 18px; }
 .tk-num { width: 100%; }
 .tk-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .tk-steps .ln-step { min-height: 44px; padding: 2px 4px; white-space: nowrap; }
-.vkey.word.tk-on { flex: 0 0 auto; min-width: 72px; min-height: 48px; padding: 2px 12px; font-size: min(0.75rem, 18px); }
+.vkey.word.tk-on { flex: 0 0 auto; min-width: 64px; min-height: 48px; padding: 2px 14px; border-radius: 10px; font-size: min(0.75rem, 18px); }
 .vkey.tk-on[aria-pressed="true"] { color: var(--text-primary); font-weight: 700; box-shadow: inset 0 0 0 2px var(--text-primary), var(--btn-mini-shadow); }
 .tk-fades { justify-content: flex-end; }
-.tk-fades #trkFadeOut:disabled { opacity: 0.4; }
-.v-track.endless .ln-input { color: var(--text-secondary); text-decoration: none; font-weight: 500; font-size: min(1.75rem, 40px); }
+.v-track.endless .ln-input { text-decoration: none; }
 /* On and on, the steps and the slider still set a time: they keep their
    contrast, the thumb hollow as Bars' is under any. */
 .v-track.endless :is(.ln-step, .ln-slide) { opacity: 1; }
@@ -2623,7 +2622,7 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
   }
   .v-track .tk-num { position: absolute; top: 4px; left: 72px; right: 72px; width: auto; height: 44px; }
-  .v-track .ln-input, .v-track.endless .ln-input { height: 44px; font-size: min(1.5rem, 26px); }
+  .v-track .ln-input { height: 44px; font-size: min(1.5rem, 26px); }
   .v-track .ln-body { gap: 0; padding: 0 4px; justify-content: space-evenly; }
   .v-track .tk-steps .ln-step, .v-track .ln-keys .vkey.word { min-height: 44px; height: 44px; }
   .v-track .ln-slide input[type="range"] { height: 28px; }
@@ -2655,7 +2654,7 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   font-family: 'Inter', sans-serif; font-size: 0.8125rem; font-weight: 600; line-height: 1.35;
   text-align: center;
   color: var(--btn-mini-text);
-  background: var(--btn-mini-bg);
+  background: var(--btn-mini-bg), var(--toast-base);
   border: 1px solid var(--btn-mini-border);
   box-shadow: var(--btn-mini-shadow), 0 10px 24px -10px rgba(0,0,0,0.6);
   -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
@@ -2866,3 +2865,33 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   .t-dawn .btn-play svg > *, .t-ember .btn-play svg > *, .t-tidal .btn-play svg > *,
   .t-olive .btn-play svg > *, .t-nightlight .btn-play svg > * { stroke: currentColor; stroke-width: 1; }
 }
+
+/* ============================================================
+   PAINTER 30f: THE FINAL PASS, ONE APP
+   ============================================================ */
+/* A title that takes the focus wears its ring around its word, not through it. */
+.phone .view .page-title { flex: 0 1 auto; padding: 3px 6px; border-radius: 8px; }
+.phone .view :is(.hero-title, .page-title):focus-visible { outline-offset: 0; }
+.phone .view .page-title.vh { padding: 0; }
+/* A popup is solid: the words under it don't show through. */
+.t-dawn { --toast-base: #f7ecee; }
+.t-ember { --toast-base: #f4d4cc; }
+.t-tidal { --toast-base: #cfe6e9; }
+.t-olive { --toast-base: #e9e3c0; }
+.t-dark { --toast-base: #22222a; }
+.t-amoled { --toast-base: #0e0e12; }
+.t-nightlight { --toast-base: #2a170b; }
+.t-nocturne { --toast-base: #2a1548; }
+.t-abyss { --toast-base: #14262a; }
+/* Vibe's five lines sit in the middle of a tall panel, as Bars' do, and
+   the last has no rule under it (as Layers'). */
+.pk-list { justify-content: safe center; }
+.pk-line:last-child { border-bottom: 0; }
+/* Seed album's slider is a Sound row: its name to the left of it. */
+#seedAlbum .srow { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: center; column-gap: 14px; }
+.v-sheet #seedAlbum .srow span { font-size: min(0.75rem, 18px); }
+/* A browser that can make no loop has the line alone: no empty keys. */
+.phone.unplayable { justify-content: center; }
+.phone.unplayable > :is(.zone-dynamic, .zone-buttons) { display: none; }
+.phone.unplayable > .zone-info { flex: 0 0 auto; grid-area: auto; grid-column: 1 / -1; align-self: center; padding: 12px; }
+.phone.unplayable .info-inner { padding: 22px 14px; }

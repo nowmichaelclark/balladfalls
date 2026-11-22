@@ -1,7 +1,7 @@
 {
   "name": "Driftloom",
   "short_name": "Driftloom",
-  "description": "A procedural loop machine for relaxing, meditative and joyful nostalgic loops.",
+  "description": "Infinite, procedurally generated music to share with friends.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

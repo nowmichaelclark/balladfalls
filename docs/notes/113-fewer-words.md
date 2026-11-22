@@ -21,6 +21,20 @@ words: 30f, 30, B5. The before and after of every line is in
   - "Lighter on processor" is named "Lite";
   - the export keys are flac, opus and midi (replaces "export flac" and
     "export midi", his names of 2026-11-18).
+- His answers to the session's last two questions, given to brain
+  B-parallel 3 in its session the same day, in his words:
+
+  > can keep "Please refresh."
+  >
+  > the app's description can be "Infinitally procedurally generated music that can be shared with friends"
+  >
+  > or something like that
+
+  So "Please refresh." stays, and the description (index.html's three and
+  the manifest's) is "Infinite, procedurally generated music to share with friends.":
+  the brain's edit of his sentence under "or something like that" (the
+  spelling fixed, "that can be shared" as "to share"). The F-Droid listing,
+  README and AGENTS keep their own lines: they weren't in the question.
 
 ## The session's own calls, his to undo
 
@@ -33,9 +47,6 @@ words: 30f, 30, B5. The before and after of every line is in
   itself" is "auto".
 - No popup for what the screen already shows (a loop's name, left album, a
   roll in Layers).
-- Not changed, his own sentences, and both open questions to him in
-  `for-mikey.md`: "Please refresh." and the app's description (the install
-  box, a link's preview).
 
 ## How it holds together, for the next session
 

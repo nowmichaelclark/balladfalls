@@ -446,11 +446,10 @@ the last one (same key). On the **Moto** and on the **tablet**:
   keep their reason (no space, nothing saved, needs update); delete
   with 3 loops keeps its count; share link and seed album stay on Share,
   else both would be lost.
-  **Two questions still yours** (both lines stay as they are until you
-  answer): should "Please refresh." become "Refresh."? And should the app's
-  description, which an install box and a link's preview show ("A
-  procedural loop machine for relaxing, meditative and joyful nostalgic
-  loops."), become "Calm, nostalgic loops"?
+  You answered the last two the same day: "Please refresh." stays, and
+  the app's description is the last row below (your sentence, "or
+  something like that", with its spelling fixed and a little shorter; say
+  if you want your exact words).
 
 | Where | Before | After |
 |---|---|---|
@@ -631,6 +630,7 @@ the last one (same key). On the **Moto** and on the **tablet**:
 | **Android** | The loop playing, with its controls, and a file being saved. (the notification's channel) | (gone) |
 | Android | Saving, 42% | Saving 42% |
 | Android | a title with the bundled page's address, over each box to type in (WebView's default; not seen on a device) | the box's own words: Name, Paste code, Paste backup |
+| **Description** | A procedural loop machine for relaxing, meditative and joyful nostalgic loops. (the install box, search results, a link's preview) | Infinite, procedurally generated music to share with friends. |
 
 (A shared loop's name, the export sheet's words and the export's ending
 were decided 2026-11-17, `docs/DECISIONS.md`, "Share codes, requests and

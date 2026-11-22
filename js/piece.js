@@ -31,17 +31,17 @@ const CALLS_MOST = 16;
 // What the listener hears the unit at the playhead as: the plan's roles
 // (js/gen.js `ROLES`) in plain words. For Mikey to approve.
 export const ROLE_WORDS = {
-  opening: 'the opening',
-  theme: 'the theme',
+  opening: 'opening',
+  theme: 'theme',
   build: 'building',
-  second: 'a second theme',
+  second: 'second theme',
   development: 'developing',
-  peak: 'the peak',
+  peak: 'peak',
   release: 'easing',
-  return: 'the return',
-  close: 'the close',
-  breath: 'a breath',
-  lift: 'a lift',
+  return: 'return',
+  close: 'close',
+  breath: 'breath',
+  lift: 'lift',
   holding: 'holding',
   turning: 'turning',
 };
@@ -184,15 +184,19 @@ export function neighbor(model, bar, dir, slack = 2) {
 // What the line says in words about a place: "bar 812 of 3,072" (Endless:
 // "bar 812"), the unit's word, and the time.
 export function placeWords(model, place) {
-  if (!place) return { bars: model.endless ? 'bar 1' : `bar 1 of ${group(model.last)}`, times: '', word: '' };
+  if (!place) return { bars: model.endless ? 'bar 1' : `bar 1/${group(model.last)}`, times: '', word: '', said: model.endless ? 'bar 1' : `bar 1 of ${group(model.last)}` };
   const bar = Math.floor(place.bar) + 1;
   const mark = markAt(model, place.bar);
   const word = mark && ROLE_WORDS[mark.role] ? ROLE_WORDS[mark.role] : '';
   const total = place.bars != null ? place.bars : model.endless ? null : model.last;
-  const played = `${clock(place.played)} played`;
-  const times = place.left != null ? `${played} · ${clock(place.left)} left` : played;
+  // Symbols on screen (Mikey, 2026-11-22), the words for a screen reader.
+  const played = clock(place.played);
+  const times = place.left != null ? `${played} · \u2212${clock(place.left)}` : played;
+  const said = [total == null ? `bar ${group(bar)}` : `bar ${group(bar)} of ${group(total)}`, word,
+    `${played} played`, place.left != null ? `${clock(place.left)} left` : ''].filter(Boolean).join(', ');
   return {
-    bars: total == null ? `bar ${group(bar)}` : `bar ${group(bar)} of ${group(total)}`,
+    bars: total == null ? `bar ${group(bar)}` : `bar ${group(bar)}/${group(total)}`,
+    said,
     times,
     word,
   };
@@ -351,8 +355,8 @@ function showGhost() {
   const bar = Math.floor(dragging.bar);
   const mark = markAt(view.model, dragging.bar);
   const words = mark && ROLE_WORDS[mark.role] ? ` · ${ROLE_WORDS[mark.role]}` : '';
-  document.getElementById('pieceBars').textContent = `to bar ${group(bar + 1)}${words}`;
-  document.getElementById('pieceTimes').textContent = `${clock(bar * per)} in`;
+  document.getElementById('pieceBars').textContent = `\u2192 bar ${group(bar + 1)}${words}`;
+  document.getElementById('pieceTimes').textContent = clock(bar * per);
 }
 
 function hideGhost() {
@@ -432,14 +436,14 @@ export function updatePiece() {
       line.setAttribute('aria-valuemin', String(Math.round(view.model.first)));
       line.setAttribute('aria-valuemax', String(Math.round(view.model.last)));
       line.setAttribute('aria-valuenow', String(Math.floor(at.bar) + 1));
-      line.setAttribute('aria-valuetext', `${words.bars}${words.word ? `, ${words.word}` : ''}`);
+      line.setAttribute('aria-valuetext', words.said);
       const prev = neighbor(view.model, at.bar, -1);
       const next = neighbor(view.model, at.bar, 1);
       document.getElementById('piecePrev').disabled = !playing || !prev;
       document.getElementById('pieceNext').disabled = !playing || !next;
     }
   } else if (!at && !dragging) {
-    setText('pieceBars', view.model.endless ? 'bar 1' : `bar 1 of ${group(view.model.last)}`);
+    setText('pieceBars', view.model.endless ? 'bar 1' : `bar 1/${group(view.model.last)}`);
     setText('pieceTimes', '');
   }
   return true;

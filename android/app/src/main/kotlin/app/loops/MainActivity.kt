@@ -1,6 +1,7 @@
 package app.loops
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -13,6 +14,7 @@ import android.view.KeyEvent
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.window.OnBackInvokedDispatcher
+import android.webkit.JsPromptResult
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -20,6 +22,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.EditText
 import android.widget.FrameLayout
 import androidx.webkit.WebViewAssetLoader
 
@@ -106,6 +109,30 @@ class MainActivity : Activity() {
             override fun onShowFileChooser(
                 v: WebView, callback: ValueCallback<Array<Uri>>, params: WebChromeClient.FileChooserParams,
             ): Boolean = bridge.chooseFile(callback, params.acceptTypes)
+
+            // The page's boxes to type in (a name, a code, a backup) with the page's
+            // words alone: WebView's own box is titled with the bundled page's address.
+            override fun onJsPrompt(
+                v: WebView, url: String?, message: String?, defaultValue: String?, result: JsPromptResult,
+            ): Boolean {
+                if (isFinishing) {
+                    result.cancel()
+                    return true
+                }
+                val box = EditText(this@MainActivity).apply {
+                    maxLines = 4
+                    setSelectAllOnFocus(true)
+                    setText(defaultValue.orEmpty())
+                }
+                AlertDialog.Builder(this@MainActivity)
+                    .setTitle(message)
+                    .setView(box)
+                    .setPositiveButton(android.R.string.ok) { _, _ -> result.confirm(box.text.toString()) }
+                    .setNegativeButton(android.R.string.cancel) { _, _ -> result.cancel() }
+                    .setOnCancelListener { result.cancel() }
+                    .show()
+                return true
+            }
         }
         view.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(v: WebView, request: WebResourceRequest): WebResourceResponse? =

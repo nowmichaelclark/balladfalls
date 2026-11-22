@@ -35,12 +35,13 @@
 <body>
 <main>
   <h1>Speed test</h1>
-  <p>Plays Driftloom's busiest loops silently at full and lite quality, mono and stereo, and times every block. Tap Measure, keep the screen on and this tab open (10 to 15 minutes on a slow phone), then tap Copy and send the text back.</p>
+  <p>Screen on, up to 15 min.</p>
+  <p id="goHint" hidden>Plays the busiest loops silently at full and lite quality, mono and stereo, and times every block. Press Measure, keep the screen on and this tab open (10 to 15 minutes on a slow phone), then press Copy and send the text back.</p>
   <div class="keys">
-    <button id="go" type="button" class="go">Measure</button>
+    <button id="go" type="button" class="go" aria-describedby="goHint">Measure</button>
     <button id="copy" type="button">Copy</button>
   </div>
-  <div id="status">Ready.</div>
+  <div id="status" role="status">Ready.</div>
   <p id="verdict"></p>
   <pre id="out" aria-label="Speed test report"></pre>
 </main>
@@ -121,7 +122,7 @@ async function run() {
       else if (m.type === 'start') {
         const spent = (performance.now() - t0) / 1000;
         const left = m.i ? Math.round((spent / m.i) * (m.n - m.i) / 60) : null;
-        status.textContent = `Measuring ${m.i + 1} of ${m.n}: ${m.loop.name}, ${wayName(m.way)}${left != null ? `, about ${left} min left` : ''}`;
+        status.textContent = `${m.i + 1} of ${m.n}${left != null ? ` · ${left} min left` : ''}`;
       } else if (m.type === 'result') { results.push(m); say(m.text); }
       else if (m.type === 'error') { say(`error: ${m.message}`); resolve(); }
       else if (m.type === 'done') resolve();
@@ -136,7 +137,7 @@ async function run() {
   if (full.length) {
     const worst = full.reduce((a, m) => (m.r.pct > a.r.pct ? m : a));
     const over = worst.r.pct > 25;
-    verdict.textContent = `Worst block at full quality: ${worst.r.pct.toFixed(1)}% of its deadline (${worst.loop.name}, ${wayName(worst.way)}); the yardstick is under 25%.`;
+    verdict.textContent = `Worst block ${worst.r.pct.toFixed(1)}%, limit 25%`;
     verdict.className = over ? 'over' : 'under';
     say(`summary: worst block at full ${worst.r.pct.toFixed(1)}% (${worst.loop.name}, ${wayName(worst.way)}), ${over ? 'OVER' : 'under'} 25%`);
   }
@@ -146,7 +147,7 @@ async function run() {
     if (lm && ls) say(`summary: ${loop.name} lite ahead ${ls.r.speed.toFixed(1)}x stereo, ${lm.r.speed.toFixed(1)}x mono (stereo costs ${(lm.r.speed / ls.r.speed).toFixed(2)}x mono)`);
   }
   say(`took ${((performance.now() - t0) / 60000).toFixed(1)} min`);
-  status.textContent = 'Done. Tap Copy and send the text back.';
+  status.textContent = 'Done';
   document.title = 'Driftloom speed test: done';
   try { await wake?.release(); } catch { /* the screen may sleep again */ }
   go.disabled = false;
@@ -159,7 +160,7 @@ copy.addEventListener('click', async () => {
   catch {
     const r = document.createRange(); r.selectNodeContents(out);
     const s = getSelection(); s.removeAllRanges(); s.addRange(r);
-    status.textContent = 'Selected: copy it with the menu.';
+    status.textContent = 'Selected';
   }
 });
 if (q.has('auto')) run();

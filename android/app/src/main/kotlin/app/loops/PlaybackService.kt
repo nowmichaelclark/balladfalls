@@ -129,7 +129,8 @@ class PlaybackService : Service() {
         power = getSystemService(PowerManager::class.java)
         notes.createNotificationChannel(
             NotificationChannel(CHANNEL, getString(R.string.channel_playback), NotificationManager.IMPORTANCE_LOW).apply {
-                description = getString(R.string.channel_playback_about)
+                // Its name says it; null clears the line earlier versions set.
+                description = null
                 setShowBadge(false)
             },
         )

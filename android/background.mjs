@@ -360,6 +360,7 @@ try {
       await ev(() => {
         if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
         document.querySelector('[data-stab="share"]').click();
+        document.getElementById('goExport').click();
       });
       await sleep(1500);
       if (format === 'small') {
@@ -370,14 +371,14 @@ try {
         }
       }
       const missing = await ev(([f, l]) => {
-        const pick = (sel) => { const e = document.querySelector(sel); if (e) e.click(); return e ? '' : sel; };
+        const go = document.querySelector(`[data-format="${f}"]`);
         const t = Number(l);
         const two = (x) => String(x).padStart(2, '0');
         const shown = t >= 3600 ? `${Math.floor(t / 3600)}:${two(Math.floor((t % 3600) / 60))}:${two(t % 60)}` : `${Math.floor(t / 60)}:${two(t % 60)}`;
         const key = document.querySelector('#picksList .pk-track');
-        return [pick(`[data-format="${f}"]`), key && key.textContent === shown ? '' : `the track length ${shown} (the key says ${key && key.textContent})`].filter(Boolean).join(', ')
-          || ((document.getElementById('exportAudio').disabled && `exportAudio is disabled: ${document.getElementById('exportAbout').textContent}`) || '')
-          || (document.getElementById('exportAudio').dataset.asks ? `the export asks how long: ${document.getElementById('exportAbout').textContent}` : '');
+        return [go ? '' : `the ${f} key`, key && key.textContent === shown ? '' : `the track length ${shown} (the key says ${key && key.textContent})`].filter(Boolean).join(', ')
+          || ((go.disabled && `the ${f} key is disabled: ${document.getElementById('exportAbout').textContent}`) || '')
+          || (go.dataset.asks ? `the export asks how long: ${document.getElementById('exportHint').textContent}` : '');
       }, [format, String(length)]);
       if (missing) {
         const sheet = await ev(() => ({
@@ -413,7 +414,7 @@ try {
         log(`  the page's problems: ${page.problems.slice(-5).join(' | ')}`);
         return null;
       }
-      await ev("document.getElementById('exportAudio').click()", undefined, true);
+      await ev(`document.querySelector('[data-format="${format}"]').click()`, undefined, true);
       const picked = await pickerSave();
       if (!check(`${format}: the picker opened and took Save`, picked)) return null;
       await waitFor('the export to run', () => ev("!document.getElementById('exportRun').hidden"), 60000).catch(() => null);
@@ -437,7 +438,7 @@ try {
       await screenOn();
       sh('am', 'start', '-n', `${pkg}/app.loops.MainActivity`);
       await sleep(2000);
-      const name = (/chose: (.+?), \d/.exec(sheet.saved) || [])[1];
+      const name = (/^Saved (.+?) · \d/.exec(sheet.saved) || [])[1];
       if (name) {
         const found = sh('find', '/storage/emulated/0/', '-name', name, '-size', '+1k').split('\n').filter(Boolean)[0];
         const head = found ? sh('head', '-c', '4', `'${found}'`) : '';

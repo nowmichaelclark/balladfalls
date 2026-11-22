@@ -159,6 +159,9 @@ jobs:
           path: ${{ runner.temp }}/out
           if-no-files-found: error
           retention-days: 14
+          # A failed build uploads too (its log): a re-run's takes its place,
+          # or the jobs after it may be handed the failed one's, with no APK.
+          overwrite: true
 
   plays:
     name: the F-Droid build plays on an emulator

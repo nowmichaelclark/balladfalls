@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#160830">
-<meta name="description" content="A procedural loop machine for relaxing, meditative and joyful nostalgic loops.">
+<meta name="description" content="Infinite, procedurally generated music to share with friends.">
 <title>Driftloom</title>
 <!-- The preview a link shows (Discord, Messages, Slack, search): one title,
      description and picture for every address, since there is no server to
@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Driftloom">
 <meta property="og:title" content="Driftloom">
-<meta property="og:description" content="A procedural loop machine for relaxing, meditative and joyful nostalgic loops.">
+<meta property="og:description" content="Infinite, procedurally generated music to share with friends.">
 <meta property="og:url" content="https://driftloom.nowmichaelclark.workers.dev/">
 <meta property="og:image" content="https://driftloom.nowmichaelclark.workers.dev/icons/icon-512.png">
 <meta property="og:image:type" content="image/png">
@@ -24,7 +24,7 @@
 <meta property="og:image:alt" content="The Driftloom icon">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Driftloom">
-<meta name="twitter:description" content="A procedural loop machine for relaxing, meditative and joyful nostalgic loops.">
+<meta name="twitter:description" content="Infinite, procedurally generated music to share with friends.">
 <meta name="twitter:image" content="https://driftloom.nowmichaelclark.workers.dev/icons/icon-512.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -55,15 +55,16 @@
       <div class="info-row">
         <div class="cover"><canvas id="cover" width="320" height="320" aria-label="Cover art"></canvas></div>
         <div class="info-text">
-          <h1 id="loopName" class="name" tabindex="0" role="button" title="Tap to rename">—</h1>
+          <h1 id="loopName" class="name" tabindex="0" role="button" title="Rename" aria-describedby="nameHint">—</h1>
+          <span id="nameHint" hidden>Press to rename</span>
           <input id="nameEdit" class="name-edit" type="text" maxlength="24" autocomplete="off"
                  spellcheck="false" aria-label="Name" hidden>
           <!-- The details: the lines shown (what fits, each whole), every fact for
                a screen reader, and, where some are left off, the tap that shows
                the rest (js/ui.js, session 30d). -->
           <div id="metaWrap" class="meta-wrap">
-            <ul id="loopDetail" class="meta" aria-hidden="true"><li>press play to begin</li></ul>
-            <ul id="loopFacts" class="meta vh" aria-label="Loop details"><li>press play to begin</li></ul>
+            <ul id="loopDetail" class="meta" aria-hidden="true"><li>press play</li></ul>
+            <ul id="loopFacts" class="meta vh" aria-label="Loop details"><li>press play</li></ul>
             <button id="metaMore" class="meta-more" type="button" aria-label="More details" hidden>
               <span id="metaDots" class="meta-dots" aria-hidden="true"></span>
             </button>
@@ -130,7 +131,7 @@
         <div class="vb-head">
           <button id="vibesClose" type="button" class="vkey np-vibes">close</button>
           <span id="vibesCount" class="vb-count" aria-live="polite"></span>
-          <button id="vibesClear" type="button" class="vkey">clear all</button>
+          <button id="vibesClear" type="button" class="vkey" aria-label="clear all vibes">clear</button>
         </div>
         <div id="vibesList" class="vb-list" role="group" aria-label="Vibes for new loops"></div>
       </div>
@@ -203,7 +204,7 @@
           <div class="ln-num tk-num">
             <input id="trkNum" class="ln-input" type="text" inputmode="numeric" autocomplete="off"
                    spellcheck="false" aria-label="Track length" aria-describedby="trkWords">
-            <span id="trkWords" class="ln-time"></span>
+            <span id="trkWords" class="vh"></span>
           </div>
           <div class="tk-steps">
             <button id="trkMinDown" type="button" class="vkey ln-step" aria-label="A minute less">−1 min</button>
@@ -218,7 +219,7 @@
           <!-- On and on (no end: the Length slider at its start), then the
                two fades, each pressed on or off like the Bars view's keys. -->
           <div class="ln-keys">
-            <button id="trkOn" type="button" class="vkey word tk-on" aria-pressed="false">on and on</button>
+            <button id="trkOn" type="button" class="vkey word ln-inf tk-on" aria-pressed="false" aria-label="On and on" title="On and on"><span aria-hidden="true">∞</span></button>
             <div class="ln-journey tk-fades" role="group" aria-label="Fades">
               <button id="trkFadeIn" type="button" class="vkey word" aria-pressed="false">fade in</button>
               <button id="trkFadeOut" type="button" class="vkey word" aria-pressed="true">fade out</button>
@@ -253,84 +254,91 @@
           <button type="button" role="tab" class="tab" data-stab="share" aria-label="Share and export"><span class="led" aria-hidden="true"></span><span class="tab-ico" data-ico="share"></span><span class="tab-word">Share</span></button>
         </div>
         <div id="savePane" class="pane"></div>
+        <!-- Share (session 30e, queue item 113): keys, and nothing under them.
+             What a key's line used to say is its description, for a screen
+             reader. The box shows only where the clipboard refuses a code. -->
         <div id="saveShare" class="pane" hidden>
           <div class="scroll">
-            <section class="adv-sec">
-              <h2 class="sec">This loop</h2>
-              <p class="hint">A loop is a recipe, not a recording, so it fits in a code.
-                No internet needed at either end.</p>
-              <div class="keys3">
-                <button id="shareSong" type="button" class="vkey">share link</button>
-                <button id="copySong" type="button" class="vkey">copy its code</button>
-                <button id="exportMidi" type="button" class="vkey">export midi</button>
-              </div>
-            </section>
-            <!-- Exporting audio (queue item 104b; js/export.js): the sheet's
-                 four states, one showing at a time. -->
-            <section class="adv-sec" id="exportSheet" aria-label="Export audio">
-              <h2 class="sec">Audio</h2>
-              <div id="exportChoose">
-                <p class="hint" id="exportIntro"></p>
-                <div class="keys2" role="radiogroup" aria-label="Format">
-                  <button type="button" class="vkey" role="radio" aria-checked="true" data-format="lossless">lossless</button>
-                  <!-- Small (queue item 104c) shows only where the browser can encode Opus (js/export.js). -->
-                  <button type="button" class="vkey" role="radio" aria-checked="false" data-format="small" hidden>small</button>
-                </div>
-                <p class="hint" id="exportFormat"></p>
-                <p class="hint" id="exportAbout"></p>
-                <div class="keys2">
-                  <button id="exportAudio" type="button" class="vkey">export audio</button>
-                </div>
-              </div>
-              <div id="exportRun" hidden>
-                <div class="export-bar" role="progressbar" aria-label="Export"><span id="exportFill"></span></div>
-                <p class="hint" id="exportProgress" aria-live="polite"></p>
-                <p class="hint" id="exportNote"></p>
-                <div class="keys2">
-                  <button id="exportCancel" type="button" class="vkey">cancel</button>
-                </div>
-              </div>
-              <div id="exportDone" hidden>
-                <p class="hint" id="exportSaved" aria-live="polite"></p>
-                <div class="keys3">
-                  <button id="exportSave" type="button" class="vkey">save</button>
-                  <button id="exportOpen" type="button" class="vkey">open</button>
-                  <button id="exportShare" type="button" class="vkey">share</button>
-                </div>
-                <div class="keys2 export-end">
-                  <button id="exportDoneBtn" type="button" class="vkey">done</button>
-                </div>
-              </div>
-              <div id="exportFailed" hidden>
-                <p class="hint" id="exportWhy" aria-live="polite"></p>
-                <div class="keys2">
-                  <button id="exportOk" type="button" class="vkey">ok</button>
-                </div>
-              </div>
-            </section>
-            <!-- An album drawn from one seed (queue item 105c): a code of a
-                 few characters whatever its length, each track asked the
-                 picks set now. -->
-            <section class="adv-sec" id="seedAlbum" aria-label="Album from one seed">
-              <h2 class="sec">Album from one seed</h2>
-              <p class="hint">A whole album from one short code: its tracks are
-                drawn from a single seed, each asked for the picks set now.</p>
-              <label class="srow"><span>Tracks <b id="seedCountVal">12</b></span>
-                <input type="range" id="seedCount" min="2" max="48" step="1" value="12"></label>
-              <div class="keys2">
-                <button id="seedAlbumLink" type="button" class="vkey">share link</button>
-                <button id="seedAlbumCode" type="button" class="vkey">copy its code</button>
-              </div>
-            </section>
-            <section class="adv-sec">
-              <h2 class="sec">Bring one in</h2>
-              <p class="hint">A loop code lands in Imported Loops; an album code
-                arrives as an album of its own.</p>
-              <div class="keys2">
-                <button id="pasteCode" type="button" class="vkey">paste a code</button>
-              </div>
-              <pre id="shareOut" class="diag" hidden></pre>
-            </section>
+            <div class="keys2 share-keys">
+              <button id="copySong" type="button" class="vkey" aria-describedby="copyHint">copy code</button>
+              <button id="pasteCode" type="button" class="vkey" aria-describedby="pasteHint">paste code</button>
+              <button id="goExport" type="button" class="vkey" aria-describedby="goExportHint">export audio</button>
+              <button id="shareSong" type="button" class="vkey share-more" aria-describedby="linkHint">share link</button>
+              <button id="goSeedAlbum" type="button" class="vkey share-more" aria-label="seed album: an album from one seed" aria-describedby="seedHint">seed album</button>
+            </div>
+            <p id="copyHint" hidden>Copies this loop's code. A loop is a recipe, not a recording, so it fits in a code; no internet needed at either end.</p>
+            <p id="pasteHint" hidden>Brings a loop or an album in. A loop code lands in Imported Loops; an album code arrives as an album of its own.</p>
+            <p id="goExportHint" hidden>Saves what plays as an audio file, to keep or to play anywhere, or as MIDI.</p>
+            <p id="linkHint" hidden>Shares a link that opens this loop.</p>
+            <p id="seedHint" hidden>A whole album from one short code: its tracks are drawn from a single seed, each asked for the picks set now.</p>
+            <pre id="shareOut" class="diag" role="group" aria-label="Code to copy" tabindex="0" hidden></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Export (session 30e): a key a format, pressed it starts; then the
+           four states of js/export.js, one showing at a time (queue item
+           104b). Opened by Share's export audio. -->
+      <div id="viewExport" class="view v-length v-sheet" data-view="export" role="region" aria-label="Export" hidden>
+        <div class="ln-head">
+          <button id="exportBack" type="button" class="vkey back" aria-label="Back to Share"><span data-ico="left"></span>Share</button>
+          <h2 class="page-title ln-title" tabindex="-1">Export</h2>
+        </div>
+        <div class="ln-body" id="exportSheet">
+          <div id="exportChoose">
+            <div class="format-keys" role="group" aria-label="Format">
+              <button type="button" class="vkey" data-format="lossless" aria-label="export flac" aria-describedby="flacHint exportHint">flac</button>
+              <!-- Opus (queue item 104c) shows only where the browser can encode it (js/export.js). -->
+              <button type="button" class="vkey" data-format="small" aria-label="export opus" aria-describedby="opusHint exportHint" hidden>opus</button>
+              <button id="exportMidi" type="button" class="vkey" aria-label="export midi" aria-describedby="midiHint">midi</button>
+            </div>
+            <p class="hint" id="exportAbout" hidden></p>
+            <p id="flacHint" hidden>Lossless: full quality, as a FLAC file.</p>
+            <p id="opusHint" hidden>Small: much smaller, as an Opus file, for sharing and for phones.</p>
+            <p id="midiHint" hidden>This loop's notes, as a MIDI file.</p>
+            <p id="exportHint" hidden></p>
+          </div>
+          <div id="exportRun" hidden>
+            <div class="export-bar" role="progressbar" aria-label="Export" aria-valuemin="0" aria-valuemax="100"><span id="exportFill"></span></div>
+            <p class="hint" id="exportProgress" aria-live="polite"></p>
+            <p class="hint" id="exportNote"></p>
+            <p id="exportNoteMore" hidden>It keeps going in the background while the music plays.</p>
+            <div class="format-keys">
+              <button id="exportCancel" type="button" class="vkey" aria-label="cancel export" aria-describedby="exportNote exportNoteMore">cancel</button>
+            </div>
+          </div>
+          <div id="exportDone" hidden>
+            <p class="hint" id="exportSaved" aria-live="polite"></p>
+            <div class="format-keys">
+              <button id="exportSave" type="button" class="vkey" aria-label="save the exported file">save</button>
+              <button id="exportOpen" type="button" class="vkey" aria-label="open the exported file">open</button>
+              <button id="exportShare" type="button" class="vkey" aria-label="share the exported file">share</button>
+              <button id="exportDoneBtn" type="button" class="vkey">done</button>
+            </div>
+          </div>
+          <div id="exportFailed" hidden>
+            <p class="hint" id="exportWhy" aria-live="polite"></p>
+            <div class="format-keys">
+              <button id="exportOk" type="button" class="vkey" aria-describedby="exportWhy">ok</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- An album drawn from one seed (queue item 105c): a code of a few
+           characters whatever its length, each track asked the picks set
+           now. Opened by Share's album from seed. -->
+      <div id="viewSeed" class="view v-length v-sheet" data-view="seed" role="region" aria-label="Album from one seed" hidden>
+        <div class="ln-head">
+          <button id="seedBack" type="button" class="vkey back" aria-label="Back to Share"><span data-ico="left"></span>Share</button>
+          <h2 class="page-title ln-title" tabindex="-1">Seed album</h2>
+        </div>
+        <div class="ln-body" id="seedAlbum">
+          <label class="srow"><span>Tracks <b id="seedCountVal">12</b></span>
+            <input type="range" id="seedCount" min="2" max="48" step="1" value="12" aria-label="Tracks" aria-describedby="seedHint"></label>
+          <div class="keys2">
+            <button id="seedAlbumCode" type="button" class="vkey" aria-label="copy code of the album" aria-describedby="seedHint">copy code</button>
+            <button id="seedAlbumLink" type="button" class="vkey" aria-label="share link to the album" aria-describedby="seedHint">share link</button>
           </div>
         </div>
       </div>
@@ -349,7 +357,8 @@
           <div class="page more">
             <div class="more-head"><h2 class="sec" id="themeLbl">Theme</h2><span id="themeName" class="theme-name"></span></div>
             <div id="themes" class="themes" role="radiogroup" aria-labelledby="themeLbl"></div>
-            <button id="goAdvanced" type="button" class="vkey go" aria-describedby="goHint"><span class="go-text"><span class="go-name">Advanced</span><span class="go-hint" id="goHint">Sound, processor, files, diagnostics</span></span><span class="go-chev" data-ico="right"></span></button>
+            <button id="goAdvanced" type="button" class="vkey go" aria-describedby="goHint"><span class="go-text"><span class="go-name">Advanced</span></span><span class="go-chev" data-ico="right"></span></button>
+            <p id="goHint" hidden>Sound, processor, files, diagnostics, keyboard.</p>
           </div>
         </div>
 
@@ -360,47 +369,51 @@
               <section class="adv-sec">
                 <h3 class="sec">Sound</h3>
                 <div class="setrow"><div class="setrow-text"><span class="setrow-name" id="monoName">Mono</span>
-                  <p class="hint" id="monoHint">Plays one channel instead of stereo, for a single speaker or one earbud. The music is the same, only narrower.</p></div>
+                  <p id="monoHint" hidden>Plays one channel instead of stereo, for a single speaker or one earbud. The music is the same, only narrower.</p></div>
                   <button id="monoMode" type="button" class="vkey" role="switch" aria-checked="false" aria-labelledby="monoName" aria-describedby="monoHint"><span aria-hidden="true">off</span></button></div>
               </section>
               <section class="adv-sec">
                 <h3 class="sec">Processor</h3>
-                <div class="setrow"><div class="setrow-text"><span class="setrow-name" id="liteName">Lighter on processor</span>
-                  <p class="hint" id="liteHint">Uses less of the phone, so older ones keep up. A busy loop may play a few notes fewer. Turns itself on if this device can't keep up, unless you choose.</p>
+                <div class="setrow"><div class="setrow-text"><span class="setrow-name" id="liteName">Lite</span>
+                  <p id="liteHint" hidden>Lighter on the processor. Uses less of the phone, so older ones keep up. A busy loop may play a few notes fewer. Turns itself on if this device can't keep up, unless you choose.</p>
                   <p class="hint" id="liteAuto" hidden></p></div>
-                  <button id="liteMode" type="button" class="vkey" role="switch" aria-checked="false" aria-labelledby="liteName" aria-describedby="liteHint"><span aria-hidden="true">off</span></button></div>
+                  <button id="liteMode" type="button" class="vkey" role="switch" aria-checked="false" aria-labelledby="liteName" aria-describedby="liteHint liteAuto"><span aria-hidden="true">off</span></button></div>
               </section>
               <section class="adv-sec">
                 <h3 class="sec">Files</h3>
-                <p class="hint">Your loops and albums live on this device. A backup is one file with all of them.</p>
-                <div class="keys2">
-                  <button id="exportJson" type="button" class="vkey">back up all</button>
-                  <button id="importBtn" type="button" class="vkey">restore</button>
-                  <button id="copyBackup" type="button" class="vkey">copy backup</button>
-                  <button id="pasteBackup" type="button" class="vkey">paste backup</button>
+                <div class="keys2 adv-keys">
+                  <button id="exportJson" type="button" class="vkey" aria-label="back up all" aria-describedby="filesHint">back up</button>
+                  <button id="importBtn" type="button" class="vkey" aria-label="restore from a file" aria-describedby="restoreHint">restore</button>
+                  <button id="copyBackup" type="button" class="vkey" aria-describedby="filesHint">copy backup</button>
+                  <button id="pasteBackup" type="button" class="vkey" aria-describedby="restoreHint">paste backup</button>
                 </div>
-                <input type="file" id="importFile" hidden>
+                <p id="filesHint" hidden>Your loops and albums live on this device. A backup is one file, or one text, with all of them.</p>
+                <p id="restoreHint" hidden>Adds a backup's loops and albums to your Library. Nothing already there is replaced.</p>
+                <input type="file" id="importFile" aria-label="Backup file" hidden>
               </section>
               <section class="adv-sec">
                 <h3 class="sec">Diagnostics</h3>
-                <p class="hint">If something misbehaves, play for a minute with the screen off, come back, then copy this and send it over.</p>
-                <pre id="diagOut" class="diag" aria-label="Diagnostics report">open to read</pre>
-                <div class="trim"><div class="setrow-text"><span class="setrow-name">Playhead trim</span><span class="hint">Normally leave at zero</span></div>
-                  <button id="trimDown" type="button" class="vkey" aria-label="Earlier by 5 ms">−</button>
+                <pre id="diagOut" class="diag adv-keys" aria-label="Diagnostics report"></pre>
+                <div class="trim"><div class="setrow-text"><span class="setrow-name">Playhead trim</span></div>
+                  <button id="trimDown" type="button" class="vkey" aria-label="Playhead trim: earlier by 5 ms" aria-describedby="trimHint">−</button>
                   <span id="syncVal" class="trim-val" aria-live="polite">0 ms</span>
-                  <button id="trimUp" type="button" class="vkey" aria-label="Later by 5 ms">+</button>
-                  <input type="range" id="playheadSync" min="-200" max="200" step="5" value="0" hidden>
+                  <button id="trimUp" type="button" class="vkey" aria-label="Playhead trim: later by 5 ms" aria-describedby="trimHint">+</button>
+                  <input type="range" id="playheadSync" min="-200" max="200" step="5" value="0" aria-label="Playhead trim" hidden>
                 </div>
+                <p id="trimHint" hidden>Normally leave at zero.</p>
                 <div class="keys3">
-                  <button id="diagRefresh" type="button" class="vkey">refresh</button>
-                  <button id="diagCopy" type="button" class="vkey">copy</button>
-                  <button id="diagReset" type="button" class="vkey">reset counters</button>
+                  <button id="diagRefresh" type="button" class="vkey" aria-label="refresh diagnostics">refresh</button>
+                  <button id="diagCopy" type="button" class="vkey" aria-label="copy diagnostics" aria-describedby="diagHint">copy</button>
+                  <button id="diagReset" type="button" class="vkey" aria-label="reset counters">reset</button>
                 </div>
-                <p class="hint"><a href="./speed.html" class="speed-link">Speed test</a>: how fast this device plays the busiest loops (a few minutes).</p>
+                <p id="diagHint" hidden>If something misbehaves, play for a minute with the screen off, come back, then copy this and send it over.</p>
+                <a href="./speed.html" class="vkey speed-link" aria-describedby="speedHint">speed test</a>
+                <p id="speedHint" hidden>How fast this device plays the busiest loops (a few minutes).</p>
               </section>
               <section class="adv-sec">
                 <h3 class="sec">Keyboard</h3>
-                <p class="colophon">Space plays. N makes something new (or Next, outside an album). S keeps it in Favorite Loops. 1 to 5 re-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device.</p>
+                <p class="colophon" aria-hidden="true">Space play · N new · S save · 1-5 roll</p>
+                <p class="vh">Space plays. N makes something new (or Next, outside an album). S keeps it in Favorite Loops. 1 to 5 re-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device.</p>
               </section>
             </div>
           </div>
@@ -420,7 +433,7 @@
     </div>
     <div class="row row-2">
       <button id="libraryBtn" type="button" class="btn" aria-label="Library" title="Library"></button>
-      <button id="saveBtn" type="button" class="btn" aria-label="Save or share" title="Save or share"></button>
+      <button id="saveBtn" type="button" class="btn" aria-label="Save or share" title="Save / share"></button>
     </div>
     <div class="row row-3">
       <button id="nowBtn" type="button" class="btn" aria-label="Now playing" title="Now playing"></button>
@@ -428,7 +441,10 @@
     </div>
   </nav>
 
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <!-- A popup is only seen, and only for what the screen doesn't show
+       already; what is said, in whole words, is the status (js/ui.js). -->
+  <div id="toast" class="toast" aria-hidden="true"></div>
+  <p id="announce" class="vh" role="status" aria-live="polite"></p>
 </main>
 
 <script type="module" src="js/main.js"></script>

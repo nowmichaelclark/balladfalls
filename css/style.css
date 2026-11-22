@@ -1702,7 +1702,7 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 }
 .hero-keys {
   grid-column: 1 / -1;
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 48px repeat(2, minmax(0, 1.35fr)); gap: 6px;
 }
 .hero-keys .vkey { padding: 4px 6px; }
 .end-keys { display: flex; padding: 10px 0 4px; border-top: 1px solid var(--rule); }
@@ -1788,7 +1788,26 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 .keys2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .keys3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .keys3 .vkey { padding: 4px 4px; }
-.speed-link { color: inherit; text-decoration: underline; }
+/* Symbols for words (session 30e; Mikey, 2026-11-22). */
+.layer .btn-roll svg { width: 18px; height: 18px; display: block; margin: auto; pointer-events: none; }
+.np-next svg { width: 1.1em; height: 1.1em; vertical-align: -0.18em; margin-right: 6px; }
+/* Fewer words (session 30e): a section's keys stand where its line was. */
+.adv-keys, .sec + .setrow { margin-top: 8px; }
+.speed-link { display: flex; margin-top: 6px; text-decoration: none; }
+/* Share's keys, and its two views: a head with a way back, and keys. */
+.share-keys { grid-template-columns: repeat(6, minmax(0, 1fr)); padding: 2px; }
+.share-keys .vkey { grid-column: span 2; padding: 4px; }
+.share-keys .share-more { grid-column: span 3; }
+.ln-head :is(#exportBack, #seedBack) { justify-self: start; }
+.v-sheet .ln-body { gap: 12px; }
+.format-keys { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+.format-keys .vkey { padding: 4px; }
+#exportAbout { margin-bottom: 0; text-align: center; }
+#exportSaved { overflow-wrap: anywhere; }
+#exportSheet .hint { text-align: center; }
+/* Neither view scrolls, so their words stop growing at 1.5x, as Bars' do. */
+.v-sheet :is(.vkey, .hint, .srow span) { font-size: min(0.6875rem, 16.5px); }
+.share-keys .vkey { font-size: min(0.75rem, 18px); }
 .setrow { display: flex; align-items: center; gap: 12px; }
 .setrow-text { flex: 1; min-width: 0; }
 .setrow-name {
@@ -1796,17 +1815,14 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
   line-height: 1.3; color: var(--text-primary);
 }
 .setrow .hint { margin: 2px 0 0; }
-/* Exporting audio (queue item 104b): the length chosen is pressed in
-   with a ring, as a lit choice; the progress is a groove filled with
-   the theme's mark. */
-.vkey[role="radio"][aria-checked="true"] { box-shadow: inset 0 0 0 2px var(--text-primary); color: var(--text-primary); }
+/* Exporting audio (queue item 104b): the progress is a groove filled
+   with the theme's mark. */
 .vkey:disabled { opacity: 0.55; }
 .export-bar {
   height: 10px; margin: 8px 0 4px; border-radius: 5px; overflow: hidden;
   background: var(--groove-bg); box-shadow: inset 0 1px 3px var(--groove-shade);
 }
 .export-bar span { display: block; height: 100%; width: 0; background: var(--np-fill, var(--mark)); transition: width 240ms linear; }
-.export-end { margin-top: 6px; }
 .diag {
   margin: 0 0 8px; padding: 8px 10px; border-radius: 8px;
   background: var(--groove-bg);
@@ -2290,6 +2306,7 @@ canvas.art { image-rendering: auto; }
 .save-head .hint { margin: 0; flex: 1 1 100%; }
 .save-head.changed .hint { color: var(--text-primary); font-weight: 600; }
 .save-head .vkey { flex: 1 1 0; }
+.save-head:not(.changed) { padding: 0; }
 .diag { max-height: none; }
 #shareOut { margin-top: 8px; user-select: all; }
 
@@ -2643,4 +2660,13 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 /* Short screens: the Sound rows get closer so all seven fit. */
 @media (max-height: 700px) {
   .phone input[type="range"] { height: 28px; }
+}
+/* The smallest phones: Share and its views still fit without scrolling. */
+@media (max-height: 600px) {
+  .share-keys { padding: 0; }
+  .share-keys .vkey { font-size: min(0.75rem, 14px); padding: 1px 3px; line-height: 1.1; }
+  .share-keys .vkey, .v-sheet .ln-body .vkey { min-height: 44px; }
+  .v-sheet .ln-body { gap: 4px; padding: 0; }
+  .v-sheet .hint { margin: 2px 0 4px; }
+  .export-bar { margin: 2px 0; height: 8px; }
 }

@@ -13,6 +13,10 @@
 #   card   tools/card.mjs: the info card's lines at every width and text size
 #          (session 30d, item 112): whole, inside, apart, the rest a tap
 #          away, the playhead's round dots; its screenshots are uploaded
+#   names  tools/names.mjs: every control on every screen named for a screen
+#          reader, with the description its screen lost (session 30e, item
+#          113), Share's views fitting; its screenshots of every screen at
+#          360 px and a tablet's width, light and dark, are uploaded
 #   long   tools/export-long.mjs: a three-hour export (lossless, or small:
 #          Opus through the browser's encoder, queue item 104c) on
 #          tools/autolite.mjs's slow case (burn 1700 us, lighter on processor
@@ -20,7 +24,7 @@
 #          and the file decodes and nulls against a straight render
 #          (lossless) or decodes clean, whole and aligned (small)
 #
-# By hand: `jobs` (rows, views, long or all), `repeat` (the rows, that many
+# By hand: `jobs` (rows, views, card, names, long or all), `repeat` (the rows, that many
 # times in a row, all must pass), `length` (seconds, the track length the
 # export takes, session 30c), `burn` and `format` (lossless or small) for the long job.
 name: export
@@ -45,6 +49,8 @@ on:
       - 'tools/views.mjs'
       - 'js/dlplayer.wasm'
       - 'index.html'
+      - 'speed.html'
+      - 'tools/names.mjs'
       - 'tools/rows.mjs'
       - 'tools/card.mjs'
       - 'tools/export*.mjs'
@@ -53,7 +59,7 @@ on:
   workflow_dispatch:
     inputs:
       jobs:
-        description: 'Which jobs: rows, views, card, long or all'
+        description: 'Which jobs: rows, views, card, names, long or all'
         default: 'all'
       repeat:
         description: 'The rows, this many times in a row'
@@ -126,6 +132,26 @@ jobs:
         with:
           name: card-shots
           path: card-shots
+          if-no-files-found: ignore
+
+  names:
+    if: github.event_name != 'workflow_dispatch' || inputs.jobs == 'all' || inputs.jobs == 'names'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Playwright's Chromium
+        run: npm install --no-save --no-audit --no-fund playwright@1.56.1 && npx playwright install --with-deps chromium
+      - name: Every control named, every screen
+        run: node tools/names.mjs --shots names-shots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: names-shots
+          path: names-shots
           if-no-files-found: ignore
 
   long:

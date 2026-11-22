@@ -32,11 +32,11 @@ function startWorker() {
     return null;
   }
   worker.onmessage = (e) => {
-    const { id, bitmap, error } = e.data;
+    const { id, bitmap, blob, error } = e.data;
     const w = waiting.get(id);
     if (!w) return;
     waiting.delete(id);
-    if (bitmap) w.resolve(bitmap);
+    if (bitmap || blob) w.resolve(bitmap || blob);
     else w.reject(new Error(error || 'no cover'));
   };
   // The worker could not load (no module workers, say): everything waiting
@@ -98,6 +98,34 @@ export function coverImage(spec, size = 320) {
   kept.set(key, p);
   while (kept.size > KEEP) kept.delete(kept.keys().next().value);
   return p;
+}
+
+// The cover of `spec` as a PNG's Blob, for the phone's lock screen (session
+// 30f): the picture `coverImage` keeps, encoded on the covers' thread.
+export async function coverPng(spec, size = 320) {
+  const image = await coverImage(spec, size);
+  const here = () => pngHere(image, size);
+  if (!startWorker()) return here();
+  // A copy to send: the kept picture stays the page's.
+  const copy = await createImageBitmap(image);
+  const w = startWorker();
+  if (!w) return here();
+  return new Promise((resolve, reject) => {
+    const id = ++nextId;
+    waiting.set(id, { resolve, reject, fallback: () => here().then(resolve, reject) });
+    w.postMessage({ id, image: copy, size }, [copy]);
+  });
+}
+
+// With no worker, the browser's own encoder, which calls back when it's done.
+function pngHere(image, size) {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    paint(canvas, image);
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('no PNG'))), 'image/png');
+  });
 }
 
 // The picture into `canvas`, scaled to fill it. Drawing a bitmap in reads

@@ -90,6 +90,10 @@
 //                       copied, the Library cleared, and restored
 //   lighter on processor  a new core at the other quality, the same loop
 //   Diagnostics         the core's player, nothing late, nothing lost
+//   now playing art     (session 30f) the media session's artwork is the
+//                       playing loop's own cover: on first Play, Next,
+//                       Previous, an album track, a track's end, a rename
+//                       and out of an album
 //   plain line          a browser with no WebAssembly, and a module that
 //                       never arrives: one plain line each, nothing played
 //   long piece          (queue item 106b; a page of its own, opened on a
@@ -1577,6 +1581,7 @@ async function main() {
     if (!APP) await linkRows(browser);
     if (!APP) await paceRows(browser);
     if (!APP) await previousRows(browser);
+    if (!APP) await artRows(browser);
     if (!APP) await trackRows(browser);
   } finally {
     if (browser) await browser.close();
@@ -2158,6 +2163,125 @@ async function previousRows(browser) {
   row('previous in an album: and on again once a new loop has made a history', afterNew, String(afterNew));
   await pause();
   row('previous in an album: no page errors', !bad.length, bad.join('; '));
+  await tab.close();
+}
+
+// The lock screen's artwork (session 30f; Mikey, 2026-11-22): what
+// navigator.mediaSession.metadata says, fetched, decoded and compared with
+// that loop's cover as js/cover.js draws it, pixel for pixel at 32 px.
+async function artRows(browser) {
+  console.log('\n  Now Playing art (session 30f)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(() => {
+    window.__long = [];
+    try {
+      new PerformanceObserver((list) => { for (const t of list.getEntries()) window.__long.push({ at: t.startTime, ms: t.duration }); }).observe({ entryTypes: ['longtask'] });
+    } catch { /* none here */ }
+  });
+  const specs = [newSpec(31337, ['rainy', 'mellow']), newSpec(4242), newSpec(777, 'bpm=80')];
+  await tab.goto(linkOf(`${ORIGIN}/`, encodeAlbum('Art', specs)));
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  const click = (id) => tev((i) => document.getElementById(i).click(), id);
+  // How far the artwork is from a loop's cover (0: that cover), or why not.
+  // `spec` null: the card's own cover (a loop the core made itself).
+  const artIs = (spec) => tev(async (want) => {
+    const m = navigator.mediaSession.metadata;
+    if (!m || !m.artwork.length) return { why: 'no artwork', title: m && m.title };
+    const src = m.artwork[0].src;
+    if (src.includes('/icons/')) return { why: 'the app\'s icon', title: m.title, src };
+    let got;
+    try {
+      got = await createImageBitmap(await (await fetch(src)).blob());
+    } catch (e) {
+      return { why: `unreadable: ${e.message}`, title: m.title, src };
+    }
+    let expected = document.getElementById('cover');
+    if (want) {
+      expected = document.createElement('canvas');
+      (await import('/js/cover.js')).drawCover(expected, want, 320);
+    }
+    const small = (image) => {
+      const c = document.createElement('canvas');
+      c.width = c.height = 32;
+      const x = c.getContext('2d', { willReadFrequently: true });
+      x.drawImage(image, 0, 0, 32, 32);
+      return x.getImageData(0, 0, 32, 32).data;
+    };
+    const a = small(got);
+    const b = small(expected);
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) sum += Math.abs(a[i] - b[i]);
+    return { off: sum / a.length, width: got.width, title: m.title, src };
+  }, spec);
+  // Within a few seconds: that loop's title, and its cover.
+  const becomes = async (spec, title, ms = 8000) => {
+    const until = Date.now() + ms;
+    let last;
+    do {
+      last = await artIs(spec);
+      if (last.off != null && last.off < 2 && last.width === 320 && (!title || last.title === title)) return { ok: true, ...last };
+      await sleep(300);
+    } while (Date.now() < until);
+    return { ok: false, ...last };
+  };
+  const say = (x) => (x.why ? `${x.why} (${x.title})` : `${x.off.toFixed(2)} off, ${x.width} px, ${x.title}`);
+  const steps = async (name, go, spec, title, ms) => {
+    await go();
+    const x = await becomes(spec, title, ms);
+    row(`now playing art: ${name}: the loop's own cover`, x.ok, say(x));
+    return x;
+  };
+
+  const apart = await steps('first Play', () => click('playBtn'), specs[0], specs[0].name);
+  const other = await artIs(specs[1]);
+  row('now playing art: one loop\'s cover is not another\'s', apart.ok && other.off > 4, say(other));
+  // From here: switching loops, not the first Play's loading of the core.
+  await sleep(1500);
+  await steps('Next', () => click('nextBtn'), specs[1], specs[1].name);
+  await steps('Previous', () => click('prevBtn'), specs[0], specs[0].name);
+  await steps('an album track', () => tev(async () => {
+    const at = async (sel) => { document.querySelector(sel).click(); await new Promise((r) => setTimeout(r, 300)); };
+    if (document.getElementById('viewLibrary').hidden) await at('#libraryBtn');
+    await at('[data-tab="albums"]');
+    [...document.querySelectorAll('.lrow.album')].find((r) => r.textContent.includes('Art')).querySelector('.lrow-main').click();
+    await new Promise((r) => setTimeout(r, 300));
+    document.querySelectorAll('.lrow.track .lrow-main')[1].click();
+  }), specs[1], specs[1].name);
+  await steps('a track\'s end', async () => {
+    await click('nowBtn');
+    await trackTo(tev, 3);
+  }, specs[2], specs[2].name, 15000);
+  const before = await artIs(specs[2]);
+  const renamed = await steps('a rename', () => tev(() => {
+    if (document.getElementById('viewNow').hidden) document.getElementById('nowBtn').click();
+    document.getElementById('loopName').click();
+    const i = document.getElementById('nameEdit');
+    i.value = 'renamed';
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+    i.dispatchEvent(new Event('blur'));
+  }), specs[2], 'renamed');
+  row('now playing art: a rename keeps the picture it had', renamed.ok && renamed.src === before.src, `${before.src} then ${renamed.src}`);
+
+  // Out of the album, a loop the core makes: the card's cover. Nothing here
+  // draws a cover to compare, so the long tasks are the app's own.
+  await tev(() => {
+    if (document.getElementById('viewNow').hidden) document.getElementById('nowBtn').click();
+    if (!document.getElementById('nowAlbum').hidden) document.getElementById('nowAction').click();
+  });
+  await sleep(500);
+  await tev(() => { window.__long = []; });
+  await click('nextBtn');
+  await sleep(2500);
+  const long = await tev(() => window.__long.map((t) => Math.round(t.ms)));
+  row('now playing art: no long task over 100 ms as a new loop\'s cover is made', long.every((ms) => ms <= 100), `${long.join(', ') || 'none'} ms`);
+  const fresh = await becomes(null);
+  row('now playing art: out of the album, a new loop: the cover on the card', fresh.ok && fresh.title !== 'renamed' && fresh.src !== renamed.src, say(fresh));
+  row('now playing art: no page errors', !bad.length, `${bad.join('; ')}`);
   await tab.close();
 }
 

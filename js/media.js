@@ -39,13 +39,83 @@
 // plays) goes to the app (js/app.js), and the lock screen's, the
 // notification's and a headset's buttons come back as the page's own Play,
 // Pause, Next and Previous.
+//
+// In a browser the artwork is the playing loop's own cover too (Mikey,
+// 2026-11-22, session 30f): the title at once, the picture when it is drawn.
 
 import { appLink } from './app.js';
+import { coverPng } from './covers.js';
 
 const KEEPALIVE = [
   ['audio/keepalive.flac', 'audio/flac'],
   ['audio/keepalive.wav', 'audio/wav'],
 ];
+
+const ICONS = [
+  { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+  { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+];
+const ART_SIZE = 320;
+
+// What a browser's media session shows. The session is the page's, one for
+// as long as it lives, so this outlives a bridge (the engine rebuilt makes
+// a new one): one picture's address is held at a time.
+export class SessionArt {
+  // `png(spec, size)`: a promise of the cover's Blob; `show(words, artwork)`
+  // puts them in the session.
+  constructor(png, show) {
+    this.png = png;
+    this.show = show;
+    this.key = null;
+    this.url = '';
+    this.artwork = [];
+    this.words = null;
+  }
+
+  set(title, artist, spec) {
+    this.words = { title, artist };
+    // A cover is the loop's whatever it is called: a rename keeps it.
+    const key = spec ? JSON.stringify({ ...spec, name: undefined }) : '';
+    if (key === this.key) {
+      this.show(this.words, this.artwork);
+      return;
+    }
+    this.key = key;
+    // The words at once. Not the last loop's picture under this one's name,
+    // nor the icon for the moment the cover takes.
+    this._swap(spec ? [] : ICONS);
+    if (!spec) return;
+    Promise.resolve()
+      .then(() => this.png(spec, ART_SIZE))
+      .then((blob) => {
+        if (this.key !== key) return;   // another loop's turn by now
+        const url = URL.createObjectURL(blob);
+        this._swap([{ src: url, sizes: `${ART_SIZE}x${ART_SIZE}`, type: 'image/png' }], url);
+      })
+      .catch((err) => {
+        if (this.key !== key) return;
+        console.warn('Could not make the lock screen\'s cover', err);
+        this._swap(ICONS);
+        // Asked again, it is tried again.
+        this.key = null;
+      });
+  }
+
+  // The session shows the new picture first, then the old one's address goes.
+  _swap(artwork, url = '') {
+    const old = this.url;
+    this.url = url;
+    this.artwork = artwork;
+    this.show(this.words, artwork);
+    if (old) URL.revokeObjectURL(old);
+  }
+}
+
+const sessionArt = new SessionArt(coverPng, ({ title, artist }, artwork) => {
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({ title, artist, album: 'Driftloom', artwork });
+  } catch { /* metadata is a nicety, not a requirement */ }
+});
 
 export class MediaBridge {
   constructor(ctx) {
@@ -203,17 +273,7 @@ export class MediaBridge {
       return;
     }
     if (!('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
-    try {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title,
-        artist: subtitle,
-        album: 'Driftloom',
-        artwork: [
-          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-        ],
-      });
-    } catch { /* metadata is a nicety, not a requirement */ }
+    sessionArt.set(title, subtitle, spec);
   }
 
   setPlaybackState(playing) {

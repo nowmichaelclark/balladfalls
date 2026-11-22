@@ -182,6 +182,7 @@ function edges(sc) {
 // Put a pane's new contents in place, then restore its scroll, or bring
 // the row marked current into view the first time.
 function mount(host, nodes) {
+  const held = focusHeld(host);
   host.innerHTML = '';
   host.append(...nodes);
   for (const sc of host.querySelectorAll('.scroll')) {
@@ -193,6 +194,38 @@ function mount(host, nodes) {
     }
     edges(sc);
   }
+  if (held) focusAgain(host, held);
+}
+
+// Rows are built again at every change, so the focus is put back: on the
+// same key of the same page, or, on a page just come to, on its first (the
+// way back, where it has one).
+function focusHeld(host) {
+  const at = document.activeElement;
+  if (!at || !host.contains(at)) return null;
+  const keys = [...host.querySelectorAll('button')];
+  const row = at.closest('.lrow');
+  return {
+    page: host.querySelector('.scroll')?.dataset.key,
+    index: keys.indexOf(at),
+    row: row?.querySelector('.lrow-title')?.textContent,
+    nth: row ? [...row.querySelectorAll('button')].indexOf(at) : -1,
+  };
+}
+
+function focusAgain(host, held) {
+  const keys = [...host.querySelectorAll('button:not(:disabled)')];
+  if (!keys.length) return;
+  let to = keys[0];
+  if (held.page === host.querySelector('.scroll')?.dataset.key && held.index >= 0) {
+    to = keys[Math.min(held.index, keys.length - 1)];
+    if (held.row != null) {
+      const same = [...host.querySelectorAll('.lrow')].find((r) => r.querySelector('.lrow-title')?.textContent === held.row);
+      if (same) to = same.querySelectorAll('button')[held.nth] || to;
+    }
+  }
+  // The list keeps its own place: the focus doesn't move it.
+  to.focus({ preventScroll: true });
 }
 
 function lrows(label, rows) {

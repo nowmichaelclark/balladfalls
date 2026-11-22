@@ -303,6 +303,9 @@ function plain(text) {
 export function renderPanel() {
   const { state } = api;
   const list = el('picksList');
+  // Built again at every pick: the focus stays on the key it was on.
+  const had = document.activeElement && list.contains(document.activeElement)
+    ? [...list.querySelectorAll('button')].indexOf(document.activeElement) : -1;
   list.textContent = '';
   const moods = state.vibes;
   const { tempo, length, key, scale, style, voices, layers } = state.picks;
@@ -323,7 +326,7 @@ export function renderPanel() {
         b.setAttribute('aria-label', `Moods: ${spoken(moodsText(moods))}`);
       } else {
         b.append(plain('any mood'));
-        b.setAttribute('aria-label', 'Moods: any');
+        b.setAttribute('aria-label', 'Moods: any mood');
       }
       vals.append(b);
     } else if (line.id === 'pace') {
@@ -340,7 +343,7 @@ export function renderPanel() {
         vals.append(sep);
         const b = lineButton('', () => api.openLength());
         b.append(plain('any bars'));
-        b.setAttribute('aria-label', 'Bars: any');
+        b.setAttribute('aria-label', 'Bars: any bars');
         vals.append(b);
       } else {
         const t = document.createElement('span');
@@ -350,7 +353,7 @@ export function renderPanel() {
         const b = lineButton('', () => api.openLength());
         b.append(length != null ? pill(lengthText(length), 'length') : pill('any bars', 'length', { dashed: true }));
         if (journey) b.append(pill(journey, 'journey'));
-        b.setAttribute('aria-label', `Bars: ${length != null ? spoken(lengthText(length)) : 'any'}${journey ? `, ${journey} journey` : ''}`);
+        b.setAttribute('aria-label', `Bars: ${length != null ? spoken(lengthText(length)) : 'any bars'}${journey ? `, ${journey} journey` : ''}`);
         vals.append(b);
       }
       vals.append(trackKey(state, isAny.pace));
@@ -405,6 +408,10 @@ export function renderPanel() {
     list.append(row);
   }
   fitPanel();
+  if (had >= 0) {
+    const all = list.querySelectorAll('button');
+    all[Math.min(had, all.length - 1)].focus({ preventScroll: true });
+  }
 }
 
 // The fit guard: at large text, very long picks can make the five lines
@@ -412,7 +419,7 @@ export function renderPanel() {
 // until they fit, never below the 100% size; then take the lines'
 // padding away.
 const CAPS = [1.5, 1.3, 1.15, 1];
-function fitPanel() {
+export function fitPanel() {
   const view = el('viewVibe');
   const list = el('picksList');
   const fits = () => list.scrollHeight <= list.clientHeight + 0.5;

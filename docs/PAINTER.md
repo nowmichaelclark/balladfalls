@@ -13,6 +13,15 @@ used soon. The rest waits for its phase of the core work.
   fixed in place.
 - **Scrolling in exactly two places,** both in the middle viewport: the
   Library's lists and the Advanced page. Nothing else scrolls.
+  Two exceptions. A computer zoomed to 400% (Mikey, 2026-11-22: "let it
+  scroll at 400%, only those who have accessibility issues would zoom in
+  that much I think"): under 280 px high and no finger, the page scrolls
+  down, never across. And, for the browser's address bar alone (Mikey, 2026-11-22:
+  "when viewing on chrome, I can't get the address bar at the top to go
+  away; what would be the sensible way to do that without Fullscreen? I
+  would thing the user could just be able to scroll down a bit"): in a
+  touch browser's tab the document scrolls that bit; the app stays put and
+  grows into the room. Not installed, not the Android app.
 - **Bottom buttons have no lights or LEDs;** they only change icon (for
   now only the bottom-right Sound / Layers switch does).
 - **Only three settings exist:** the theme, "lighter on processor" and
@@ -27,6 +36,33 @@ used soon. The rest waits for its phase of the core work.
 - **Plain characters only** in anything the app shows as a code or name
   (letters, digits, `-` and `_`); no emoji in codes.
 - It must run smoothly on old Android phones and weak chips.
+
+## What the final pass settled (session 30f, item 114, v196 to v198)
+
+- **Two layouts.** Upright: card, panel, keys. Under 520 px high and 480 or
+  wider (a phone on its side; Mikey's review, 2026-11-22): panel at the
+  left, card over keys at the right, the two filling the safe area, up to
+  560 px a side. The reading order is the same both ways: card, panel,
+  keys. A design is drawn for both, and at 360x640 and 320x568.
+- **The panel asks its own height** (the container `middle`: 340, 300,
+  240 px): a view closes its gaps by it, and never scrolls to fit.
+- **Targets:** 44 px where there is room, never under 24.
+- **Keys:** no letter, number or symbol does anything alone or with Shift
+  (Mikey, 2026-11-22; WCAG 2.1.4): a shortcut has Alt or Ctrl, and
+  `js/shortcuts.js` lists them.
+- **The bar is WCAG 2.2 AA** in every theme and in forced colors, held by
+  `tools/a11y.mjs`: text 4.5:1 (3:1 large), marks and rings 3:1. A hue used
+  for words has its own deeper token (`--mark-text`).
+- **State is a shape as well as a color:** pressed is a ring, muted notes
+  are rings, a soft note keeps its ring at full color. Off is one dimming,
+  0.55, never doubled.
+- **Focus:** a 2 px ring on everything, whole; a view opened puts the focus
+  on its way out, closed on the key that opened it.
+- **A popup is solid.** A screen that can do nothing shows no keys.
+- **Text size is the root size** (rem, the pixel caps holding), in the
+  browser and in the Android app.
+- The baked spec (`design/driftloom_v20.html`) predates this: bake it again
+  before designing on it.
 
 ## 1. Next-loop picks (soonest: can be designed now)
 
@@ -80,7 +116,7 @@ rail becomes the piece's line (ticks for the map, a bead for you), under it
 "bar 812/3,072 · peak" and the time played and left (a minus before it), with a key each way
 for the section before or after; press the line to jump. The journey (arc,
 wander) sits beside the Bars picker's ∞ and any. The Library's lists end in each
-loop's length. A Painter session may restyle all of it.
+loop's length. The final pass (30f) kept it.
 
 - **Where you are.** For a long piece: bar 812 of 3,072, time played
   and time left; something calm that fits the info card.

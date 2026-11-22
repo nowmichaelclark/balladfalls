@@ -8,7 +8,7 @@
 // change, together with BUILD in js/main.js, so you can tell at a glance
 // which deploy you are listening to. Bumping it also evicts files that
 // have been deleted from FILES, which the network-first path cannot do.
-const CACHE = 'driftloom-v195';
+const CACHE = 'driftloom-v200';
 // './index.html' is deliberately absent. Cloudflare redirects it to './'
 // with a 307, and the Cache API will not store a redirected response --
 // addAll is atomic, so that one entry failing takes the whole install with
@@ -24,6 +24,9 @@ const FILES = [
   './fonts/space-grotesk-600.woff2',
   './js/main.js',
   './js/ui.js',
+  // The safe area and the browser's bar (session 30f).
+  './js/viewport.js',
+  './js/shortcuts.js',
   './js/characters.js',
   './js/media.js',
   './js/app.js',

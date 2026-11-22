@@ -8,13 +8,15 @@ import { picksAsk, PlayerEngine } from './player.js';
 import { patternToMidi } from './midi.js';
 import { AudioExport } from './export.js';
 import { MediaBridge } from './media.js';
-import { appBridge } from './app.js';
+import { appBridge, appLink } from './app.js';
+import { watchViewport } from './viewport.js';
+import { shortcutOf, keyNames, onMac } from './shortcuts.js';
 import * as share from './share.js';
 
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v195';
+const BUILD = 'v200';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -912,7 +914,7 @@ function saveAsNew() {
   savedChanged();
 }
 
-// S on a keyboard: save to Favorite Loops, or save the changes to a saved loop.
+// Save on a keyboard: to Favorite Loops, or the changes to a saved loop.
 function saveQuick() {
   if (!state.spec) return;
   if (!isSaved()) saveIn(store.FAVORITES);
@@ -938,8 +940,31 @@ function updateSaveButton() {
 // button again (or the switch) goes back to where you were.
 const BASE_VIEWS = ['now', 'sounds', 'layers'];
 
+// The focus follows the view (WCAG 2.4.3): a child view opens on its way
+// back out, and closed, the focus is on the key that opened it.
+const FOCUS_IN = { vibe: '#picksClose', vibes: '#vibesClose', length: '#lenCancel', track: '#trkCancel' };
+const FOCUS_BACK = {
+  'vibe>now': '#vibesBtn',
+  'vibes>vibe': '#picksList .pk-line-mood .pk-val',
+  'length>vibe': '#picksList .pk-line-pace button.pk-val:not(.pk-track)',
+  'track>vibe': '#picksList .pk-track',
+  'track>export': '#viewExport .page-title',
+};
+
+function focusView(from, view, had) {
+  // Only for a focus that was in the view gone: never taken from the rest.
+  if (!had || from === view) return;
+  const sel = FOCUS_BACK[`${from}>${view}`] || FOCUS_IN[view];
+  const n = sel && document.querySelector(sel);
+  if (n && n.checkVisibility && !n.checkVisibility()) return;
+  if (n) n.focus({ preventScroll: true });
+}
+
 function setView(view) {
   viewFlush();
+  const from = state.view;
+  const was = document.querySelector('.view:not([hidden])');
+  const had = !!(was && document.activeElement && was.contains(document.activeElement));
   state.view = view;
   if (views.open) views.open.view = view;
   const visiting = !BASE_VIEWS.includes(view);
@@ -964,6 +989,8 @@ function setView(view) {
   if (view === 'length') picks.renderLength();
   if (view === 'track') tracklen.renderTrack();
   refreshCard();
+  if (view === 'sounds') saySliders();
+  focusView(from, view, had);
   store.setPrefs({ view: state.lastView, edit: state.lastEdit });
 }
 
@@ -1320,8 +1347,11 @@ function startRename() {
     syncMediaMetadata();
   };
   const onKey = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
-    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    if (e.key !== 'Enter' && e.key !== 'Escape') return;
+    e.preventDefault();
+    e.stopPropagation();
+    finish(e.key === 'Enter');
+    h.focus({ preventScroll: true });
   };
   const onBlur = () => finish(true);
   input.addEventListener('keydown', onKey);
@@ -1435,12 +1465,24 @@ function restoredToast({ added, rejected }) {
     `Restored ${added} loop${added === 1 ? '' : 's'}${rejected ? `, skipped ${rejected} unreadable` : ''}`);
 }
 
+// A slider's value as it is said: a tempo, a share, a count.
+function saySliders() {
+  const of = (id) => Number(ui.el(id).value);
+  const say = (id, text) => ui.el(id).setAttribute('aria-valuetext', text);
+  say('bpm', `${of('bpm')} bpm`);
+  for (const id of ['warmth', 'space', 'wobble', 'volume']) say(id, `${Math.round(of(id) * 100)}%`);
+  const wander = of('driftAmount');
+  say('driftAmount', wander > 0 ? `${wander.toFixed(2).replace(/\.?0+$/, '')} of 2.4` : 'off');
+  say('seedCount', `${of('seedCount')} tracks`);
+}
+
 function syncToneInputs(spec) {
   ui.el('bpm').value = spec.bpm;
   ui.el('warmth').value = spec.tone.warmth;
   ui.el('space').value = spec.tone.space;
   ui.el('wobble').value = spec.tone.wobble;
   ui.el('bpmVal').textContent = spec.bpm;
+  saySliders();
 }
 
 function openSaved(entry) {
@@ -1781,6 +1823,11 @@ function applyTheme(cls, save = true) {
   const th = THEMES.find((t) => t[0] === cls);
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta && th) meta.content = th[3];
+  // What shows past the app as a browser's bar slides away.
+  if (th) document.documentElement.style.setProperty('--page-back', th[3]);
+  // The Android app's bars behind the page take the theme's color too.
+  const link = appLink();
+  if (link && th) link.theme(th[3]);
   if (save) store.setPrefs({ theme: cls });
   ui.el('themeName').textContent = th ? th[2] : '';
   for (const sw of document.querySelectorAll('#themes .sw')) {
@@ -1828,7 +1875,43 @@ function setSwitch(id, on) {
   b.firstElementChild.textContent = on ? 'on' : 'off';
 }
 
+// The text's two steps, where Layers stacks and rows wrap their keys: the
+// width there is, in ems of the text as it is now. Measured here, not by a
+// container query in em: Chromium 141 leaves one at the size the page
+// loaded with when the text size changes under it (the Android app's font
+// size, a browser's setting; measured by tools/a11y.mjs).
+function stepText() {
+  const app = ui.el('app');
+  const box = matchMedia('(min-width: 480px)').matches ? app.querySelector('.zone-dynamic') : app;
+  const style = getComputedStyle(box);
+  const room = box.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  if (!(room > 0)) return;
+  const ems = room / parseFloat(getComputedStyle(app).fontSize);
+  app.classList.toggle('text-large', ems <= 17.5);
+  app.classList.toggle('text-larger', ems <= 15.5);
+}
+
+// A text size changed with no resize (a browser's setting): a probe a rem
+// wide says so.
+function watchTextSize(changed) {
+  if (typeof ResizeObserver === 'undefined') return;
+  const probe = document.createElement('i');
+  probe.setAttribute('aria-hidden', 'true');
+  probe.style.cssText = 'position:absolute;left:0;top:0;width:1rem;height:1rem;visibility:hidden;pointer-events:none';
+  document.body.appendChild(probe);
+  let was = probe.getBoundingClientRect().width;
+  new ResizeObserver(() => {
+    const now = probe.getBoundingClientRect().width;
+    if (now === was) return;
+    was = now;
+    changed();
+  }).observe(probe);
+}
+
 // ---------------------------------------------------------------- boot
+
+// Whether the focus is where the keyboard put it (not a tap).
+let byKeys = true;
 
 function wire() {
   lights = ui.buildPlayhead(state.gridSteps);
@@ -1840,6 +1923,7 @@ function wire() {
   ui.setIcon(ui.el('nowBtn'), 'now');
   ui.setIcon(ui.el('saveBtn'), 'saveShare');
   for (const n of document.querySelectorAll('[data-ico]')) n.innerHTML = ui.icon(n.dataset.ico);
+  stepText();
   initThemes();
   setPlayButton(false);
   store.ensureAlbums();
@@ -1877,7 +1961,11 @@ function wire() {
     setLength: (length, journey) => setPicks({ length, journey }),
     clearLine: clearPickLine,
   });
-  ui.el('vibesClear').addEventListener('click', () => setVibes([]));
+  ui.el('vibesClear').addEventListener('click', () => {
+    setVibes([]);
+    // It goes dim with nothing picked: the focus to close beside it.
+    ui.el('vibesClose').focus({ preventScroll: true });
+  });
   // A long piece on Now Playing (queue item 106b): its line, where you are,
   // and the jump (session 17's command).
   piece.wirePiece({
@@ -1911,7 +1999,11 @@ function wire() {
   const nameEl = ui.el('loopName');
   nameEl.addEventListener('click', startRename);
   nameEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); startRename(); }
+    if (e.key === 'Enter' || (e.key === ' ' && byKeys)) {
+      e.preventDefault();
+      e.stopPropagation();
+      startRename();
+    }
   });
 
   ui.el('playBtn').addEventListener('click', togglePlay);
@@ -1993,6 +2085,10 @@ function wire() {
     if (state.output) state.output.setVolume(parseFloat(e.target.value));
     store.setPrefs({ volume: parseFloat(e.target.value) });
   });
+
+  for (const id of ['bpm', 'warmth', 'space', 'wobble', 'volume', 'driftAmount', 'seedCount']) {
+    ui.el(id).addEventListener('input', saySliders);
+  }
 
   ui.el('liteMode').addEventListener('click', () => {
     state.lite = !state.lite;
@@ -2163,20 +2259,39 @@ function wire() {
     e.target.value = '';
   });
 
+  document.addEventListener('pointerdown', () => { byKeys = false; }, true);
+  // (An arrow with Alt is a shortcut's: the focus hasn't moved by it.)
+  document.addEventListener('keydown', (e) => { if (e.key === 'Tab' || (e.key.startsWith('Arrow') && !e.altKey)) byKeys = true; }, true);
+  // The chords (js/shortcuts.js) come before what has the focus, whose own
+  // arrows take any modifier: never in a box to type in or on a slider.
+  const mac = onMac();
+  const CHORDS = { next: goForward, previous: goBack, save: saveQuick };
+  LAYERS.forEach((layer, i) => { CHORDS[`roll${i}`] = () => reroll(layer); });
   document.addEventListener('keydown', (e) => {
     if (e.target.matches('input, textarea')) return;
+    const does = CHORDS[shortcutOf(e, mac)];
+    if (!does) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (!e.repeat) does();
+  }, true);
+  for (const id of ['keysLine', 'keysSaid']) ui.el(id).textContent = keyNames(ui.el(id).textContent, mac);
+  if (mac) ui.el('saveBtn').setAttribute('aria-keyshortcuts', 'Meta+S Alt+Shift+S');
+  document.addEventListener('keydown', (e) => {
+    if (e.target.matches('input, textarea')) return;
+    // Any other modifier's keys are the browser's and the system's.
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    // Space presses the key the keyboard is on; after a tap it is Play.
+    if (e.code === 'Space' && byKeys && e.target.matches('button, [role="button"], a[href]')) return;
     if (e.code === 'Space' || e.code === 'MediaPlayPause') {
       e.preventDefault();
-      togglePlay();
-    } else if (e.key === 'n') newLoop();
-    else if (e.key === 's') saveQuick();
-    else if (e.key >= '1' && e.key <= '5') reroll(LAYERS[parseInt(e.key, 10) - 1]);
-    else if (e.code === 'MediaNextTrack') {
+      if (!e.repeat) togglePlay();
+    } else if (e.code === 'MediaNextTrack') {
       e.preventDefault();
-      goForward();
+      if (!e.repeat) goForward();
     } else if (e.code === 'MediaPreviousTrack') {
       e.preventDefault();
-      goBack();
+      if (!e.repeat) goBack();
     }
   });
 
@@ -2222,6 +2337,7 @@ function wire() {
   ui.el('driftAmount').value = wander;
   ui.el('wanderRow').classList.toggle('off', !(wander > 0));
   if (prefs.volume != null) ui.el('volume').value = prefs.volume;
+  saySliders();
   const sync = prefs.playheadSync ?? 0;
   ui.el('playheadSync').value = sync;
   ui.el('syncVal').textContent = `${sync} ms`;
@@ -2241,13 +2357,28 @@ function wire() {
   updateHistoryButtons();
   updateSaveButton();
 
-  // The name's size depends on the card's width.
-  window.addEventListener('resize', () => ui.fitCard());
+  // A turned phone or a resized window: what is measured is measured again
+  // (the name, the card's lines, the sliders' stops, the panel's fit).
+  const refit = () => {
+    stepText();
+    ui.fitCard();
+    if (state.view === 'length') picks.renderLength();
+    else if (state.view === 'track') tracklen.renderTrack();
+    else if (state.view === 'vibe') picks.fitPanel();
+    else if (state.view === 'now') fitNow();
+  };
+  window.addEventListener('resize', refit);
+  watchTextSize(refit);
 }
+
+// The safe area as it really is, and the browser's bar a scroll puts away
+// (js/viewport.js): before anything is measured.
+watchViewport({ app: !!nativeBridge() });
 
 if (noGenerator) {
   // No loop can be made or shown here (js/gen.js): the page is the line.
   state.coreError = noGenerator;
+  ui.el('app').classList.add('unplayable');
   ui.plainLine(coreUnsupported() ? CANT_PLAY : NOT_LOADED);
 } else {
   wire();

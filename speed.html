@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#08060c">
+<meta name="theme-color" content="#160830">
 <title>Driftloom speed test</title>
 <!--
   The speed test (queue item 87): the figures promise 1 and item 87 ask of
@@ -17,24 +17,37 @@
   headless Chromium.
 -->
 <style>
-  :root { --bg: #08060c; --fg: #ece8f4; --dim: #9a93ab; --line: #2a2533; --key: #1a1622; --hi: #c9b6ff; --bad: #ff9a8a; --good: #9fe0b0; }
+  @font-face { font-family: 'Inter'; font-weight: 500; font-display: swap; src: url('fonts/inter-500.woff2') format('woff2'); }
+  @font-face { font-family: 'Inter'; font-weight: 600; font-display: swap; src: url('fonts/inter-600.woff2') format('woff2'); }
+  @font-face { font-family: 'Space Grotesk'; font-weight: 600; font-display: swap; src: url('fonts/space-grotesk-600.woff2') format('woff2'); }
+  /* Nocturne's colors: the app's first theme. */
+  :root { --bg: #160830; --fg: #ece4fb; --dim: #c0b0dc; --line: rgba(180, 140, 230, 0.36); --key: #2a1548; --hi: #d9a0f0; --bad: #ff9a8a; --good: #9fe0b0; }
+  .head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .head h1 { margin: 0; font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600; }
+  .back { flex: none; width: 48px; height: 48px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 10px; background: var(--key); color: var(--fg); }
+  .back svg { width: 16px; height: 16px; }
+  :focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 500 0.9375rem/1.45 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
   main { max-width: 640px; margin: 0 auto; padding: 20px 16px 40px; }
-  h1 { font-size: 20px; margin: 0 0 8px; }
+  h1 { font-size: 1.25rem; margin: 0 0 8px; }
   p { margin: 0 0 12px; color: var(--dim); }
   .keys { display: flex; gap: 10px; margin: 16px 0; }
-  button { flex: 1; min-height: 52px; border: 1px solid var(--line); border-radius: 12px; background: var(--key); color: var(--fg); font: 600 16px system-ui, sans-serif; }
+  button { flex: 1; min-height: 52px; border: 1px solid var(--line); border-radius: 10px; background: var(--key); color: var(--fg); font: 600 1rem 'Inter', system-ui, sans-serif; }
   button:disabled { opacity: 0.45; }
   button.go { background: var(--hi); color: #120e1a; border-color: var(--hi); }
   #status { color: var(--hi); min-height: 1.5em; }
-  pre { white-space: pre-wrap; word-break: break-word; background: #110e17; border: 1px solid var(--line); border-radius: 12px; padding: 12px; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; min-height: 6em; }
+  pre { white-space: pre-wrap; word-break: break-word; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); border-radius: 12px; padding: 12px; font: 0.75rem/1.5 ui-monospace, Menlo, Consolas, monospace; min-height: 6em; }
   #verdict.over { color: var(--bad); } #verdict.under { color: var(--good); }
 </style>
 </head>
 <body>
 <main>
-  <h1>Speed test</h1>
+  <div class="head">
+    <!-- The way back: in the app nothing else is. -->
+    <a class="back" href="./" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 6-6 6 6 6"/></svg></a>
+    <h1>Speed test</h1>
+  </div>
   <p>Screen on, up to 15 min.</p>
   <p id="goHint" hidden>Plays the busiest loops silently at full and lite quality, mono and stereo, and times every block. Press Measure, keep the screen on and this tab open (10 to 15 minutes on a slow phone), then press Copy and send the text back.</p>
   <div class="keys">

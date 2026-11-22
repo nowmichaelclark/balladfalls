@@ -8,13 +8,14 @@
 # KVM, the Android SDK and Node 22, and a sound server for the emulator's audio
 # (CI's is PulseAudio with a null sink), as emulator-native.sh's does.
 #
-#   android/emulator-background.sh path/to/app-debug.apk [SUMMARY.md] [MINUTES]
+#   android/emulator-background.sh path/to/app-debug.apk [SUMMARY.md] [MINUTES] [SHOTS_DIR]
 
 set -eu
 
-apk=${1:?usage: android/emulator-background.sh APK [SUMMARY] [MINUTES]}
+apk=${1:?usage: android/emulator-background.sh APK [SUMMARY] [MINUTES] [SHOTS]}
 summary=${2:-}
 minutes=${3:-10}
+shots=${4:-}
 here=$(cd "$(dirname "$0")" && pwd)
 . "$here/emulator-lib.sh"
 boot_emulator
@@ -26,4 +27,5 @@ adb install -r "$apk"
 adb shell pm revoke "$(sed -n 's/^driftloom\.applicationId=//p' "$here/gradle.properties")" android.permission.POST_NOTIFICATIONS 2>/dev/null || true
 set -- node "$here/background.mjs" --minutes "$minutes"
 [ -n "$summary" ] && set -- "$@" --summary "$summary"
+[ -n "$shots" ] && set -- "$@" --shots "$shots"
 "$@"

@@ -224,7 +224,12 @@ export function fitName() {
   let size = max;
   const set = (px) => { size = px; h.style.fontSize = `${px}px`; };
   // One line, as large as fits, down to a size that still reads as a title.
-  const oneLine = () => h.scrollWidth <= h.clientWidth + 1;
+  // (scrollWidth is whole pixels, and a pixel of slack on it let a last
+  // letter lose up to 1.5px: the text's own box says the rest.)
+  const words = document.createRange();
+  words.selectNodeContents(h);
+  const oneLine = () => h.scrollWidth <= h.clientWidth + 1
+    && words.getBoundingClientRect().width <= h.getBoundingClientRect().width + 0.5;
   while (!oneLine() && size > NAME_ONE_LINE_MIN) set(size - 1);
   if (oneLine()) return;
   // Otherwise two lines, as large as lets both fit. Names are capped at
@@ -513,6 +518,7 @@ export function buildLayers(handlers, steps = STEPS_PER_BAR) {
     reroll.innerHTML = icon('dice');
     reroll.title = 'Roll';
     reroll.setAttribute('aria-label', `Roll ${label}`);
+    reroll.setAttribute('aria-keyshortcuts', `Alt+Shift+${LAYERS.indexOf(layer) + 1}`);
     reroll.addEventListener('click', () => handlers.onReroll(layer));
 
     const mute = document.createElement('button');
@@ -677,7 +683,14 @@ export function toast(message, said = message) {
 // Said to a screen reader and not shown (session 30e; Mikey, 2026-11-22,
 // the popups too): what the screen shows already needs no popup.
 export function announce(said) {
-  el('announce').textContent = said;
+  const status = el('announce');
+  // The same words again are a change only if the status was empty between.
+  if (status.textContent === said) {
+    status.textContent = '';
+    requestAnimationFrame(() => { if (!status.textContent) status.textContent = said; });
+    return;
+  }
+  status.textContent = said;
 }
 
 export function download(blob, filename) {

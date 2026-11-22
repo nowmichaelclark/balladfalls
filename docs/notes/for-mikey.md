@@ -12,6 +12,61 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## The final pass, and accessibility (item 114, v196 to v198, #452, #453, #454)
+
+- **Look at the sheets,** before and after, every screen: the branch
+  [`s30f-shots`](https://github.com/nowmichaelclark/driftloom/tree/s30f-shots)
+  (light and dark at 360 px and a tablet's width; after also has every
+  theme, a short phone and a phone on its side).
+- **TalkBack in the Android app (five minutes):**
+  1. Settings, Accessibility, TalkBack, on; open the app.
+  2. Swipe right from the top: the name, the details, the panel, the seven
+     keys, each said with what it is. Nothing should be just "button".
+  3. Double-tap Play, then Next: "Pause", and the new loop's name once.
+  4. The vibe key, then any bars: you land on cancel; cancel lands you back
+     on any bars.
+  5. Sound: each slider says a value ("92 bpm", "60%"), and the volume keys
+     move it. Layers: a switch says on or off.
+  6. Share, export audio, flac: the end is said once, not every percent.
+  7. Font size at the largest, both ways up: nothing cut or overlapping.
+- **A screen reader in your phone's browser:** the same steps on the site
+  (the font size there is the browser's own text setting). If anything is
+  silent, said twice, or lands somewhere odd, say which step.
+- **One look on Android:** in Dawn the system's bars are Dawn's color with
+  dark icons; a box to type in lines up with its title.
+
+- **The lock screen's cover (#455, v199):** play, turn the screen off, and
+  look at the notification and the lock screen through a Next: each loop's
+  own cover, both in the site installed from Chrome and in the APK (the
+  artifact `driftloom-debug-apk` of the
+  [newest Android run on that PR's branch](https://github.com/nowmichaelclark/driftloom/actions/workflows/android.yml?query=branch%3Aclaude%2Fs30f-cover)).
+  The small status bar icon stays Driftloom's.
+
+- **Sideways, your review (#457, v200; not seen on a phone yet):** in
+  DuckDuckGo first (your screenshot's browser), then in Chrome, open
+  <https://claude-s30f-sideways-driftloom.nowmichaelclark.workers.dev>,
+  turn the phone, and:
+  1. The panel at the left, card and keys at the right, the same gap at
+     both ends. (A screenshot if not: it says which insets that browser gave.)
+  2. A small swipe up on the panel puts the address bar away and the boxes
+     grow; a swipe down brings it back. Sliders and lists don't move the page.
+
+- **The keyboard, as you asked (#457):** Space plays; Alt+Shift+arrows are
+  Next and Previous; Ctrl+S (Cmd+S on a Mac) or Alt+Shift+S saves;
+  Alt+Shift+1 to 5 roll. N, S and the bare numbers are gone. Spotify's
+  Alt+Shift+B is Edge's favorites bar, so Save took S instead. Say if any
+  should change.
+
+**Yours to decide (nothing waits on them):**
+
+- **Text stops at 1.5x in the views that don't scroll** (the card, the
+  keys, the pickers), as since Painter 5, so they fit; browser zoom still
+  takes them to 200%, and the lists and Advanced go all the way. The
+  Android app now does the same, where before it overflowed.
+- **Two names only a screen reader hears** now hold the words on their key,
+  as the standard asks (2.5.3): "Moods: any mood", "Bars: any bars" (were
+  "Moods: any", "Bars: any"). No word on screen changed.
+
 ## Track length, its own view (item 111, v193, PR #448)
 
 - **Look at the view:** Vibe, then the pace line's third key (the infinity sign,
@@ -21,20 +76,12 @@ the points where the next step is yours.
   cancel and done. The Sound view's Length slider is gone, and so is the
   export's "How much": an export is as long as the track, with its fades;
   with none set a finite piece exports whole, and a loop that plays on (or
-  Endless) opens the view first, and done there exports. Plain, in the
-  app's style; the Painter's session restyles it. Say if anything is in an
-  odd place on your phone or the tablet.
+  Endless) opens the view first, and done there exports. Say if anything
+  is in an odd place on your phone or the tablet.
 - **On a short phone** (360x640, 320x568) the time takes the title's
   place between cancel and done, and its words and the slider's labels are
   left out, so every key fits without scrolling. A phone on its side has
-  no room for the view yet (a Known issue, for the Painter's session).
-- **How the fades sound (for your ears):** the fade in rises from silence
-  over 3 s; the fade out reaches silence on the last second over the 8 s
-  before it, the notes and the room falling together, so its last couple
-  of seconds are already near silence (on a short track each fade takes at
-  most a third of it). Fade out on and fade in off are the defaults, as the
-  old close and start. Try a 0:45 track each way; say if a fade is too
-  long, too short, or should be a different shape.
+  had room for it since v196 (two columns).
 - **Without the fade out** the track stops on its second: nothing after it
   is played, what was sounding rings out (as an export ends), and the next
   track starts on that second (a long piece without it stops where it is,
@@ -603,7 +650,7 @@ the last one (same key). On the **Moto** and on the **tablet**:
 | Advanced | Normally leave at zero | (gone) |
 | Advanced | Select the text above and copy it manually | Copy from box |
 | Advanced | Speed test: how fast this device plays the busiest loops (a few minutes). | speed test (a key) |
-| Advanced | Space plays. N makes something new (or Next, outside an album). S keeps it in Favorite Loops. 1 to 5 re-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device. | Space play · N new · S save · 1-5 roll |
+| Advanced | Space plays. N makes something new (or Next, outside an album). S keeps it in Favorite Loops. 1 to 5 re-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device. | Space play · Ctrl+S save · Alt+Shift+Left/Right skip · Alt+Shift+1-5 roll (v200; v195: Space play · N new · S save · 1-5 roll; read out, every key in full) |
 | Advanced | Lighter on processor | Lite |
 | Advanced | back up all | back up |
 | Advanced | reset counters | reset |

@@ -23,6 +23,9 @@ Five lines, like Layers. Tempo and length share line two.
 | 4 | style (profile) | `#9fd38a` | `#4f9a3a` |
 | 5 | voices | `#8fc3f0` | `#3a7fc4` |
 
+(Since v197 Ember and Tidal take `#5a38b8` for length: it fills the
+slider, a graphic that needs 3:1 on those mid-tone panels.)
+
 Colors are decoration only: they outline pills and color the length
 slider; text stays `--text-primary` / `--text-secondary`. Define them as
 theme tokens (for example `--pk-mood`), with the darker set in the four

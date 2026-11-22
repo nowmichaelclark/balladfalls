@@ -22,6 +22,7 @@
 //
 // Needs Node 22 (its WebSocket) and, for the device, adb on the path.
 
+import { execFileSync } from 'node:child_process';
 import { AppPage, appId, until } from './cdp.mjs';
 
 const argv = process.argv.slice(2);
@@ -77,6 +78,21 @@ try {
   check('no error in the engine line', !/none \(|error|fail/i.test(engine));
   check('the player plays on (its step moves)', second !== first, `step ${first}, then ${second}`);
   check('the page has a loop named', (await ev("document.getElementById('loopName').textContent.trim()")).length > 1);
+  if (!CDP && native) {
+    // Android's font size is the page's root size (session 30f), changed under the running app.
+    const scale = (v) => execFileSync('adb', ['shell', 'settings', 'put', 'system', 'font_scale', String(v)]);
+    scale(1.5);
+    let root = '';
+    try {
+      root = await until('the font size to reach the page', async () => {
+        const px = await ev('getComputedStyle(document.documentElement).fontSize');
+        return px === '24px' ? px : '';
+      }, STEP_MS);
+    } finally {
+      scale(1);
+    }
+    check('Android\'s font size is the page\'s text size (1.5x: 24 px)', root === '24px', root);
+  }
 
   if (native) {
     // Promise 1: the page's main thread blocked for five seconds, and the

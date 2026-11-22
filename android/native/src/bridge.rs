@@ -608,7 +608,7 @@ fn watch_of(s: &mut String, engine: &Engine, status: &[f64; at::WORDS], f: &Figu
     #[allow(clippy::cast_precision_loss, reason = "nanoseconds of a session, far under 2^53")]
     let now = engine.age() as f64;
     let ago = |then: f64| ((now - then) * 1e-9).max(0.0);
-    let _ = write!(s, ",\"watch\":{{\"over\":{},\"dry\":{},\"behind\":{}", status[at::OVER], status[at::DRY], f.behind);
+    let _ = write!(s, ",\"watch\":{{\"over\":{},\"behind\":{}", status[at::OVER], f.behind);
     s.push_str(",\"behindMs\":");
     number(s, f.behind_lost * 1e3);
     s.push_str(",\"behindAgo\":");
@@ -833,7 +833,7 @@ mod tests {
     fn between_runs_the_level_holds_and_the_watch_reaches_the_page() {
         let (engine, mut bridge) = page("full");
         post(&engine, &mut bridge, r#"{"type":"playLoad","seed":2693262067,"ask":null,"at":0}"#);
-        engine.stream_began(1024, 7680);
+        engine.stream_began(1024);
         let mut out = vec![0.0f32; 1024 * 2];
         for _ in 0..150 {
             engine.fill(&mut out, 2);

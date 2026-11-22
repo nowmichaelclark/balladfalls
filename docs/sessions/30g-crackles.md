@@ -1,19 +1,24 @@
 # Session 30g: no crackles in the Android app (115)
 
-**Left** (after the first build, v201, 2026-11-22):
+**Left** (2026-11-23, after Mikey heard v201 clean: `docs/notes/115-crackles.md`):
 
-- Mikey's listen on that build (`docs/notes/for-mikey.md`): only it says
-  whether step 5's change is the fix. Merge after #453, #454 and #455, with
-  the block's checks met; then the Done line, the queue's status, the tick.
+- Merge #458 after #455 and #457 (30f's), main merged in, CI green on the
+  last commit; then the Done line, the queue's status (item 115 closed by
+  that listen), the tick. Session 30g's own session ends at that merge, so
+  what follows is for the next session with this prompt.
 - Step 1 (E9T-ZxDxj and the album rendered natively, read for steps in the
-  samples), step 3 (every command timed), step 4 (a switch without a click),
-  step 6 (the Lite rule on this thread and buffer): not done.
-- Step 2's rest needs files outside 30g's while 30f runs: "reset counters"
-  clearing the native counts and why it moved to Lite (`js/main.js`), time
-  played with the screen off (Kotlin), and the screen-off job reading the
-  new counts (`NativeCore.kt`, `android/background.mjs`).
+  samples), step 3 (every command timed natively, the worst against promise
+  1), step 4 (a switch by hand and by itself without a click): not done.
+- Step 6 (the Lite rule for the native buffer and thread): waits for 30f's
+  tick (`js/quality.js`, `js/main.js`). On v201 Mikey's phone read 22% over
+  20 s and 60 s at full, under the 50% line.
+- Step 2's rest needs 30f's files too: "reset counters" clearing the native
+  counts and why it moved to Lite (`js/main.js`), time played with the
+  screen off (Kotlin), the screen-off job reading the new counts
+  (`NativeCore.kt`, `android/background.mjs`).
 - Step 7 (Play after two minutes paused, `android/background.mjs`): waits
-  for 30f's tick.
+  for the tick.
+- If Mikey minds the 222 ms latency on Pause and Next: a follow-up item.
 - The nightly by hand on main after the last merge, and read.
 
 Written by brain B-parallel 3 on 2026-11-22, after Mikey heard crackles in

@@ -4,9 +4,10 @@
 //!
 //! - `Watch`, the audio thread's: the callbacks that took longer than the
 //!   audio they made, the worst few (when, how many frames, what they did),
-//!   the longest time between two callbacks, and how often that was longer
-//!   than the whole buffer (which had then run dry, whatever AAudio says).
-//!   Fixed memory and plain numbers: no lock, no allocation, no log.
+//!   and the longest time between two callbacks (a figure, not a glitch: on
+//!   the deep buffer the mixer and the device hold more than AAudio's
+//!   buffer says, and Mikey's clean phone had gaps longer than it 123 times
+//!   in eleven minutes, so a count of those was dropped). Fixed memory and plain numbers: no lock, no allocation, no log.
 //! - `Playhead`, the app's thread's: how often the frame the speaker plays
 //!   fell behind the phone's clock and stayed there. A dropout past the
 //!   buffer (the mixer's, the device's) shows here where the device's
@@ -81,8 +82,6 @@ pub struct Watch {
     /// it ended.
     pub gap: u64,
     pub gap_at: u64,
-    /// Times that gap was longer than the buffer holds.
-    pub dry: u64,
     began: u64,
     last: Option<u64>,
 }
@@ -90,7 +89,7 @@ pub struct Watch {
 impl Watch {
     #[must_use]
     pub const fn new() -> Self {
-        Watch { over: 0, worst: [Called { at: 0, spent: 0, deadline: 0, frames: 0, did: 0 }; WORST], gap: 0, gap_at: 0, dry: 0, began: 0, last: None }
+        Watch { over: 0, worst: [Called { at: 0, spent: 0, deadline: 0, frames: 0, did: 0 }; WORST], gap: 0, gap_at: 0, began: 0, last: None }
     }
 
     /// A stream began at `at`: no gap counts across it, or in its first
@@ -100,9 +99,8 @@ impl Watch {
         self.last = None;
     }
 
-    /// A callback ended; `buffer` is what the stream's buffer holds, in
-    /// nanoseconds (0 offline).
-    pub fn called(&mut self, c: Called, buffer: u64) {
+    /// A callback ended.
+    pub fn called(&mut self, c: Called) {
         if c.deadline > 0 && c.spent > c.deadline {
             self.over += 1;
         }
@@ -117,9 +115,6 @@ impl Watch {
             if gap > self.gap {
                 self.gap = gap;
                 self.gap_at = c.at;
-            }
-            if buffer > 0 && gap > buffer {
-                self.dry += 1;
             }
         }
         self.last = Some(c.at);
@@ -212,7 +207,7 @@ mod tests {
     fn the_callbacks_over_their_deadline_and_the_worst_first() {
         let mut w = Watch::new();
         for (i, spent) in [5, 30, 8, 48, 22, 6, 21].into_iter().enumerate() {
-            w.called(called(i as u64, spent, 0), 0);
+            w.called(called(i as u64, spent, 0));
         }
         assert_eq!(w.over, 3);
         assert_eq!(w.worst.map(|c| c.spent / MS), [48, 30, 22, 21]);
@@ -220,20 +215,18 @@ mod tests {
     }
 
     #[test]
-    fn a_gap_past_the_buffer_is_a_glitch_but_not_as_a_stream_starts() {
+    fn the_longest_gap_but_not_as_a_stream_starts_or_across_a_pause() {
         let mut w = Watch::new();
-        let buffer = 160 * MS;
         w.stream_began(0);
-        w.called(called(0, 1, 0), buffer);
-        w.called(called(600, 1, 0), buffer);
-        assert_eq!((w.dry, w.gap), (0, 0), "the first second");
-        w.called(called(1_100, 1, 0), buffer);
-        assert_eq!((w.dry, w.gap / MS), (1, 500));
-        w.called(called(1_180, 1, 0), buffer);
-        assert_eq!(w.dry, 1, "inside the buffer");
+        w.called(called(0, 1, 0));
+        w.called(called(600, 1, 0));
+        assert_eq!(w.gap, 0, "the first second");
+        w.called(called(1_100, 1, 0));
+        w.called(called(1_180, 1, 0));
+        assert_eq!((w.gap / MS, w.gap_at / MS), (500, 1_100));
         w.stream_began(9_000 * MS);
-        w.called(called(10_500, 1, 0), buffer);
-        assert_eq!((w.dry, w.gap / MS), (1, 500), "none across a pause");
+        w.called(called(10_500, 1, 0));
+        assert_eq!(w.gap / MS, 500, "none across a pause");
     }
 
     #[test]

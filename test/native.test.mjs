@@ -126,10 +126,10 @@ console.log('\nOn the music path (session 30g): callbacks in runs');
   check('and rings when it has', rang);
 
   music._hear([{ type: 'native', time: rendered + 0.1, running: true, rate: 48000, burst: 1920, buffer: 7680, capacity: 7680, channels: 2, performance: 11, sharing: 1, policy: 1073741825, priority: 2, reopens: 0, busiest: 0.4, mean: 0.2, callback: 1024, underruns: 0,
-    watch: { over: 1, dry: 2, behind: 3, behindMs: 41, behindAgo: 12, gapMs: 190, gapAgo: 30, worst: [{ share: 1.1, ms: 23.4, frames: 1024, ago: 30, did: 'init+load' }] } }]);
+    watch: { over: 1, behind: 3, behindMs: 41, behindAgo: 12, gapMs: 190, gapAgo: 30, worst: [{ share: 1.1, ms: 23.4, frames: 1024, ago: 30, did: 'init+load' }] } }]);
   const report = music.streamReport();
   check('Diagnostics: the path and the thread', report.includes('callbacks of 1024') && report.includes('power saving') && report.includes('thread SCHED_FIFO/2'), report);
-  check('Diagnostics: the glitches, each way they are counted', report.includes('\nglitches: 0 underruns, 2 times the buffer ran dry, 3 times playback fell behind (41 ms in all, the last 12 s ago)'), report);
+  check('Diagnostics: the glitches, each way they are counted', report.includes('\nglitches: 0 underruns, 3 times playback fell behind (41 ms in all, the last 12 s ago)'), report);
   check('Diagnostics: the worst callbacks', report.includes('\ncallback, worst 1: 110% (23.4 ms, 1024 frames, init+load), 30 s ago'), report);
   performance.now = real;
 }

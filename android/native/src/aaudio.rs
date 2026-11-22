@@ -327,7 +327,7 @@ fn open_and_start(c: &mut Control, full: bool) -> Result<(), String> {
     // A block's deadline is at least a burst's time, or a callback's where
     // that is less: a burst here may be many callbacks.
     let block = if i.callback > 0 { i.burst.min(i.callback) } else { i.burst };
-    engine.stream_began(u64::try_from(block).unwrap_or(0), u64::try_from(i.buffer).unwrap_or(0));
+    engine.stream_began(u64::try_from(block).unwrap_or(0));
     CURRENT.store(std::ptr::from_ref(engine).cast_mut(), Ordering::Release);
     FIRST.store(true, Ordering::Relaxed);
     // SAFETY: as above.

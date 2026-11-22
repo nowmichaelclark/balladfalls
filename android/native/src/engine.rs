@@ -275,12 +275,11 @@ pub mod at {
     /// The audio thread's watch (`watch.rs`), its times in nanoseconds
     /// since the engine was made.
     pub const OVER: usize = 28;
-    pub const DRY: usize = 29;
-    pub const GAP: usize = 30;
-    pub const GAP_AT: usize = 31;
+    pub const GAP: usize = 29;
+    pub const GAP_AT: usize = 30;
     /// The worst callbacks, `WORST_WORDS` each: when, its time, its
     /// deadline, its frames, what it did.
-    pub const WORST_AT: usize = 32;
+    pub const WORST_AT: usize = 31;
     pub const WORST_WORDS: usize = 5;
     pub const WORDS: usize = WORST_AT + WORST_WORDS * crate::watch::WORST;
 }
@@ -359,9 +358,8 @@ pub struct Counts {
     /// The stream's burst, in frames: the least a block's deadline is
     /// counted as (0 offline).
     pub block: AtomicU64,
-    /// The stream's buffer, in frames (0 offline), and whether a stream
-    /// began since the last callback (`Engine::stream_began`).
-    pub buffer: AtomicU64,
+    /// Whether a stream began since the last callback
+    /// (`Engine::stream_began`).
     pub began: AtomicBool,
     /// The player's state (0 idle, 1 loading, 2 wandering, 3 playing, as
     /// `dl_player_state`), and the seed of the loop heard last (its `Loop`
@@ -593,12 +591,10 @@ impl Engine {
     }
 
     /// A stream is about to start: the frames a block's deadline is counted
-    /// as at least, and what its buffer holds (the app's thread, with no
-    /// stream running).
+    /// as at least (the app's thread, with no stream running).
     #[cfg_attr(not(any(target_os = "android", test)), allow(dead_code, reason = "the stream's"))]
-    pub fn stream_began(&self, block: u64, buffer: u64) {
+    pub fn stream_began(&self, block: u64) {
         self.counts.block.store(block, Ordering::Relaxed);
-        self.counts.buffer.store(buffer, Ordering::Relaxed);
         self.counts.began.store(true, Ordering::Release);
     }
 
@@ -781,7 +777,7 @@ impl Engine {
             c.busiest_frames.store(frames as u64, Ordering::Relaxed);
         }
 
-        inner.watch.called(Called { at, spent, deadline: block, frames: frames as u64, did: doing }, time(c.buffer.load(Ordering::Relaxed)));
+        inner.watch.called(Called { at, spent, deadline: block, frames: frames as u64, did: doing });
 
         // The worklet's cost and busy reports (`costReport`): this
         // callback's time, counted with the lanes it had.
@@ -928,7 +924,6 @@ impl Engine {
         w[at::LAYOUT] = f64::from(core.layout());
         let watch = &inner.watch;
         w[at::OVER] = watch.over as f64;
-        w[at::DRY] = watch.dry as f64;
         w[at::GAP] = watch.gap as f64;
         w[at::GAP_AT] = watch.gap_at as f64;
         for (i, c) in watch.worst.iter().enumerate().take(WORST) {
@@ -1387,7 +1382,7 @@ mod tests {
     fn the_watch_allocates_nothing_and_says_what_a_callback_did() {
         use super::{Ordering, at};
         let engine = Engine::new(48_000.0, 2, true).unwrap();
-        engine.stream_began(1024, 7680);
+        engine.stream_began(1024);
         let request = dlcore::player::Request::parse("").unwrap();
         let mut out = vec![0.0f32; 1024 * 2];
         assert!(engine.send_all(&[Command::Init { full: true, layout: 2 }, Command::LoadAt { seed: 2_693_262_067, request, at: 0.0, resumed: false }]));

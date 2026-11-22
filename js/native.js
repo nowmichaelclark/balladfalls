@@ -170,7 +170,7 @@ export class NativeContext extends EventTarget {
     const behind = w.behind ? ` (${w.behindMs.toFixed(0)} ms in all, the last ${ago(w.behindAgo)})` : '';
     const gap = w.gapMs ? `${w.gapMs.toFixed(0)} ms, ${ago(w.gapAgo)}` : 'not yet';
     const lines = [
-      `glitches: ${s.underruns} underruns, ${w.dry} times the buffer ran dry, ${w.behind} times playback fell behind${behind}`,
+      `glitches: ${s.underruns} underruns, ${w.behind} times playback fell behind${behind}`,
       `callbacks: ${w.over} over their deadline, longest gap ${gap}`,
       ...(w.worst || []).map((c, i) => `callback, worst ${i + 1}: ${(c.share * 100).toFixed(0)}% (${c.ms.toFixed(1)} ms, ${c.frames} frames, ${c.did}), ${ago(c.ago)}`),
     ];

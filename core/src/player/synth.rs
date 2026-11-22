@@ -641,23 +641,20 @@ impl Synth {
     }
 
     /// twang (queue item 101h): a pick of `midi` (in its register, the
-    /// loop's tuning added here) at `time`, the version by `parts`
-    /// (`blocks::twang`), its tremolo synced to `beats` a second from
-    /// `zero` (the loop's start), its saws from `phases` (its string's,
+    /// loop's tuning added here) at `time` (`blocks::twang`), its tremolo
+    /// from `zero` (the loop's start), its saws from `phases` (its string's,
     /// `twang::string_phases`). It yields as the low bell does: it plays
     /// only where the budget has its cost and the margin to spare, and holds
     /// nothing. Whether it played.
-    #[allow(clippy::too_many_arguments)] // the pick's own values
-    pub fn twang<H: Host>(&mut self, host: &mut H, key: Key, midi: f64, time: f64, parts: u32, beats: f64, zero: f64, phases: [f64; 2]) -> bool {
+    pub fn twang<H: Host>(&mut self, host: &mut H, key: Key, midi: f64, time: f64, zero: f64, phases: [f64; 2]) -> bool {
         if !self.budget.room(time, cost_or("twang", default_cost()) + YIELD_MARGIN) {
             return false;
         }
         let mut x = NONE;
-        x[twang::BEATS] = beats;
         x[twang::ZERO] = zero;
         x[twang::PHASES] = phases[0];
         x[twang::PHASES + 1] = phases[1];
-        self.note(host, key, TWANG, CHORDS, time, midi, twang::ring(), 1.0, parts, x);
+        self.note(host, key, TWANG, CHORDS, time, midi, twang::ring(), 1.0, 0, x);
         true
     }
 

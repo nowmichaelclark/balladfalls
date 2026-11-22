@@ -4,7 +4,8 @@
 //! walk of the request's whole list, as the pins' test walks them, and a few
 //! thousand random requests); every generation golden's case written as a
 //! code and read back generates its same hashes; codes from a newer build,
-//! or naming what this build lacks, are refused plainly; and corrupt or
+//! or naming what no build gave, are refused plainly; one naming what was
+//! taken out plays something close (item 105e); and corrupt or
 //! truncated codes never panic. A name travels with its code in any script
 //! and with emoji, capped in bytes, and what a name refuses is refused
 //! (session 23). The dummy build's test (`tests/dummy.rs`) holds the
@@ -12,11 +13,11 @@
 
 use dlcore::code::{self, ALPHABET, Album, BAD_NAME, BAD_PACE, Kind, Loop, MARKS_MOST, NAME_MOST, NEEDS_NEWER, NOT_A_CODE, Name, PACE_MOST, Pace};
 use dlcore::fades::Fades;
-use dlcore::generator::data::{self, CHARACTERS, CHOICES, Ids, MOODS, VIBES};
+use dlcore::generator::data::{self, CHARACTERS, CHOICES, Ids, MOODS, Member, Numbers, VIBES};
 use dlcore::generator::request::{self, Journey, LAYER_NAMES, LENGTH_MOST, LayerAsk, Length, PROFILE_ORDER, Pins, Request, VOICE_ORDER};
 use dlcore::generator::rng::{Rng, seed_name};
 use dlcore::generator::theory::SCALES;
-use dlcore::generator::{Generator, Part};
+use dlcore::generator::{Generator, Part, choices, planing};
 use dlcore::space;
 
 /// Run `f` on a thread with room for the generator's frames.
@@ -59,14 +60,43 @@ fn asked(r: Result<Request, &'static str>) -> Loop {
 
 // -------------------------------------------------------------- the ids
 
-/// `names` each have one row in `list`, and `list` names nothing else.
+/// `names` each have one row in `list` that is here, and a row that is
+/// here names nothing else. A gone one's row stays and names nothing.
 fn covers(what: &str, list: Ids, names: &[&str]) {
     for n in names {
-        assert!(list.iter().any(|e| e.0 == *n), "{what}: '{n}' has no row in data/codes.txt");
+        assert!(here(list, n), "{what}: '{n}' has no row in data/codes.txt, or a gone one");
     }
     for e in list {
-        assert!(names.contains(&e.0), "{what}: data/codes.txt names '{}', which is none", e.0);
+        assert!(e.3 != Member::Here || names.contains(&e.0), "{what}: data/codes.txt names '{}', which is none and is not gone", e.0);
     }
+}
+
+/// Whether `name` has a row in `list` that is here.
+fn here(list: Ids, name: &str) -> bool {
+    list.iter().any(|e| e.0 == name && e.3 == Member::Here)
+}
+
+/// Every list in data/codes.txt, by name.
+fn lists() -> Vec<(String, Ids)> {
+    let mut all: Vec<(String, Ids)> = [
+        ("vibes", data::CODE_VIBES),
+        ("profiles", data::CODE_PROFILES),
+        ("moods", data::CODE_MOODS),
+        ("scales", data::CODE_SCALES),
+        ("layers", data::CODE_LAYERS),
+        ("journeys", data::CODE_JOURNEYS),
+        ("tones", data::CODE_TONES),
+        ("bassStyles", data::CODE_BASS_STYLES),
+        ("choices", data::CODE_CHOICES),
+        ("settings", data::CODE_SETTINGS),
+    ]
+    .into_iter()
+    .map(|(name, list)| (name.to_string(), list))
+    .collect();
+    all.extend(LAYER_NAMES.iter().zip(data::CODE_VOICES).map(|(l, list)| (format!("voices {l}"), list)));
+    all.extend(data::CODE_OPTIONS.iter().map(|&(name, list)| (format!("options {name}"), list)));
+    all.extend(data::CODE_WORDS.iter().map(|&(name, list)| (format!("words {name}"), list)));
+    all
 }
 
 #[test]
@@ -86,7 +116,11 @@ fn every_member_has_an_id_and_a_version() {
         let list = data::CODE_OPTIONS.iter().find(|e| e.0 == c.id).map_or_else(|| panic!("{}: no [options]", c.id), |e| e.1);
         covers(c.id, list, &c.options.iter().map(|o| o.0).collect::<Vec<_>>());
     }
-    assert_eq!(data::CODE_OPTIONS.len(), CHOICES.len(), "an [options] block for no choice");
+    // A choice taken out keeps its options, so a code holding it still reads.
+    for e in data::CODE_CHOICES {
+        assert!(!data::options_of(e.0).is_empty(), "{}: no [options]", e.0);
+    }
+    assert_eq!(data::CODE_OPTIONS.len(), data::CODE_CHOICES.len(), "an [options] block for no choice");
     // The settings a pin names, and each setting's words.
     let mut settings = Vec::new();
     let mut worded = Vec::new();
@@ -101,38 +135,145 @@ fn every_member_has_an_id_and_a_version() {
         }
     }
     covers("settings", data::CODE_SETTINGS, &settings);
-    assert_eq!(data::CODE_WORDS.len(), worded.len(), "a [words] block for no setting of words");
+    // A setting of words taken out keeps them; a setting here of numbers
+    // has none.
+    for (name, _) in data::CODE_WORDS {
+        let gone = data::CODE_SETTINGS.iter().any(|e| e.0 == *name && e.3 != Member::Here);
+        assert!(gone || worded.contains(name), "a [words] block for no setting of words: {name}");
+    }
     assert_eq!(settings.len(), request::SETTINGS.len() + space::n::COUNT);
     // Each layer's voices: everything a request can ask, and every name a
     // profile's pool draws from.
     let pools: [fn(&data::Character) -> Option<data::Pool>; 5] = [|c| c.kits, |c| c.bass_voices, |c| c.chord_voices, |c| c.melody_voices, |c| c.textures];
     for (layer, list) in data::CODE_VOICES.iter().enumerate() {
-        for v in VOICE_ORDER[layer] {
-            assert!(list.iter().any(|e| e.0 == *v), "{}: '{v}' has no row", LAYER_NAMES[layer]);
-        }
+        // The names the core's own pools hold (the fallback kits and
+        // textures, the choir's two).
+        let mut names: Vec<&str> = [&["machine"][..], &[], &["vowel", "hum"], &["vowel", "hum"], &["none"]][layer].to_vec();
+        names.extend(VOICE_ORDER[layer]);
         for c in &CHARACTERS {
-            for (name, _) in pools[layer](c).unwrap_or(&[]) {
-                assert!(list.iter().any(|e| e.0 == *name), "{}: '{name}' ({}) has no row", LAYER_NAMES[layer], c.id);
-            }
+            names.extend(pools[layer](c).unwrap_or(&[]).iter().map(|e| e.0));
+        }
+        covers(LAYER_NAMES[layer], list, &names);
+        for &(name, _, _, member) in *list {
+            let Member::StandIn(to) = member else { continue };
+            let plays = list.iter().find(|e| e.1 == to).expect("a row").0;
+            assert!(VOICE_ORDER[layer].contains(&plays), "{name}'s stand-in '{plays}' is no voice a request can ask");
         }
     }
-    for c in &CHARACTERS {
-        for (name, _) in c.bass_styles.unwrap_or(&[]) {
-            assert!(data::CODE_BASS_STYLES.iter().any(|e| e.0 == *name), "bass style '{name}' has no row");
+    let styles: Vec<&str> = CHARACTERS.iter().flat_map(|c| c.bass_styles.unwrap_or(&[]).iter().map(|e| e.0)).collect();
+    covers("bass styles", data::CODE_BASS_STYLES, &styles);
+}
+
+#[test]
+fn every_id_ever_given_has_its_row() {
+    // The rows of version 2, list by list: none is ever deleted (gone or
+    // not), and a list that came later has none.
+    let first = [
+        ("vibes", 88), ("profiles", 16), ("moods", 8), ("scales", 19), ("layers", 5), ("journeys", 2), ("tones", 3), ("bassStyles", 5),
+        ("choices", 16), ("settings", 63), ("voices drums", 4), ("voices bass", 6), ("voices chords", 20), ("voices melody", 28), ("voices texture", 7),
+        ("options glass", 2), ("options dubStab", 2), ("options organ", 2), ("options wash", 2), ("options arc", 2), ("options tunedKick", 3),
+        ("options subDuck", 3), ("options lateFloor", 3), ("options floorDrop", 2), ("options pedalBass", 2), ("options padSweep", 4),
+        ("options padWow", 2), ("options widePad", 3), ("options tripletKit", 2), ("options dottedPulse", 3), ("options colorTone", 2),
+        ("words arc.shape", 2), ("words lateFloor.order", 3), ("words progression.kind", 2), ("words lowBell.kind", 3), ("words lowBell.drops", 2),
+        ("words twang.kind", 4),
+    ];
+    let all = lists();
+    for (what, count) in first {
+        let list = all.iter().find(|l| l.0 == what).unwrap_or_else(|| panic!("{what}: the list is gone")).1;
+        assert_eq!(list.iter().filter(|e| e.2 == 2).count(), count, "{what}: a row of version 2 is gone or came late");
+    }
+    for (what, list) in &all {
+        let mut ids: Vec<u32> = list.iter().map(|e| e.1).collect();
+        ids.sort_unstable();
+        assert!(ids.iter().zip(0..).all(|(&id, next)| id == next), "{what}: an id skipped, or its row deleted");
+    }
+}
+
+#[test]
+fn one_version_a_release() {
+    // Every member added since the last release shares the next version, so
+    // a code's head stays a character long (version 15 and under).
+    let next = data::CODE_RELEASED + 1;
+    assert!(data::CODE_NEWEST <= next, "newest is past released + 1");
+    let mut joined = data::CODE_RELEASED;
+    for (what, list) in lists() {
+        for e in list {
+            assert!(e.2 <= next, "{what}: {} joined at {}, past released + 1", e.0, e.2);
+            joined = joined.max(e.2);
+        }
+    }
+    assert!(joined <= data::CODE_NEWEST, "a member past newest");
+}
+
+#[test]
+fn every_number_a_field_takes_has_been_written_down() {
+    // A range widened widens its row; one narrowed leaves it.
+    let held = |name: &str, [lo, hi]: [f64; 2], whole: bool| {
+        let Some(Numbers::Range([least, most], ever_whole)) = data::numbers(name) else { panic!("{name}: no range in [code numbers]") };
+        assert!(least <= lo && hi <= most, "{name}: {lo} to {hi} is past its row, {least} to {most}");
+        assert!(whole || !ever_whole, "{name}: its row is of whole numbers alone");
+    };
+    held("tempo", request::TEMPO_LIMIT, true);
+    held("bpm", request::TEMPO_LIMIT, false);
+    held("tone", [0.0, 1.0], false);
+    held("length", [1.0, LENGTH_MOST], true);
+    for number in request::CHOICE_PINS..request::PINS_MAX {
+        let Some((prefix, name)) = Pins::name(number) else { continue };
+        let full = format!("{prefix}{name}");
+        if let Some((range, whole)) = Pins::range(number) {
+            held(&full, range, whole);
+        } else if let Some(values) = Pins::values(number) {
+            let ever = data::numbers(&full).unwrap_or_else(|| panic!("{full}: no list in [code numbers]"));
+            for &(x, _) in values {
+                assert!(ever.wrote(x), "{full}: {x} is not in its row");
+            }
         }
     }
 }
 
 #[test]
+fn every_drawn_setting_draws_nothing_below_its_version() {
+    // Version 1 is before every member's: each setting drawn per loop, as a
+    // later one is for a version 2 loop (tests/dummy.rs has one that is).
+    roomy(|| {
+        let (p, mut r) = (Pins::NONE, Rng::new(20_261_009));
+        let (mut g, mut drew) = (Box::new(Generator::new()), [0; 5]);
+        for _ in 0..500 {
+            let seed = r.seed32();
+            g.load_with(seed, &Request::new());
+            let mut spec = *g.spec();
+            spec.version = 1;
+            assert!(choices::tuning_of(seed, None, &p, 1) == 0.0, "{seed}: tuning");
+            assert_eq!(choices::low_bell_of(seed, true, None, &p, 1), 0, "{seed}: lowBell");
+            assert!(!choices::spotlight_of(seed, 1, true, None, &p, 1), "{seed}: dropSpotlight");
+            assert_eq!(choices::twang_of(seed, true, None, &p, 1), 0, "{seed}: twang");
+            assert!(!planing::planes(&spec), "{seed}: planing");
+            spec.version = 2;
+            for (n, on) in drew.iter_mut().zip([
+                choices::tuning_of(seed, None, &p, 2) != 0.0,
+                choices::low_bell_of(seed, true, None, &p, 2) != 0,
+                choices::spotlight_of(seed, 1, true, None, &p, 2),
+                choices::twang_of(seed, true, None, &p, 2) != 0,
+                planing::planes(&spec),
+            ]) {
+                *n += usize::from(on);
+            }
+        }
+        assert!(drew.iter().all(|&n| n > 0), "{drew:?}: each draws at its own version");
+    });
+}
+
+#[test]
 fn ids_today_are_the_old_numbers() {
-    // The first ids were given in today's orders, so a host that numbered
-    // them by place still names the same thing (they are frozen from here).
-    for (i, v) in VIBES.iter().enumerate() {
-        assert_eq!(data::CODE_VIBES.iter().find(|e| e.0 == v.id).map(|e| e.1), Some(u32::try_from(i).unwrap()), "{}", v.id);
-    }
-    for (i, c) in CHOICES.iter().enumerate() {
-        assert_eq!(data::CODE_CHOICES.iter().find(|e| e.0 == c.id).map(|e| e.1), Some(u32::try_from(i).unwrap()), "{}", c.id);
-    }
+    // The first ids were given in today's orders, and new members go last:
+    // those here stand in their ids' order, the gone ones' left out.
+    let in_order = |list: Ids| {
+        let mut rows: Vec<(u32, &str)> = list.iter().filter(|e| e.3 == Member::Here).map(|e| (e.1, e.0)).collect();
+        rows.sort_unstable();
+        rows.into_iter().map(|e| e.1).collect::<Vec<_>>()
+    };
+    assert_eq!(in_order(data::CODE_VIBES), VIBES.iter().map(|v| v.id).collect::<Vec<_>>());
+    assert_eq!(in_order(data::CODE_CHOICES), CHOICES.iter().map(|c| c.id).collect::<Vec<_>>());
 }
 
 // ------------------------------------------------------- short and plain
@@ -775,23 +916,100 @@ fn a_newer_builds_code_is_refused_plainly() {
     assert_eq!(code::read_loop(sealed(&format!("{}{seed}", uv(newer * 2))).as_bytes()).err(), Some(NEEDS_NEWER));
     assert_eq!(code::read_album(sealed(&format!("{}A{}{}", uv(newer * 2 + 1), uv(1), &plain[..7])).as_bytes()).err(), Some(NEEDS_NEWER));
     assert_eq!(code::read_loop(sealed(&format!("{}{seed}", uv(1 << 40))).as_bytes()).err(), Some(NEEDS_NEWER));
-    // An id this build lacks: a vibe, a choice, a setting, a voice, a field.
+    // An id with no row (a vibe, a choice, an option, a setting, a word, a
+    // voice, a journey): a newer build's at the version still open, which it
+    // shares, and no code's at a released one, whose ids are all here
+    // (item 105e; tests/dummy.rs reads both).
+    let open = data::CODE_NEWEST > data::CODE_RELEASED;
     let head = &plain[..7];
     for fields in [
         format!("{}{}", uv(1), uv(9999)),
         format!("{}{}{}", uv(15), uv(999), uv(1)),
         format!("{}{}{}", uv(15), uv(0), uv(99)),
         format!("{}{}{}", uv(16), uv(999), uv(0)),
+        format!("{}{}{}", uv(16), uv(22), uv(9)),
         format!("{}{}{}{}", uv(11), uv(3), uv(1), uv(200)),
         format!("{}{}", uv(7), uv(7)),
-        uv(25),
-        uv(31),
     ] {
+        let why = if open { NEEDS_NEWER } else { NOT_A_CODE };
+        assert_eq!(code::read_loop(sealed(&format!("{head}{fields}")).as_bytes()).err(), Some(why), "{fields}");
+    }
+    // A field this build lacks.
+    for fields in [uv(25), uv(31)] {
         assert_eq!(code::read_loop(sealed(&format!("{head}{fields}")).as_bytes()).err(), Some(NEEDS_NEWER), "{fields}");
     }
     assert_eq!(code::kind(sealed(&format!("{}{seed}", uv(newer * 2))).as_bytes()), None);
     // The line names no app: the host says whose build it is.
     assert_eq!(NEEDS_NEWER, "needs a newer version");
+}
+
+#[test]
+fn twangs_slow_and_bright_play_soft() {
+    // Written by main at v193, before slow and bright were taken out (item
+    // 105e): corpus 20261009's first loop that plays twang, pinned to each.
+    roomy(|| {
+        let (soft, slow, bright) = ("ENqAy3DQWBWo", "ENqAy3DQWCXo", "ENqAy3DQWDYo");
+        let mut g = Box::new(Generator::new());
+        let want = code::read_loop(soft.as_bytes()).expect("soft");
+        assert_eq!(write(&want), soft);
+        let hashed = hashes(&mut g, &want);
+        assert_eq!(g.settings().twang, 1, "it plays twang");
+        for old in [slow, bright] {
+            let back = code::read_loop(old.as_bytes()).unwrap_or_else(|e| panic!("{old}: {e}"));
+            assert_eq!(back.request.pins().word("twang.kind"), Some("soft"), "{old}");
+            assert_eq!(write(&back), soft, "{old}: written again");
+            assert_eq!(hashes(&mut g, &back), hashed, "{old}: plays soft");
+            assert_eq!(g.lost(), 0);
+        }
+        // An album that holds both, as it was written then.
+        let album = "FACJNqAy3DQWCJNqAy3DQWDRd";
+        assert_eq!(code::read_album(album.as_bytes()).map(|a| a.count), Ok(2));
+        for track in album_tracks(album) {
+            assert_eq!(code::read_loop(track.as_bytes()).expect("a track").request.pins().word("twang.kind"), Some("soft"));
+        }
+    });
+}
+
+#[test]
+fn every_field_ever_written_is_still_read() {
+    // A tag this build stops writing is read and set aside, never refused
+    // and never given again (item 105e): one of each, as version 2 wrote it.
+    let seed = "NBAAAA";
+    let one = uv(1);
+    let fields = [
+        (1, uv(27)),
+        (2, format!("{}{}{}", uv(27), uv(14), uv(1))),
+        (3, uv(38)),
+        (4, format!("{}{}", uv(38), uv(14))),
+        (5, uv(63)),
+        (6, String::new()),
+        (7, uv(1)),
+        (8, format!("{one}{}", uv(2))),
+        (9, format!("{one}{}", uv(0))),
+        (10, format!("{one}{}", uv(0))),
+        (11, format!("{}{one}{}", uv(3), uv(19))),
+        (12, format!("{one}{}", uv(0))),
+        (13, format!("{one}{}", uv(0))),
+        (14, "AAAAAA".to_string()),
+        (15, format!("{}{one}", uv(2))),
+        (16, format!("{}{one}", uv(22))),
+        (17, format!("{}AAAAAA", uv(0))),
+        (18, format!("{}{}{}", uv(0), uv(12), uv(1))),
+        (19, format!("{}{}", uv(176), uv(0))),
+        (20, format!("{one}{}", uv(0))),
+        (21, "BAAAAA".to_string()),
+        (30, format!("{one}eA")),
+    ];
+    for (t, value) in &fields {
+        let text = sealed(&format!("E{seed}{}{value}", uv(*t)));
+        assert!(code::read_loop(text.as_bytes()).is_ok(), "tag {t}: {text}");
+    }
+    // Those an album's alone holds (a track's pace, and the album's): a
+    // track of nine seconds beside two of two minutes.
+    let track = |extra: &str| format!("{}{seed}{extra}", uv((seed.len() + extra.len()) as u64));
+    let own = format!("{}{}", uv(22), uv(34));
+    let album = sealed(&format!("FA{}{}{}{}{}{}", uv(3), track(""), track(&own), track(""), uv(22), uv(480)));
+    assert_eq!(code::read_album(album.as_bytes()).map(|a| a.count), Ok(3), "tag 22: {album}");
 }
 
 #[test]

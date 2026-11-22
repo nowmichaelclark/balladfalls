@@ -1,5 +1,5 @@
 //! twang (queue item 101h; batch 6's #13, Ears 13b, approved by Mikey
-//! 2026-11-09, all three versions): a synth in the spirit of a tremolo
+//! 2026-11-09): a synth in the spirit of a tremolo
 //! baritone guitar (`docs/DECISIONS.md`, 2026-11-08: a synth in its spirit,
 //! never an imitation), picking each chord low and slow. The player picks it
 //! (`Synth::twang`) at each chord whose root changes, or the same root again
@@ -9,8 +9,8 @@
 //!
 //! What plays is the Ears 13b sketch's (`tools/ears/sketches/ears13/twang/`),
 //! number for number: two band-limited saws 4 cents apart through a two-pole
-//! lowpass whose cutoff starts at the version's `bright` times the note and
-//! falls over 0.12 s to its `round` times it; a two-stage fall (55% of the
+//! lowpass whose cutoff starts at 18 times the note and
+//! falls over 0.12 s to 2.5 times it; a two-stage fall (55% of the
 //! pick gone in a quarter second, the rest a tail of 2.8 s), a 2 ms attack,
 //! and a pitch settling from 8 cents sharp over 40 ms. Six strings, as the
 //! sketch's: a pick takes the next, and its saws start where that string's
@@ -26,11 +26,11 @@
 //! dips at the same moment, as the sketch's one tremolo over its six strings
 //! did.
 //!
-//! **Three versions** (the note's parts, `SLOW` and `BRIGHT`; soft is 0):
-//! soft (a 4.5 Hz tremolo, 35% deep; the pick's cutoff 18 times the note, the
-//! tail's 2.5), slow (tempo-synced, two cycles a beat of the loop's tempo,
-//! `BEATS` in the extra values; 55% deep, rounder: 12 and 2), bright (5.5 Hz,
-//! 45% deep, the brightest pick: 30 and 3.5).
+//! **Soft alone:** a 4.5 Hz tremolo, 35% deep; the pick's cutoff 18 times
+//! the note, the tail's 2.5. The batch's slow and bright were taken out
+//! (queue item 105e; Mikey, 2026-11-17, the Batch 6 Album: "I only liked
+//! the soft version"), and a code pinning either plays this
+//! (`data/codes.txt`).
 //!
 //! Where the core's version differs from the sketch, and why: the sketch was
 //! a block on the whole chords channel that heard the chords through
@@ -56,23 +56,15 @@ use crate::math;
 
 use super::midi_to_freq;
 
-/// The note's parts: the slow version (a tempo-synced tremolo, rounder).
-pub const SLOW: u32 = 1;
-/// The note's parts: the bright version (a brighter pick).
-pub const BRIGHT: u32 = 2;
-
-/// Where the note's extra values hold the loop's beats a second (the slow
-/// version's tremolo is two cycles a beat; NaN: 60 BPM).
-pub const BEATS: usize = 0;
-/// Where they hold the time, on the core's clock, the tremolo's phase is 0
-/// at: the loop's start (NaN: 0), so every pick of a loop shares one
-/// tremolo.
-pub const ZERO: usize = 1;
+/// Where the note's extra values hold the time, on the core's clock, the
+/// tremolo's phase is 0 at: the loop's start (NaN: 0), so every pick of a
+/// loop shares one tremolo.
+pub const ZERO: usize = 0;
 /// Where they hold the two saws' phases at the pick (0 to 1; NaN: 0): the
 /// player hands each pick the phases its string's saws have run to since
 /// that string's last pick (`string_phases`), as the sketch's six strings,
 /// never reset, carried them.
-pub const PHASES: usize = 2;
+pub const PHASES: usize = 1;
 
 /// A string's two saws' phases at `time`, from its last pick of `midi` at
 /// `then` with phases `was` (a fresh string, `then` NaN: both 0): where
@@ -96,23 +88,13 @@ pub fn string_phases(was: [f64; 2], midi: f64, then: f64, time: f64) -> [f64; 2]
     out
 }
 
-/// A version's pick and tremolo: the cutoff at the pick and of the tail,
-/// in multiples of the note; the tremolo's depth, its rate in Hz (when not
-/// synced) and its cycles a beat (0: free). The sketch's `variant.py`.
-struct Version {
-    bright: f64,
-    round: f64,
-    depth: f64,
-    hz: f64,
-    per_beat: f64,
-}
-
-/// soft, slow and bright, by the note's parts.
-const VERSIONS: [Version; 3] = [
-    Version { bright: 18.0, round: 2.5, depth: 0.35, hz: 4.5, per_beat: 0.0 },
-    Version { bright: 12.0, round: 2.0, depth: 0.55, hz: 0.0, per_beat: 2.0 },
-    Version { bright: 30.0, round: 3.5, depth: 0.45, hz: 5.5, per_beat: 0.0 },
-];
+/// The cutoff at the pick and of the tail, in multiples of the note: the
+/// sketch's soft (`variant.py`).
+const BRIGHTEST: f64 = 18.0;
+const ROUND: f64 = 2.5;
+/// The tremolo: how deep, and its rate in Hz.
+const DEPTH: f64 = 0.35;
+const TREMOLO: f64 = 4.5;
 
 /// A pick's peak at the least (the chords silent), its peak against the
 /// chords' RMS, and the most it peaks at, whatever they do.
@@ -180,9 +162,6 @@ pub struct Twang {
     sharp: f64,
     settle: f64,
     sharp_fall: f64,
-    /// The cutoff's range, in multiples of the note.
-    hi: f64,
-    lo: f64,
     /// The attack's envelope and its rise a frame.
     env: f64,
     up: f64,
@@ -190,9 +169,8 @@ pub struct Twang {
     freq: f64,
     s: [f64; 2],
     a: [f64; 3],
-    /// The tremolo: its depth, and its phase as a turning pair (cosine,
-    /// sine) and the turn a frame.
-    depth: f64,
+    /// The tremolo's phase as a turning pair (cosine, sine) and the turn a
+    /// frame.
     trem: [f64; 2],
     turn: [f64; 2],
     /// When it was picked, in seconds and as a frame; when it ends; the
@@ -222,14 +200,11 @@ impl Twang {
             sharp: 0.0,
             settle: 0.0,
             sharp_fall: 0.0,
-            hi: 0.0,
-            lo: 0.0,
             env: 0.0,
             up: 0.0,
             freq: 0.0,
             s: [0.0; 2],
             a: [0.0; 3],
-            depth: 0.0,
             trem: [0.0; 2],
             turn: [0.0; 2],
             time: 0.0,
@@ -250,7 +225,7 @@ impl Twang {
 
     /// The filter's coefficients for the cutoff now.
     fn tune(&mut self) {
-        let fc = (self.freq * (self.lo + (self.hi - self.lo) * self.bright)).min(TOP).min(0.45 * self.rate);
+        let fc = (self.freq * (ROUND + (BRIGHTEST - ROUND) * self.bright)).min(TOP).min(0.45 * self.rate);
         let w = core::f64::consts::PI * fc / self.rate;
         let g = math::sin(w) / math::cos(w);
         let a1 = 1.0 / (1.0 + g * (g + DAMPING));
@@ -258,10 +233,9 @@ impl Twang {
     }
 }
 
-/// A probe's extra values: 60 BPM, the tremolo's phase 0 at the start.
+/// A probe's extra values: the tremolo's phase 0 at the start.
 const PROBE: [f64; crate::EXTRA] = {
     let mut x = NO_EXTRA;
-    x[BEATS] = 1.0;
     x[ZERO] = 0.0;
     x
 };
@@ -271,8 +245,6 @@ impl Block for Twang {
 
     const PROBES: &'static [Probe<Note>] = &[
         Probe { name: "soft", settings: Note::probe(crate::TWANG, crate::CHORDS, 45.0, 0, PROBE) },
-        Probe { name: "slow", settings: Note::probe(crate::TWANG, crate::CHORDS, 40.0, SLOW, PROBE) },
-        Probe { name: "bright", settings: Note::probe(crate::TWANG, crate::CHORDS, 47.0, BRIGHT, PROBE) },
     ];
 
     const HEARS: &'static [u32] = &[event::LET_GO];
@@ -282,7 +254,6 @@ impl Block for Twang {
         let rate = cx.rate;
         self.rate = rate;
         self.time = note.time;
-        let v = VERSIONS.get(note.parts as usize).unwrap_or(&VERSIONS[0]);
         let heard = note.extra[HEARD];
         let heard = if heard > 0.0 { heard } else { 0.0 };
         self.peak = (REL * math::sqrt(heard)).clamp(LEVEL, MOST) * note.vel.clamp(0.0, 1.0);
@@ -303,15 +274,12 @@ impl Block for Twang {
         self.sharp = 1.0;
         self.settle = math::exp(-1.0 / (SETTLE * rate));
         self.sharp_fall = math::exp(-1.0 / (SHARP_FALL * rate));
-        self.hi = v.bright;
-        self.lo = v.round;
         self.up = 1.0 / (ATTACK * rate);
         self.end = self.begin + self.frame(ring());
         // The tremolo, its phase read from the clock at the pick's first
         // frame against the loop's start.
-        let beats = if note.extra[BEATS] > 0.0 { note.extra[BEATS] } else { 1.0 };
         let zero = if note.extra[ZERO].is_finite() { note.extra[ZERO] } else { 0.0 };
-        let hz = if v.per_beat > 0.0 { v.per_beat * beats } else { v.hz };
+        let hz = TREMOLO;
         #[allow(clippy::cast_precision_loss)] // a frame of the clock, exact to 2^53
         let at = (self.begin as f64 / rate - zero) * hz;
         let at = at - math::floor(at);
@@ -319,7 +287,6 @@ impl Block for Twang {
         self.trem = [math::cos(w), math::sin(w)];
         let dw = core::f64::consts::TAU * hz / rate;
         self.turn = [math::cos(dw), math::sin(dw)];
-        self.depth = v.depth;
         self.tune();
     }
 
@@ -381,7 +348,7 @@ impl Block for Twang {
             self.bright *= self.settle;
             self.sharp *= self.sharp_fall;
             // The tremolo, the same dip as every string of the loop.
-            let dip = 0.5 * self.depth * (1.0 - self.trem[0]);
+            let dip = 0.5 * DEPTH * (1.0 - self.trem[0]);
             let [c, s] = self.trem;
             self.trem = [c * self.turn[0] - s * self.turn[1], s * self.turn[0] + c * self.turn[1]];
             *y += (v2 * (1.0 - dip)) as f32;

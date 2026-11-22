@@ -35,7 +35,7 @@
 //! exactly as before.
 
 use super::choices::lean_of;
-use super::data::{PROGRESSION, Pool};
+use super::data::{self, PROGRESSION, Pool};
 use super::js;
 use super::list::List;
 use super::plan::{Notes, Slot};
@@ -89,13 +89,16 @@ pub fn chord_scale(notes: usize) -> &'static [f64] {
 
 /// Whether the loop of `spec` planes: drawn on its own stream, for
 /// `[setting progression] planing` of the loops before its vibes lean it
-/// (never to none), unless the request pinned `progression.kind`.
+/// (never to none), unless the request pinned `progression.kind`; none at a
+/// version before the setting's or the word's (queue item 105e).
 #[must_use]
 pub fn planes(spec: &Spec) -> bool {
     let mut r = Rng::new(js::salted(spec.seed, DRAW_SALT, 1));
     let base = PROGRESSION.planing;
     let share = base * lean_of(Some(PROGRESSION.vibes), spec.vibes.as_ref());
-    let drawn = r.f() * (1.0 - base + share) < share;
+    let drawn = r.f() * (1.0 - base + share) < share
+        && data::drawn_at("progression.kind", spec.version)
+        && !data::words_at(&[("planing", 1.0)], "progression.kind", spec.version).is_empty();
     let planing = spec.pins.word("progression.kind").map_or(drawn, |k| k == "planing");
     forced(planing)
 }

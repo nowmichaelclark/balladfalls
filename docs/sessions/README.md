@@ -92,7 +92,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 24 | `24-codes-links.md` | 105c: links, an album from one seed, the plain lines | Sonnet 5.5, medium | 23 | 17, 18, 20, 21, 26, 27, 28, 29 | yes, 2026-11-18 (#433) |
 | 24b | `24b-album-pacing.md` | 105d: an album's code carries how each track plays (Mikey, 2026-11-18) | Opus 5.5, high | 24 | 26, 27, 28, 29, 30b | yes, 2026-11-18 (#438) |
 | B4 | `brain-4-codes.md` | Brain: check 16 to 24b; the albums again in the new codes | Opus 5.5, high | 18, 21, 24b | 26 to 29, 30a to 30d | yes, 2026-11-18 (the format kept; session 24c written; three albums in `docs/ALBUMS.md`) |
-| 24c | `24c-codes-freeze.md` | 105e: the codes made ready to freeze: a removed member plays something close, every draw filtered by version, one version a release (brain B4) | Opus 5.5, high | 30c | 30a, 30b, 30d, 30e | |
+| 24c | `24c-codes-freeze.md` | 105e: the codes made ready to freeze: a removed member plays something close, every draw filtered by version, one version a release (brain B4) | Opus 5.5, high | 30c | 30a, 30b, 30d, 30e | yes, 2026-11-22 (#450) |
 | | | **Android** | | | | |
 | 26 | `26-android-audio.md` | 107b: the core native, on Android's audio | Opus 5.5, high | 25 | 17, 18, 20, 21, 22, 23, 24 | yes, 2026-11-17 (#411; no app change) |
 | 27 | `27-android-bridge.md` | 107c: the page talks to the native core | Opus 5.5, high | 26, 17 | 18, 21, 22, 23, 24 | yes, 2026-11-18 (#420) |
@@ -104,7 +104,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 30b | `30b-layers-heard.md` | 110: the layers show what is heard, in time with it | Opus 5.5, high | 27 | 21, 23, 24, 24c, 29, 30a | yes, 2026-11-18 (#440) |
 | 30c | `30c-track-length.md` | 111: Track length, its own view, to the second; out of the sliders and the export | Opus 5.5, high | 21, 24, 28 | 29, 30a, 30d | yes, 2026-11-22 (#448) |
 | 30d | `30d-info-card.md` | 112: the info card: clean lines, the rest a tap away, a round playhead | Sonnet 5.5, high | 23 | 21, 24, 24c, 28, 29, 30a, 30c | yes, 2026-11-22 (#446) |
-| 30e | `30e-fewer-words.md` | 113: fewer words: keys, icons and switches; the share screen as keys | Opus 5.5, high | 21, 24, 28, 30a to 30d | 24c, 29 | |
+| 30e | `30e-fewer-words.md` | 113: fewer words: keys, icons and switches; the share screen as keys | Opus 5.5, high | 21, 24, 28, 30a to 30d | 24c, 29 | yes, 2026-11-22 (#449) |
 | 30f | `30f-painter-final.md` | 114: the Painter's final touches, and accessibility | Opus 5.5, high | 29, 30e | none | |
 | | | **Then in order, one at a time** | | | | |
 | 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | 18, 21, 24, 24c, 29, B4, 30f | none | |

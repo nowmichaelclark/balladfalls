@@ -3,29 +3,77 @@
 # core/README.md, "Share codes"; core/src/code.rs writes and reads it, and
 # core/build.rs compiles this file in.
 #
-# The rules, for whoever adds something (they keep old codes as they sound):
+# The rules, for whoever adds or removes something (Mikey, 2026-11-10: an
+# addition leaves old codes as they sound; 2026-11-17: no code rot, so no
+# code ever grows to keep an older one's sound). core/tests/codes.rs and the
+# dummy build (core/tests/dummy/) hold them.
 #
-# - **Ids are forever.** Each row is `name id since`: the id is the name's
-#   number in a code, given once and never changed, reused or taken back,
-#   whatever happens to the list's order elsewhere. A new member takes the
-#   next free id of its list. A member renamed keeps its id.
-# - **`since` is the version it joined.** A code carries its version, and the
-#   generator draws a code's loop only from what existed at that version:
-#   every pool is filtered by version before its draw (`data::joined`), so a
-#   newer member can't shift an older code's picks. A new member's `since` is
-#   `newest` raised by one, and `newest` is raised with it, in the same change.
+# Every row is `name id since`, or for a member taken out
+# `name id since gone` or `name id since gone stand-in`.
+#
+# - **No member is added until the app keeps a code's version** (Mikey,
+#   2026-11-22: "Before first new sound"; docs/notes/105e-page.md): the app
+#   drops it today, so an addition would move every older code played there.
+#   Take this rule out with that fix.
+# - **Ids are forever.** The id is the name's number in a code, given once
+#   and never changed, reused or taken back, whatever happens to the list's
+#   order elsewhere. A new member takes the next free id of its list. A
+#   member renamed keeps its id. **No row is ever deleted:** every id ever
+#   given is in this file, so an id with a row is this build's (gone or
+#   not) and an id with none a newer build's.
+# - **`since` is the version it joined, and a release has one version.** A
+#   new member's `since` is `released + 1`, and `newest` is set to that in
+#   the same change: every member added between two releases shares it, so a
+#   code made on a build between releases may change as another joins
+#   (Mikey, 2026-11-18). A release sets `released = newest`, and nothing
+#   else moves either. A code's head is one character to version 15.
+# - **Every draw is filtered by the loop's version.** A code carries its
+#   version, and its loop is drawn from what existed then:
+#   - a pool of members listed here keeps only those that had joined
+#     (`data::there`, `data::joined_of`) before it is drawn from, a pool the
+#     core writes in Rust as well;
+#   - a setting whose word a loop draws (a `[words ...]` list here) draws
+#     only among the words that had joined;
+#   - **a new setting drawn per loop** (as tuning.cents, progression.kind,
+#     lowBell.kind and twang.kind are, each counted against a loop's
+#     changes) draws nothing below its own version: its draw asks
+#     `data::drawn_at` first and plays today's where that is false, on a
+#     stream of its own, and it is counted only where it plays
+#     (`Render::settings_changes`);
+#   - a pool with no list here (floorDrop's shapes, the echo's beats, the
+#     organ's stops, a kit's patterns) moves old codes when it grows: a new
+#     member of one first gets a list here and the filter where it is drawn.
 # - **New members go last** in their own file (data/characters.txt,
 #   data/vibes.txt, data/choices.txt and the rest), as they do here: a
 #   choice's place salts its streams.
+# - **Removing leaves a row.** Take the member out of the core and the data
+#   and write `gone` after its row's version, then a stand-in's name where
+#   one fits: a member of the same list, still here, that had joined by
+#   then (one later taken out too is written again here with another). An
+#   older code naming it plays the stand-in; with none it goes without
+#   (a vibe, a mode, a style, a voice, a choice, a setting or a word leaves
+#   the request; a journey leaves the piece's to the generator), but an
+#   option plays its choice's today. A choice's `[options]` and a setting's
+#   `[words]` stay after it, so a code holding it can still be read. The
+#   layers and the tone's parts are the format's and are never removed.
+# - **A number keeps every value ever written** (`[code numbers]`): a range
+#   widened widens its row, a range narrowed leaves the row as it was, and an
+#   older code's number then plays the nearest the field takes today. A
+#   number outside its row was written by no build and is no code.
+# - **A field this build stopped writing is still read** (its tag, core/src/
+#   code.rs) and set aside, never refused, and its tag is never given again.
 # - **Every member is listed.** core/tests/codes.rs fails if a vibe, a
 #   profile, a mood, a mode, a voice, a bass style, a choice, an option, a
-#   setting or a word has no row here, or a row here names nothing.
+#   setting or a word has no row here, or a row here that is not gone names
+#   nothing.
 # - A deliberate improvement to a sound that already exists changes old codes
 #   too: that is allowed, and the release notes say so.
 
-# The version a new code writes. Codes start at 2 (version 1 was the old
-# `DL1-` codes, which version 2 does not read).
+# The version of the last release (until 1.0, the version the format began
+# at), and the version a new code writes: `released`, or one past it once
+# something has joined since.
 [code version]
+released = 2
 newest = 2
 
 [code vibes]
@@ -195,5 +243,39 @@ ids = today 0 2, struck 1 2, swell 2 2
 ids = today 0 2, on 1 2
 
 [words twang.kind]
-ids = today 0 2, soft 1 2, slow 2 2, bright 3 2
+# slow and bright: taken out by session 24c (Mikey, 2026-11-17, the Batch 6
+# Album: "I only liked the soft version").
+ids = today 0 2, soft 1 2, slow 2 2 gone soft, bright 3 2 gone soft
 
+
+# Every number a code's fields have ever taken: a field's least and most
+# (`whole`: whole numbers only), or the numbers of one that takes a list.
+# The tempo is a request's, `bpm` the edit the slider makes, `tone` each of
+# the tone's parts, `length` in bars; the rest are the settings'.
+[code numbers]
+ranges = tempo 32 190 whole, bpm 32 190, tone 0 1,
+    length 1 9007199254740991 whole, arc.period 90 720, arc.from 0 1,
+    arc.floor 800 1500, kick.note 31 38 whole, kick.short 180 260,
+    kick.long 45 80, subDuck.depth 5 16, subDuck.recover 0.15 0.75,
+    lateFloor.seconds 8 90, lateFloor.gap 1 8 whole, padSweep.lo 350 800,
+    padSweep.oct 2 4.5, padSweep.period 5 28, padSweep.q 0.7 1.2,
+    lateFloor.fade 4 20, tuning.cents -35 35, space.room-weight 0.64 0.64,
+    space.ensemble-weight 0.5 0.5, space.room 0.7 0.9,
+    space.spread-chords 0.3 0.5, space.spread-texture 0.35 0.6,
+    space.spread-light-texture 0.15 0.3, space.spread-melody 0 0.12,
+    space.spread-scale 1.6 1.6, space.spread-max 0.8 0.8,
+    space.spread-delay 0.012 0.012, space.spread-sway 0.003 0.003,
+    space.spread-rate 0.35 0.35, space.spread-rate-step 0.07 0.07,
+    space.kit 0.08 0.15, space.kit-soft 0.7 0.7, space.texture-place 0.1 0.25,
+    space.room-cutoff 180 180, space.spread-cutoff 200 200,
+    space.place-cutoff 150 150, space.busy-from 0.5 0.5, space.busy-span 5 5,
+    space.width-least 0.25 0.25, space.wet-from 0.7 0.7,
+    space.wet-scale 0.75 0.75, space.ceiling-busy -7 -7,
+    space.ceiling-sparse -9 -9, space.ceiling-very-sparse -12 -12,
+    space.dense 0.5 0.5, space.sparse 0.15 0.15, space.wash 1 1,
+    space.wash-follows-width 1 1, space.wash-cutoff 200 200, space.wide 0 0,
+    space.wide-chords 1.4 1.4, space.wide-max 2 2,
+    space.wide-ceiling-busy -4 -4, space.wide-ceiling-sparse -5 -5,
+    space.wide-ceiling-very-sparse -7 -7, space.wide-cutoff 250 250,
+    space.wide-open 60 120
+lists = echo.beats 0.75 1 0.5 0.6666666666666666

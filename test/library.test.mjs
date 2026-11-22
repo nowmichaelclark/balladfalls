@@ -120,6 +120,18 @@ console.log('\nAn album carries how long each track plays (session 24b; a time w
   check('  and one that played on keeps no track', !none.track && !('playFor' in none));
 }
 
+console.log('\nSaved with what was taken out');
+{
+  // Twang's slow and bright (item 105e): a loop saved from a v193 code that
+  // pins either plays soft, as that code now does.
+  const soft = decodeSong('ENqAy3DQWBWo');
+  for (const [word, code] of [['slow', 'ENqAy3DQWCXo'], ['bright', 'ENqAy3DQWDYo']]) {
+    const saved = { ...soft, pins: { 'twang.kind': word } };
+    check(`twang ${word}: the code plays soft`, JSON.stringify(decodeSong(code)) === JSON.stringify(soft));
+    check('  saved with it: plays, and is shared, as soft', hash(saved) === hash(soft) && encodeSong(saved) === encodeSong(soft));
+  }
+}
+
 console.log('\nWhat is no code');
 check('a version 1 loop code: from an older build', codeKind('DL1-0C088-1GE08-60511') === 'old' && codeKind('  dl1-abcde') === 'old');
 check('a version 1 album code: from an older build', codeKind('DLA1-0C7N0-T31ED') === 'old');

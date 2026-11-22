@@ -151,7 +151,8 @@ twang (`src/blocks/twang.rs`, queue item 101h) follows its channel too, and
 hears the one event kind only it hears, a let-go (`event::LET_GO`): the
 strings picked at or before the event's value let go from its time, so the
 player can take the oldest of six strings as a seventh is picked, and damp
-them all at a full stop.
+them all at a full stop. It is soft alone since item 105e (slow and bright
+taken out; a code pinning either plays soft, "Share codes" below).
 
 ## The test kit
 
@@ -519,18 +520,35 @@ ten, zigzagged; zero is `0 0` and minus zero `0 1`. A *set* of ids is how many
 for each character before it becomes `(h * 64 + value + 1) mod 4093`. Any one
 character changed, or two side by side swapped, is caught.
 
-**Versions.** Codes start at 2 (`data/codes.txt`, `newest`). A version past the
-build's is refused, "needs a newer version" (the host adds its app's name). A
-code's loop is drawn at its version: every pool the generator draws from is
-filtered first to what had joined by then (`data::there`), so a member added
+**Versions.** Codes start at 2. One version a release (`data/codes.txt`,
+`released` and `newest`): what joins after a release shares `released + 1`,
+so the head stays a character to version 15, and a code made between two
+releases may change as another addition joins. A version past the build's is
+refused, "needs a newer version" (the host adds its app's name). A code's
+loop is drawn at its version: every pool, every word of a setting drawn per
+loop and every such setting itself is filtered first to what had joined by
+then (`data::there`, `data::joined_of`, `data::drawn_at`), so a member added
 later never moves an older code's picks; a deliberate change to a sound that
 exists still moves them, and the release notes say so.
 
+**What was taken out** (item 105e; Mikey, 2026-11-17: no code rot, so no
+longer codes). A member's row stays when it goes, marked `gone`, with a
+stand-in where one fits. An id with a row is this build's, gone or not: a
+gone one plays its stand-in (never over what the code itself asks), an
+option with none its choice's today, anything else with none is left out of
+the request (a journey to the piece's own draw, its length kept). An id with
+no row is "needs a newer version" in a code of the version still open (past
+`released`, which newer builds share), and "not a code" at a released
+version, whose ids are all here. A number a field has ever taken
+(`[code numbers]`) plays the nearest it takes today; one no build wrote is
+"not a code". A code read so is written again in what is here now.
+
 **Fields:** each a *tag* (a number) and what follows it, the tags ascending; a
 tag marked *keyed* may repeat with its key (the number after it) ascending.
-Every name is its *id* in `data/codes.txt`, never its place in a list. A tag,
-or an id, this build lacks is "needs a newer version"; anything else out of
-place is "not a code".
+Every name is its *id* in `data/codes.txt`, never its place in a list. A tag
+this build never had is "needs a newer version" and one it stopped writing
+is read and set aside; an id is read as "What was taken out" says; anything
+else out of place is "not a code".
 
 | Tag | Field | What follows |
 |---|---|---|
@@ -630,12 +648,24 @@ one seed with two vibes, 19; a plain loop renamed "Rainy Sunday" 27, renamed
 "ฝนตกที่กรุงเทพ" 68.
 
 **Adding to it.** A new vibe, profile, voice, choice, option, setting or word
-takes the next free id of its list in `data/codes.txt`, `since` the newest plus
-one, and `newest` rises with it. A pool the core writes in Rust (a fallback
-kit, a setting's kinds) filters by `data::there` where it draws. A new field
-takes a new tag, with the version raised. `tests/dummy.rs` (the `dummy`
-feature, in the gate) adds a member of each kind at version 3 and shows every
-generation golden drawn at version 2 bit for bit as it was.
+takes the next free id of its list in `data/codes.txt`, `since` the last
+release's version plus one, and `newest` is that (a release sets
+`released = newest`). A pool the core writes in Rust (a fallback kit, a
+setting's kinds) filters by `data::there` or `data::joined_of` where it
+draws; a new setting drawn per loop outside the list of choices asks
+`data::drawn_at` first, draws nothing below its version, and is counted in
+`Render::settings_changes` only where it plays. A number's range widened
+widens its `[code numbers]` row. A new field takes a new tag, with the
+version raised.
+
+**Taking out of it.** The member leaves the core and the data; its row stays,
+`gone` after it, then a stand-in that had joined by then, if one fits. A
+range narrowed leaves its row. A field no longer written keeps its tag and
+its reading. `data/codes.txt`'s header is the rule in full.
+
+`tests/dummy.rs` (the `dummy` feature, in the gate) adds a member of each
+kind at version 3 and takes one of each out, and shows every generation
+golden drawn at version 2 bit for bit as it was, and every removed one read.
 
 ## Sketches (queue item 83)
 

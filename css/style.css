@@ -53,8 +53,6 @@ h1, h2, h3, h4, h5, p { margin: 0; }
   isolation: isolate;
   font-size: 1rem;
   line-height: 1.4;
-  container-type: inline-size;
-  container-name: phone;
 }
 .phone > .zone-info,
 .phone > .zone-dynamic,
@@ -298,14 +296,15 @@ h1, h2, h3, h4, h5, p { margin: 0; }
    locked zones do not: Info 205 / Dynamic ~319 / Buttons 240 stay
    exactly that at every text size, so the pins below stop a zone
    growing to fit its content and squeezing its neighbour. What
-   changes is what happens INSIDE a zone, in steps. The phone is a
-   size container, so each step is measured in ems of the phone's
-   own font size:  340px / (16px x scale).
+   changes is what happens INSIDE a zone, in steps, each measured in
+   ems of the phone's own font size:  340px / (16px x scale). (Since
+   v197 js/main.js measures them: a container query in em went stale
+   when the text size changed under the page, Chromium 141.)
       Q1  <= 17.5em  scale >= 1.21   Layers stack
    (The info card's lines no longer step: script lays out whole
    lines and leaves off what does not fit, session 30d.)
-   No media query, no JS, no class: the same rules answer to the
-   browser's own text-size setting.
+   The same rules answer to the browser's own text-size setting and
+   to the Android app's.
    ============================================================ */
 .zone-info, .zone-buttons, .info-inner { min-height: 0; }
 .info-text { overflow: hidden; }
@@ -325,22 +324,20 @@ h1, h2, h3, h4, h5, p { margin: 0; }
 .phone.fit-stack .layer .btn-roll { grid-area: roll; }
 .phone.fit-stack .layer .btn-on   { grid-area: on;   }
 
-@container phone (max-width: 17.5em) {
-  /* Layers: the label moves ABOVE the pattern and the two buttons
+/* Layers: the label moves ABOVE the pattern and the two buttons
      span both rows. The 48 x 48 targets are unchanged and the
      pattern gets wider. */
-  .layer {
+:where(.phone.text-large) .layer {
     grid-template-columns: 1fr 48px 48px;
     grid-template-rows: auto auto;
     grid-template-areas: "lbl roll on" "pat roll on";
     align-content: center; align-items: center;
     row-gap: 1px;
   }
-  .layer .lbl      { grid-area: lbl;  align-self: end;   line-height: 1.15; }
-  .layer .pattern  { grid-area: pat;  align-self: start; }
-  .layer .btn-roll { grid-area: roll; }
-  .layer .btn-on   { grid-area: on;   }
-}
+:where(.phone.text-large) .layer .lbl { grid-area: lbl;  align-self: end;   line-height: 1.15; }
+:where(.phone.text-large) .layer .pattern { grid-area: pat;  align-self: start; }
+:where(.phone.text-large) .layer .btn-roll { grid-area: roll; }
+:where(.phone.text-large) .layer .btn-on { grid-area: on;   }
 
 
 /* ============================================================
@@ -1988,27 +1985,26 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 .more.fit-five .sw-card { left: 10%; right: 10%; top: 30%; bottom: 30%; gap: 2px; padding: 0 3px; }
 .more.fit-five .sw-card i:nth-child(3) { display: none; }
 .more.fit-five .sw-card b { width: 9px; }
-@container phone (max-width: 17.5em) {
-  .themes { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  .sw-card { left: 10%; right: 10%; top: 30%; bottom: 30%; gap: 2px; padding: 0 3px; }
-  .sw-card i:nth-child(3) { display: none; }
-  .sw-card b { width: 9px; }
-  .trim { flex-wrap: wrap; }
-  .trim .setrow-text { flex-basis: 100%; }
-  .trim .trim-val { flex: 1; }
-  .hero-keys { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .hero-keys .vkey:last-child:nth-child(odd) { grid-column: 1 / -1; }
-  .keys3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  /* Rows with keys put the keys under the text, so a long name
+:where(.phone.text-large) .themes { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+:where(.phone.text-large) .sw-card { left: 10%; right: 10%; top: 30%; bottom: 30%; gap: 2px; padding: 0 3px; }
+:where(.phone.text-large) .sw-card i:nth-child(3) { display: none; }
+:where(.phone.text-large) .sw-card b { width: 9px; }
+:where(.phone.text-large) .trim { flex-wrap: wrap; }
+:where(.phone.text-large) .trim .setrow-text { flex-basis: 100%; }
+:where(.phone.text-large) .trim .trim-val { flex: 1; }
+:where(.phone.text-large) .hero-keys { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+:where(.phone.text-large) .hero-keys .vkey:last-child:nth-child(odd) { grid-column: 1 / -1; }
+:where(.phone.text-large) .keys3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* Rows with keys put the keys under the text, so a long name
      keeps the full width and never breaks mid-word. */
-  .lrow.track, .lrow.album { flex-wrap: wrap; row-gap: 0; }
-  .lrow.track .lrow-main, .lrow.album .lrow-main { flex-basis: 100%; }
-  .lrow.track .row-keys, .lrow.album > .vkey { margin: 0 0 8px auto; }
-}
-@container phone (max-width: 15.5em) {
-  .v-now .np-mid { gap: 8px; }
-  .go-hint { flex-basis: 100%; }
-}
+:where(.phone.text-large) .lrow.track,
+:where(.phone.text-large) .lrow.album { flex-wrap: wrap; row-gap: 0; }
+:where(.phone.text-large) .lrow.track .lrow-main,
+:where(.phone.text-large) .lrow.album .lrow-main { flex-basis: 100%; }
+:where(.phone.text-large) .lrow.track .row-keys,
+:where(.phone.text-large) .lrow.album > .vkey { margin: 0 0 8px auto; }
+:where(.phone.text-larger) .v-now .np-mid { gap: 8px; }
+:where(.phone.text-larger) .go-hint { flex-basis: 100%; }
 
 /* ---------- Reduced motion -------------------------------------
    The global rule (SESSION 6) already stops every transition and
@@ -2695,20 +2691,14 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 .layer { grid-template-rows: minmax(0, 1fr); }
 .layer .btn-roll, .layer .btn-on { height: min(48px, 100%); min-height: 24px; align-self: center; }
 .phone.fit-stack .layer { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
-@container phone (max-width: 17.5em) {
-  .layer { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
-}
+:where(.phone.text-large) .layer { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
 
-/* The layer's name keeps its column at any text size; on a wide screen
-   the stacking asks the panel's width, which the zones hold at 480px. */
+/* The layer's name keeps its column at any text size. The text's steps
+   (.text-large, .text-larger) are js/main.js's stepText: on a wide screen
+   it asks the panel's width, which the zones hold at 480px. */
 .layer { grid-template-columns: max(48px, 3rem) minmax(0, 1fr) 48px 48px; }
 .phone.fit-stack .layer { grid-template-columns: minmax(0, 1fr) 48px 48px; }
-@container phone (max-width: 17.5em) {
-  .layer { grid-template-columns: minmax(0, 1fr) 48px 48px; }
-}
-@media (min-width: 480px) {
-  .phone > .zone-dynamic { container: phone / inline-size; }
-}
+:where(.phone.text-large) .layer { grid-template-columns: minmax(0, 1fr) 48px 48px; }
 
 /* A short phone upright: the keys give the panel what they can spare and
    stay 44px; on the smallest the card's art is 100px, room for four of its lines. */
@@ -2899,3 +2889,8 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 @container track (max-height: 279.98px) {
   .phone .v-track .page-title.ln-title { padding: 0; }
 }
+/* A browser that can make no loop has the line alone: no empty keys. */
+.phone.unplayable { display: flex; justify-content: center; }
+.phone.unplayable > :is(.zone-dynamic, .zone-buttons) { display: none; }
+.phone.unplayable > .zone-info { flex: 0 0 auto; grid-area: auto; grid-column: 1 / -1; align-self: center; padding: 12px; }
+.phone.unplayable .info-inner { padding: 22px 14px; }

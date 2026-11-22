@@ -224,7 +224,12 @@ export function fitName() {
   let size = max;
   const set = (px) => { size = px; h.style.fontSize = `${px}px`; };
   // One line, as large as fits, down to a size that still reads as a title.
-  const oneLine = () => h.scrollWidth <= h.clientWidth + 1;
+  // (scrollWidth is whole pixels, and a pixel of slack on it let a last
+  // letter lose up to 1.5px: the text's own box says the rest.)
+  const words = document.createRange();
+  words.selectNodeContents(h);
+  const oneLine = () => h.scrollWidth <= h.clientWidth + 1
+    && words.getBoundingClientRect().width <= h.getBoundingClientRect().width + 0.5;
   while (!oneLine() && size > NAME_ONE_LINE_MIN) set(size - 1);
   if (oneLine()) return;
   // Otherwise two lines, as large as lets both fit. Names are capped at

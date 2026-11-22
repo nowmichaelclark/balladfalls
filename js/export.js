@@ -54,22 +54,20 @@ const BUSY_LINE = 0.5;
 
 // The sheet's words (for Mikey to approve: docs/notes/for-mikey.md).
 export const WORDS = {
-  whole: (t) => `whole piece ${t}`,
-  track: (t) => `track ${t}`,
   sized: (format, s) => `${format} ~${s}`,
-  memoryLong: (t) => `${t} at most here`,
+  memoryLong: (t) => `${t} max`,
   progress: (pct, left) => `${pct}%${left ? ` · ${left} left` : ''}`,
   cancelling: 'Canceling...',
-  background: 'Closing the app stops it.',
+  background: 'Closing app stops it.',
   saved: (name, size, t) => `Saved ${name} · ${size} · ${t}`,
-  cancelled: 'Canceled. Nothing saved.',
+  cancelled: 'Canceled.',
   space: (need, free) => `Not enough space: needs ${need}, ${free} free.`,
   space_app: (need, free) => `Not enough space there: needs ${need}, ${free} free.`,
   seek: "Can't save there. Try Downloads or Documents.",
   spaceLate: 'Out of space. Nothing saved.',
-  memoryFull: 'Too long for this browser. Nothing saved.',
+  memoryFull: 'Too long. Nothing saved.',
   failed: 'Export failed. Nothing saved.',
-  cant: "This browser can't export audio.",
+  cant: "Can't export audio here.",
 };
 
 // What the format keys' description says to a screen reader (session 30e:
@@ -80,7 +78,7 @@ const SPOKEN = {
   ask: 'This plays on and on, so you set how long first.',
   memoryLong: (t) => `This browser can keep ${t} at most: set a shorter track length.`,
   memory: (t) => `This browser can't write a file as it goes, so it keeps the export in memory: ${t} at most.`,
-  gentle: 'Lighter on processor is on, so it goes gently: slower, and the music never stutters.',
+  gentle: 'Lite is on, so it goes gently: slower, and the music never stutters.',
   fast: 'It goes as fast as this device safely can.',
   picker: 'You choose where it goes.',
   private: 'It downloads when it is done.',
@@ -279,7 +277,7 @@ export class AudioExport {
     const said = [];
     if (plan) {
       const key = plan.key === 'whole' ? 'whole' : 'track';
-      shown.push(WORDS[key](words(plan.seconds)));
+      shown.push(words(plan.seconds));
       said.push(SPOKEN[key](words(plan.seconds)));
     } else {
       said.push(SPOKEN.ask);

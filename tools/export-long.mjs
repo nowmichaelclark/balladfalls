@@ -204,7 +204,7 @@ async function main() {
       const small = await ev(() => { const b = document.querySelector('[data-format="small"]'); return !!b && !b.hidden; });
       if (!small) throw new Error('the sheet does not offer Small in this browser');
     }
-    if (set === 'plays on') throw new Error(`no track length of ${LENGTH} s`);
+    if (set === '\u221e') throw new Error(`no track length of ${LENGTH} s`);
     const before = await engine();
     const fills0 = await ev(() => window.__long.fills());
     const behind0 = await ev(() => window.__long.behind);

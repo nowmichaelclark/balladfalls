@@ -171,7 +171,7 @@ export function renderTrack() {
   const view = el('viewTrack');
   view.classList.toggle('endless', on);
   const num = el('trkNum');
-  if (document.activeElement !== num || on) num.value = on ? 'on and on' : clock(secs);
+  if (document.activeElement !== num || on) num.value = on ? '\u221e' : clock(secs);
   num.setAttribute('aria-label', on ? 'Track length: on and on' : `Track length: ${spokenTime(secs)}`);
   // Not on screen (session 30e): the time says it. A screen reader gets it.
   el('trkWords').textContent = on ? 'plays until you move on' : spokenTime(secs);

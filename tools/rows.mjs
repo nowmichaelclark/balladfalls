@@ -528,7 +528,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await share();
   await sleep(600);
   s = await sheet();
-  row('export audio: with a track length set, the export is as long as the track, and says so', s.asks === '' && /^track 1 min · flac ~\d+ MB, opus ~\d+ MB$/.test(s.about) && /^As long as the track: 1 min\./.test(s.hint), `${s.about}; ${s.hint}`);
+  row('export audio: with a track length set, the export is as long as the track, and says so', s.asks === '' && /^1 min · flac ~\d+ MB, opus ~\d+ MB$/.test(s.about) && /^As long as the track: 1 min\./.test(s.hint), `${s.about}; ${s.hint}`);
 
   // A minute, both speeds.
   const speeds = {};
@@ -571,7 +571,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   let m = await said(['cancelled', 'done', 'failed'], from, 30000);
   s = await sheet();
   let files = await ev(() => window.__rows.opfs());
-  row('export audio: Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && /Nothing saved/.test(s.why) && !files.includes('picked.flac') && (await playing()) && nothingLate(await lateLine()),
+  row('export audio: Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && s.why === 'Canceled.' && !files.includes('picked.flac') && (await playing()) && nothingLate(await lateLine()),
     `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}`);
   await clickId('exportOk');
 
@@ -636,7 +636,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   m = await said(['cancelled', 'done', 'failed'], from, 30000);
   s = await sheet();
   files = await ev(() => window.__rows.opfs());
-  row('export audio (small): Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && /Nothing saved/.test(s.why) && !files.includes('picked.opus') && (await playing()) && nothingLate(await lateLine()),
+  row('export audio (small): Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && s.why === 'Canceled.' && !files.includes('picked.opus') && (await playing()) && nothingLate(await lateLine()),
     `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}`);
   await clickId('exportOk');
 
@@ -689,7 +689,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await tshare();
   await sleep(1500);
   const whole = await tev(() => ({ about: document.getElementById('exportAbout').textContent, asks: document.querySelector('[data-format="lossless"]').dataset.asks || '' }));
-  row('export audio: a finite piece with no track length set exports whole, and says so', whole.asks === '' && /^whole piece \d+ h/.test(whole.about), whole.about);
+  row('export audio: a finite piece with no track length set exports whole, and says so', whole.asks === '' && /^\d+ h/.test(whole.about), whole.about);
   await tev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
   await tev(() => document.getElementById('pasteCode').click());
   await sleep(3000);
@@ -831,7 +831,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     go: !document.querySelector('[data-format="lossless"]').disabled,
     about: document.getElementById('exportAbout').textContent,
   }));
-  row('export audio: where the browser has no Opus encoder, Small is not offered and Lossless still is', seen.lossless && !seen.small && seen.go && /^$|^track [^·]+ · flac ~\d+ MB$/.test(seen.about) && bareBad.length === 0, `${JSON.stringify(seen)} ${bareBad.join('; ')}`);
+  row('export audio: where the browser has no Opus encoder, Small is not offered and Lossless still is', seen.lossless && !seen.small && seen.go && /^$|^[^·]+ · flac ~\d+ MB$/.test(seen.about) && bareBad.length === 0, `${JSON.stringify(seen)} ${bareBad.join('; ')}`);
   await bare.close();
 }
 
@@ -1042,8 +1042,8 @@ async function longRows(browser, port, errors) {
     bars: document.getElementById('pieceBars').textContent,
     times: document.getElementById('pieceTimes').textContent,
   }));
-  // "1:12:03 played" in seconds.
-  const secs = (t) => { const m = /^([\d:]+) played/.exec(t); return m ? m[1].split(':').reduce((a, v) => a * 60 + Number(v), 0) : NaN; };
+  // "1:12:03 · −2:10:00": the time played, in seconds.
+  const secs = (t) => { const m = /^([\d:]+)( \u00b7|$)/.exec(t); return m ? m[1].split(':').reduce((a, v) => a * 60 + Number(v), 0) : NaN; };
   const jumps = () => ev(() => window.__rows.posts.filter((m) => m.type === 'playJump'));
   // Seconds from the page's jump to the core's Jump event arriving.
   const landed = async (count) => {
@@ -1070,7 +1070,7 @@ async function longRows(browser, port, errors) {
   const perBar = spb * (60 / Number(p.d.bpm) / 4);
   let w = await words();
   row('long piece: Now Playing says where you are: bar of how many, time played and time left, the line in the rail\'s place',
-    w.shown && !w.rail && /^bar [\d,]+ of 32,768/.test(w.bars) && /^[\d:]+ played \u00b7 [\d:]+ left$/.test(w.times), `${w.bars}; ${w.times}`);
+    w.shown && !w.rail && /^bar [\d,]+\/32,768/.test(w.bars) && /^[\d:]+ \u00b7 \u2212[\d:]+$/.test(w.times), `${w.bars}; ${w.times}`);
 
   // The markers are the map's: a fresh call of the core's map, drawn.
   const m = await ev(async () => {
@@ -1122,7 +1122,7 @@ async function longRows(browser, port, errors) {
     return { want: mark ? piece.ROLE_WORDS[mark.role] : null, section: mark ? mark.section : null };
   }, now.bar);
   row('long piece: where you are after the jump: the bar, the time played and left, and the section\'s word are the core\'s place and the map\'s',
-    Math.abs(shownBar - (Math.floor(now.bar) + 1)) <= 3 && Math.abs(secs(w.times) - now.played) < 6 && /left$/.test(w.times) && word.want && w.bars.endsWith(word.want), `${w.bars}; ${w.times}; place bar ${now.bar.toFixed(1)}`);
+    Math.abs(shownBar - (Math.floor(now.bar) + 1)) <= 3 && Math.abs(secs(w.times) - now.played) < 6 && /\u2212[\d:]+$/.test(w.times) && word.want && w.bars.endsWith(word.want), `${w.bars}; ${w.times}; place bar ${now.bar.toFixed(1)}`);
   row('long piece: nothing late across the jump', nothingLate(await diag()), (await diag()).split('\n').find((l) => l.startsWith('engine:')));
 
   // The next-section key goes to the map's next section.
@@ -1171,7 +1171,7 @@ async function longRows(browser, port, errors) {
     return { endless: !!(model && model.endless), wander: roles.has('holding') && !roles.has('peak') && !roles.has('opening'), window: model ? model.last - model.first : 0 };
   });
   row('long piece: Endless: bar and time played, no time left, a window of the map with a wander\'s holds',
-    end.endless && end.wander && end.window > 0 && /^bar [\d,]+( \u00b7 [a-z ]+)?$/.test(w.bars) && !/ of /.test(w.bars) && /^[\d:]+ played$/.test(w.times), `${w.bars}; ${w.times}; ${JSON.stringify(end)}`);
+    end.endless && end.wander && end.window > 0 && /^bar [\d,]+( \u00b7 [a-z ]+)?$/.test(w.bars) && !/\//.test(w.bars) && /^[\d:]+$/.test(w.times), `${w.bars}; ${w.times}; ${JSON.stringify(end)}`);
 
   // The Library says each loop's length: from 4 bars to 27 hours, or
   // Endless. Four loops saved (the page's own storage, as a Save would), the
@@ -1464,7 +1464,7 @@ async function main() {
       await clickId('goExport');
       await sleep(800);
       const keys = await ev(() => [...document.querySelectorAll('#exportChoose button')].filter((b) => !b.hidden).map((b) => b.textContent.trim()).join());
-      row('share: album from seed and export audio open their views; Export is a key a format, export midi among them', seed && back && /^export flac,(export opus,)?export midi$/.test(keys), `seed ${seed}, back ${back}, ${keys}`);
+      row('share: album from seed and export audio open their views; Export is a key a format, export midi among them', seed && back && /^flac,(opus,)?midi$/.test(keys), `seed ${seed}, back ${back}, ${keys}`);
     }
     // Export MIDI and a share code.
     await clickId('exportMidi');
@@ -1661,12 +1661,12 @@ async function codeRows(browser) {
   const albumCode = encodeAlbum('Rainy Sunday', tracks);
   await paste(albumCode);
   t = await toast();
-  row('codes: an album\'s code pasted lands in the Library', t === 'Added Rainy Sunday · 3 loops' && await openAlbum('Rainy Sunday'), t);
+  row('codes: an album\'s code pasted lands in the Library', t === 'Imported 3 loops' && await openAlbum('Rainy Sunday'), t);
   let again = null;
   try { again = decodeAlbum(await shareAlbum('Rainy Sunday')); } catch (err) { again = { error: err.message }; }
   const same = (a) => a && a.title === 'Rainy Sunday' && a.specs && a.specs.length === 3 && a.specs.every((s, i) => s.seed === tracks[i].seed && s.name === tracks[i].name && encodeSong(s) === encodeSong(tracks[i]));
   row('codes: the album shared again from the Library is the same album, its first track\'s Thai name with it', same(again), JSON.stringify(again && again.title));
-  await heroKey('play album');
+  await heroKey('play');
   await sleep(3500);
   let p = await tev(() => window.__rows.probe());
   let d = about(p && p.about);
@@ -1702,7 +1702,7 @@ async function codeRows(browser) {
   // The Library after a reload: the album there, the renamed loop renamed.
   await open(true);
   const kept = await openAlbum('Rainy Sunday');
-  await heroKey('play album');
+  await heroKey('play');
   await sleep(3500);
   p = await tev(() => window.__rows.probe());
   d = about(p && p.about);
@@ -1770,7 +1770,7 @@ async function linkRows(browser) {
   const loopLink = linkOf(`${ORIGIN}/`, loopCode);
   let tab = await fresh(loopLink);
   let st = await state(tab);
-  row('links: a loop\'s link opens the loop on the card, ready and not playing, its code out of the address', st.card === spec.name && !st.playing && st.hash === '' && /Imported Loops/.test(st.toast), JSON.stringify(st));
+  row('links: a loop\'s link opens the loop on the card, ready and not playing, its code out of the address', st.card === spec.name && !st.playing && st.hash === '' && /^Imported/.test(st.toast), JSON.stringify(st));
   await tab.reload();
   await sleep(1500);
   st = await state(tab);
@@ -1827,12 +1827,12 @@ async function linkRows(browser) {
   const damaged = `${ORIGIN}/#c=${loopCode.slice(0, 4)}${loopCode[4] === 'A' ? 'B' : 'A'}${loopCode.slice(5)}`;
   tab = await fresh(damaged);
   st = await state(tab);
-  row('links: a link with a damaged code says so in one plain line', st.toast === 'Can\'t read that link.' && st.hash === '', JSON.stringify(st));
+  row('links: a link with a damaged code says so in one plain line', st.toast === 'Can\'t read link.' && st.hash === '', JSON.stringify(st));
   await tab.evaluate((c) => { window.__rows.clip = c; }, loopCode);
   await tab.evaluate(() => document.getElementById('pasteCode').click());
   await sleep(1500);
   st = await state(tab);
-  row('links: and the app still works: a code pasted after it opens', st.card === spec.name && /Imported Loops/.test(st.toast), JSON.stringify(st));
+  row('links: and the app still works: a code pasted after it opens', st.card === spec.name && /^Imported/.test(st.toast), JSON.stringify(st));
   // A link pasted is its code.
   await tab.evaluate((c) => { window.__rows.clip = `try this: ${c}`; }, loopLink);
   await tab.evaluate(() => document.getElementById('pasteCode').click());
@@ -2060,7 +2060,7 @@ async function previousRows(browser) {
       if (r) r.querySelector('.lrow-main').click();
     }, title);
     await sleep(300);
-    await heroKey('play album');
+    await heroKey('play');
     await sleep(500);
     await tev(() => { if (!document.getElementById('viewLibrary').hidden) document.getElementById('saveBtn').click(); });
     await sleep(300);
@@ -2139,7 +2139,7 @@ async function previousRows(browser) {
   // its start, there once a new loop makes some.
   await tev(() => document.getElementById('nowBtn').click());
   await sleep(400);
-  const offered = await tev(() => { const a = document.getElementById('nowAction'); const ok = !!a && !a.hidden && a.textContent === 'leave album'; if (ok) a.click(); return ok; });
+  const offered = await tev(() => { const a = document.getElementById('nowAction'); const ok = !!a && !a.hidden && a.textContent === 'leave'; if (ok) a.click(); return ok; });
   await sleep(500);
   const left = await tev(() => document.getElementById('prevBtn').disabled);
   row('previous in an album: after leaving the album, Previous is as the history says (off at its start)', offered && left, `${offered} ${left}`);
@@ -2174,7 +2174,7 @@ async function plainRows(browser) {
       return { ...seen, bad };
     };
     const none = await plain((tab) => tab.addInitScript(() => { Object.defineProperty(globalThis, 'WebAssembly', { value: undefined }); }));
-    row('plain line: a browser with no WebAssembly is told it can\'t play', none.shown && none.text === 'Can\'t play here. Try a recent Chrome, Firefox or Safari.' && !none.bad.length, `${none.text} ${none.bad.join('; ')}`);
+    row('plain line: a browser with no WebAssembly is told it can\'t play', none.shown && none.text === 'Can\'t play here. Try recent Chrome, Firefox or Safari.' && !none.bad.length, `${none.text} ${none.bad.join('; ')}`);
     const lost = await plain((tab) => tab.route('**/js/dlplayer.wasm', (r) => r.abort('failed')));
     row('plain line: a module that never arrives says to refresh', lost.shown && lost.text === 'Please refresh.' && !lost.bad.length, `${lost.text} ${lost.bad.join('; ')}`);
   }
@@ -2246,12 +2246,12 @@ async function trackRows(browser) {
   await sleep(300);
   const line = await tev(() => document.querySelector('#picksList .pk-line-pace').innerText.replace(/\s+/g, ' ').trim());
   let v = await shown();
-  row('track length: its key on the Vibe panel\'s pace line, beside "any tempo" and "any bars", says the loop plays on', /any tempo · any bars · plays on/.test(line) && v.keyLabel === 'Track length: plays on', line);
+  row('track length: its key on the Vibe panel\'s pace line, beside "any tempo" and "any bars", says the loop plays on', /any tempo · any bars · \u221e/.test(line) && v.keyLabel === 'Track length: plays on', line);
   const before = await tracks();
   await tab.click('#picksList .pk-track');
   await sleep(300);
   v = await shown();
-  row('track length: open, on and on lit, fade in off and fade out on (dimmed while it plays on)', v.view === 'track' && v.num === 'on and on' && v.on && !v.fadeIn && v.fadeOut && v.outDimmed, JSON.stringify(v));
+  row('track length: open, on and on lit, fade in off and fade out on (dimmed while it plays on)', v.view === 'track' && v.num === '\u221e' && v.on && !v.fadeIn && v.fadeOut && v.outDimmed, JSON.stringify(v));
 
   // Typed: h:mm:ss, m:ss, and digits a timer's way.
   const type = async (text) => {
@@ -2297,7 +2297,7 @@ async function trackRows(browser) {
   const on = await shown();
   await click('trkOn');
   const off = await shown();
-  row('track length: on and on lit (the fade out dimmed), pressed again the time it showed', on.on && on.num === 'on and on' && on.outDimmed && !off.on && off.num === '12:00:00' && !off.outDimmed, `${on.num} | ${off.num}`);
+  row('track length: on and on lit (the fade out dimmed), pressed again the time it showed', on.on && on.num === '\u221e' && on.outDimmed && !off.on && off.num === '12:00:00' && !off.outDimmed, `${on.num} | ${off.num}`);
   // The fades, each pressed on or off.
   await click('trkFadeIn');
   const f1 = await shown();
@@ -2312,7 +2312,7 @@ async function trackRows(browser) {
   await sleep(300);
   v = await shown();
   let p = await probe();
-  row('track length: cancel goes back to the Vibe panel, nothing sent, the loop still on and on', v.view === 'vibe' && v.key === 'plays on' && (await tracks()) === before && p.trackAt < 0, `${v.view} ${v.key}, trackAt ${p.trackAt}`);
+  row('track length: cancel goes back to the Vibe panel, nothing sent, the loop still on and on', v.view === 'vibe' && v.key === '\u221e' && (await tracks()) === before && p.trackAt < 0, `${v.view} ${v.key}, trackAt ${p.trackAt}`);
 
   // Done: 1:23:45 with its fade in, on the core to the second.
   await tab.click('#picksList .pk-track');
@@ -2387,7 +2387,7 @@ async function trackRows(browser) {
   }
   await sleep(1500);
   v = await tev(() => { document.getElementById('vibesBtn').click(); return document.querySelector('#picksList .pk-track').textContent; });
-  row('track length: the loop after it (the core\'s own) plays on, as after the Length slider', v === 'plays on', v);
+  row('track length: the loop after it (the core\'s own) plays on, as after the Length slider', v === '\u221e', v);
   const line2 = (await tev(() => document.getElementById('diagRefresh').click() || document.getElementById('diagOut').textContent)).split('\n').find((l) => l.startsWith('engine:')) || '';
   row('track length: nothing late across it', /late: 0\s+missed: 0\s+dropped: 0/.test(line2), line2);
   row('track length: no page errors', !bad.length, bad.join('; '));

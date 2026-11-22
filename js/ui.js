@@ -89,7 +89,7 @@ const RANK = {
 // An atom may carry `alts`: shorter words for the same fact, used only where
 // the column is too narrow for the full text on its own (a fact is never
 // cut; it is said in fewer words).
-const atom = (text, rank, alts = []) => ({ text, rank, alts, shown: text });
+const atom = (text, rank, alts = [], said = text) => ({ text, rank, alts, said, shown: text });
 // "40% Undertow" shortened to "Undertow".
 const bare = (part) => [part.replace(/^\d+% /, '')];
 
@@ -152,7 +152,7 @@ export function renderAlbumCard(title, specs, extra = {}) {
     facts.push({ atoms: [atom(lo === hi ? `${lo} bpm` : `${lo}-${hi} bpm`, 98)] });
     const secs = specs.reduce((t, s) => t + passSeconds(s), 0);
     facts.push({ atoms: [Number.isFinite(secs)
-      ? atom(`~${formatTime(secs)} once through`, 97, [`~${formatTime(secs)}`])
+      ? atom(`~${formatTime(secs)}`, 97, [], `~${formatTime(secs)} once through`)
       : atom('endless', 97)] });
   }
   if (extra.playing) facts.push({ cls: 'album-line', atoms: [atom(extra.playing, 96)] });
@@ -284,7 +284,7 @@ function setFacts(facts) {
     all.innerHTML = '';
     for (const f of facts) {
       const li = document.createElement('li');
-      li.textContent = f.atoms.map((a) => a.text).join(SEP);
+      li.textContent = f.atoms.map((a) => a.said).join(SEP);
       all.appendChild(li);
     }
   }
@@ -510,7 +510,8 @@ export function buildLayers(handlers, steps = STEPS_PER_BAR) {
     const reroll = document.createElement('button');
     reroll.type = 'button';
     reroll.className = 'btn-roll';
-    reroll.textContent = 'roll';
+    reroll.innerHTML = icon('dice');
+    reroll.title = 'Roll';
     reroll.setAttribute('aria-label', `Roll ${label}`);
     reroll.addEventListener('click', () => handlers.onReroll(layer));
 
@@ -727,6 +728,11 @@ const ICONS = {
   sounds: '<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>'
     + '<circle class="solid" cx="9" cy="6" r="2"/><circle class="solid" cx="15" cy="12" r="2"/><circle class="solid" cx="7" cy="18" r="2"/>',
   layers: '<path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="m3 12.5 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/>',
+  // A die showing five: roll again.
+  dice: '<rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/>'
+    + [[8, 8], [16, 8], [12, 12], [8, 16], [16, 16]].map(([x, y]) => `<circle class="solid" cx="${x}" cy="${y}" r="1.2"/>`).join(''),
+  arrowLeft: '<path d="M19 12H5"/><path d="m11 6-6 6 6 6"/>',
+  arrowRight: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
   left: '<path d="m14.5 6-6 6 6 6"/>',
   right: '<path d="m9.5 6 6 6-6 6"/>',
 };

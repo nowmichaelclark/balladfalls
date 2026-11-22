@@ -1702,7 +1702,7 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 }
 .hero-keys {
   grid-column: 1 / -1;
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 48px repeat(2, minmax(0, 1.35fr)); gap: 6px;
 }
 .hero-keys .vkey { padding: 4px 6px; }
 .end-keys { display: flex; padding: 10px 0 4px; border-top: 1px solid var(--rule); }
@@ -1788,6 +1788,9 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 .keys2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .keys3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .keys3 .vkey { padding: 4px 4px; }
+/* Symbols for words (session 30e; Mikey, 2026-11-22). */
+.layer .btn-roll svg { width: 18px; height: 18px; display: block; margin: auto; pointer-events: none; }
+.np-next svg { width: 1.1em; height: 1.1em; vertical-align: -0.18em; margin-right: 6px; }
 /* Fewer words (session 30e): a section's keys stand where its line was. */
 .adv-keys, .sec + .setrow { margin-top: 8px; }
 .speed-link { display: flex; margin-top: 6px; text-decoration: none; }
@@ -2580,11 +2583,11 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
    either way) under that, so the number keeps the width at 360 px; the
    coarse slider; then on and on and the two fades, lit the app's way. A
    Painter session restyles it later. */
-.v-track .ln-body { gap: 18px; }
+.v-track .ln-body { gap: 13px; }
 .tk-num { width: 100%; }
 .tk-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .tk-steps .ln-step { min-height: 44px; padding: 2px 4px; white-space: nowrap; }
-.vkey.word.tk-on { flex: 0 0 auto; min-width: 72px; min-height: 48px; padding: 2px 12px; font-size: min(0.75rem, 18px); }
+.vkey.tk-on { flex: 0 0 auto; min-height: 48px; }
 .vkey.tk-on[aria-pressed="true"] { color: var(--text-primary); font-weight: 700; box-shadow: inset 0 0 0 2px var(--text-primary), var(--btn-mini-shadow); }
 .tk-fades { justify-content: flex-end; }
 .tk-fades #trkFadeOut:disabled { opacity: 0.4; }

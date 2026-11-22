@@ -308,7 +308,7 @@ async function checkFit(browser, code, size, scale) {
       if (w !== 'Choose') return;
       const about = document.getElementById('exportAbout');
       about.hidden = false;
-      about.textContent = 'track 45 min · flac ~174 MB, opus ~33 MB';
+      about.textContent = '2 h 48 min · flac ~1.9 GB, opus ~121 MB';
     }, which);
     for (const p of await clipped('#exportSheet', '#viewExport .vkey')) fail(where, `${which.toLowerCase()}: ${p}`);
   }

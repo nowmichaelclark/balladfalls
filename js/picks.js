@@ -276,7 +276,7 @@ function lineButton(cls, onClick) {
 function trackKey(state, plainLine) {
   const t = trackOfSpec(state.spec);
   const b = lineButton('pk-track', () => api.openTrack());
-  const text = t.secs != null ? clock(t.secs) : 'plays on';
+  const text = t.secs != null ? clock(t.secs) : '\u221e';
   if (plainLine) {
     const sep = document.createElement('span');
     sep.className = 'pk-any pk-sep';

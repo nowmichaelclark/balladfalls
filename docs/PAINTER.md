@@ -77,7 +77,7 @@ code ("a peaceful, zany loop at 77 bpm, 16 bars, when the sun rises").
 
 **Built plain (session 18, v183, `js/piece.js`, `design/` untouched):** on Now Playing the
 rail becomes the piece's line (ticks for the map, a bead for you), under it
-"bar 812 of 3,072 · the peak" and the time played and left, with a key each way
+"bar 812/3,072 · peak" and the time played and left (a minus before it), with a key each way
 for the section before or after; press the line to jump. The journey (arc,
 wander) sits beside the Bars picker's ∞ and any. The Library's lists end in each
 loop's length. A Painter session may restyle all of it.
@@ -99,8 +99,8 @@ Saving a loop as an audio file to keep or share. Safety comes first:
 an export must never crash or break anything, even on an old phone.
 
 - **The Export view** (session 30e; behind Share's export audio). A key a
-  format, named by it, and pressing it starts: **export flac** (lossless),
-  **export opus** (much smaller, for sharing), **export midi**.
+  format, named by it, and pressing it starts: **flac** (lossless),
+  **opus** (much smaller, for sharing), **midi**.
 - **Its length is the track's** (session 30c): the Track length view's time
   and fades; with none, a finite piece exports whole, and a loop that plays
   on (or Endless) opens the Track length view first.

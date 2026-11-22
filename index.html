@@ -131,7 +131,7 @@
         <div class="vb-head">
           <button id="vibesClose" type="button" class="vkey np-vibes">close</button>
           <span id="vibesCount" class="vb-count" aria-live="polite"></span>
-          <button id="vibesClear" type="button" class="vkey">clear all</button>
+          <button id="vibesClear" type="button" class="vkey" aria-label="clear all vibes">clear</button>
         </div>
         <div id="vibesList" class="vb-list" role="group" aria-label="Vibes for new loops"></div>
       </div>
@@ -219,7 +219,7 @@
           <!-- On and on (no end: the Length slider at its start), then the
                two fades, each pressed on or off like the Bars view's keys. -->
           <div class="ln-keys">
-            <button id="trkOn" type="button" class="vkey word tk-on" aria-pressed="false">on and on</button>
+            <button id="trkOn" type="button" class="vkey ln-inf tk-on" aria-pressed="false" aria-label="On and on" title="On and on"><span aria-hidden="true">∞</span></button>
             <div class="ln-journey tk-fades" role="group" aria-label="Fades">
               <button id="trkFadeIn" type="button" class="vkey word" aria-pressed="false">fade in</button>
               <button id="trkFadeOut" type="button" class="vkey word" aria-pressed="true">fade out</button>
@@ -264,7 +264,7 @@
               <button id="pasteCode" type="button" class="vkey" aria-describedby="pasteHint">paste code</button>
               <button id="goExport" type="button" class="vkey" aria-describedby="goExportHint">export audio</button>
               <button id="shareSong" type="button" class="vkey share-more" aria-describedby="linkHint">share link</button>
-              <button id="goSeedAlbum" type="button" class="vkey share-more" aria-describedby="seedHint">album from seed</button>
+              <button id="goSeedAlbum" type="button" class="vkey share-more" aria-label="seed album: an album from one seed" aria-describedby="seedHint">seed album</button>
             </div>
             <p id="copyHint" hidden>Copies this loop's code. A loop is a recipe, not a recording, so it fits in a code; no internet needed at either end.</p>
             <p id="pasteHint" hidden>Brings a loop or an album in. A loop code lands in Imported Loops; an album code arrives as an album of its own.</p>
@@ -287,10 +287,10 @@
         <div class="ln-body" id="exportSheet">
           <div id="exportChoose">
             <div class="format-keys" role="group" aria-label="Format">
-              <button type="button" class="vkey" data-format="lossless" aria-describedby="flacHint exportHint">export flac</button>
+              <button type="button" class="vkey" data-format="lossless" aria-label="export flac" aria-describedby="flacHint exportHint">flac</button>
               <!-- Opus (queue item 104c) shows only where the browser can encode it (js/export.js). -->
-              <button type="button" class="vkey" data-format="small" aria-describedby="opusHint exportHint" hidden>export opus</button>
-              <button id="exportMidi" type="button" class="vkey" aria-describedby="midiHint">export midi</button>
+              <button type="button" class="vkey" data-format="small" aria-label="export opus" aria-describedby="opusHint exportHint" hidden>opus</button>
+              <button id="exportMidi" type="button" class="vkey" aria-label="export midi" aria-describedby="midiHint">midi</button>
             </div>
             <p class="hint" id="exportAbout" hidden></p>
             <p id="flacHint" hidden>Lossless: full quality, as a FLAC file.</p>
@@ -331,7 +331,7 @@
       <div id="viewSeed" class="view v-length v-sheet" data-view="seed" role="region" aria-label="Album from one seed" hidden>
         <div class="ln-head">
           <button id="seedBack" type="button" class="vkey back" aria-label="Back to Share"><span data-ico="left"></span>Share</button>
-          <h2 class="page-title ln-title" tabindex="-1">Album from seed</h2>
+          <h2 class="page-title ln-title" tabindex="-1">Seed album</h2>
         </div>
         <div class="ln-body" id="seedAlbum">
           <label class="srow"><span>Tracks <b id="seedCountVal">12</b></span>
@@ -374,15 +374,15 @@
               </section>
               <section class="adv-sec">
                 <h3 class="sec">Processor</h3>
-                <div class="setrow"><div class="setrow-text"><span class="setrow-name" id="liteName">Lighter on processor</span>
-                  <p id="liteHint" hidden>Uses less of the phone, so older ones keep up. A busy loop may play a few notes fewer. Turns itself on if this device can't keep up, unless you choose.</p>
+                <div class="setrow"><div class="setrow-text"><span class="setrow-name" id="liteName">Lite</span>
+                  <p id="liteHint" hidden>Lighter on the processor. Uses less of the phone, so older ones keep up. A busy loop may play a few notes fewer. Turns itself on if this device can't keep up, unless you choose.</p>
                   <p class="hint" id="liteAuto" hidden></p></div>
                   <button id="liteMode" type="button" class="vkey" role="switch" aria-checked="false" aria-labelledby="liteName" aria-describedby="liteHint liteAuto"><span aria-hidden="true">off</span></button></div>
               </section>
               <section class="adv-sec">
                 <h3 class="sec">Files</h3>
                 <div class="keys2 adv-keys">
-                  <button id="exportJson" type="button" class="vkey" aria-describedby="filesHint">back up all</button>
+                  <button id="exportJson" type="button" class="vkey" aria-label="back up all" aria-describedby="filesHint">back up</button>
                   <button id="importBtn" type="button" class="vkey" aria-label="restore from a file" aria-describedby="restoreHint">restore</button>
                   <button id="copyBackup" type="button" class="vkey" aria-describedby="filesHint">copy backup</button>
                   <button id="pasteBackup" type="button" class="vkey" aria-describedby="restoreHint">paste backup</button>
@@ -404,7 +404,7 @@
                 <div class="keys3">
                   <button id="diagRefresh" type="button" class="vkey" aria-label="refresh diagnostics">refresh</button>
                   <button id="diagCopy" type="button" class="vkey" aria-label="copy diagnostics" aria-describedby="diagHint">copy</button>
-                  <button id="diagReset" type="button" class="vkey">reset counters</button>
+                  <button id="diagReset" type="button" class="vkey" aria-label="reset counters">reset</button>
                 </div>
                 <p id="diagHint" hidden>If something misbehaves, play for a minute with the screen off, come back, then copy this and send it over.</p>
                 <a href="./speed.html" class="vkey speed-link" aria-describedby="speedHint">speed test</a>

@@ -26,7 +26,7 @@ const BURN = Number(new URLSearchParams(location.search).get('burn')) || 0;
 // events. There is nothing else to play on (queue item 97): a browser whose
 // core will not run is told so in a plain line, in the info card's place
 // (Mikey, 2026-11-07; shorter in session 30e, the same meaning).
-const CANT_PLAY = "Can't play here. Try a recent Chrome, Firefox or Safari.";
+const CANT_PLAY = "Can't play here. Try recent Chrome, Firefox or Safari.";
 // And where the browser could run the core but the core did not arrive (a
 // first visit with no connection, a server error): not the browser's fault,
 // so not the line above.
@@ -35,7 +35,7 @@ const NOT_LOADED = 'Please refresh.';
 // 2026-11-10): the line, and where the Driftloom app is. The link is empty
 // until the Android app has a page (F-Droid, queue item 107); the second
 // sentence shows only when it is set.
-const TOO_SLOW = 'This browser is too slow.';
+const TOO_SLOW = 'Browser too slow.';
 // The app's name, where a line names it (the app is renamed at 1.0: session
 // 31a changes it here). The lines a pasted code gets name it, as the core's
 // "needs a newer version" leaves the host to.
@@ -53,12 +53,12 @@ const NOT_A_BACKUP = `Not a ${APP_NAME} backup.`;
 // not have (it can't say so yet: today it says "needs a newer version" for
 // any id it lacks, and session B4 settles whether it plays something close
 // instead). share.codeKind answers 'instrument' for such a refusal.
-const INSTRUMENT_CODE = `Can't open: missing instrument.`;
+const INSTRUMENT_CODE = `Missing instrument.`;
 // A link whose code is damaged (cut short, or a character changed).
-const BAD_LINK = `Can't read that link.`;
+const BAD_LINK = `Can't read link.`;
 // Storage refused (a private window, or the site's storage full).
 const CANT_SAVE = "Can't save: storage blocked";
-const GET_APP = 'Get the app.';
+const GET_APP = 'Get app.';
 const APP_LINK = '';
 
 // Reported in Diagnostics. Declared here rather than beside the registration
@@ -397,10 +397,10 @@ function showLiteSource() {
   // The switch's description reads it, hidden or not: empty where it is yours.
   hint.textContent = '';
   if (!auto) return;
-  hint.textContent = prefs.liteAuto.lite ? 'Turned on by itself' : 'Turned off by itself';
+  hint.textContent = 'auto';
   const why = document.createElement('span');
   why.className = 'vh';
-  why.textContent = prefs.liteAuto.lite ? ': this device was working hard at full quality.' : ': this device has room to spare.';
+  why.textContent = prefs.liteAuto.lite ? ': turned on by itself; this device was working hard at full quality.' : ': turned off by itself; this device has room to spare.';
   hint.append(why);
 }
 
@@ -861,7 +861,7 @@ function saveIn(albumId) {
   }
   if (!store.addToAlbum(albumId, state.currentId)) { ui.toast("Can't change album"); return; }
   const album = store.loadAlbums().find((a) => a.id === albumId);
-  ui.toast(`Saved to ${album ? album.title : 'the album'}`);
+  ui.toast(album ? 'Saved' : "Can't change album");
   savedChanged();
   refreshCard();
 }
@@ -875,7 +875,7 @@ function unsaveFrom(albumId) {
     state.currentId = null;
     ui.toast(`Deleted ${name}`);
   } else {
-    ui.toast('Removed from album');
+    ui.toast('Removed');
   }
   savedChanged();
   refreshCard();
@@ -887,7 +887,7 @@ function updateSaved() {
     ui.toast(CANT_SAVE);
     return;
   }
-  ui.toast(`Updated ${state.spec.name}`);
+  ui.toast('Updated');
   savedChanged();
 }
 
@@ -986,7 +986,7 @@ function renderVibes() {
   for (const b of list.children) b.setAttribute('aria-pressed', on.has(b.dataset.vibe) ? 'true' : 'false');
   const n = state.vibes.length;
   const count = ui.el('vibesCount');
-  count.textContent = n ? `${n} picked` : 'any mood';
+  count.textContent = n ? `${n} picked` : 'any';
   const more = document.createElement('span');
   more.className = 'vh';
   more.textContent = n ? ', for new loops' : ': new loops as usual';
@@ -1080,7 +1080,7 @@ function onOwn(seed, tag) {
     }
     pushHistory(spec);
     loadSpec(spec, { pushToHistory: false });
-    ui.toast(`New loop: ${spec.name}`);
+    ui.toast(spec.name);
     updateHistoryButtons();
   }, 0);
 }
@@ -1127,7 +1127,7 @@ function renderNow() {
     dots.innerHTML = n <= 12
       ? Array.from({ length: n }, (_, i) => (i === pl.index ? '<i class="on"></i>' : '<i></i>')).join('')
       : '';
-    ui.el('nowOf').textContent = `${pl.index + 1}\u00a0of\u00a0${n}`;
+    ui.el('nowOf').innerHTML = `<span aria-hidden="true">${pl.index + 1}/${n}</span><span class="vh">${pl.index + 1} of ${n}</span>`;
   }
 
   // In an album the album is what comes next, so Now Playing says which
@@ -1137,7 +1137,8 @@ function renderNow() {
   next.hidden = !inAlbum;
   ui.el('nowPicks').hidden = inAlbum;
   if (inAlbum) {
-    next.textContent = 'Next: ';
+    // An arrow for the word (Mikey, 2026-11-22), the word for a screen reader.
+    next.innerHTML = `${ui.icon('arrowRight')}<span class="vh">Next: </span>`;
     const b = document.createElement('b');
     b.textContent = nextName();
     next.appendChild(b);
@@ -1148,13 +1149,18 @@ function renderNow() {
   const action = ui.el('nowAction');
   if (pl && pl.ids.length) {
     action.hidden = false;
-    action.textContent = 'leave album';
+    action.textContent = 'leave';
+    action.title = '';
+    action.setAttribute('aria-label', 'leave album');
     action.onclick = leaveAlbum;
   } else if (state.lastAlbum) {
     const album = store.loadAlbums().find((a) => a.id === state.lastAlbum.albumId);
     action.hidden = !album;
     if (album) {
-      action.textContent = `back to ${album.title}`;
+      action.innerHTML = ui.icon('arrowLeft');
+      action.append(album.title);
+      action.title = `Back to ${album.title}`;
+      action.setAttribute('aria-label', action.title);
       action.onclick = () => playAlbum(album.id, state.lastAlbum.index);
     }
   } else {
@@ -1168,7 +1174,7 @@ function nextName() {
   if (pl && pl.ids.length) {
     const id = pl.ids[(pl.index + 1) % pl.ids.length];
     const entry = store.loadAll().find((e) => e.id === id);
-    return entry ? entry.spec.name : 'the next track';
+    return entry ? entry.spec.name : 'next track';
   }
   if (state.historyIndex < state.history.length - 1) {
     return state.history[state.historyIndex + 1].name;
@@ -1335,7 +1341,7 @@ function playAlbum(albumId, index = 0, play = true) {
   if (!album) return;
   const saved = new Set(store.loadAll().map((e) => e.id));
   const present = album.ids.filter((id) => saved.has(id));
-  if (!present.length) { ui.toast('Empty album'); return; }
+  if (!present.length) { ui.toast('Empty'); return; }
   state.playlist = { albumId: album.id, title: album.title, ids: present, index: index - 1 };
   advancePlaylist(1, play);
 }
@@ -1345,7 +1351,7 @@ async function shareAlbum(albumId, asLink = false) {
   if (!album) return;
   const byId = new Map(store.loadAll().map((e) => [e.id, e]));
   const specs = album.ids.map((id) => byId.get(id)).filter(Boolean).map((e) => e.spec);
-  if (!specs.length) { ui.toast('Empty album'); return; }
+  if (!specs.length) { ui.toast('Empty'); return; }
   try {
     const code = share.encodeAlbum(album.title, specs);
     const label = `${album.title} · ${specs.length} loops`;
@@ -1374,7 +1380,7 @@ async function offerCode(code, label, what = 'Code') {
     setView('save');
     library.showShare();
     out.scrollIntoView({ block: 'nearest' });
-    ui.toast('Copy from the box');
+    ui.toast('Copy from box');
   }
 }
 
@@ -1435,7 +1441,7 @@ function openSaved(entry) {
     return;
   }
   if (!state.engine.playing) togglePlay();
-  ui.toast(`Loaded ${entry.spec.name}`);
+  ui.toast(entry.spec.name);
 }
 
 // ------------------------------------------------------------ callbacks
@@ -1647,7 +1653,7 @@ function exportMidi(spec = state.spec) {
   if (!spec) return;
   const blob = patternToMidi(render(spec), { repeats: 4 });
   ui.download(blob, `${spec.name}-${spec.bpm}bpm.mid`);
-  ui.toast('MIDI exported');
+  ui.toast('Exported');
 }
 
 // Paste a song or album code: from the clipboard if the browser allows it,
@@ -1702,13 +1708,12 @@ function openCode(text, { play, link = false }) {
       state.playlist = null;
       if (same) {
         loadSpec(cloneSpec(same.spec), { id: same.id });
-        const home = store.albumsOf(same.id)[0];
-        ui.toast(`Already saved${home ? ` in ${home.title}` : ''}`);
+        ui.toast('Already saved');
       } else {
         const ids = store.addSpecs([spec]);
         if (ids) store.addToAlbum(store.IMPORTED, ids[0]);
         loadSpec(spec, { id: ids ? ids[0] : null });
-        ui.toast(ids ? 'Added to Imported Loops' : 'Opened, not saved');
+        ui.toast(ids ? 'Imported' : 'Opened, not saved');
       }
       if (play && !state.engine.playing) togglePlay();
     } else {
@@ -1721,7 +1726,7 @@ function openCode(text, { play, link = false }) {
       const album = store.createAlbum(title);
       if (album) store.setAlbumIds(album.id, ids);
       savedChanged();
-      ui.toast(`Added ${title} · ${specs.length} loops`);
+      ui.toast(`Imported ${specs.length} loops`);
       // From a link the album is open at its first track, ready to play.
       if (link && album) playAlbum(album.id, 0, false);
     }
@@ -2058,7 +2063,7 @@ function wire() {
   ui.el('diagReset').addEventListener('click', () => {
     if (state.engine) state.engine.clearMetrics();
     renderDiag();
-    ui.toast('Counters cleared');
+    ui.toast('Reset');
   });
   ui.el('diagCopy').addEventListener('click', async () => {
     renderDiag();
@@ -2066,9 +2071,9 @@ function wire() {
       await navigator.clipboard.writeText(ui.el('diagOut').textContent);
       // The views' report starts again from here.
       viewsReset();
-      ui.toast('Diagnostics copied');
+      ui.toast('Copied');
     } catch {
-      ui.toast('Copy from the box');
+      ui.toast('Copy from box');
     }
   });
 
@@ -2099,7 +2104,7 @@ function wire() {
   ui.el('copyBackup').addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(await store.exportAll().text());
-      ui.toast('Backup copied');
+      ui.toast('Copied');
     } catch {
       ui.toast('Clipboard blocked');
     }
@@ -2116,9 +2121,9 @@ function wire() {
     try {
       const res = store.importAll(text);
       savedChanged();
-      if (res.failed) ui.toast("Can't save restored loops");
+      if (res.failed) ui.toast("Can't save");
       else if (res.added) ui.toast(`Restored ${res.added} loops${res.rejected ? `, skipped ${res.rejected}` : ''}`);
-      else ui.toast(res.rejected ? `Skipped ${res.rejected} unreadable` : 'Nothing new');
+      else ui.toast(res.rejected ? `Skipped ${res.rejected}` : 'Nothing new');
     } catch {
       ui.toast(NOT_A_BACKUP);
     }
@@ -2129,9 +2134,9 @@ function wire() {
     try {
       const res = store.importAll(await file.text());
       savedChanged();
-      if (res.failed) ui.toast("Can't save restored loops");
+      if (res.failed) ui.toast("Can't save");
       else if (res.added) ui.toast(`Restored ${res.added} loops${res.rejected ? `, skipped ${res.rejected}` : ''}`);
-      else ui.toast(res.rejected ? `Skipped ${res.rejected} unreadable` : 'Nothing new');
+      else ui.toast(res.rejected ? `Skipped ${res.rejected}` : 'Nothing new');
     } catch {
       ui.toast("Can't read file");
     }

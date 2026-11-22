@@ -241,6 +241,19 @@ fn a_time_set_as_it_plays_counts_from_then() {
         // By the music's own shift: the next step, a lookahead ahead when it
         // stopped, plays at the resume.
         assert!(after - before > 9.5 && after - before < 10.5, "the pause moved it {}", after - before);
+        // A time set while it is stopped counts from the resume, its fade
+        // out planned there.
+        p.stop();
+        p.decide(&mut h);
+        h.frame += (RATE * 5.0) as u64;
+        p.set_track_with(&h, Track::Seconds(40), Fades { fade_in: false, fade_out: true });
+        assert_eq!(p.track_at(), None, "nothing counts while stopped");
+        h.gain.clear();
+        let at = h.frame as f64 / RATE + 0.1;
+        p.resume(at);
+        p.decide(&mut h);
+        assert!(p.track_at().is_some_and(|t| (t - (at + 40.0)).abs() < 1e-9), "from the resume: {:?}", p.track_at());
+        assert!(h.gain.iter().any(|&(op, v, t)| op == 1 && v == 0.0 && (t - (at + 40.0)).abs() < 1e-9), "its fade out written");
     });
 }
 

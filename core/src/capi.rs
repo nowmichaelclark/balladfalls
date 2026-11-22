@@ -1150,7 +1150,7 @@ pub unsafe extern "C" fn dl_album_track(code: *const c_char, index: usize, out: 
 /// How long track `index` (from 0) of the album `code` plays before the
 /// next, as its maker set it (`code::album_pace`): `kind` and `count` as the
 /// player's track takes them (`dl_player_track`: 0 on and on, 3 a time of
-/// `count` seconds, with DL_FADE_IN and DL_FADE_OUT added). Null, or the
+/// `count` seconds, with `DL_FADE_IN` and `DL_FADE_OUT` added). Null, or the
 /// line saying why not.
 ///
 /// # Safety

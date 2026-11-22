@@ -218,7 +218,7 @@ impl Pace {
             1 => Pace::OnFadingIn,
             _ => {
                 let v = p - 2;
-                Pace::Time { seconds: v / 4 + 1, fades: Fades { fade_in: v % 4 & 1 != 0, fade_out: v % 4 & 2 != 0 } }
+                Pace::Time { seconds: v / 4 + 1, fades: Fades { fade_in: v & 1 != 0, fade_out: v & 2 != 0 } }
             }
         }
     }

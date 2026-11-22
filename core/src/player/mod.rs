@@ -1767,7 +1767,13 @@ impl Player {
             // and the fades planned after the pause began, move with the
             // music.
             let shift = self.seq.next_step_time - was;
-            if shift.is_finite() && shift > 0.0 {
+            // A time set while it was stopped counts from the resume.
+            if let Track::Seconds(n) = self.track
+                && self.track_at <= 0.0
+            {
+                self.track_at = self.seq.next_step_time + f64::from(n);
+                self.plan_track(self.seq.next_step_time, false);
+            } else if shift.is_finite() && shift > 0.0 {
                 if self.track_at > 0.0 {
                     self.track_at += shift;
                 }
@@ -1778,7 +1784,7 @@ impl Player {
             }
             // Written again whatever moved: a host's stop may have cancelled
             // what was scheduled.
-            self.replan = self.gain_moved;
+            self.replan = self.replan || self.gain_moved;
         }
         if self.state != State::Playing {
             return Work::None;

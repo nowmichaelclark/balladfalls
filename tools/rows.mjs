@@ -618,7 +618,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     && ogg && ogg.beginning && ogg.tagged && ogg.end && ogg.ordered && ogg.channels === 2 && ogg.preSkip > 0 && ogg.frames === small.frames && smallGot.decoded === small.frames
     && small.seconds >= 60 && small.seconds < 60 + 30 && smallMoved >= 2 && !small.counts.late && !small.counts.missed && !small.counts.dropped && s.done && smallMeanwhile && nothingLate(smallLine),
     `${small && small.type} ${small && small.why || ''}, ${smallGot.size} bytes, ${ogg ? `${ogg.pages} pages, ${ogg.packets} packets, pre-skip ${ogg.preSkip}, ${ogg.frames} frames` : oggWhy}; the browser decoded ${smallGot.decoded} frames; ${small && small.seconds && small.seconds.toFixed(1)} s in ${small && small.took && small.took.toFixed(1)} s; ${smallMoved} progress reports; ${s.saved}; ${smallLine}`);
-  row('export audio (small): the size is the constant bit rate (96 kbit/s stereo, 12,000 bytes a second and the pages) and the sheet said about so', rate > 11500 && rate < 12700 && /^About \d+ MB\./.test(smallAbout), `${Math.round(rate)} bytes a second; ${smallAbout}`);
+  row('export audio (small): the size is the constant bit rate (96 kbit/s stereo, 12,000 bytes a second and the pages) and the sheet said about so', rate > 11500 && rate < 12700 && /^As long as the track: 1 min\. About \d+ MB\./.test(smallAbout), `${Math.round(rate)} bytes a second; ${smallAbout}`);
   await clickId('exportDoneBtn');
   await trackTo(ev, 600);
   await share();
@@ -799,7 +799,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     go: !document.getElementById('exportAudio').disabled,
     about: document.getElementById('exportAbout').textContent,
   }));
-  row('export audio: where the browser has no Opus encoder, Small is not offered and Lossless still is', seen.lossless && !seen.small && seen.go && /^About \d+ MB\./.test(seen.about) && bareBad.length === 0, `${JSON.stringify(seen)} ${bareBad.join('; ')}`);
+  row('export audio: where the browser has no Opus encoder, Small is not offered and Lossless still is', seen.lossless && !seen.small && seen.go && /^(This plays on and on, so you set how long first|As long as the track: .*? About \d+ MB)\./.test(seen.about) && bareBad.length === 0, `${JSON.stringify(seen)} ${bareBad.join('; ')}`);
   await bare.close();
 }
 
@@ -2220,9 +2220,9 @@ async function trackRows(browser) {
   await click('trkSecDown');
   const k3 = (await shown()).num;
   await type('0:01');
-  await click('trkSecDown');
   const k4 = await shown();
-  row('track length: the keys a second and a minute either way, never under a second', k1 === '1:23:46' && k2 === '1:22:46' && k3 === '1:23:45' && k4.num === '0:01', [k1, k2, k3, k4.num].join(' | '));
+  const downOff = await tev(() => document.getElementById('trkSecDown').disabled && document.getElementById('trkMinDown').disabled);
+  row('track length: the keys a second and a minute either way, never under a second (at 0:01 both down keys are off)', k1 === '1:23:46' && k2 === '1:22:46' && k3 === '1:23:45' && k4.num === '0:01' && downOff, [k1, k2, k3, k4.num, downOff].join(' | '));
   // The coarse slider: its stops, to a whole day.
   const slideTo = (i) => tev((x) => { const r = document.getElementById('trkSlide'); r.value = String(x); r.dispatchEvent(new Event('input', { bubbles: true })); }, i);
   await slideTo(8);

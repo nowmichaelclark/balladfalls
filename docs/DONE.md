@@ -542,3 +542,14 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   is the track length (2:00:07 exports 7207.000 s of track and its tail);
   saved loops convert; an album code carries the time and fades. Listen to
   a 0:45 track with each fade on and off: are 3 s and 8 s right?
+- #450, the codes made ready to freeze (item 105e, session 24c, v194),
+  preview URL: the branch's preview (no hash kept): no code's bytes change
+  and every code made before reads as before (the 50 in the fixtures and
+  `docs/ALBUMS.md`, loop for loop). A member taken out keeps its row in
+  `data/codes.txt`, gone, and plays its stand-in or goes without; twang's
+  slow and bright are the first (a code pinning either plays soft, the same
+  samples as soft's; 675 of 10,000 corpus loops play twang, as before, every
+  hash unmoved). Every draw with ids is filtered by the code's version, and
+  a new setting drawn per loop draws nothing below its own; one version a
+  release (`released`). Left for the page: `docs/notes/105e-page.md` (it
+  drops a code's version). Listen for nothing. No album loop.

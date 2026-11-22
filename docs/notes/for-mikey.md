@@ -94,9 +94,12 @@ the points where the next step is yours.
   and the long pieces, as links the app plays (`docs/ALBUMS.md`, "Three
   albums in the app"). You heard them all as clips; this is them on your
   own devices. One word a track only if something sounds wrong.
-- **Removed sounds:** after 24c, a code naming something since taken out
-  (first: twang's slow and bright) plays something close (soft) instead of
-  "needs a newer version". No code gets longer.
+- **Removed sounds (item 105e, v194, PR #450):** nothing to do or hear. A
+  code naming something since taken out plays something close: twang's slow
+  and bright are gone, and a code or saved loop that pinned either plays
+  soft. Every code you have reads as before, and none gets longer. One thing
+  is left before a sound is added after 1.0: the app has to keep a code's
+  version (`docs/notes/105e-page.md`; the brain's to schedule).
 
 ## The Android app on F-Droid (item 107e, session 29): choose the signing, then submit after 31
 

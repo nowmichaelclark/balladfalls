@@ -456,6 +456,7 @@ export class AudioExport {
     const t = words(m.seconds);
     const placed = r.sink === 'handle' || r.sink === 'app';
     el('exportSaved').textContent = WORDS.saved(r.name, size(m.bytes), t);
+    ui.announce(el('exportSaved').textContent);
     el('exportSave').hidden = placed;
     this.show('done');
     el('exportShare').hidden = !this.canShare();
@@ -468,6 +469,7 @@ export class AudioExport {
     if (this.app) this.app.exporting(false);
     el('exportWhy').textContent = why === 'space' ? WORDS.spaceLate : why === 'memory' ? WORDS.memoryFull : WORDS.failed;
     if (message) console.warn('export:', why, message);
+    ui.announce(el('exportWhy').textContent);
     this.show('failed');
   }
 

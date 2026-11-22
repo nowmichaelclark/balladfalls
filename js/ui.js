@@ -677,7 +677,14 @@ export function toast(message, said = message) {
 // Said to a screen reader and not shown (session 30e; Mikey, 2026-11-22,
 // the popups too): what the screen shows already needs no popup.
 export function announce(said) {
-  el('announce').textContent = said;
+  const status = el('announce');
+  // The same words again are a change only if the status was empty between.
+  if (status.textContent === said) {
+    status.textContent = '';
+    requestAnimationFrame(() => { if (!status.textContent) status.textContent = said; });
+    return;
+  }
+  status.textContent = said;
 }
 
 export function download(blob, filename) {

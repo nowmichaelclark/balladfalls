@@ -270,7 +270,7 @@ export function paintLine(canvas, model) {
     if (!hh) continue;
     const role = roles[x];
     const mark = role === 'peak' || role === 'close' || role === 'return';
-    ctx.globalAlpha = role === 'opening' ? 0.5 : mark ? 1 : 0.75;
+    ctx.globalAlpha = mark ? 1 : 0.9;
     ctx.fillStyle = mark ? loud : quiet;
     const th = Math.max(3, Math.round((h - 4) * hh));
     ctx.fillRect(x, h - 3 - th, 1.5, th);
@@ -404,6 +404,8 @@ export function updatePiece() {
   const playing = host.playing();
   const line = document.getElementById('pieceLine');
   root.classList.toggle('idle', !playing);
+  const off = playing ? 'false' : 'true';
+  if (line.getAttribute('aria-disabled') !== off) line.setAttribute('aria-disabled', off);
   // Endless: a window; asked again when the playhead leaves it.
   if (view.model.endless && place) {
     const w = windowOf(spec, place.section);

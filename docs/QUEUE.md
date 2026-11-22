@@ -650,6 +650,16 @@ changelog, codes frozen (105), the nightly's checks back as merge gates
   with a measured aim; for Broken Friends' web build, the header's line is
   enough.
 
+## 115. No crackles in the Android app (a 1.0 blocker; 2026-11-22)
+
+**Hands:** session 30g (`docs/sessions/30g-crackles.md`), after 30f and
+before 30; then Mikey's ears, which alone close it. He heard a few crackles
+in v195's app on the moto g stylus 5G (2022), and it moved to Lite by
+itself; "Yes, blocker". The evidence, the suspects apart from what is known:
+`docs/notes/115-crackles.md`. **Yardsticks:** the album's native renders
+free of discontinuities, no command on the audio thread past promise 1, a
+switch without a click, then a clean listen on that phone.
+
 ## For phase 3 (from item 82; brain, Session 28)
 
 - **When notes reach the core** (`docs/archive/notes/82-hand-over.md`): the
@@ -782,6 +792,8 @@ stay channel sources until an ears session needs a voice's note-by-note play
 
 ## Known issues
 
+- **Crackles in the Android app: blocks 1.0; session 30g's, not session
+  30's** (Mikey, 2026-11-22, v195 on the Moto): item 115.
 - **CI's flakes and weak checks; for session 30** (brain B-parallel 3,
   2026-11-22). Flakes, worst first: the Kotlin Gradle plugin's download
   (four times in a day); the F-Droid emulator check counts UiAutomation's

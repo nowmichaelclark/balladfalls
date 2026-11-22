@@ -183,6 +183,15 @@ repository's address and the one-line description; someone from F-Droid may
 write the recipe, but it takes longer and they build it their own way. The
 merge request is faster and keeps the recipe in this repository.
 
+## Crackles in the Android app (item 115, a 1.0 blocker, session 30g)
+
+Three short checks on the Moto, whenever you can (30g reads your answers):
+
+- **The Batch 6 album again, Lite off:** the same spot each time, or random?
+  Which track, at a track's change or not, screen on or off, speaker or wired?
+- **A few minutes of it with Lite on:** any crackle?
+- **The same album on the site in Chrome, Lite off:** any crackle?
+
 ## The Android app, screen off (item 107d, v188, PR #431)
 
 Install the universal APK from the PR's `driftloom-debug-apk` artifact over
@@ -192,9 +201,11 @@ the last one (same key). On the **Moto** and on the **tablet**:
   minute (Vibe, its third key), press Home, switch the screen off, put the phone down for
   ten minutes. Listen for: no gap, no crackle, the loops changing on the
   minute; the notification and the lock screen show the loop's **own cover**
-  and its name, changing with each loop. Then in Diagnostics (screen on):
-  `engine:` with `late: 0 missed: 0 dropped: 0` and its underruns, and
-  `while hidden:`; send me those two lines and the phone's name.
+  and its name, changing with each loop (seen right on the Moto, 2026-11-22;
+  the tablet is left). An album changes by itself (Batch 6's does each
+  minute); a loop's own Track length changes it once. Then in Diagnostics (screen on),
+  refresh and copy it all, and send it with the phone's name ("while hidden"
+  counts only paused time: your ears are this test).
 - **The controls.** From the lock screen and the notification: Pause, Play,
   Next, Previous; from a headset's or Bluetooth's buttons too. Pull the
   headphones (or switch the Bluetooth off) while it plays: it should pause.
@@ -416,10 +427,6 @@ the last one (same key). On the **Moto** and on the **tablet**:
   Save tab (ticks, no line); Library, an album open; More, Advanced to its
   end. With TalkBack on, if you like: each key still says what its line
   used to. The words themselves are yours to approve, under Decisions.
-
-- **The Android app's type-in box (item 113, v195, #449):** in the app, tap
-  + in the Library: the box should be titled "Name", with no web address.
-  It has not been seen on a device.
 
 ## Accounts
 

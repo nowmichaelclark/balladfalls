@@ -125,3 +125,7 @@ The brain's reading: the version filter on additions costs no characters and sta
 ## Rust: the synth, then the generator (Mikey, 2026-10-03)
 
 - 2026-10-03 -- **Rust:** the synth, then the generator, move to a host-agnostic Rust core (WebAssembly in an AudioWorklet for the web), in its own brain chat. **(Superseded 2026-10-12: the generator no longer waits; see "The core: aims and design".)** **Timing (2026-10-03): the synth ports now; the generator waits until the words' draws stop moving.** Its case is portability, not speed (the performance baseline showed the fixable costs were elsewhere). The deliverable is the phone app; a native build and games are separate projects. Rust over C++ and the rest: roadmap 16.
+
+## Shorter share codes, the line as it stood (2026-10-12)
+
+- 2026-10-12 -- **Shorter share codes** (Mikey, 2026-10-12): an album fills half a phone screen in Discord; not tidy. Brain's proposal for the charter: with a deterministic, versioned core, a loop's code is the version, the seed and only what the listener changed (vibes, mutes, edits) -- about 10-16 characters; an album, a list of those (about 60 for eight loops, against over a thousand now). Shared as a link, so Discord shows a tidy preview. The levers for shorter still, and why the version replaces explicit parameters: [the full text](#shorter-share-codes-mikey-2026-10-12).

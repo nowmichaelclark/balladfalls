@@ -1,5 +1,8 @@
 # Session 30: the known issues and the polish
 
+**Changed by brain B-parallel 3 (2026-11-22):** it waits for session 30g
+(item 115, the crackles, a 1.0 blocker) and doesn't take that Known issue.
+
 **Changed 2026-11-18, at Mikey's request:** his seven items for 1.0 run first, as sessions 30a to 30f (`README.md`, "Mikey's seven"), so "Start after" adds 30f, the last of them; the pass in step 3 covers their screens too.
 
 **Changed by brain B-parallel (2026-11-17):** the chains (`README.md`, "From 17 on"): "Start after" was "sessions 24 and 29, and brain session B4": the chains end at 18, 21, 24 and 29, so all four are named; it runs alone.
@@ -7,7 +10,7 @@
 **Changed by brain B1 (2026-11-11):** the Painter's test kit's broken imports, found in B1's check of item 97.
 
 - **Model:** Sonnet 5.5. **Effort:** high.
-- **Start after:** sessions 18, 21, 24, 29 and 30f (30a to 30f all in), and brain session B4. Nothing runs alongside it.
+- **Start after:** sessions 18, 21, 24, 29, 30f and 30g (30a to 30g all in), and brain session B4. Nothing runs alongside it.
 - **Queue item:** the "Known issues" section and the road's "the known issues, the polish".
 
 Paste everything in the block as the session's first message.
@@ -22,7 +25,7 @@ Check your place: in docs/sessions/README.md every row above session 30 should b
 The work, small PRs, one per kind of thing. Don't start anything new: this session closes what the road left open.
 
 1. for-mikey.md, line by line: for every line Mikey or the brain has answered (the brain's notes and docs/DECISIONS.md say), do what the answer asks (a wording, a level, a revert) or remove the line; for every line still open, check it is still true and still needed, and make it shorter and clearer. Nothing here is decided by you.
-2. The queue's "Known issues" and "Also noted": for each, either it is done (move it to the archive with the brain's way of archiving), or it is not for 1.0 (say so in one line where it stands). Item 75 (the reverb, rate-true) stays low priority unless the brain's note for this session says otherwise.
+2. The queue's "Known issues" and "Also noted": for each (item 115, the crackles, is session 30g's and Mikey's ears': leave it as it stands), either it is done (move it to the archive with the brain's way of archiving), or it is not for 1.0 (say so in one line where it stands). Item 75 (the reverb, rate-true) stays low priority unless the brain's note for this session says otherwise.
 3. A pass over the app as a listener would use it, with the tools: tools/rows.mjs ten times; tools/views.mjs on every view at 4x and 6x; tools/perf.mjs's baseline against docs/archive/perf-baseline.md's figures (say what moved since v54 and why it is fine or not); tools/autolite.mjs, all cases; the nightly green on every target (fix what is red). Fix small things you find; write up larger ones for the brain instead of fixing them. One known already: the Painter's test kit (design/test-kit/bake.mjs and picks_shots.mjs) still imports /js/generator.js, gone since item 97: move it to js/gen.js or retire what can't move, and say which. Another: Diagnostics' "reset counters" button clears nothing since session 01 (the old scheduler's counters are gone): make it reset the core's counts, or remove it.
 4. The words: README.md as a newcomer reads it (what Driftloom is, how to run it, the app, the codes); a CHANGELOG.md begun, in plain words, from docs/DONE.md, grouped for listeners (what is new to hear, what is new to do), ready for session 31; the app's own About or version line if it has one.
 5. The docs kept small: finished items out of docs/QUEUE.md into the archive as the brain does it, docs/README.md's map true, node tools/check-docs.mjs.

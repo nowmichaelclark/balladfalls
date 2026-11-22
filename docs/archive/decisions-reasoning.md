@@ -125,3 +125,15 @@ The brain's reading: the version filter on additions costs no characters and sta
 ## Rust: the synth, then the generator (Mikey, 2026-10-03)
 
 - 2026-10-03 -- **Rust:** the synth, then the generator, move to a host-agnostic Rust core (WebAssembly in an AudioWorklet for the web), in its own brain chat. **(Superseded 2026-10-12: the generator no longer waits; see "The core: aims and design".)** **Timing (2026-10-03): the synth ports now; the generator waits until the words' draws stop moving.** Its case is portability, not speed (the performance baseline showed the fixable costs were elsewhere). The deliverable is the phone app; a native build and games are separate projects. Rust over C++ and the rest: roadmap 16.
+
+## Shorter share codes, the line as it stood (2026-10-12)
+
+- 2026-10-12 -- **Shorter share codes** (Mikey, 2026-10-12): an album fills half a phone screen in Discord; not tidy. Brain's proposal for the charter: with a deterministic, versioned core, a loop's code is the version, the seed and only what the listener changed (vibes, mutes, edits) -- about 10-16 characters; an album, a list of those (about 60 for eight loops, against over a thousand now). Shared as a link, so Discord shows a tidy preview. The levers for shorter still, and why the version replaces explicit parameters: [the full text](#shorter-share-codes-mikey-2026-10-12).
+
+## How many changes a loop gets: way A (2026-11-17)
+
+- 2026-11-17 -- **How many changes a loop gets, with batch 6 in: way A (Mikey, 2026-11-17: "going with your recommendation"):** batch 6's nine draws (padWow, widePad, tripletKit, dottedPulse, colorTone, tuningOffset, planingSevenths, lowBell with dropSpotlight, twang) count against the changes a loop drew, and the list of choices fills only what they leave: 78.5% of loops get one or two changes (52% with the nine beside the list, 75% before batch 6), 16.6% three or more. It moved the choices of 56% of loops, so their codes play differently (v175, #402; `docs/archive/notes/101h-change-counts.md`).
+
+## The vibes go to 88 (2026-10-29)
+
+- 2026-10-29 -- **The vibes go to 88 (Mikey, 2026-10-29):** twenty join beside glacial (dewy, dusky, moonlit, rainy, whimsical, dreamy, chill, groovy, pulsing, cruising, droning, cosmic, bubbly, earthy, soaring, jazzy, breezy, rippling, playful, mellow) and four leave (soft, energetic, silly, comfy; enthusiastic, goofy, cozy, restful and soothing stay). Turned down: nostalgic ("it has too many meanings of what it could be to be a good mood word for music") and sleepy. The reasons and drafts: `docs/VIBES.md`, "The vibes to 88". Queue item 76b.

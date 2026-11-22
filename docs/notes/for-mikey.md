@@ -146,11 +146,12 @@ the points where the next step is yours.
   albums in the app"). You heard them all as clips; this is them on your
   own devices. One word a track only if something sounds wrong.
 
-## The Android app on F-Droid (item 107e, session 29): choose the signing, then submit after 31
+## The Android app on F-Droid (item 107e, session 29): make your key, then submit after 31
 
-Nothing here is submitted or signed yet and no account was made. Two choices
-are yours; the submission itself waits until after session 31, because the
-merge request to F-Droid is public and carries the app's new name.
+Nothing here is submitted or signed yet and no account was made. The signing
+is chosen (your own key); the submission waits until after session 31,
+because the merge request to F-Droid is public and carries the app's new
+name.
 
 **Google's developer verification (brain B4, 2026-11-18; read before you
 submit):** since 2026-09-30 certified Android phones in Thailand, Brazil,
@@ -164,26 +165,12 @@ developers not to register, and Google lets a store that signs apps itself
 register its key. Nothing to do now; it matters for Play later, and it is
 one more reason to keep the app's id yours (31a).
 
-**1. Who signs the app (decide before 31; it can wait until you submit).**
+**1. Who signs the app: you chose your own key (2026-11-22).** One app, one
+key, from F-Droid, GitHub or Play; keep it safe for good (lose it and the app
+can never be updated). The build must stay reproducible
+(`docs/notes/107-reproducible.md`; CI checks it). Make it before you submit:
 
-- *F-Droid signs it* (the default). F-Droid builds the app from the tagged
-  commit and signs the APK with its own key. You do nothing more. Cost: the
-  F-Droid app's copy is signed with F-Droid's key, not yours, so a copy from
-  somewhere else (a GitHub release, Play later) will not install over it or be
-  replaced by it (Android refuses a different key). Choose this if you only
-  want people to get the app from F-Droid.
-- *Your own key plus reproducible builds*. You sign the release APK with a key
-  only you hold. F-Droid builds it too and, because the two files match byte
-  for byte, publishes yours: one app, one key, whether it comes from F-Droid,
-  GitHub or Play. Cost: you keep the key safe for good (lose it and the app
-  can never be updated), and the build must stay reproducible
-  (`docs/notes/107-reproducible.md`: CI checks it on every Android change).
-- **Recommendation:** your own key, because the build is reproducible (see
-  that note for the checked result) and because you plan Play later. If you
-  would rather not hold a key, F-Droid signing is fine and you can still move
-  later by releasing under a new app id.
-
-If you choose your own key (do this on your computer, never in CI, never in a
+(Do this on your computer, never in CI, never in a
 chat or the repo):
 
 1. Make the key: `keytool -genkeypair -v -keystore release.jks -alias release
@@ -230,6 +217,14 @@ repository's address and the one-line description; someone from F-Droid may
 write the recipe, but it takes longer and they build it their own way. The
 merge request is faster and keeps the recipe in this repository.
 
+## Crackles in the Android app (item 115, a 1.0 blocker, session 30g)
+
+Your checks of 2026-11-22 are all in (`docs/notes/115-crackles.md`): only in
+the app with the screen off (maybe faintly on the lit lock screen), on full
+and Lite; clean behind Home and other apps, and in Chrome with the screen on
+or off. Nothing more to try: 30g will ask for one listen to its fix. Until
+then, the site in Chrome for listening with the screen off.
+
 ## The Android app, screen off (item 107d, v188, PR #431)
 
 Install the universal APK from the PR's `driftloom-debug-apk` artifact over
@@ -239,9 +234,11 @@ the last one (same key). On the **Moto** and on the **tablet**:
   minute (Vibe, its third key), press Home, switch the screen off, put the phone down for
   ten minutes. Listen for: no gap, no crackle, the loops changing on the
   minute; the notification and the lock screen show the loop's **own cover**
-  and its name, changing with each loop. Then in Diagnostics (screen on):
-  `engine:` with `late: 0 missed: 0 dropped: 0` and its underruns, and
-  `while hidden:`; send me those two lines and the phone's name.
+  and its name, changing with each loop (seen right on the Moto, 2026-11-22;
+  the tablet is left). An album changes by itself (Batch 6's does each
+  minute); a loop's own Track length changes it once. Then in Diagnostics (screen on),
+  refresh and copy it all, and send it with the phone's name ("while hidden"
+  counts only paused time: your ears are this test).
 - **The controls.** From the lock screen and the notification: Pause, Play,
   Next, Previous; from a headset's or Bluetooth's buttons too. Pull the
   headphones (or switch the Bluetooth off) while it plays: it should pause.
@@ -463,10 +460,6 @@ the last one (same key). On the **Moto** and on the **tablet**:
   Save tab (ticks, no line); Library, an album open; More, Advanced to its
   end. With TalkBack on, if you like: each key still says what its line
   used to. The words themselves are yours to approve, under Decisions.
-
-- **The Android app's type-in box (item 113, v195, #449):** in the app, tap
-  + in the Library: the box should be titled "Name", with no web address.
-  It has not been seen on a device.
 
 ## Accounts
 

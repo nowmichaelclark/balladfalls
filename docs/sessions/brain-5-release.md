@@ -5,6 +5,9 @@ docs-only changes", stale since Mikey's line of 2026-11-18 (the brain merges
 any PR that is green and checked; `docs/DECISIONS.md`); and step 1 now names
 what a code check must know (`docs/notes/105e-page.md`).
 
+**Changed again that day:** step 1 names item 115 (the Android app's
+crackles), a 1.0 blocker (Mikey, 2026-11-22).
+
 - **Model:** Opus 5.5. **Effort:** high. In the claude.ai Driftloom Project.
 - **Start after:** hands session 30 is merged, and Mikey has tried the Android app on his phone and tablet.
 
@@ -19,7 +22,7 @@ You are overseeing a run of hands sessions that Mikey starts one at a time from 
 
 This session decides whether 1.0 is ready.
 
-1. Everything on the road, once more, briefly: each item's yardsticks met (docs/DONE.md and the PRs), the nightly green on every target, the gate, the balance lock, promise 1 on the site and in the Android app (Mikey's and the testers' Diagnostics), promise 11 for long pieces, codes that round-trip and refuse plainly (the app dropping a code's version doesn't hold 1.0: Mikey, 2026-11-22, "Before first new sound", docs/notes/105e-page.md; check only that no member has joined data/codes.txt before that fix).
+1. Everything on the road, once more, briefly: each item's yardsticks met (docs/DONE.md and the PRs), the nightly green on every target, the gate, the balance lock, promise 1 on the site and in the Android app (Mikey's and the testers' Diagnostics), item 115 closed by Mikey's own ears (no crackles in the Android app: without his word that it is clean, 1.0 is no go), promise 11 for long pieces, codes that round-trip and refuse plainly (the app dropping a code's version doesn't hold 1.0: Mikey, 2026-11-22, "Before first new sound", docs/notes/105e-page.md; check only that no member has joined data/codes.txt before that fix).
 2. docs/notes/for-mikey.md: every line answered or explicitly left for after 1.0 (say which, and why that is safe). Mark any that block the release.
 3. The Android app against F-Droid's rules, the recipe building from source, the signing choice made, the listing's words.
 4. If it is ready, write "1.0: go (brain, date)" in the queue's status, so session 31 can start; if not, write what is missing as the smallest set of sessions, with prompts in docs/sessions/, and tell Mikey the order.

@@ -144,7 +144,7 @@ impl Pass {
         let mut written = Rng::new(js::salted(seed ^ DRIFT_SALT ^ salt, WRITTEN_SALT, 1).wrapping_add(pass.wrapping_mul(0x9e37_79b1)));
         self.drift(cx, base, &mut rng, &mut written, amount);
         let held = cx.spec.pins.get("tunedKick").is_some();
-        self.kick = kick.map(|k| choices::kick_kind_of(seed, k, pass, held));
+        self.kick = kick.map(|k| choices::kick_kind_of(seed, k, pass, held, cx.spec.version));
         self.number = Some(pass);
         self.breathes = amount > 0.0;
         self.heard = Heard::NONE;

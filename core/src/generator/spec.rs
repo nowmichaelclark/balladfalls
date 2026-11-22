@@ -949,7 +949,10 @@ impl Spec {
         if !r.chance(CHOIR_RATE) {
             return None;
         }
-        let voice = r.weighted(&[("vowel", 3.0), ("hum", 2.0)]).unwrap_or("vowel");
+        // The voices that had joined by the loop's version (queue item
+        // 105e): both layers sing it, and each lists it.
+        let sung = data::joined_of(&[("vowel", 3.0), ("hum", 2.0)], data::CODE_VOICES[Layer::Melody as usize], self.version);
+        let voice = r.weighted(&sung[..])?;
         let cents = 4.0 + r.f() * 7.0;
         Some(Choir { voice, keys_detune: -cents, melody_detune: cents })
     }

@@ -100,14 +100,16 @@ fn arc_period(v: Option<&Vibes>) -> [f64; 2] {
 /// The arc's draws on its stream, in their order (`arcDraws`): the period,
 /// where it starts (a share, placed by the shape), the shape and the floor;
 /// and the stream, left after them.
-fn arc_draws(seed: u32, v: Option<&Vibes>) -> (f64, f64, &'static str, f64, Rng) {
+fn arc_draws(seed: u32, v: Option<&Vibes>, version: u32) -> (f64, f64, &'static str, f64, Rng) {
     let mut r = Rng::new(js::salted(seed, ARC_SALT, 1));
     let [lo, hi] = arc_period(v);
     let period = r.range(lo, hi);
     let at = r.f();
+    // The shapes that had joined by the loop's version (queue item 105e).
+    let shapes = data::words_at(ARC.shapes, "arc.shape", version);
     let shape = r
-        .weighted_index(ARC.shapes.iter().map(|&(id, w)| w * lean_of(data::table_named(ARC.shape_vibes, id), v)))
-        .map_or("dip", |i| ARC.shapes[i].0);
+        .weighted_index(shapes.iter().map(|&(id, w)| w * lean_of(data::table_named(ARC.shape_vibes, id), v)))
+        .map_or("dip", |i| shapes[i].0);
     let floor = r.range(ARC.floor[0], ARC.floor[1]);
     (period, at, shape, floor, r)
 }
@@ -118,8 +120,8 @@ fn arc_draws(seed: u32, v: Option<&Vibes>) -> (f64, f64, &'static str, f64, Rng)
 /// `p` may pin the shape (the start is then placed by the pinned shape),
 /// the period, the start and the floor.
 #[must_use]
-pub fn arc_of(seed: u32, v: Option<&Vibes>, p: &Pins) -> Arc {
-    let (period, at, drawn, floor, _) = arc_draws(seed, v);
+pub fn arc_of(seed: u32, v: Option<&Vibes>, p: &Pins, version: u32) -> Arc {
+    let (period, at, drawn, floor, _) = arc_draws(seed, v, version);
     let shape = p.word("arc.shape").unwrap_or(drawn);
     let dip = ARC.dip;
     let [a, b] = if shape == "deep" { ARC.from_deep } else { [dip / 2.0, 1.0 - dip / 2.0] };
@@ -140,17 +142,17 @@ pub fn arc_of(seed: u32, v: Option<&Vibes>, p: &Pins) -> Arc {
 /// changes, so nothing else moves. `pinned`: the request pinned the arc
 /// (queue item 85b); pinned to today, a glacial loop plays none either.
 #[must_use]
-pub fn arc_plays(seed: u32, chosen: bool, v: Option<&Vibes>, pinned: bool) -> bool {
+pub fn arc_plays(seed: u32, chosen: bool, v: Option<&Vibes>, pinned: bool, version: u32) -> bool {
     if chosen {
         return true;
     }
-    if pinned {
+    if pinned || !data::there(data::CODE_CHOICES, "arc", version) {
         return false;
     }
     let Some(w) = v.and_then(|v| v.list.iter().find(|&&(id, _)| data::VIBES[id].id == "glacial")).map(|x| x.1) else {
         return false;
     };
-    arc_draws(seed, v).4.chance(ARC.glacial_chance * w)
+    arc_draws(seed, v, version).4.chance(ARC.glacial_chance * w)
 }
 
 // ------------------------------------------------------------ the kick
@@ -573,7 +575,7 @@ pub fn kick_of(seed: u32, root: f64, p: &Pins) -> TunedKick {
 /// `held`: the request pinned the kick (queue item 85b), and a pick holds
 /// through wandering, so it never swaps.
 #[must_use]
-pub fn kick_kind_of(seed: u32, kind: &'static str, pass: u32, held: bool) -> &'static str {
+pub fn kick_kind_of(seed: u32, kind: &'static str, pass: u32, held: bool, version: u32) -> &'static str {
     if pass == 0 || held {
         return kind;
     }
@@ -581,7 +583,8 @@ pub fn kick_kind_of(seed: u32, kind: &'static str, pass: u32, held: bool) -> &'s
     if !r.chance(KICK.swap) {
         return kind;
     }
-    let mut others = ["today", "short", "long"].into_iter().filter(|&k| k != kind);
+    let options = data::options_of("tunedKick");
+    let mut others = ["today", "short", "long"].into_iter().filter(|&k| k != kind && data::there(options, k, version));
     let (first, second) = (others.next(), others.next());
     (if r.chance(0.5) { first } else { second }).unwrap_or(kind)
 }
@@ -690,14 +693,15 @@ impl LateFloor {
 /// the wait in seconds (held to the kind's range), the gap (still held
 /// inside the loop as above) and a slow kind's fade.
 #[must_use]
-pub fn late_floor_of(seed: u32, spb: f64, step_dur: f64, v: Option<&Vibes>, loop_bars: f64, slow: bool, p: &Pins) -> LateFloor {
+#[allow(clippy::too_many_arguments)] // the loop's own values, and its version
+pub fn late_floor_of(seed: u32, spb: f64, step_dur: f64, v: Option<&Vibes>, loop_bars: f64, slow: bool, p: &Pins, version: u32) -> LateFloor {
     let mut r = Rng::new(js::salted(seed, LATEFLOOR_SALT, 1));
     r.f();
     let lean = lean_of(Some(LATEFLOOR.long_vibes), v);
     let u = r.f();
     let [lo, hi] = if slow { LATEFLOOR.slow_seconds } else { LATEFLOOR.seconds }; #[cfg(feature = "sketch")] let hi = if slow { hi } else { crate::tuning::get("latefloor.SECONDS_MAX", hi) };
     let secs = p.get("lateFloor.seconds").map_or_else(|| lo + math::pow(u, 1.0 / lean) * (hi - lo), |x| held(x, [lo, hi]));
-    let order = r.weighted(LATEFLOOR.orders).unwrap_or("together");
+    let order = r.weighted(&data::words_at(LATEFLOOR.orders, "lateFloor.order", version)).unwrap_or("together");
     let order = p.word("lateFloor.order").unwrap_or(order);
     let k = LATEFLOOR.round;
     let bars = js::max(k, js::round(secs / (spb * step_dur) / k) * k);
@@ -818,14 +822,14 @@ const TUNING_SALT: u32 = 0x7c3e;
 /// that offset instead (0 holds the loop at A440: a game's own sounds may
 /// need it), held to the data's farthest.
 #[must_use]
-pub fn tuning_of(seed: u32, v: Option<&Vibes>, p: &Pins) -> f64 {
+pub fn tuning_of(seed: u32, v: Option<&Vibes>, p: &Pins, version: u32) -> f64 {
     let mut r = Rng::new(js::salted(seed, TUNING_SALT, 1));
     let share = TUNING.share * lean_of(Some(TUNING.vibes), v);
     let off = r.f() * (1.0 - TUNING.share + share) < share;
     let [lo, hi] = TUNING.cents;
     let size = r.range(lo, hi);
     let up = r.f() < 0.5;
-    let drawn = if !off {
+    let drawn = if !off || !data::drawn_at("tuning.cents", version) {
         0.0
     } else if up {
         size
@@ -839,7 +843,13 @@ const LOW_BELL_SALT: u32 = 0x6c62_656c;
 
 /// lowBell's kinds, today's first: the words the request's `lowBell.kind`
 /// pin takes (`js/pins.js`), and a loop's kind by its place here (0, none).
-pub const LOW_BELL_KINDS: data::Pool = &[("today", 1.0), ("struck", 1.0), ("swell", 1.0)];
+pub const LOW_BELL_KINDS: data::Pool = &[
+    ("today", 1.0),
+    ("struck", 1.0),
+    ("swell", 1.0),
+    #[cfg(feature = "dummy")]
+    ("dummybell", 1.0),
+];
 
 /// lowBell (queue item 101g; batch 6's #2): which kind of low bell the loop
 /// plays, by its place in [`LOW_BELL_KINDS`] (0: none, for most loops).
@@ -850,14 +860,19 @@ pub const LOW_BELL_KINDS: data::Pool = &[("today", 1.0), ("struck", 1.0), ("swel
 /// plays a chord (`plays`); a request's `lowBell.kind` pin plays that kind
 /// instead, where the loop may (today's keeps it off).
 #[must_use]
-pub fn low_bell_of(seed: u32, plays: bool, v: Option<&Vibes>, p: &Pins) -> u8 {
+pub fn low_bell_of(seed: u32, plays: bool, v: Option<&Vibes>, p: &Pins, version: u32) -> u8 {
     let mut r = Rng::new(js::salted(seed, LOW_BELL_SALT, 1));
     let x = r.f();
-    let total: f64 = LOWBELL.kinds.iter().map(|k| k.1).sum();
-    let mut weights = [1.0 - LOWBELL.share, 0.0, 0.0];
-    for &(id, k) in LOWBELL.kinds {
+    // The kinds that had joined by the loop's version, and none below the
+    // setting's own (queue item 105e).
+    let kinds = data::words_at(LOWBELL.kinds, "lowBell.kind", version);
+    let share = if data::drawn_at("lowBell.kind", version) { LOWBELL.share } else { 0.0 };
+    let total: f64 = kinds.iter().map(|k| k.1).sum();
+    let mut weights = [0.0; LOW_BELL_KINDS.len()];
+    weights[0] = 1.0 - share;
+    for &(id, k) in kinds.iter() {
         if let Some(w) = LOW_BELL_KINDS.iter().position(|x| x.0 == id).filter(|&i| i > 0).and_then(|i| weights.get_mut(i)) {
-            *w = LOWBELL.share * k / total * lean_of(data::table_named(LOWBELL.kind_vibes, id), v);
+            *w = share * k / total * lean_of(data::table_named(LOWBELL.kind_vibes, id), v);
         }
     }
     let sum: f64 = weights.iter().sum();
@@ -889,11 +904,13 @@ pub const SPOTLIGHT_KINDS: data::Pool = &[("today", 1.0), ("on", 1.0)];
 /// before its vibes lean it (never to none), unless a request pins
 /// `lowBell.drops`.
 #[must_use]
-pub fn spotlight_of(seed: u32, bell: u8, drops: bool, v: Option<&Vibes>, p: &Pins) -> bool {
+pub fn spotlight_of(seed: u32, bell: u8, drops: bool, v: Option<&Vibes>, p: &Pins, version: u32) -> bool {
     let mut r = Rng::new(js::salted(seed, SPOTLIGHT_SALT, 1));
     let base = LOWBELL.spotlight;
     let share = base * lean_of(Some(LOWBELL.spotlight_vibes), v);
-    let drawn = r.f() * (1.0 - base + share) < share;
+    let drawn = r.f() * (1.0 - base + share) < share
+        && data::drawn_at("lowBell.drops", version)
+        && !data::words_at(&[("on", 1.0)], "lowBell.drops", version).is_empty();
     let on = p.word("lowBell.drops").map_or(drawn, |w| w == "on");
     on && bell != 0 && drops
 }
@@ -902,56 +919,60 @@ const TWANG_SALT: u32 = 0x7477_6e67;
 
 /// twang's versions, today's first: the words the request's `twang.kind` pin
 /// takes (`js/pins.js`), and a loop's version by its place here (0, none).
-pub const TWANG_KINDS: data::Pool = &[("today", 1.0), ("soft", 1.0), ("slow", 1.0), ("bright", 1.0)];
+/// Soft alone: slow and bright were taken out (queue item 105e; Mikey,
+/// 2026-11-17: "they sounded off"), and a code pinning either plays soft
+/// (`data/codes.txt`).
+pub const TWANG_KINDS: data::Pool = &[("today", 1.0), ("soft", 1.0)];
 
 /// twang (queue item 101h; batch 6's #13): which version of twang the loop
 /// plays, by its place in [`TWANG_KINDS`] (0: none, for most loops). Drawn
 /// at load on its own stream, outside the choices, as `low_bell_of` is: one
-/// draw across today's `1 - share` and each version's `share` split by the
-/// versions' weights and leaned by that version's vibes (`[setting twang]`),
-/// so each has its own leans and none goes to 0; the version drawn then
-/// plays as [`played_twang`] says (soft alone, since Mikey's Batch 6 Album:
-/// the draw is kept whole so the loops that play twang stay the same). Only
-/// for a loop that may
-/// play it (`may`: a chord, and no kit busier than a soft one); a request's
-/// `twang.kind` pin plays that version instead, where the loop may (today's
-/// keeps it off).
+/// draw across today's `1 - share` and each drawn version's `share` split by
+/// the versions' weights and leaned by that version's vibes (`[setting
+/// twang]`), so each has its own leans and none goes to 0. The draw is the
+/// batch's, kept whole so the loops that play twang stay the same: it still
+/// weighs slow and bright, which are gone, and plays what it lands on as
+/// [`played_twang`] says. It weighs only what had joined by the loop's
+/// `version`, and nothing below the setting's own (queue item 105e). Only
+/// for a loop that may play it (`may`: a chord, and no kit busier than a
+/// soft one); a request's `twang.kind` pin plays that version instead, where
+/// the loop may (today's keeps it off).
 #[must_use]
-pub fn twang_of(seed: u32, may: bool, v: Option<&Vibes>, p: &Pins) -> u8 {
+pub fn twang_of(seed: u32, may: bool, v: Option<&Vibes>, p: &Pins, version: u32) -> u8 {
     let mut r = Rng::new(js::salted(seed, TWANG_SALT, 1));
     let x = r.f();
-    let total: f64 = TWANG.drawn.iter().map(|k| k.1).sum();
-    let mut weights = [1.0 - TWANG.share, 0.0, 0.0, 0.0];
-    for &(id, k) in TWANG.drawn {
-        if let Some(w) = TWANG_KINDS.iter().position(|x| x.0 == id).filter(|&i| i > 0).and_then(|i| weights.get_mut(i)) {
-            *w = TWANG.share * k / total * lean_of(data::table_named(TWANG.kind_vibes, id), v);
-        }
+    let drawn = data::words_at(TWANG.drawn, "twang.kind", version);
+    let share = if data::drawn_at("twang.kind", version) { TWANG.share } else { 0.0 };
+    let total: f64 = drawn.iter().map(|k| k.1).sum();
+    // Today's first, then each drawn version's, in the data's order.
+    let mut weights = [0.0; data::WORDS_MOST + 1];
+    weights[0] = 1.0 - share;
+    for (w, &(id, k)) in weights.iter_mut().skip(1).zip(drawn.iter()) {
+        *w = share * k / total * lean_of(data::table_named(TWANG.kind_vibes, id), v);
     }
     let sum: f64 = weights.iter().sum();
     let mut at = x * sum;
-    let mut drawn = 0;
+    let mut landed = None;
     for (i, &w) in weights.iter().enumerate() {
         if at < w {
-            drawn = i;
+            landed = i.checked_sub(1).and_then(|i| drawn.get(i));
             break;
         }
         at -= w;
     }
-    let drawn = played_twang(drawn);
-    let kind = p.word("twang.kind").map_or(drawn, |k| TWANG_KINDS.iter().position(|x| x.0 == k).unwrap_or(0));
-    #[allow(clippy::cast_possible_truncation)] // four versions
+    let plays = landed.map_or(0, |&(id, _)| played_twang(id, version));
+    let kind = p.word("twang.kind").map_or(plays, |k| TWANG_KINDS.iter().position(|x| x.0 == k).unwrap_or(0));
+    #[allow(clippy::cast_possible_truncation)] // two versions
     if may { kind as u8 } else { 0 }
 }
 
 /// The version a loop plays for the version its draw landed on (Mikey's
 /// Batch 6 Album, 2026-11-17: soft alone): itself where `[setting twang]`'s
-/// `kinds` names it, else the first of `kinds`; 0 (none) stays none.
-fn played_twang(drawn: usize) -> usize {
-    let id = TWANG_KINDS.get(drawn).map_or("today", |k| k.0);
-    if drawn == 0 || TWANG.kinds.iter().any(|k| k.0 == id) {
-        return drawn;
-    }
-    TWANG.kinds.first().and_then(|k| TWANG_KINDS.iter().position(|x| x.0 == k.0)).unwrap_or(0)
+/// `kinds` names it, else the first of `kinds` there at the loop's version.
+fn played_twang(id: &str, version: u32) -> usize {
+    let kinds = data::words_at(TWANG.kinds, "twang.kind", version);
+    let plays = kinds.iter().find(|k| k.0 == id).or_else(|| kinds.first());
+    plays.and_then(|k| TWANG_KINDS.iter().position(|x| x.0 == k.0)).unwrap_or(0)
 }
 
 /// `bassLiftOf(tracks)`: the bass layer's level in dB (queue item 76c), the
@@ -970,4 +991,18 @@ impl Empty for Walking {
 impl Empty for Fitting {
     const EMPTY: Self =
         Fitting { long: false, dbps: 0.0, refs: [0.0; 3], lift: None, k: 0, tlo: 0.0, thi: 0.0, walking: Maybe::NONE };
+}
+
+/// The dummy build's setting's words, today's first (`tests/dummy.rs`).
+#[cfg(feature = "dummy")]
+pub const DUMMY_KINDS: data::Pool = &[("today", 1.0), ("on", 1.0)];
+
+/// The dummy build's setting drawn per loop outside the list of choices and
+/// counted against a loop's changes, that joins at version 3 (queue item
+/// 105e; `tests/dummy.rs`): the shape a new one takes (`data::drawn_at`).
+#[cfg(feature = "dummy")]
+#[must_use]
+pub fn dummy_of(seed: u32, p: &Pins, version: u32) -> bool {
+    let drawn = Rng::new(js::salted(seed, 0x6475_6d6d, 1)).f() < 0.5 && data::drawn_at("dummy.kind", version);
+    p.word("dummy.kind").map_or(drawn, |w| w == "on")
 }

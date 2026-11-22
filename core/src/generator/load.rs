@@ -123,8 +123,7 @@ pub struct Load {
     /// item 101g).
     pub spotlight: bool,
     /// The twang the loop plays (queue item 101h), by its place in
-    /// `choices::TWANG_KINDS`: 0 none (most loops), 1 soft, 2 slow, 3
-    /// bright.
+    /// `choices::TWANG_KINDS`: 0 none (most loops), 1 soft.
     pub twang: u8,
     /// The profile's pump, and its level (`setCharacterLevel`).
     pub pump: f64,
@@ -210,19 +209,19 @@ impl Load {
         // spotlight where the floor can drop (the wander's floor drop: 4
         // bars or more, and a kick or a bass for it to take out).
         let plays_chord = chords > 0 && r.plays_chord();
-        let bell = choices::low_bell_of(spec.seed, plays_chord, v, p);
+        let bell = choices::low_bell_of(spec.seed, plays_chord, v, p, spec.version);
         let floor = r.drums.iter().any(|e| e.vel != 0.0 && matches!(e.inst.get(), "kick" | "softkick" | "frame")) || r.bass.iter().any(|e| e.vel != 0.0);
         let drops = js::floor(total / spb) >= 4.0 && floor;
         // twang (queue item 101h), for a loop that plays a chord and has no
         // kit busier than a soft one: its hits a second over the kit's own
         // cycle.
-        let twang = choices::twang_of(spec.seed, plays_chord && r.soft_kit(cx), v, p);
+        let twang = choices::twang_of(spec.seed, plays_chord && r.soft_kit(cx), v, p, spec.version);
         Load {
             glass_scale: js::min(1.0, js::num(chords) / js::max(1.0, total / spb)),
             stab: on("dubStab").then(|| stab_of(spec.seed, busy)),
             organ: on("organ").then(|| organ_of(spec.seed, busy)),
             wash: on("wash").then(|| wash_of(spec.seed, spec.root)),
-            arc: choices::arc_plays(spec.seed, on("arc"), v, p.get("arc").is_some()).then(|| choices::arc_of(spec.seed, v, p)),
+            arc: choices::arc_plays(spec.seed, on("arc"), v, p.get("arc").is_some(), spec.version).then(|| choices::arc_of(spec.seed, v, p, spec.version)),
             kick,
             sub_duck: plays("subDuck").map(|o| {
                 let cycle = spec.cycles.of(Layer::Drums as usize).filter(|&c| c > 0.0).unwrap_or(total);
@@ -232,7 +231,7 @@ impl Load {
             pad_sweep: plays("padSweep").map(|o| choices::pad_sweep_of(spec.seed, o, p)),
             pad_wow: plays("padWow").map(|_| choices::pad_wow_of(spec.seed)),
             bass_lift: choices::bass_lift_of(&r.drums),
-            late: plays("lateFloor").map(|o| choices::late_floor_of(spec.seed, spb, step, v, js::round(total / spb), o == "slow", p)),
+            late: plays("lateFloor").map(|o| choices::late_floor_of(spec.seed, spb, step, v, js::round(total / spb), o == "slow", p, spec.version)),
             space: Space {
                 seed: spec.seed,
                 busy,
@@ -247,9 +246,9 @@ impl Load {
                 }),
             },
             echo_beats: Biased::of(p.get("echo.beats").unwrap_or_else(|| choices::echo_time_of(spec.seed, v))),
-            tuning: choices::tuning_of(spec.seed, v, p),
+            tuning: choices::tuning_of(spec.seed, v, p, spec.version),
             low_bell: bell,
-            spotlight: choices::spotlight_of(spec.seed, bell, drops, v, p),
+            spotlight: choices::spotlight_of(spec.seed, bell, drops, v, p, spec.version),
             twang,
             pump: cx.c.pump.unwrap_or(0.0),
             level: Biased::of(cx.c.level.unwrap_or(1.0)),

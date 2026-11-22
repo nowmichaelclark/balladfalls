@@ -679,6 +679,9 @@ fn related(spec: &Spec, home: Key) -> [Option<Key>; 4] {
     let side = third(home.scale);
     // No related key is darker than the data's floor, unless home is.
     let bright = |scale: usize| SCALES.get(scale).map_or(0.0, |s| s.bright);
+    // A mode that joined after the loop's version is no related key's
+    // (queue item 105e).
+    let there = |id: &str| data::there(data::CODE_SCALES, id, spec.version);
     let floor = js::min(LONGFORM.dark, bright(home.scale));
     let relative = side.and_then(|major| {
         // The modes of the same notes with the other third: the one a
@@ -687,9 +690,9 @@ fn related(spec: &Spec, home: Key) -> [Option<Key>; 4] {
         let usual = if major { 9 } else { 3 };
         let mut best: Option<(Key, f64)> = None;
         for up in 1..12u8 {
-            for scale in 0..SCALES.len() {
+            for (scale, mode) in SCALES.iter().enumerate() {
                 let k = Key { root: (home.root + up) % 12, scale, relation: Relation::Relative };
-                if third(scale) != Some(!major) || k.notes() != own || bright(scale) < floor {
+                if third(scale) != Some(!major) || k.notes() != own || bright(scale) < floor || !there(mode.id) {
                     continue;
                 }
                 let far = if up == usual { -1.0 } else { js::abs(bright(scale) - bright(home.scale)) };
@@ -707,7 +710,7 @@ fn related(spec: &Spec, home: Key) -> [Option<Key>; 4] {
     let parallel = side.filter(|&major| !major).and_then(|major| {
         let mut best: Option<(Key, f64)> = None;
         for &(id, w) in pool? {
-            let Some(scale) = SCALES.iter().position(|s| s.id == id) else { continue };
+            let Some(scale) = SCALES.iter().position(|s| s.id == id).filter(|_| there(id)) else { continue };
             let k = Key { root: home.root, scale, relation: Relation::Parallel };
             if third(scale) == Some(!major) && near(k) && bright(scale) >= floor && best.is_none_or(|b| w > b.1) {
                 best = Some((k, w));
@@ -761,7 +764,9 @@ impl Form {
         let length = piece.length();
 
         // The journey: asked, or drawn, the arc's weight leaned by the vibes.
-        let weight = |name| data::lookup(LONGFORM.weights, name).unwrap_or(1.0);
+        // A journey that joined after the loop's version is never drawn
+        // (queue item 105e).
+        let weight = |name| if data::there(data::CODE_JOURNEYS, name, spec.version) { data::lookup(LONGFORM.weights, name).unwrap_or(1.0) } else { 0.0 };
         let arc = weight("arc") * lean_of(Some(LONGFORM.vibes), v) * if endless { LONGFORM.endless } else { 1.0 };
         let drawn = if stream(seed, JOURNEY_SALT, 0).f() * (arc + weight("wander")) < arc { Journey::Arc } else { Journey::Wander };
         let journey = spec.journey.unwrap_or(drawn);

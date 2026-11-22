@@ -1011,6 +1011,11 @@ fn laid_over(blocks: &mut Vec<Block>, more: Vec<Block>) {
         for e in add.entries {
             match b.entries.iter_mut().find(|x| x.key == e.key) {
                 Some(x) if words || x.key == "newest" => x.rows.iter_mut().take(1).for_each(|r| r.extend(e.rows.iter().flatten().cloned())),
+                // A field's numbers, as a build that took more wrote them.
+                Some(x) if x.key == "ranges" || x.key == "lists" => {
+                    x.rows.retain(|r| e.rows.iter().all(|n| n[0] != r[0]));
+                    x.rows.extend(e.rows);
+                }
                 Some(x) => x.rows.extend(e.rows),
                 None => b.entries.push(e),
             }
@@ -1019,17 +1024,22 @@ fn laid_over(blocks: &mut Vec<Block>, more: Vec<Block>) {
 }
 
 /// The share codes' names, ids and versions (`data/codes.txt`, queue item
-/// 105): each list as `(name, id, since)` rows, the version a new code
-/// writes, and the checks that keep them forever: an id or a name once in a
-/// list, every `since` from the first version (2) to `newest`.
+/// 105): each list as `(name, id, since, member)` rows, the release's version
+/// and the one a new code writes, the numbers a field has ever taken, and
+/// the checks that keep them forever: an id or a name once in a list (a
+/// gone one's too), every `since` from the first version (2) to `newest`, a
+/// stand-in a member of the list still here that had joined by then.
+#[allow(clippy::too_many_lines)] // one table after another
 fn codes(out: &mut String, blocks: &[Block]) {
     let file = "data/codes.txt";
     let version = blocks.iter().find(|b| b.kind == "code" && b.name == "version").expect("data/codes.txt has no [code version]");
     let r = Reader { file, block: version };
-    r.only(&["newest"]);
+    r.only(&["released", "newest"]);
+    let released: u32 = r.one("released").and_then(|t| t.parse().ok()).unwrap_or_else(|| panic!("{file}: [code version] released is a whole number"));
     // The dummy build's additions raise it: the newest is the most named.
     let newest = r.words("newest").expect("[code version] has no newest").iter().map(|t| t.parse::<u32>().unwrap_or_else(|_| panic!("{file}: newest is a whole number"))).max().expect("[code version] newest");
-    assert!(newest >= 2, "{file}: newest is 2 or more");
+    assert!(2 <= released && released <= newest, "{file}: released is 2 or more, and at most newest");
+    let _ = writeln!(out, "/// The version of the last release (`[code version] released`): what joins after it shares the next.\npub const CODE_RELEASED: u32 = {released};");
     let _ = writeln!(out, "/// The version a new share code writes (`[code version] newest`).\npub const CODE_NEWEST: u32 = {newest};");
     let list = |b: &Block| {
         let r = Reader { file, block: b };
@@ -1037,15 +1047,29 @@ fn codes(out: &mut String, blocks: &[Block]) {
         let rows = r.rows("ids").unwrap_or_else(|| panic!("{file}: [{} {}] has no ids", b.kind, b.name));
         let mut s = String::from("&[");
         let (mut names, mut ids) = (BTreeSet::new(), BTreeSet::new());
+        let at = r.at("ids");
         for row in rows {
-            let at = r.at("ids");
-            assert!(row.len() == 3, "{at}: each row is a name, its id and its version");
+            assert!(
+                row.len() == 3 || ((4..=5).contains(&row.len()) && row[3] == "gone"),
+                "{at}: each row is a name, its id and its version, then for one taken out gone and its stand-in"
+            );
             let id: u32 = row[1].parse().unwrap_or_else(|_| panic!("{at}: '{}' is not an id", row[1]));
             let since: u32 = row[2].parse().unwrap_or_else(|_| panic!("{at}: '{}' is not a version", row[2]));
             assert!((2..=newest).contains(&since), "{at}: {} joined at {since}, outside 2 to {newest}", row[0]);
             assert!(names.insert(row[0].clone()), "{at}: '{}' twice", row[0]);
             assert!(ids.insert(id), "{at}: id {id} twice");
-            let _ = write!(s, "({}, {id}, {since}),", quote(&row[0]));
+            let member = match (row.len(), row.get(4)) {
+                (3, _) => "Member::Here".to_string(),
+                _ if b.name == "layers" || b.name == "tones" => panic!("{at}: the layers and the tone's parts are never removed"),
+                (_, None) => "Member::Gone".to_string(),
+                (_, Some(name)) => {
+                    let to = rows.iter().find(|x| x[0] == *name).unwrap_or_else(|| panic!("{at}: {}'s stand-in '{name}' has no row", row[0]));
+                    assert!(to.len() == 3, "{at}: {}'s stand-in '{name}' is gone too", row[0]);
+                    assert!(to[2].parse().is_ok_and(|joined: u32| joined <= since), "{at}: {}'s stand-in '{name}' joined after it", row[0]);
+                    format!("Member::StandIn({})", to[1])
+                }
+            };
+            let _ = write!(s, "({}, {id}, {since}, {member}),", quote(&row[0]));
         }
         s.push(']');
         s
@@ -1066,7 +1090,7 @@ fn codes(out: &mut String, blocks: &[Block]) {
         ("choices", "CODE_CHOICES", "The choices"),
         ("settings", "CODE_SETTINGS", "The settings a pin names"),
     ] {
-        let _ = writeln!(out, "/// {doc} a share code names (`[code {name}]`): name, id, version joined.\npub static {konst}: Ids = {};", one("code", name));
+        let _ = writeln!(out, "/// {doc} a share code names (`[code {name}]`): name, id, version joined, and whether here or gone.\npub static {konst}: Ids = {};", one("code", name));
     }
     out.push_str("/// Each layer's voices a share code names (`[voices LAYER]`), in the core's layer order.\npub static CODE_VOICES: [Ids; 5] = [\n");
     for layer in ["drums", "bass", "chords", "melody", "texture"] {
@@ -1080,6 +1104,28 @@ fn codes(out: &mut String, blocks: &[Block]) {
         }
         out.push_str("];\n");
     }
+    let numbers = blocks.iter().find(|b| b.kind == "code" && b.name == "numbers").expect("data/codes.txt has no [code numbers]");
+    let r = Reader { file, block: numbers };
+    r.only(&["ranges", "lists"]);
+    let mut names = BTreeSet::new();
+    out.push_str("/// Every number a code's fields have ever taken (`[code numbers]`).\npub static CODE_NUMBERS: &[(&str, Numbers)] = &[\n");
+    for row in r.rows("ranges").into_iter().flatten() {
+        let at = r.at("ranges");
+        let whole = row.len() == 4 && row[3] == "whole";
+        assert!(row.len() == 3 || whole, "{at}: each row is a field, its least and its most, then whole or nothing");
+        assert!(names.insert(row[0].clone()), "{at}: '{}' twice", row[0]);
+        let (lo, hi) = (number(&row[1], &at), number(&row[2], &at));
+        assert!(lo <= hi, "{at}: {}'s least is over its most", row[0]);
+        let _ = writeln!(out, "({}, Numbers::Range([{}, {}], {whole})),", quote(&row[0]), f(lo), f(hi));
+    }
+    for row in r.rows("lists").into_iter().flatten() {
+        let at = r.at("lists");
+        assert!(row.len() >= 2, "{at}: each row is a field and its numbers");
+        assert!(names.insert(row[0].clone()), "{at}: '{}' twice", row[0]);
+        let values: Vec<String> = row[1..].iter().map(|x| f(number(x, &at))).collect();
+        let _ = writeln!(out, "({}, Numbers::List(&[{}])),", quote(&row[0]), values.join(", "));
+    }
+    out.push_str("];\n");
 }
 
 fn main() {

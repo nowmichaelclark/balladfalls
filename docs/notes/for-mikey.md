@@ -97,9 +97,9 @@ the points where the next step is yours.
 - **Removed sounds (item 105e, v194, PR #450):** nothing to do or hear. A
   code naming something since taken out plays something close: twang's slow
   and bright are gone, and a code or saved loop that pinned either plays
-  soft. Every code you have reads as before, and none gets longer. One thing
-  is left before a sound is added after 1.0: the app has to keep a code's
-  version (`docs/notes/105e-page.md`; the brain's to schedule).
+  soft. Every code you have reads as before, and none gets longer. The app
+  keeping a code's version is set for before the first new sound, as you
+  said (`docs/notes/105e-page.md`).
 
 ## The Android app on F-Droid (item 107e, session 29): choose the signing, then submit after 31
 

@@ -11,6 +11,10 @@
 # Every row is `name id since`, or for a member taken out
 # `name id since gone` or `name id since gone stand-in`.
 #
+# - **No member is added until the app keeps a code's version** (Mikey,
+#   2026-11-22: "Before first new sound"; docs/notes/105e-page.md): the app
+#   drops it today, so an addition would move every older code played there.
+#   Take this rule out with that fix.
 # - **Ids are forever.** The id is the name's number in a code, given once
 #   and never changed, reused or taken back, whatever happens to the list's
 #   order elsewhere. A new member takes the next free id of its list. A

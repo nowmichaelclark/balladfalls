@@ -810,6 +810,12 @@ stay channel sources until an ears session needs a voice's note-by-note play
 
 ## Known issues
 
+- **The app drops a code's version** (found by 105e, #450; Mikey,
+  2026-11-22: "Before first new sound"). **Blocks the first addition after
+  1.0, not 1.0: session 30 doesn't build it.** No member joins
+  `data/codes.txt` until the app keeps a code's version
+  (`docs/notes/105e-page.md`, 1): until then an addition would move every
+  older code played in the app.
 - **"Let the loop wander" repeats itself since item 44** (Mikey,
   2026-10-18). Since #211 each pass's wandering is drawn from the loop's
   code and the pass number, so replaying a saved loop wanders exactly as

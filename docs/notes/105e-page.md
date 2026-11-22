@@ -12,9 +12,12 @@ the one removal is handled.
    additions would move old codes in the app, against Mikey's line of
    2026-11-10. It needs a `dl_play_version` in the core's hosts (wasm, the C
    header, Android), the version kept in the record and in the Library, and
-   sent with every load, export and re-share. Before the first addition
-   after 1.0, and best before 1.0: a loop saved without its version can't
-   say later which it was.
+   sent with every load, export and re-share. **When (Mikey, 2026-11-22):
+   "Before first new sound".** It doesn't hold 1.0, and it lands before any
+   member joins `data/codes.txt`. While version 2 is the only one, every
+   code, and every loop saved without a version, is a version 2 one, so the
+   fix can label them all as it lands, as long as that is before the first
+   addition.
 2. **The page's saved records know removed members by a hand copy.** A
    record keeps names, not ids. 24c gave `twang.kind` its stand-ins in
    `js/pins.js` (`gone`), held to the code's by `test/library.test.mjs`. A

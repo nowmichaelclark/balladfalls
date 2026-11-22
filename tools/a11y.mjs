@@ -203,7 +203,7 @@ function pageSide() {
     ['.pattern span.on[data-shade], .layer.dim .pattern span.on', 'edge'],
     ['.np-dots i.on', 'fill'], ['[aria-selected="true"] > .led, [aria-pressed="true"] > .led', 'fill'],
     ['.meta-dots i.on', 'fill'], ['.now-mark', 'edge'], ['.pick', 'edge'],
-    ['button:not(:disabled) svg, .vkey:not(:disabled) svg', 'edge'],
+    ['button:not(:disabled) svg, .vkey:not(:disabled) svg', 'stroke'],
     ['.btn-play svg', 'halves'], ['.pc-head', 'head'], ['input[type="range"]:not(:disabled)', 'thumb'],
     ['.export-bar span', 'fill'], ['.ln-inf[aria-pressed="true"] > span', 'edge'],
   ];
@@ -280,7 +280,7 @@ function pageSide() {
       const marks = [];
       for (const [sel, how] of MARKS) {
         for (const e of document.querySelectorAll(sel)) {
-          if (!e.checkVisibility() || off(e)) continue;
+          if (!e.checkVisibility({ visibilityProperty: true, opacityProperty: true }) || off(e)) continue;
           let r = e.getBoundingClientRect();
           if (how === 'lit') r = { left: r.left + r.width / 2 - 4, right: r.left + r.width / 2 + 4, top: r.top + r.height / 2 - 4, bottom: r.top + r.height / 2 + 4 };
           if (how === 'head') r = { left: r.left - 3, right: r.left + 3, top: r.bottom - 8, bottom: r.bottom - 1 };
@@ -297,12 +297,14 @@ function pageSide() {
           }
           const box = clipped(e, r);
           if (!box || box.right - box.left < Math.min(6, r.right - r.left - 1) || box.bottom - box.top < Math.min(6, r.bottom - r.top - 1)) continue;
-          marks.push({ what: `${nameOf(e)} in ${nameOf(e.parentElement)}`, how: how === 'thumb' || how === 'edge' ? 'edge' : 'fill', box });
+          marks.push({ what: `${nameOf(e)} in ${nameOf(e.parentElement)}`, how: how === 'stroke' ? 'stroke' : how === 'thumb' || how === 'edge' ? 'edge' : 'fill', box });
         }
       }
       return { text, marks };
     },
-    // The screen without its words and marks: what is under them.
+    // The screen without its words and marks: what is under them. Forced
+    // colors won't let a color be changed, so there all that is under them
+    // is drawn as what it is forced to, the Canvas.
     bare(on) {
       let s = document.getElementById('a11y-bare');
       if (!on) { if (s) s.remove(); return; }
@@ -313,7 +315,10 @@ function pageSide() {
       }
       s.textContent = `* { color: transparent !important; -webkit-text-fill-color: transparent !important; text-shadow: none !important; text-decoration-color: transparent !important; }
         ${MARKS.map(([sel]) => sel).join(', ')} { visibility: hidden !important; }
-        .ln-ticks, .ln-inf > span { visibility: hidden !important; }`;
+        .ln-ticks, .ln-inf > span, .pc-canvas { visibility: hidden !important; }
+        @media (forced-colors: active) {
+          html, body, * { forced-color-adjust: none !important; background: Canvas !important; border-color: transparent !important; box-shadow: none !important; outline-color: transparent !important; }
+        }`;
     },
     // What Tab should reach now.
     reachable() {
@@ -538,8 +543,9 @@ async function readPixels({ bare, full, jobs }) {
       }
     }
     // Text: its worst background (a hairline in the box aside); a fill: its
-    // middle; an edge: the strokes are the box's most different pixels.
-    return pick(v, j.kind === 'text' ? 0.05 : j.kind === 'fill' ? 0.5 : 0.93);
+    // middle; an edge: the box's most different pixels; a thin icon's
+    // strokes, fewer of them still.
+    return pick(v, j.kind === 'text' ? 0.05 : j.kind === 'fill' ? 0.5 : j.kind === 'stroke' ? 0.985 : 0.93);
   });
 }
 
@@ -618,6 +624,8 @@ const setTheme = (page, theme) => page.evaluate((t) => {
 
 async function measure(page, lab, theme, where, { rings }) {
   await setTheme(page, theme);
+  // As seen before anything takes the focus.
+  await page.evaluate(() => window.A.blur());
   await settle(page);
   const { text, marks } = await page.evaluate(() => window.A.contrastTargets());
   const full = marks.length ? (await page.screenshot()).toString('base64') : null;

@@ -657,7 +657,7 @@ the last one (same key). On the **Moto** and on the **tablet**:
 | Advanced | Normally leave at zero | (gone) |
 | Advanced | Select the text above and copy it manually | Copy from box |
 | Advanced | Speed test: how fast this device plays the busiest loops (a few minutes). | speed test (a key) |
-| Advanced | Space plays. N makes something new (or Next, outside an album). S keeps it in Favorite Loops. 1 to 5 re-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device. | Space play · Ctrl+S save · Alt+Shift+←/→ skip · Alt+Shift+1-5 roll (v200; v195: Space play · N new · S save · 1-5 roll; read out, every key in full) |
+| Advanced | Space plays. N makes something new (or Next, outside an album). S keeps it in Favorite Loops. 1 to 5 re-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device. | Space play · Ctrl+S save · Alt+Shift+Left/Right skip · Alt+Shift+1-5 roll (v200; v195: Space play · N new · S save · 1-5 roll; read out, every key in full) |
 | Advanced | Lighter on processor | Lite |
 | Advanced | back up all | back up |
 | Advanced | reset counters | reset |

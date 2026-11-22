@@ -292,31 +292,28 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 
 ### Start here (for the next brain)
 
-- **Brain B-parallel 3 (Opus 5.5, 2026-11-22, in Claude Code; ended
-  with its close-out, #451).** **Merged:** 30d (#446, v192), 30c (#448,
-  v193, df5ff16), 24c (#450, v194, 7cd44c4), 30e (#449, v195, 998f64b, live).
-  No hands session is running. **Checked here:** #450 against main, 50 codes
-  and 2,000 loops' notes the same, 106 random loops' audio sample for sample;
-  Track length's 11 controls reachable at 360x640 and 320x568 on #448's and
-  #449's previews; each PR's gate and rows read from CI's logs (30d's from
-  its checks and body). The nightly is green on v193
-  (44995399978) and v194 (45000684305); v195's (45012032493) was read
-  before #451 merged, its result in #451's body. The archive pass is done.
-  **Next:** 30f (`30f-painter-final.md`, alone, started), then 30g
-  (`30g-crackles.md`, beside 30f on the audio path: item 115, a 1.0
-  blocker), then 30 (alone), then B5. **Mikey's v195 test on the Moto (2026-11-22):** the lock
-  screen's cover and the Name box right; a few crackles, only screen-off
-  (`docs/notes/115-crackles.md`); ten minutes screen-off still to do (30g's test).
-  v196's nightly (45027671732) is green. **Mikey's answers:** DECISIONS,
-  2026-11-22: a code's version kept before the first new sound, not before
-  1.0; item 113's words; their own signing key; the fades fine; 400% zoom may
-  scroll; the keyboard as Spotify's and a DAW's, no bare letters (#457).
-  **Learned:** read a PR body back from GitHub (30c reported edits it hadn't
-  made); measure screens at 360x640 and 320x568, not only 360x780; rows ten
-  take 60 to 80 minutes (`-f jobs=all -f repeat=10` runs views beside them);
-  Auto-fix wakes a session only on red, so the brain waits for green; a
-  session auto-archives when its PR merges; give a pair its version numbers
-  up front.
+- **Brain B-parallel 3 (Opus 5.5, 2026-11-22 to 23, in Claude Code; ended
+  at Mikey's word, the next brain to take his list: `brain-parallel-4.md`).**
+  **Merged:** 30d (#446, v192), 30c (#448, v193), 24c (#450, v194), 30e
+  (#449, v195); 30f (#452 to #455, #457, v196 to v200, live: sideways
+  swapped and centered, the address bar put away by a scroll, 400% zoom
+  scrolls, the keyboard on Spotify's and a DAW's keys); the docs (#451,
+  #456). **Open:** #458 (30g, v201), the crackles' fix: the stream on
+  AAudio's power-saving path, as Chrome's. Mikey heard v201 clean on the
+  Moto, on headphones, where v195 crackled; the 222 ms latency "Didn't
+  notice". CI ran on 17cdcfa; merge it, then 30g's "Left" list to a new
+  session with its prompt. **Nightlies:** green on v195 (45012032493) and
+  v196 (45027671732); none yet on v197 to v200. **Checked here:** each
+  PR's yardsticks from CI's logs (ten rows 10 of 10, by count) and live
+  versions read from the site; Mikey's Diagnostics read against the code
+  (`docs/notes/115-crackles.md`). **Not checked:** 30f's work on a phone
+  (DuckDuckGo's insets and bar), a Mac, screen readers. **Next:**
+  B-parallel 4 (Mikey's remaining changes, before 30), then 30, then B5.
+  **Learned:** read PR bodies and logs back from GitHub (30c and 30f each
+  had a test that tested nothing); Auto-fix wakes only on red, so a green
+  PR waits for a message; say which commit an APK is from; downloads need
+  Mikey's OK each time; ask Mikey early for a short phone test, which found
+  item 115 in minutes.
 - **Brain B4 (Opus 5.5, 2026-11-18, a cloud thread of the project): export,
   the screens and the codes checked; the albums again.** On main (c5b2862,
   v189), measured here: `cargo test --test codes` 26 of 26 and `--features

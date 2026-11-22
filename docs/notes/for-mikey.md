@@ -8,7 +8,8 @@ brain). Empty or answered at 1.0 (queue item 108).
 
 ## What to start next
 
-The rest of the road is cut into sessions, each with a prompt to paste:
+Next: brain B-parallel 4 (`docs/sessions/brain-parallel-4.md`), with your
+list of changes. The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 

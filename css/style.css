@@ -2693,7 +2693,7 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 .ln-ticks { pointer-events: none; }
 /* A layer's two keys are 48px, and never taller than their row. */
 .layer { grid-template-rows: minmax(0, 1fr); }
-.layer .btn-roll, .layer .btn-on { height: auto; max-height: 48px; min-height: 24px; align-self: stretch; margin-block: auto; }
+.layer .btn-roll, .layer .btn-on { height: min(48px, 100%); min-height: 24px; align-self: center; }
 .phone.fit-stack .layer { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
 @container phone (max-width: 17.5em) {
   .layer { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
@@ -2775,7 +2775,7 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   .pk-head { margin-bottom: 0; }
   .pk-line { flex: 1 1 0; min-height: min-content; padding: 1px 0; }
   .pk-val, .vkey.word.pk-anykey { min-height: 28px; }
-  .pk-line .vkey.word.pk-anykey { align-self: stretch; max-height: 44px; margin-block: auto; padding-block: 0; }
+  .pk-line .vkey.word.pk-anykey { align-self: stretch; max-height: 44px; padding-block: 0; }
   .pk-vals { row-gap: 0; }
   .pk-list .pk-pill { min-height: 24px; padding-block: 1px; }
   .v-now { padding-block: 0; }

@@ -1868,6 +1868,21 @@ function setSwitch(id, on) {
   b.firstElementChild.textContent = on ? 'on' : 'off';
 }
 
+// The root text size changed under the running page (the Android app's font
+// size): Chromium (141, measured by tools/a11y.mjs) leaves a container query
+// in em at the size it loaded with, until the container is set again.
+let rootTextSize = '';
+function followTextSize() {
+  const px = getComputedStyle(document.documentElement).fontSize;
+  if (px === rootTextSize) return;
+  rootTextSize = px;
+  const app = ui.el('app');
+  const containers = [app, app.querySelector('.zone-dynamic')];
+  for (const c of containers) c.style.containerType = 'normal';
+  app.getBoundingClientRect();
+  for (const c of containers) c.style.containerType = '';
+}
+
 // ---------------------------------------------------------------- boot
 
 // Whether the focus is where the keyboard put it (not a tap).
@@ -2306,6 +2321,7 @@ function wire() {
   // A turned phone or a resized window: what is measured is measured again
   // (the name, the card's lines, the sliders' stops, the panel's fit).
   window.addEventListener('resize', () => {
+    followTextSize();
     ui.fitCard();
     if (state.view === 'length') picks.renderLength();
     else if (state.view === 'track') tracklen.renderTrack();

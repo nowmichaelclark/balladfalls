@@ -2862,6 +2862,9 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   .phone input[type="range"]::-moz-range-track { background: GrayText; box-shadow: none; }
   .phone input[type="range"]::-webkit-slider-thumb { background: Canvas; border: 3px solid Highlight; box-shadow: none; }
   .phone input[type="range"]::-moz-range-thumb { background: Canvas; border: 3px solid Highlight; box-shadow: none; }
+  /* (Bars' and Track length's thumbs, in each of their states, have rules of their own.) */
+  .phone .v-length .ln-slide input[type="range"]::-webkit-slider-thumb { background: Canvas; border: 3px solid Highlight; box-shadow: none; }
+  .phone .v-length .ln-slide input[type="range"]::-moz-range-thumb { background: Canvas; border: 3px solid Highlight; box-shadow: none; }
   .phone input[type="range"]:disabled { opacity: 0.6; }
   .export-bar { background: Canvas; border: 1px solid CanvasText; box-shadow: none; }
   .export-bar span { background: Highlight; }

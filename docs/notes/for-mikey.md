@@ -12,6 +12,48 @@ The rest of the road is cut into sessions, each with a prompt to paste:
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## The final pass, and accessibility (item 114, v196 to v198, #452, #453, #454)
+
+- **Look at the sheets,** before and after, every screen: the branch
+  [`s30f-shots`](https://github.com/nowmichaelclark/driftloom/tree/s30f-shots)
+  (light and dark at 360 px and a tablet's width; after also has every
+  theme, a short phone and a phone on its side). Then turn your phone on
+  its side: the card and keys at the left, the panel at the right.
+- **TalkBack in the Android app (five minutes):**
+  1. Settings, Accessibility, TalkBack, on; open the app.
+  2. Swipe right from the top: the name, the details, the panel, the seven
+     keys, each said with what it is. Nothing should be just "button".
+  3. Double-tap Play, then Next: "Pause", and the new loop's name once.
+  4. The vibe key, then any bars: you land on cancel; cancel lands you back
+     on any bars.
+  5. Sound: each slider says a value ("92 bpm", "60%"), and the volume keys
+     move it. Layers: a switch says on or off.
+  6. Share, export audio, flac: the end is said once, not every percent.
+  7. Font size at the largest, both ways up: nothing cut or overlapping.
+- **A screen reader in your phone's browser:** the same steps on the site
+  (the font size there is the browser's own text setting). If anything is
+  silent, said twice, or lands somewhere odd, say which step.
+- **One look on Android:** in Dawn the system's bars are Dawn's color with
+  dark icons; a box to type in lines up with its title.
+
+**Yours to decide (nothing waits on them):**
+
+- **The letter shortcuts (N, S, 1 to 5).** WCAG 2.1.4 (level A) wants
+  single-letter keys able to be turned off or remapped, since speech input
+  types letters by accident. That needs a setting, or Shift on each, or
+  their going, and the Keyboard line's words change with it. Left as they
+  are. Proposed: Shift+N, Shift+S, Shift+1 to 5.
+- **400% zoom on a computer** (a 320 x 256 screen, WCAG 1.4.10) can't hold
+  one screen that doesn't scroll. Left to your rule. Proposed: under 280 px
+  high only, let the page scroll.
+- **Text stops at 1.5x in the views that don't scroll** (the card, the
+  keys, the pickers), as since Painter 5, so they fit; browser zoom still
+  takes them to 200%, and the lists and Advanced go all the way. The
+  Android app now does the same, where before it overflowed.
+- **Two names only a screen reader hears** now hold the words on their key,
+  as the standard asks (2.5.3): "Moods: any mood", "Bars: any bars" (were
+  "Moods: any", "Bars: any"). No word on screen changed.
+
 ## Track length, its own view (item 111, v193, PR #448)
 
 - **Look at the view:** Vibe, then the pace line's third key (the infinity sign,
@@ -21,9 +63,8 @@ the points where the next step is yours.
   cancel and done. The Sound view's Length slider is gone, and so is the
   export's "How much": an export is as long as the track, with its fades;
   with none set a finite piece exports whole, and a loop that plays on (or
-  Endless) opens the view first, and done there exports. Plain, in the
-  app's style; the Painter's session restyles it. Say if anything is in an
-  odd place on your phone or the tablet.
+  Endless) opens the view first, and done there exports. Say if anything
+  is in an odd place on your phone or the tablet.
 - **On a short phone** (360x640, 320x568) the time takes the title's
   place between cancel and done, and its words and the slider's labels are
   left out, so every key fits without scrolling. A phone on its side has

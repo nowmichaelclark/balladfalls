@@ -37,6 +37,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { encodeSong, encodeAlbum, linkOf } from '../js/share.js';
 import { newSpec } from '../js/gen.js';
+import { setTrack } from '../js/tracklen.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -97,7 +98,9 @@ export function cases() {
   loop('long name', named(newSpec(11, BUSY), LONG));
   loop('Thai name', named(newSpec(125, BUSY), THAI));
   loop('emoji name', named(newSpec(125, BUSY), EMOJI));
-  const tracks = [named(newSpec(125, BUSY), 'First'), newSpec(24), newSpec(37, { tempo: 60 })];
+  // Each track its own length (session 30c): the card's track length line,
+  // the first left off.
+  const tracks = [setTrack(named(newSpec(125, BUSY), 'First'), { secs: 5025 }), setTrack(newSpec(24), { secs: 90 }), newSpec(37, { tempo: 60 })];
   out.push({ name: 'album on the card', album: encodeAlbum('Rainy Day Mix', tracks), open: 'card', specs: tracks });
   out.push({ name: 'album playing', album: encodeAlbum('Rainy Day Mix', tracks), open: 'playing', specs: tracks });
   return out;

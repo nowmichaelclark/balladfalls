@@ -530,3 +530,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   `tools/card.mjs`: 198 views, nothing cut, clipped, wrapped or overlapping.
   Look at the card on the phone and the tablet; the beats in 6/8 are still
   every fourth step: for Mikey's eyes.
+- #448, Track length, its own view, to the second (item 111, session 30c,
+  v193), preview URL: the branch's preview (no hash kept): the pace line's
+  third key opens Track length (h:mm:ss typed or by a timer's digits, a
+  second and a minute either way, a coarse slider to a day, on and on, fade
+  in, fade out); the core counts a time on its own clock (a tempo change
+  doesn't move it), plays nothing from its second, and starts the next loop
+  on it; fade in 3 s up from silence, fade out 8 s to silence on the second
+  (notes and a track gain), without it the track stops and rings out. The
+  Sound view's Length slider and the export's How much are gone: an export
+  is the track length (2:00:07 exports 7207.000 s of track and its tail);
+  saved loops convert; an album code carries the time and fades. Listen to
+  a 0:45 track with each fade on and off: are 3 s and 8 s right?

@@ -13,7 +13,10 @@ used soon. The rest waits for its phase of the core work.
   fixed in place.
 - **Scrolling in exactly two places,** both in the middle viewport: the
   Library's lists and the Advanced page. Nothing else scrolls.
-  One exception, for the browser's address bar alone (Mikey, 2026-11-22:
+  Two exceptions. A computer zoomed to 400% (Mikey, 2026-11-22: "let it
+  scroll at 400%, only those who have accessibility issues would zoom in
+  that much I think"): under 280 px high and no finger, the page scrolls
+  down, never across. And, for the browser's address bar alone (Mikey, 2026-11-22:
   "when viewing on chrome, I can't get the address bar at the top to go
   away; what would be the sensible way to do that without Fullscreen? I
   would thing the user could just be able to scroll down a bit"): in a

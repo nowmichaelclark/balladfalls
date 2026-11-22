@@ -584,7 +584,7 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   titles' rings, Track length's infinity, solid popups, one dimmed state,
   the speed test in the app's type with a way back, Android's bars in the
   theme's color. Left for Mikey: the two screen reader passes, the sheets,
-  the letter shortcuts, 400% zoom (`docs/notes/for-mikey.md`). Listen for
+  the letter shortcuts (`docs/notes/for-mikey.md`). Listen for
   nothing. No album loop.
 - #455, the loop's own cover as Now Playing art (item 114, session 30f,
   added by Mikey 2026-11-22; v199), preview URL:

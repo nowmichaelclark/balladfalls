@@ -2950,3 +2950,37 @@ html.bar-scroll :is(.scroll, .vb-list)::after {
   width: 1px; height: calc(100% + 1px);
   pointer-events: none;
 }
+
+/* ============================================================
+   PAINTER 30f: 400% ZOOM ON A COMPUTER SCROLLS
+   Mikey, 2026-11-22: "let it scroll at 400%". Under 280px high with a
+   mouse or the keyboard alone (pointer fine or none; 1280x1024 at 400% is
+   320x256, WCAG 1.4.10) the app keeps the
+   height of the smallest phone's layout, card and all, and the page
+   scrolls down to it; never across. A finger's screens keep one screen:
+   the keyboard up and a split screen are that short too. The query is
+   js/viewport.js's ZOOMED as well.
+   ============================================================ */
+@media (max-height: 279.98px) and (pointer: fine),
+  (max-height: 279.98px) and (pointer: none) {
+  html {
+    height: auto;
+    overflow-x: hidden; overflow-y: auto;
+    scrollbar-width: thin;
+    background: var(--page-back, #08060c);
+  }
+  body { height: auto; overflow: visible; background: var(--page-back, #08060c); }
+  .phone { height: 568px; }
+  .toast { position: fixed; bottom: 12px; }
+}
+@media (max-height: 279.98px) and (pointer: fine) and (max-width: 479.98px),
+  (max-height: 279.98px) and (pointer: none) and (max-width: 479.98px) {
+  .phone:not(:has(.name-edit:not([hidden]), .info-inner.plain)) > .zone-info { display: flex; }
+  .zone-dynamic { padding-top: 0; }
+  .zone-buttons { flex-basis: 172px; }
+}
+@media (max-height: 279.98px) and (pointer: fine) and (min-width: 480px),
+  (max-height: 279.98px) and (pointer: none) and (min-width: 480px) {
+  .phone { height: 320px; }
+  .zone-dynamic { padding-top: 8px; }
+}

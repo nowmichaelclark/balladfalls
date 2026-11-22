@@ -15,7 +15,12 @@
 // taller than the screen and the app is stuck to its top at the screen's
 // height (css/style.css, `.bar-scroll`): a scroll puts the bar away and the
 // app grows into the room. No Fullscreen API.
+//
+// 400% zoom. A computer's screen that short scrolls (css/style.css, the
+// same query as ZOOMED), and the keyboard's focus is scrolled into sight
+// where the app moves it: a view opened moves it with preventScroll.
 
+const ZOOMED = '(max-height: 279.98px) and (pointer: fine), (max-height: 279.98px) and (pointer: none)';
 const SIDES = ['top', 'right', 'bottom', 'left'];
 const ROUNDING = 2;   // px: a screen's and a page's sizes are rounded apart
 
@@ -80,4 +85,13 @@ export function watchViewport({ app }) {
   set();
   // (Registered before the app's own resize: it measures with these.)
   addEventListener('resize', set);
+
+  // Never while the mouse is down: what it presses would move from under it.
+  const zoomed = matchMedia(ZOOMED);
+  let down = false;
+  addEventListener('pointerdown', () => { down = true; }, true);
+  for (const type of ['pointerup', 'pointercancel']) addEventListener(type, () => { down = false; }, true);
+  addEventListener('focusin', (e) => {
+    if (zoomed.matches && !down) e.target.scrollIntoView({ block: 'nearest' });
+  });
 }

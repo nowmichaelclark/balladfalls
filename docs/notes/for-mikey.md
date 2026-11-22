@@ -42,8 +42,9 @@ the points where the next step is yours.
   [newest Android run on that PR's branch](https://github.com/nowmichaelclark/driftloom/actions/workflows/android.yml?query=branch%3Aclaude%2Fs30f-cover)).
   The small status bar icon stays Driftloom's.
 
-- **Sideways, your review (#457, v200; not seen on a phone yet):** in Chrome and
-  in DuckDuckGo open <https://claude-s30f-sideways-driftloom.nowmichaelclark.workers.dev>,
+- **Sideways, your review (#457, v200; not seen on a phone yet):** in
+  DuckDuckGo first (your screenshot's browser), then in Chrome, open
+  <https://claude-s30f-sideways-driftloom.nowmichaelclark.workers.dev>,
   turn the phone, and:
   1. The panel at the left, card and keys at the right, the same gap at
      both ends. (A screenshot if not: it says which insets that browser gave.)
@@ -52,14 +53,12 @@ the points where the next step is yours.
 
 **Yours to decide (nothing waits on them):**
 
-- **The letter shortcuts (N, S, 1 to 5).** WCAG 2.1.4 (level A) wants
-  single-letter keys able to be turned off or remapped, since speech input
-  types letters by accident. That needs a setting, or Shift on each, or
-  their going, and the Keyboard line's words change with it. Left as they
-  are. Proposed: Shift+N, Shift+S, Shift+1 to 5.
-- **400% zoom on a computer** (a 320 x 256 screen, WCAG 1.4.10) can't hold
-  one screen that doesn't scroll. Left to your rule. Proposed: under 280 px
-  high only, let the page scroll.
+- **The letter shortcuts (a computer's keyboard only).** Today N makes
+  something new, S saves and 1 to 5 re-roll a layer. Someone steering by
+  voice types letters by accident and sets them off, so WCAG 2.1.4 (level
+  A) wants them able to be turned off, or on Ctrl or Alt, or gone. Shift
+  alone doesn't count: a capital letter is still a letter. Nothing built;
+  until you choose, the app can't be called all of WCAG A and AA.
 - **Text stops at 1.5x in the views that don't scroll** (the card, the
   keys, the pickers), as since Painter 5, so they fit; browser zoom still
   takes them to 200%, and the lists and Advanced go all the way. The
@@ -83,13 +82,6 @@ the points where the next step is yours.
   place between cancel and done, and its words and the slider's labels are
   left out, so every key fits without scrolling. A phone on its side has
   had room for it since v196 (two columns).
-- **How the fades sound (for your ears):** the fade in rises from silence
-  over 3 s; the fade out reaches silence on the last second over the 8 s
-  before it, the notes and the room falling together, so its last couple
-  of seconds are already near silence (on a short track each fade takes at
-  most a third of it). Fade out on and fade in off are the defaults, as the
-  old close and start. Try a 0:45 track each way; say if a fade is too
-  long, too short, or should be a different shape.
 - **Without the fade out** the track stops on its second: nothing after it
   is played, what was sounding rings out (as an export ends), and the next
   track starts on that second (a long piece without it stops where it is,

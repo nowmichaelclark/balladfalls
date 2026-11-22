@@ -2353,22 +2353,37 @@ async function sidewaysRows(browser) {
         await tab.evaluate(() => scrollTo(0, 0));
         await sleep(250);
       };
-      const swipe = async (selector, dx, dy) => {
+      // A finger, move by move: headless Chromium's synthesizeScrollGesture
+      // sends the touch's start and no move, so nothing scrolls and "doesn't
+      // move the page" passes on nothing. So each swipe also says how many
+      // of its moves the element itself was given.
+      const swipe = async (selector, dx, dy, along = 0.5) => {
         await home();
-        const p = await tab.evaluate((s) => {
+        const p = await tab.evaluate(([s, part]) => {
+          window.fingerMoves = 0;
+          if (!window.fingerHeard) {
+            window.fingerHeard = true;
+            document.addEventListener('touchmove', (e) => { if (e.target.closest && e.target.closest(window.fingerOn)) window.fingerMoves++; }, { capture: true, passive: true });
+          }
+          window.fingerOn = s;
           const r = document.querySelector(s).getBoundingClientRect();
-          return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
-        }, selector);
-        await cdp.send('Input.synthesizeScrollGesture', { x: p.x, y: p.y, xDistance: dx, yDistance: dy, gestureSourceType: 'touch', speed: 900 });
+          return { x: Math.round(r.left + 12 + (r.width - 24) * part), y: Math.round(r.top + r.height / 2) };
+        }, [selector, along]);
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [p] });
+        for (let i = 1; i <= 12; i++) {
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x + (dx * i) / 12, y: p.y + (dy * i) / 12 }] });
+          await sleep(16);
+        }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
         await sleep(400);
-        return tab.evaluate(() => scrollY);
+        return tab.evaluate(() => ({ y: scrollY, moves: window.fingerMoves }));
       };
       const press = async (selector) => {
         await tab.evaluate((s) => document.querySelector(s).click(), selector);
         await sleep(350);
       };
       const by = await swipe('#nowBig', 0, -120);
-      row(`the bar, ${at}: a swipe on the panel scrolls the document (what puts a browser's bar away)`, by >= 40, `${by} px`);
+      row(`the bar, ${at}: a swipe on the panel scrolls the document (what puts a browser's bar away)`, by.y >= 40, JSON.stringify(by));
       await tab.evaluate(() => scrollTo(0, 1e5));
       await sleep(250);
       const still = await tab.evaluate(() => {
@@ -2378,31 +2393,33 @@ async function sidewaysRows(browser) {
       });
       row(`the bar, ${at}: scrolled to the end, the app fills the screen, every key on it`, Math.abs(still.top) <= 1 && Math.abs(still.height - still.h) <= 1 && still.in && still.wide <= 0, JSON.stringify(still));
       const line = await swipe('#pieceLine', 0, -100);
-      row(`the bar, ${at}: a finger on the piece's line doesn't move the page`, line === 0, `${line} px`);
+      row(`the bar, ${at}: a finger on the piece's line doesn't move the page`, line.y === 0 && line.moves > 0, JSON.stringify(line));
       await home();
       for (let i = 0; i < 3 && await tab.evaluate(() => document.getElementById('viewSounds').hidden); i++) await press('#viewBtn');
       const slider = await swipe('#warmth', 0, -100);
-      row(`the bar, ${at}: a finger on a slider doesn't move the page`, slider === 0, `${slider} px`);
+      row(`the bar, ${at}: a finger on a slider doesn't move the page`, slider.y === 0 && slider.moves > 0, JSON.stringify(slider));
       const was = await tab.evaluate(() => document.getElementById('warmth').value);
-      await cdp.send('Input.synthesizeScrollGesture', {
-        ...await tab.evaluate(() => {
-          const el = document.getElementById('warmth');
-          const r = el.getBoundingClientRect();
-          return { x: Math.round(r.left + 12 + (r.width - 24) * Number(el.value)), y: Math.round(r.top + r.height / 2) };
-        }),
-        xDistance: was > 0.5 ? -60 : 60, yDistance: 0, gestureSourceType: 'touch', speed: 600,
-      });
-      await sleep(400);
+      await swipe('#warmth', was > 0.5 ? -60 : 60, 0, Number(was));
       const now = await tab.evaluate(() => document.getElementById('warmth').value);
       row(`the bar, ${at}: the slider still slides`, now !== was, `${was} to ${now}`);
       await press('#libraryBtn');
       await press('[data-tab="albums"]');
       const short = await swipe('#libPane .scroll', 0, -100);
-      row(`the bar, ${at}: the Library's list, with nothing more to scroll, doesn't move the page`, short === 0, `${short} px`);
+      row(`the bar, ${at}: the Library's list, with nothing more to scroll, doesn't move the page`, short.y === 0 && short.moves > 0, JSON.stringify(short));
       await press('[data-tab="more"]');
       await press('#goAdvanced');
-      const list = await swipe('#libAdvanced .scroll', 0, -900);
-      row(`the bar, ${at}: Advanced scrolls to its end and the page stays`, list === 0 && await tab.evaluate(() => document.querySelector('#libAdvanced .scroll').scrollTop > 100), `${list} px`);
+      let moved = 0;
+      let left = Infinity;
+      // To its end, and once more past it: there the page would take over.
+      for (let i = 0, past = false; i < 80 && !past; i++) {
+        past = left <= 2;
+        moved = Math.max(moved, (await swipe('#libAdvanced .scroll', 0, -Math.round(height * 0.3))).y);
+        left = await tab.evaluate(() => {
+          const sc = document.querySelector('#libAdvanced .scroll');
+          return sc.scrollHeight - sc.clientHeight - sc.scrollTop;
+        });
+      }
+      row(`the bar, ${at}: Advanced scrolls to its end and the page stays`, moved === 0 && left <= 2, `${moved} px; ${left} px left in the list`);
       await ctx.close();
     } catch (e) {
       row(`the bar, ${at}: measured`, false, e.message.split('\n')[0]);
@@ -2414,6 +2431,38 @@ async function sidewaysRows(browser) {
   const extra = await desk.evaluate(() => document.documentElement.scrollHeight - innerHeight);
   row('the bar: with a mouse the page doesn\'t scroll at all', extra <= 1, `${extra} px`);
   await desk.close();
+
+  // A computer at 400% (320x256), and at half a screen more across.
+  for (const [width, height] of [[320, 256], [320, 180], [640, 256]]) {
+    const at = `400% zoom, ${width}x${height}`;
+    try {
+      const tab = await browser.newPage({ viewport: { width, height } });
+      tab.on('pageerror', (e) => bad.push(e.message));
+      await tab.goto(`${ORIGIN}/`);
+      await sleep(1000);
+      await tab.mouse.move(6, height / 2);
+      for (let i = 0; i < 6; i++) { await tab.mouse.wheel(0, 120); await sleep(150); }
+      await sleep(400);
+      const end = await tab.evaluate(() => {
+        const r = document.getElementById('viewBtn').getBoundingClientRect();
+        return { y: scrollY, left: document.documentElement.scrollHeight - innerHeight - scrollY, key: r.top >= 0 && r.bottom <= innerHeight + 1, wide: document.documentElement.scrollWidth - innerWidth, card: document.querySelector('.zone-info').checkVisibility() };
+      });
+      row(`${at}: the wheel scrolls to the last key, the card kept, nothing across`, end.y > 0 && end.left <= 1 && end.key && end.card && end.wide <= 0, JSON.stringify(end));
+      await tab.evaluate(() => {
+        scrollTo(0, document.documentElement.scrollHeight);
+        document.getElementById('loopName').focus({ preventScroll: true });
+      });
+      await sleep(250);
+      const seen = await tab.evaluate(() => {
+        const r = document.activeElement.getBoundingClientRect();
+        return { on: document.activeElement.id, top: r.top, bottom: r.bottom, h: innerHeight };
+      });
+      row(`${at}: the focus the app moves is scrolled into sight`, seen.on === 'loopName' && seen.top >= -1 && seen.bottom <= seen.h + 1, JSON.stringify(seen));
+      await tab.close();
+    } catch (e) {
+      row(`${at}: measured`, false, e.message.split('\n')[0]);
+    }
+  }
   row('sideways and the bar: no page errors', !bad.length, bad.join('; '));
 }
 

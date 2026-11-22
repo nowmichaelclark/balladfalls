@@ -990,7 +990,16 @@ async function quietRows(browser) {
         const hi = Math.max(...shares[i]);
         const on = [...document.querySelectorAll(`.layer[data-layer="${l}"] .pattern span.on`)];
         const drawn = on.map((d) => (d.dataset.shade ? Number(d.dataset.shade) : 1));
-        const looks = on.map((d) => Number(getComputedStyle(d).opacity));
+        // How solid the dot's middle is drawn (since v197 a soft note is a
+        // full ring with a fainter middle: its fill's alpha, as painted).
+        const px = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+        const looks = on.map((d) => {
+          const cs = getComputedStyle(d);
+          px.clearRect(0, 0, 1, 1);
+          px.fillStyle = cs.backgroundColor;
+          px.fillRect(0, 0, 1, 1);
+          return (px.getImageData(0, 0, 1, 1).data[3] / 255) * Number(cs.opacity);
+        });
         // Steady (the share held for the two seconds): every dot at it.
         const steady = want(lo) === want(hi);
         const ok = !shares[i].length || !steady || drawn.every((v) => v === want(lo));

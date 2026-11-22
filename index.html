@@ -53,7 +53,7 @@
   <section class="zone-info" aria-label="Now playing">
     <div id="card" class="info-inner">
       <div class="info-row">
-        <div class="cover"><canvas id="cover" width="320" height="320" aria-label="Cover art"></canvas></div>
+        <div class="cover"><canvas id="cover" width="320" height="320" role="img" aria-label="Cover art"></canvas></div>
         <div class="info-text">
           <h1 id="loopName" class="name" tabindex="0" role="button" title="Rename" aria-describedby="nameHint">—</h1>
           <span id="nameHint" hidden>Press to rename</span>
@@ -101,7 +101,7 @@
                way to the section before or after. Shown in the rail's place
                for a piece past 32 bars, and for Endless. -->
           <div id="nowPiece" class="np-piece" hidden>
-            <div id="pieceLine" class="pc-line" role="slider" tabindex="0" aria-label="Place in the piece">
+            <div id="pieceLine" class="pc-line" role="slider" tabindex="0" aria-label="Place in the piece" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0">
               <canvas id="pieceCanvas" class="pc-canvas" aria-hidden="true"></canvas>
               <i id="pieceHead" class="pc-head" aria-hidden="true"></i>
               <i id="pieceGhost" class="pc-ghost" aria-hidden="true" hidden></i>
@@ -300,7 +300,7 @@
           </div>
           <div id="exportRun" hidden>
             <div class="export-bar" role="progressbar" aria-label="Export" aria-valuemin="0" aria-valuemax="100"><span id="exportFill"></span></div>
-            <p class="hint" id="exportProgress" aria-live="polite"></p>
+            <p class="hint" id="exportProgress"></p>
             <p class="hint" id="exportNote"></p>
             <p id="exportNoteMore" hidden>It keeps going in the background while the music plays.</p>
             <div class="format-keys">
@@ -308,7 +308,7 @@
             </div>
           </div>
           <div id="exportDone" hidden>
-            <p class="hint" id="exportSaved" aria-live="polite"></p>
+            <p class="hint" id="exportSaved"></p>
             <div class="format-keys">
               <button id="exportSave" type="button" class="vkey" aria-label="save the exported file">save</button>
               <button id="exportOpen" type="button" class="vkey" aria-label="open the exported file">open</button>
@@ -317,7 +317,7 @@
             </div>
           </div>
           <div id="exportFailed" hidden>
-            <p class="hint" id="exportWhy" aria-live="polite"></p>
+            <p class="hint" id="exportWhy"></p>
             <div class="format-keys">
               <button id="exportOk" type="button" class="vkey" aria-describedby="exportWhy">ok</button>
             </div>
@@ -393,7 +393,7 @@
               </section>
               <section class="adv-sec">
                 <h3 class="sec">Diagnostics</h3>
-                <pre id="diagOut" class="diag adv-keys" aria-label="Diagnostics report"></pre>
+                <pre id="diagOut" class="diag adv-keys" role="group" aria-label="Diagnostics report"></pre>
                 <div class="trim"><div class="setrow-text"><span class="setrow-name">Playhead trim</span></div>
                   <button id="trimDown" type="button" class="vkey" aria-label="Playhead trim: earlier by 5 ms" aria-describedby="trimHint">−</button>
                   <span id="syncVal" class="trim-val" aria-live="polite">0 ms</span>

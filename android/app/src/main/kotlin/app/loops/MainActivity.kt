@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.res.Configuration
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -25,6 +26,7 @@ import android.webkit.WebViewClient
 import android.widget.EditText
 import android.widget.FrameLayout
 import androidx.webkit.WebViewAssetLoader
+import kotlin.math.roundToInt
 
 /**
  * The whole app for now: one WebView with the page in it, its player on the
@@ -97,6 +99,10 @@ class MainActivity : Activity() {
             blockNetworkLoads = true
             @Suppress("DEPRECATION")
             safeBrowsingEnabled = false
+            // Android's font size reaches the page as its root size ([sayFontScale]),
+            // as a browser's text setting does: WebView's own zoom would scale the
+            // pixel caps that keep a view's words in it, too.
+            textZoom = 100
         }
         view.setBackgroundColor(Color.parseColor("#160830"))
         // With the screen off and the app in the background the page goes on (its export, the next loop's
@@ -155,6 +161,10 @@ class MainActivity : Activity() {
                 app?.pageGone()
             }
 
+            override fun onPageFinished(v: WebView, url: String?) {
+                sayFontScale(v)
+            }
+
             // WebView's renderer was killed (memory): the page is rebuilt.
             override fun onRenderProcessGone(v: WebView, detail: RenderProcessGoneDetail): Boolean {
                 (v.parent as? ViewGroup)?.removeView(v)
@@ -176,6 +186,21 @@ class MainActivity : Activity() {
             bridge.attach()
         }
         view.loadUrl(BundledSite.START)
+    }
+
+    // The font size changed under the app (the activity stays: the manifest's configChanges).
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        web?.let { sayFontScale(it) }
+    }
+
+    /** Android's font size as the page's root size; the page fits itself to it again. */
+    private fun sayFontScale(v: WebView) {
+        val percent = (resources.configuration.fontScale * 100).roundToInt()
+        v.evaluateJavascript(
+            "document.documentElement.style.fontSize='$percent%';dispatchEvent(new Event('resize'));",
+            null,
+        )
     }
 
     override fun onResume() {

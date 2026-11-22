@@ -26,6 +26,7 @@ use dlcore::player::{Fades, Handover, Jump, Moment, Request, Track};
 
 use crate::engine::{Arm, ArmEnd, Command, Engine, GridView, Out, Position, ProbeAnswer, Tally, at};
 use crate::json::{self, Value, number, string};
+use crate::watch;
 
 /// The player's events are posted every this long, or at once with one that
 /// is not a step (`js/worklet.js`, `EVENTS_EVERY`).
@@ -65,6 +66,13 @@ pub struct Figures {
     /// The stream's latency to the speaker as it measures it, in seconds (0
     /// where it can't say: the buffer stands in).
     pub latency: f64,
+    /// The frames each callback makes.
+    pub callback: i32,
+    /// The playhead behind the clock (`watch::Playhead`): times, seconds
+    /// lost, seconds since the last.
+    pub behind: u32,
+    pub behind_lost: f64,
+    pub behind_ago: f64,
 }
 
 /// What a message asks of the next loop, built as the worklet's `ask`
@@ -188,6 +196,11 @@ pub struct Bridge {
     /// The core's clock at the last cost report, and the last `native`.
     cost_at: Option<f64>,
     native_at: Option<Instant>,
+    /// The level last said, and the callbacks there had been: the stream's
+    /// callbacks come in runs, and between two runs the level is the last
+    /// one's, not silence.
+    level: f64,
+    level_at: u64,
 }
 
 impl Default for Bridge {
@@ -199,7 +212,7 @@ impl Default for Bridge {
 impl Bridge {
     #[must_use]
     pub const fn new() -> Self {
-        Bridge { refused: 0, events: Vec::new(), grids: Vec::new(), urgent: false, events_at: None, replies: Vec::new(), cost_at: None, native_at: None }
+        Bridge { refused: 0, events: Vec::new(), grids: Vec::new(), urgent: false, events_at: None, replies: Vec::new(), cost_at: None, native_at: None, level: 0.0, level_at: 0 }
     }
 
     /// A message from the page, as text: the command it asks for queued on
@@ -403,7 +416,12 @@ impl Bridge {
         }
         if !batch.is_empty() || self.native_at.is_none_or(|t| now.duration_since(t) >= NATIVE_EVERY) {
             self.native_at = Some(now);
-            batch.push(native_of(engine, &status, figures));
+            let callbacks = engine.counts.callbacks.load(std::sync::atomic::Ordering::Relaxed);
+            if !figures.running || callbacks != self.level_at {
+                self.level = engine.take_level();
+                self.level_at = callbacks;
+            }
+            batch.push(native_of(engine, &status, figures, self.level));
         }
         if batch.is_empty() {
             return None;
@@ -550,7 +568,7 @@ fn cost_of(engine: &Engine, status: &[f64; at::WORDS], tally: &Tally, player: &P
 
 /// The `native` message: the core's clock, the stream's figures and how
 /// loud the output was, for `js/native.js` (its context) and Diagnostics.
-fn native_of(engine: &Engine, status: &[f64; at::WORDS], f: &Figures) -> String {
+fn native_of(engine: &Engine, status: &[f64; at::WORDS], f: &Figures, level: f64) -> String {
     let mut s = String::from("{\"type\":\"native\",\"time\":");
     number(&mut s, status[at::TIME]);
     let _ = write!(s, ",\"running\":{},\"rate\":", f.running);
@@ -573,13 +591,52 @@ fn native_of(engine: &Engine, status: &[f64; at::WORDS], f: &Figures) -> String 
     s.push_str(",\"mean\":");
     number(&mut s, f.mean);
     s.push_str(",\"level\":");
-    number(&mut s, engine.take_level());
+    number(&mut s, level);
     s.push_str(",\"sounding\":");
     number(&mut s, if f.rate > 0.0 { status[at::SOUNDING] / f.rate } else { 0.0 });
     s.push_str(",\"layout\":");
     number(&mut s, status[at::LAYOUT]);
+    let _ = write!(s, ",\"callback\":{}", f.callback);
+    watch_of(&mut s, engine, status, f);
     s.push('}');
     s
+}
+
+/// What a crackle leaves, for Diagnostics (session 30g, `watch.rs`): each
+/// "ago" is seconds before now.
+fn watch_of(s: &mut String, engine: &Engine, status: &[f64; at::WORDS], f: &Figures) {
+    #[allow(clippy::cast_precision_loss, reason = "nanoseconds of a session, far under 2^53")]
+    let now = engine.age() as f64;
+    let ago = |then: f64| ((now - then) * 1e-9).max(0.0);
+    let _ = write!(s, ",\"watch\":{{\"over\":{},\"dry\":{},\"behind\":{}", status[at::OVER], status[at::DRY], f.behind);
+    s.push_str(",\"behindMs\":");
+    number(s, f.behind_lost * 1e3);
+    s.push_str(",\"behindAgo\":");
+    number(s, f.behind_ago);
+    s.push_str(",\"gapMs\":");
+    number(s, status[at::GAP] / 1e6);
+    s.push_str(",\"gapAgo\":");
+    number(s, ago(status[at::GAP_AT]));
+    s.push_str(",\"worst\":[");
+    let kept = status[at::WORST_AT..].as_chunks::<{ at::WORST_WORDS }>().0.iter().filter(|c| c[2] > 0.0);
+    for (i, c) in kept.enumerate() {
+        if i > 0 {
+            s.push(',');
+        }
+        s.push_str("{\"share\":");
+        number(s, c[1] / c[2]);
+        s.push_str(",\"ms\":");
+        number(s, c[1] / 1e6);
+        s.push_str(",\"frames\":");
+        number(s, c[3]);
+        s.push_str(",\"ago\":");
+        number(s, ago(c[0]));
+        s.push_str(",\"did\":");
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, reason = "the bits, written from a u32")]
+        string(s, &watch::did_words(c[4] as u32));
+        s.push('}');
+    }
+    s.push_str("]}");
 }
 
 /// The `init` message's player: the full mix unless it asks for lite, and
@@ -767,6 +824,32 @@ mod tests {
         let asked = ask(&bad);
         assert_eq!((asked.refused, asked.why), (1, None), "a layer state there is no number for");
         assert_eq!(ask(&Value::Null).refused, 0);
+    }
+
+    /// Session 30g: the stream's runs of callbacks leave the level between
+    /// two runs as it was, and the figures of a crackle reach the page as
+    /// JSON it can read.
+    #[test]
+    fn between_runs_the_level_holds_and_the_watch_reaches_the_page() {
+        let (engine, mut bridge) = page("full");
+        post(&engine, &mut bridge, r#"{"type":"playLoad","seed":2693262067,"ask":null,"at":0}"#);
+        engine.stream_began(1024, 7680);
+        let mut out = vec![0.0f32; 1024 * 2];
+        for _ in 0..150 {
+            engine.fill(&mut out, 2);
+        }
+        let f = Figures { running: true, rate: 48_000.0, callback: 1024, behind: 2, behind_lost: 0.05, ..Figures::default() };
+        let t = Instant::now();
+        let native = |text: &str| read(text).unwrap().items().iter().find(|m| m.get("type").str() == Some("native")).cloned().unwrap();
+        let first = native(&bridge.drain(&engine, &f, t).unwrap());
+        let next = native(&bridge.drain(&engine, &f, t + Duration::from_secs(1)).unwrap());
+        assert!(first.get("level").num() > 0.0);
+        assert_eq!(next.get("level").num().to_bits(), first.get("level").num().to_bits(), "no callback between");
+        assert_eq!(first.get("callback").u32(), 1024);
+        let w = first.get("watch");
+        assert_eq!(w.get("behind").u32(), 2);
+        assert_eq!(w.get("worst").items().len(), crate::watch::WORST);
+        assert!(w.get("worst").at(0).get("did").str().is_some());
     }
 
     /// A page's player let go: the next one hears nothing of the last, and

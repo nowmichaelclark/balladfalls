@@ -3,8 +3,8 @@
 //
 // In a browser the core's player runs in an AudioWorklet (js/worklet.js) and
 // js/core.js's CoreHost talks to it over the node's message port. In the
-// Android app the same player runs natively, on Android's own audio, at high
-// priority (android/native): the app puts an object in the page,
+// Android app the same player runs natively, on Android's own audio, on the
+// path a music player takes (android/native): the app puts an object in the page,
 // `DriftloomNative`, and CoreHost posts the very same messages to it and
 // hears the very same messages back (events with their grids, the counts,
 // the cost and busy reports, the probes, the picks' answers), batched a few
@@ -44,6 +44,10 @@ export class NativeContext extends EventTarget {
     this.stream = null;
     this._clock = { time: 0, at: 0, running: false };
     this._last = 0;
+    // The core's clock as it said it (what is rendered, never carried on),
+    // and the latencies of the last two seconds (`_native`).
+    this._served = 0;
+    this._latencies = [];
     this._alarms = [];
     // The port CoreHost posts to and hears from: the worklet's port's shape.
     this.port = {
@@ -83,7 +87,11 @@ export class NativeContext extends EventTarget {
   _ring() {
     clearTimeout(this._timer);
     if (!this._alarms.length) return;
-    const now = this.currentTime;
+    // While the stream runs an alarm waits for the core itself to have
+    // rendered to it (session 30g: the clock reads up to a run of callbacks
+    // ahead of that, and a quality switch's fade must end before its core
+    // is let go).
+    const now = this._clock.running ? this._served : this.currentTime;
     const due = this._alarms.filter((a) => a.at <= now);
     this._alarms = this._alarms.filter((a) => a.at > now);
     for (const a of due) a.fn();
@@ -112,8 +120,28 @@ export class NativeContext extends EventTarget {
   _native(m) {
     this.stream = m;
     if (m.rate > 0) this.sampleRate = m.rate;
-    this.outputLatency = m.latency || 0;
-    this._clock = { time: m.time, at: performance.now(), running: !!m.running };
+    const at = performance.now();
+    let time = m.time;
+    let latency = m.latency || 0;
+    // Session 30g: on the music path the core renders in runs of callbacks,
+    // so its clock moves in steps and the latency measured rises and falls
+    // with them; their difference, what the speaker plays, moves evenly.
+    // So the clock is that plus the most latency of the last two seconds
+    // (at most a buffer ahead of the core), and the latency that most: the
+    // clock is even and the layers stay with what is heard.
+    if (m.running && m.measured) {
+      this._latencies = this._latencies.filter((x) => at - x.at < 2000);
+      this._latencies.push({ at, latency });
+      const buffer = m.rate > 0 ? (m.buffer || 0) / m.rate : 0;
+      const ahead = Math.min(buffer, Math.max(...this._latencies.map((x) => x.latency)) - latency);
+      time += ahead;
+      latency += ahead;
+    } else {
+      this._latencies = [];
+    }
+    this.outputLatency = latency;
+    this._served = m.time;
+    this._clock = { time, at, running: !!m.running };
     const state = m.running ? 'running' : 'suspended';
     if (state !== this.state) {
       this.state = state;
@@ -126,8 +154,26 @@ export class NativeContext extends EventTarget {
   streamReport() {
     const s = this.stream;
     if (!s) return 'not started';
-    const thread = { 0: 'normal', 1: 'SCHED_FIFO', 2: 'SCHED_RR' }[s.policy] || (s.policy < 0 ? 'not yet' : `policy ${s.policy}`);
+    // Without reset-on-fork's bit, which Android sets on its audio threads.
+    const thread = s.policy < 0 ? 'not yet' : { 0: 'normal', 1: 'SCHED_FIFO', 2: 'SCHED_RR' }[s.policy & ~0x40000000] || `policy ${s.policy}`;
     const perf = { 10: 'none', 11: 'power saving', 12: 'low latency' }[s.performance] || s.performance;
-    return `${s.running ? 'running' : 'stopped'}, ${s.rate} Hz, ${s.channels} channels, burst ${s.burst}, buffer ${s.buffer} of ${s.capacity}, ${perf}, ${s.sharing === 0 ? 'exclusive' : 'shared'}, thread ${thread}/${s.priority}, reopens ${s.reopens}, latency ${Math.round((s.latency || 0) * 1000)} ms (${s.measured ? 'measured' : 'from the buffer'}), busiest callback ${(s.busiest * 100).toFixed(1)}% of its deadline, mean ${(s.mean * 100).toFixed(2)}%, sound ${(s.sounding || 0).toFixed(1)} s`;
+    return `${s.running ? 'running' : 'stopped'}, ${s.rate} Hz, ${s.channels} channels, burst ${s.burst}, callbacks of ${s.callback || 'any'}, buffer ${s.buffer} of ${s.capacity}, ${perf}, ${s.sharing === 0 ? 'exclusive' : 'shared'}, thread ${thread}/${s.priority}, reopens ${s.reopens}, latency ${Math.round((s.latency || 0) * 1000)} ms (${s.measured ? 'measured' : 'from the buffer'}), busiest callback ${(s.busiest * 100).toFixed(1)}% of its deadline, mean ${(s.mean * 100).toFixed(2)}%, sound ${(s.sounding || 0).toFixed(1)} s${this._watchReport()}`;
+  }
+
+  // What a crackle leaves (session 30g, android/native/src/watch.rs), since
+  // the app started: lines of their own under the stream's.
+  _watchReport() {
+    const s = this.stream;
+    const w = s.watch;
+    if (!w) return '';
+    const ago = (x) => `${Math.round(x)} s ago`;
+    const behind = w.behind ? ` (${w.behindMs.toFixed(0)} ms in all, the last ${ago(w.behindAgo)})` : '';
+    const gap = w.gapMs ? `${w.gapMs.toFixed(0)} ms, ${ago(w.gapAgo)}` : 'not yet';
+    const lines = [
+      `glitches: ${s.underruns} underruns, ${w.dry} times the buffer ran dry, ${w.behind} times playback fell behind${behind}`,
+      `callbacks: ${w.over} over their deadline, longest gap ${gap}`,
+      ...(w.worst || []).map((c, i) => `callback, worst ${i + 1}: ${(c.share * 100).toFixed(0)}% (${c.ms.toFixed(1)} ms, ${c.frames} frames, ${c.did}), ${ago(c.ago)}`),
+    ];
+    return `\n${lines.join('\n')}`;
   }
 }

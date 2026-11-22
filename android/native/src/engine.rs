@@ -29,6 +29,7 @@ use dlcore::player::about::GRID_MAX;
 use dlcore::player::{CROSSFADE, Fades, Handover, Jump, Kind, Moment, Player, Request, State, Track};
 
 use crate::ring::Ring;
+use crate::watch::{Called, WORST, Watch, did};
 
 /// The frames the core renders in one call, at most: a callback asking for
 /// more is rendered in several. The core gives the same samples whatever
@@ -271,7 +272,17 @@ pub mod at {
     /// Frames played with anything sounding in them, since the start.
     pub const SOUNDING: usize = 26;
     pub const LAYOUT: usize = 27;
-    pub const WORDS: usize = 28;
+    /// The audio thread's watch (`watch.rs`), its times in nanoseconds
+    /// since the engine was made.
+    pub const OVER: usize = 28;
+    pub const DRY: usize = 29;
+    pub const GAP: usize = 30;
+    pub const GAP_AT: usize = 31;
+    /// The worst callbacks, `WORST_WORDS` each: when, its time, its
+    /// deadline, its frames, what it did.
+    pub const WORST_AT: usize = 32;
+    pub const WORST_WORDS: usize = 5;
+    pub const WORDS: usize = WORST_AT + WORST_WORDS * crate::watch::WORST;
 }
 
 /// The audio thread's snapshot of where the player is and what the core
@@ -348,6 +359,10 @@ pub struct Counts {
     /// The stream's burst, in frames: the least a block's deadline is
     /// counted as (0 offline).
     pub block: AtomicU64,
+    /// The stream's buffer, in frames (0 offline), and whether a stream
+    /// began since the last callback (`Engine::stream_began`).
+    pub buffer: AtomicU64,
+    pub began: AtomicBool,
     /// The player's state (0 idle, 1 loading, 2 wandering, 3 playing, as
     /// `dl_player_state`), and the seed of the loop heard last (its `Loop`
     /// event).
@@ -457,6 +472,8 @@ struct Inner {
     sounding: u64,
     /// Grids written into their slots, all told.
     grids_made: u64,
+    /// The callbacks, watched for what a crackle leaves (`watch.rs`).
+    watch: Watch,
     /// Probes waiting for the probe slot.
     probes: [f64; PROBES],
     probes_waiting: usize,
@@ -504,6 +521,8 @@ pub struct Engine {
     name: NameCell,
     rate: f64,
     layout: usize,
+    /// When the engine was made: the watch's times count from it.
+    born: Instant,
 }
 
 // SAFETY: `inner` is reached only inside `fill`, behind `rendering` (one
@@ -543,6 +562,7 @@ impl Engine {
             (&raw mut (*inner).window_frames).write(0.0);
             (&raw mut (*inner).sounding).write(0);
             (&raw mut (*inner).grids_made).write(0);
+            (&raw mut (*inner).watch).write(Watch::new());
             (&raw mut (*inner).probes).write([0.0; PROBES]);
             (&raw mut (*inner).probes_waiting).write(0);
             (&raw mut (*p).rendering).write(AtomicBool::new(false));
@@ -558,6 +578,7 @@ impl Engine {
             (&raw mut (*p).status).write(Status::new());
             (&raw mut (*p).name).write(NameCell::new());
             (&raw mut (*p).rate).write(rate);
+            (&raw mut (*p).born).write(Instant::now());
             (&raw mut (*p).layout).write(if layout == 2 { 2 } else { 1 });
             memory.assume_init()
         };
@@ -569,6 +590,21 @@ impl Engine {
     /// The rate the core renders at.
     pub fn rate(&self) -> f64 {
         self.rate
+    }
+
+    /// A stream is about to start: the frames a block's deadline is counted
+    /// as at least, and what its buffer holds (the app's thread, with no
+    /// stream running).
+    #[cfg_attr(not(any(target_os = "android", test)), allow(dead_code, reason = "the stream's"))]
+    pub fn stream_began(&self, block: u64, buffer: u64) {
+        self.counts.block.store(block, Ordering::Relaxed);
+        self.counts.buffer.store(buffer, Ordering::Relaxed);
+        self.counts.began.store(true, Ordering::Release);
+    }
+
+    /// How long since the engine was made, in nanoseconds: the watch's now.
+    pub fn age(&self) -> u64 {
+        u64::try_from(self.born.elapsed().as_nanos()).unwrap_or(u64::MAX)
     }
 
     /// Queue a command for the audio thread's next callback. False if the
@@ -662,14 +698,23 @@ impl Engine {
             return;
         }
         let began = Instant::now();
+        let at = u64::try_from(began.saturating_duration_since(self.born).as_nanos()).unwrap_or(u64::MAX);
         // SAFETY: `rendering` was false and is now ours: no other thread is
         // inside `fill`, and nothing else reaches `inner` through `&self`.
         let inner = unsafe { &mut *self.inner.get() };
 
         // SAFETY: the one reader: every pop is made inside `fill`, behind
         // `rendering`.
+        let mut doing = 0;
         while let Some(command) = unsafe { self.commands.pop() } {
+            doing |= did_by(&command);
             self.apply(inner, &command);
+        }
+        if inner.player.state() == State::Loading {
+            doing |= did::MAKING;
+        }
+        if self.counts.began.swap(false, Ordering::Acquire) {
+            inner.watch.stream_began(at);
         }
         self.answer_probe(inner);
 
@@ -690,7 +735,7 @@ impl Engine {
             } else {
                 into.fill(0.0);
             }
-            self.take_events(inner);
+            doing |= self.take_events(inner);
             done += n;
         }
         // The rest of a buffer not a whole number of frames, if a host gave one.
@@ -736,6 +781,8 @@ impl Engine {
             c.busiest_frames.store(frames as u64, Ordering::Relaxed);
         }
 
+        inner.watch.called(Called { at, spent, deadline: block, frames: frames as u64, did: doing }, time(c.buffer.load(Ordering::Relaxed)));
+
         // The worklet's cost and busy reports (`costReport`): this
         // callback's time, counted with the lanes it had.
         #[allow(clippy::cast_precision_loss, reason = "a callback's ns and frames, far under 2^53")]
@@ -766,8 +813,14 @@ impl Engine {
     /// back; with one that begins a pass (a pass, a section, a new loop, a
     /// re-roll, a jump), the layers' grid of that pass, read now
     /// (`Player::grid` is the pass being decided), as the worklet reads it.
-    fn take_events(&self, inner: &mut Inner) {
+    fn take_events(&self, inner: &mut Inner) -> u32 {
+        let mut began = 0;
         while let Some(event) = inner.player.event() {
+            began |= match event.kind {
+                Kind::Loop | Kind::Revised => did::LOOP,
+                Kind::Pass | Kind::Section => did::PASS,
+                _ => 0,
+            };
             if event.kind == Kind::Loop {
                 #[allow(clippy::cast_possible_truncation, reason = "a Loop event's number is its seed, a u32")]
                 self.counts.seed.store(event.number as u32, Ordering::Relaxed);
@@ -799,6 +852,7 @@ impl Engine {
                 }
             }
         }
+        began
     }
 
     /// A probe waiting, answered if the slot is free.
@@ -872,13 +926,22 @@ impl Engine {
         w[at::COST_SECONDS + 1] = inner.cost_seconds[1];
         w[at::SOUNDING] = inner.sounding as f64;
         w[at::LAYOUT] = f64::from(core.layout());
+        let watch = &inner.watch;
+        w[at::OVER] = watch.over as f64;
+        w[at::DRY] = watch.dry as f64;
+        w[at::GAP] = watch.gap as f64;
+        w[at::GAP_AT] = watch.gap_at as f64;
+        for (i, c) in watch.worst.iter().enumerate().take(WORST) {
+            let from = at::WORST_AT + i * at::WORST_WORDS;
+            w[from..from + at::WORST_WORDS].copy_from_slice(&[c.at as f64, c.spent as f64, c.deadline as f64, c.frames as f64, f64::from(c.did)]);
+        }
         self.status.write(&w);
     }
 
     /// One command, on the audio thread.
     #[allow(clippy::too_many_lines, reason = "one arm a command, as the worklet's `receive`")]
     fn apply(&self, inner: &mut Inner, command: &Command) {
-        let Inner { core, player, base, epoch, cost_ms, cost_seconds, window_ms, window_frames, probes, probes_waiting, .. } = &mut *inner;
+        let Inner { core, player, watch, base, epoch, cost_ms, cost_seconds, window_ms, window_frames, probes, probes_waiting, .. } = &mut *inner;
         match *command {
             Command::Load { seed, ref request } => player.load(seed, request),
             Command::Ready => player.ready(core),
@@ -895,6 +958,7 @@ impl Engine {
             Command::Wander(a) => player.set_wander(a),
             Command::Draws(seed) => player.set_draws(seed),
             Command::ResetBusiest => {
+                *watch = Watch::new();
                 self.counts.busiest_ppm.store(0, Ordering::Relaxed);
                 self.counts.busiest_ns.store(0, Ordering::Relaxed);
                 self.counts.busiest_frames.store(0, Ordering::Relaxed);
@@ -1016,6 +1080,18 @@ impl GridView<'_> {
     pub fn layer(&self, l: usize) -> &[f64] {
         let n = usize::from(self.0.lens.get(l).copied().unwrap_or(0)).min(GRID_MAX);
         self.0.steps.get(l).map_or(&[], |s| &s[..n])
+    }
+}
+
+/// What a command does, as the watch's bits.
+fn did_by(command: &Command) -> u32 {
+    match command {
+        Command::Init { .. } => did::INIT,
+        Command::Dispose => did::DISPOSE,
+        Command::Load { .. } | Command::LoadAt { .. } | Command::Ready | Command::Change { .. } | Command::Revise { .. } | Command::Next | Command::NextAt { .. } => did::LOAD,
+        Command::Track { .. } | Command::Arm(_) => did::TRACK,
+        Command::Jump(_) => did::JUMP,
+        _ => did::CONTROL,
     }
 }
 
@@ -1228,7 +1304,7 @@ mod tests {
     /// size, an odd one, and one past the engine's chunk.
     #[test]
     fn the_engines_path_makes_the_golden_samples() {
-        for (n, chunk) in [(0, 192), (1, 333), (2, 2500)] {
+        for (n, chunk) in [(0, 192), (1, 333), (2, 2500), (0, 1024)] {
             let want = golden(n);
             let render = render_of(&want, chunk).unwrap();
             assert_eq!(render_line(&render).unwrap(), want, "golden line {n}, {chunk} frames a callback");
@@ -1303,6 +1379,25 @@ mod tests {
         assert_eq!(c.dropped.load(std::sync::atomic::Ordering::Relaxed), 0);
         assert_eq!(c.state.load(std::sync::atomic::Ordering::Relaxed), 3, "playing again after the pause");
         assert_ne!(engine.name(), "");
+    }
+
+    /// A stream of the app's (1,024 frames a callback): promise 2 holds
+    /// with the watch counting, which names what its callbacks did.
+    #[test]
+    fn the_watch_allocates_nothing_and_says_what_a_callback_did() {
+        use super::{Ordering, at};
+        let engine = Engine::new(48_000.0, 2, true).unwrap();
+        engine.stream_began(1024, 7680);
+        let request = dlcore::player::Request::parse("").unwrap();
+        let mut out = vec![0.0f32; 1024 * 2];
+        assert!(engine.send_all(&[Command::Init { full: true, layout: 2 }, Command::LoadAt { seed: 2_693_262_067, request, at: 0.0, resumed: false }]));
+        let before = allocations();
+        engine.fill(&mut out, 2);
+        assert_eq!(allocations() - before, 0, "allocations inside fill");
+        assert!(!engine.counts.began.load(Ordering::Relaxed), "the stream's start taken");
+        let w = engine.status.read();
+        assert_eq!(w[at::WORST_AT + 3].to_bits(), 1024f64.to_bits(), "its frames");
+        assert_eq!(w[at::WORST_AT + 4].to_bits(), f64::from(super::did::INIT | super::did::LOAD | super::did::MAKING).to_bits(), "what it did");
     }
 
     /// A full queue refuses and says so; the audio thread empties it.

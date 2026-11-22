@@ -1,5 +1,21 @@
 # Session 30g: no crackles in the Android app (115)
 
+**Left** (after the first build, v201, 2026-11-22):
+
+- Mikey's listen on that build (`docs/notes/for-mikey.md`): only it says
+  whether step 5's change is the fix. Merge after #453, #454 and #455, with
+  the block's checks met; then the Done line, the queue's status, the tick.
+- Step 1 (E9T-ZxDxj and the album rendered natively, read for steps in the
+  samples), step 3 (every command timed), step 4 (a switch without a click),
+  step 6 (the Lite rule on this thread and buffer): not done.
+- Step 2's rest needs files outside 30g's while 30f runs: "reset counters"
+  clearing the native counts and why it moved to Lite (`js/main.js`), time
+  played with the screen off (Kotlin), and the screen-off job reading the
+  new counts (`NativeCore.kt`, `android/background.mjs`).
+- Step 7 (Play after two minutes paused, `android/background.mjs`): waits
+  for 30f's tick.
+- The nightly by hand on main after the last merge, and read.
+
 Written by brain B-parallel 3 on 2026-11-22, after Mikey heard crackles in
 v195's Android app and made them a 1.0 blocker ("Yes, blocker").
 

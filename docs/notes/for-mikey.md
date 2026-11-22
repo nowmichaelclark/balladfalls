@@ -188,8 +188,25 @@ merge request is faster and keeps the recipe in this repository.
 Your checks of 2026-11-22 are all in (`docs/notes/115-crackles.md`): only in
 the app with the screen off (maybe faintly on the lit lock screen), on full
 and Lite; clean behind Home and other apps, and in Chrome with the screen on
-or off. Nothing more to try: 30g will ask for one listen to its fix. Until
-then, the site in Chrome for listening with the screen off.
+or off. Until it's fixed, the site in Chrome for listening with the screen
+off.
+
+**The listen (v201, session 30g's draft PR).** The APK: the newest green
+"the debug APK builds" in
+[the branch's Android runs](https://github.com/nowmichaelclark/driftloom/actions/workflows/android.yml?query=branch%3Aclaude%2Fs30g-crackles-c234de),
+artifact `driftloom-debug-apk` (GitHub asks you to sign in; or ask the brain
+to send it). Unzip, install `driftloom-arm64-v8a-debug.apk` over the app,
+open it, then on the phone's speaker, as before:
+
+1. `E9T-ZxDxj`, screen off, ten minutes. Any crackle?
+2. The Batch 6 album, screen off, ten minutes.
+3. A few minutes behind the home screen.
+4. Lighter on processor on, then off (say if it clicks right at the switch).
+5. Still playing: Diagnostics, copy, paste to the brain.
+
+Say too if Pause or Next now feels slow, the speaker sounds different, the
+lit dots run off the beat, or it moved to Lite by itself. The new counts
+start when the app starts: "reset counters" doesn't clear them yet.
 
 ## The Android app, screen off (item 107d, v188, PR #431)
 

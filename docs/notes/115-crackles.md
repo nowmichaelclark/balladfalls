@@ -41,7 +41,9 @@ crackles".
 | the app | clean (full and Lite) | clean | crackles (full and Lite) |
 | the site in Chrome | clean (full and Lite) | not tried | clean (full and Lite) |
 
-Not yet known: headphones.
+Not yet known: headphones. The browser of the clean screen-off test was
+Chrome (Mikey, 2026-11-22: "yes I used duckduckgo for the painter test, but
+chrome for the crackle-free test").
 
 Diagnostics after it (copied paused, the stream stopped): late, missed,
 dropped and underruns all 0 again, so **the counters don't see these
@@ -128,3 +130,42 @@ reset-on-fork), reopens 0.
   (`AppWebView`), so the "while hidden" lines are paused time only.
 - A full ten minutes with the screen off: 395 s of sound in all, so that
   test is still to do.
+
+## Session 30g's first build (v201): the stream, not yet heard on a phone
+
+The cause is not proven. What was found in the sources:
+
+- Chrome opens `playback` as AAudio's power-saving mode with 1,024-frame
+  callbacks at 48 kHz (`aaudio_stream_wrapper.cc`, `aaudio_output.cc`,
+  `audio_latency.cc`, `renderer_webaudiodevice_impl.cc`; the last link, from
+  the hint to the playback tag, is read from their names, not followed).
+- That mode is Android's deep buffer, "a mixer that wakes up less often than
+  the FAST mixer", and never MMAP (`AudioStreamTrack.cpp`,
+  `AudioStreamBuilder.cpp`; the same on 8.1 and 13).
+- The old stream's 1536 of 1536 frames is eight bursts of 192, what AAudio's
+  legacy fast track asks for: so it went through the fast mixer (inferred
+  from the numbers). A glitch after the track, in that mixer or below it,
+  needn't reach the track's underrun count, which fits the zeros.
+
+The change is that same mode and callback size, AAudio's own buffer kept.
+Rejected:
+
+- a larger buffer on low latency: it was already at its capacity, and the
+  same fast mixer stays;
+- the mode None: "a normal mixer in front of the FAST mixer", so still it;
+- Chrome's shrink to two bursts: less margin, for latency a music player
+  doesn't need;
+- a lock or a stronger wake lock: the partial one is held, and the counters
+  saw no missed callback.
+
+What it costs, for Mikey's ears and phone: Pause, Next and Play are heard
+later by the new latency (Diagnostics says it); the speaker's own processing
+may differ (the fast path can skip effects the music path has); the callback
+thread loses real-time priority, so its measured busy share may rise and the
+Lite rule (step 6) is still to be measured.
+
+The new counts in Diagnostics: the buffer run dry (a gap between callbacks
+longer than it holds), playback behind the phone's clock (over 10 ms, held
+for a second), callbacks over their deadline and the worst four. Zeros don't
+prove a clean sound: a glitch that doesn't stop the device's position isn't
+seen.

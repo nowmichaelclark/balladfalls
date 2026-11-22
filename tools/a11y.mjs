@@ -317,7 +317,7 @@ function pageSide() {
         ${MARKS.map(([sel]) => sel).join(', ')} { visibility: hidden !important; }
         .ln-ticks, .ln-inf > span, .pc-canvas { visibility: hidden !important; }
         @media (forced-colors: active) {
-          html, body, * { forced-color-adjust: none !important; background: Canvas !important; border-color: transparent !important; box-shadow: none !important; outline-color: transparent !important; }
+          html, body, *, *::before, *::after { forced-color-adjust: none !important; background: Canvas !important; border-color: transparent !important; box-shadow: none !important; outline-color: transparent !important; }
         }`;
     },
     // What Tab should reach now.
@@ -438,7 +438,8 @@ function pageSide() {
         const key = e.closest('button, .tab, a.vkey');
         if (key) {
           const k = key.getBoundingClientRect();
-          if (r.right > k.right + 1 || r.left < k.left - 1 || r.bottom > k.bottom + 3 || r.top < k.top - 3) bad.push(`"${text}" runs out of ${nameOf(key)}`);
+          const over = Math.max(r.right - k.right, k.left - r.left, r.bottom - k.bottom - 2, k.top - r.top - 2);
+          if (over > 1) bad.push(`"${text}" runs ${Math.round(over)} px out of ${nameOf(key)} (${Math.round(k.width)}x${Math.round(k.height)})`);
         }
       }
       // Two pieces of text over each other.

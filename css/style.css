@@ -2868,6 +2868,14 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
   .t-dawn .btn-play svg > *, .t-ember .btn-play svg > *, .t-tidal .btn-play svg > *,
   .t-olive .btn-play svg > *, .t-nightlight .btn-play svg > * { stroke: currentColor; stroke-width: 1; }
 }
+/* A short panel's page keeps room for its list at any text size: the
+   head's and the foot's words stop growing sooner (the list's don't). */
+@container middle (max-height: 299.98px) {
+  .page-head .vkey, .page-foot .vkey { font-size: min(0.75rem, 16px); min-height: 40px; }
+  .page-head .page-title { font-size: min(0.8125rem, 16px); }
+  .page-head { row-gap: 0; }
+  .page-foot { padding-top: 4px; }
+}
 
 /* ============================================================
    PAINTER 30f: THE FINAL PASS, ONE APP
@@ -2898,3 +2906,7 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 .phone.unplayable > :is(.zone-dynamic, .zone-buttons) { display: none; }
 .phone.unplayable > .zone-info { flex: 0 0 auto; grid-area: auto; grid-column: 1 / -1; align-self: center; padding: 12px; }
 .phone.unplayable .info-inner { padding: 22px 14px; }
+/* Track length's title, read out only on a short panel, takes no room. */
+@container track (max-height: 279.98px) {
+  .phone .v-track .page-title.ln-title { padding: 0; }
+}

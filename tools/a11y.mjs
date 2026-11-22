@@ -219,7 +219,10 @@ function pageSide() {
     const d = g.getImageData(0, 0, 1, 1).data;
     return [d[0], d[1], d[2], d[3] / 255];
   };
-  const seen = (e) => e.checkVisibility({ visibilityProperty: true, opacityProperty: true }) && !e.closest('.vh');
+  // (What is only read out, clipped to a point by the class or by a short
+  // panel's rule, isn't on the screen.)
+  const seen = (e) => e.checkVisibility({ visibilityProperty: true, opacityProperty: true })
+    && !e.closest('.vh') && getComputedStyle(e).clipPath !== 'inset(50%)';
   const nameOf = (e) => (e.id ? `#${e.id}` : `${e.tagName.toLowerCase()}.${String(e.getAttribute('class') || '').trim().replace(/\s+/g, '.')}`);
   // What of `r` its clipping ancestors leave on screen.
   const clipped = (e, r, from = e.parentElement) => {
@@ -339,7 +342,7 @@ function pageSide() {
       const out = Math.max(0, o + w);
       const outer = { left: r.left - out, right: r.right + out, top: r.top - out, bottom: r.bottom + out };
       const shown = clipped(e, outer);
-      const inner = cs.boxShadow.match(/(rgba?\([^)]*\)|color\([^)]*\)) 0px 0px 0px 2px/);
+      const inner = e.matches('.zone-buttons .btn') && cs.boxShadow.match(/(rgba?\([^)]*\)|color\([^)]*\)) 0px 0px 0px 2px/);
       return {
         what: nameOf(e),
         drawn: cs.outlineStyle !== 'none' && w >= 2,

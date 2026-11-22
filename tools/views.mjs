@@ -548,7 +548,10 @@ async function changes(tab, engine, loop) {
 }
 
 async function session(opts, chromePath, loop, engine, throttle, quality, graphics) {
-  const b = await launch(chromePath, GRAPHICS[graphics]);
+  // The window at least the emulated screen's: a touch that starts below a
+  // headless window's own 600 px reached the page and, in some sessions,
+  // scrolled nothing.
+  const b = await launch(chromePath, [...GRAPHICS[graphics], '--window-size=500,1100']);
   try {
     const url = engineUrl(opts.port, engine);
     // A phone's screen, so the views lay out (and paint) as on one.

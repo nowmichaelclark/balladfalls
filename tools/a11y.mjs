@@ -61,6 +61,10 @@ const SIZES = [
   { name: '640x360', width: 640, height: 360 },
   { name: '800x360', width: 800, height: 360 },
   { name: '915x412', width: 915, height: 412 },
+  // A computer at 400% (WCAG 1.4.10): under 280 high the page scrolls.
+  { name: '320x256', width: 320, height: 256 },
+  { name: '320x180', width: 320, height: 180 },
+  { name: '640x256', width: 640, height: 256 },
 ];
 const SCALES = [100, 200];
 
@@ -393,6 +397,12 @@ function pageSide() {
         if (sc) {
           if (sc.clientHeight < 40) { bad.push(`${nameOf(sc)} is ${sc.clientHeight} px to scroll in`); continue; }
           e.scrollIntoView({ block: 'center', inline: 'nearest' });
+        }
+        // At 400% the page scrolls, and it alone: a hidden overflow that
+        // scrollIntoView would move is still a fault.
+        if (document.getElementById('app') && document.documentElement.scrollHeight > innerHeight + 1) {
+          const at = e.getBoundingClientRect();
+          if (at.top < 0 || at.bottom > innerHeight) scrollBy(0, at.top + at.height / 2 - innerHeight / 2);
         }
         const r = e.getBoundingClientRect();
         count++;

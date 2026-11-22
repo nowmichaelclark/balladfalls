@@ -13,6 +13,15 @@ used soon. The rest waits for its phase of the core work.
   fixed in place.
 - **Scrolling in exactly two places,** both in the middle viewport: the
   Library's lists and the Advanced page. Nothing else scrolls.
+  Two exceptions. A computer zoomed to 400% (Mikey, 2026-11-22: "let it
+  scroll at 400%, only those who have accessibility issues would zoom in
+  that much I think"): under 280 px high and no finger, the page scrolls
+  down, never across. And, for the browser's address bar alone (Mikey, 2026-11-22:
+  "when viewing on chrome, I can't get the address bar at the top to go
+  away; what would be the sensible way to do that without Fullscreen? I
+  would thing the user could just be able to scroll down a bit"): in a
+  touch browser's tab the document scrolls that bit; the app stays put and
+  grows into the room. Not installed, not the Android app.
 - **Bottom buttons have no lights or LEDs;** they only change icon (for
   now only the bottom-right Sound / Layers switch does).
 - **Only three settings exist:** the theme, "lighter on processor" and
@@ -31,11 +40,16 @@ used soon. The rest waits for its phase of the core work.
 ## What the final pass settled (session 30f, item 114, v196 to v198)
 
 - **Two layouts.** Upright: card, panel, keys. Under 520 px high and 480 or
-  wider (a phone on its side): card over keys at the left, panel at the
-  right. A design is drawn for both, and at 360x640 and 320x568.
+  wider (a phone on its side; Mikey's review, 2026-11-22): panel at the
+  left, card over keys at the right, the two filling the safe area, up to
+  560 px a side. The reading order is the same both ways: card, panel,
+  keys. A design is drawn for both, and at 360x640 and 320x568.
 - **The panel asks its own height** (the container `middle`: 340, 300,
   240 px): a view closes its gaps by it, and never scrolls to fit.
 - **Targets:** 44 px where there is room, never under 24.
+- **Keys:** no letter, number or symbol does anything alone or with Shift
+  (Mikey, 2026-11-22; WCAG 2.1.4): a shortcut has Alt or Ctrl, and
+  `js/shortcuts.js` lists them.
 - **The bar is WCAG 2.2 AA** in every theme and in forced colors, held by
   `tools/a11y.mjs`: text 4.5:1 (3:1 large), marks and rings 3:1. A hue used
   for words has its own deeper token (`--mark-text`).

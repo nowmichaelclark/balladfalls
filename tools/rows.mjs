@@ -2261,15 +2261,21 @@ async function trackRows(browser) {
   await sleep(200);
   await type('1:23:45');
   await click('trkFadeIn');
+  // The player's next step just before done and just after: the second
+  // counts from the block it is set before, between them (however slow the
+  // runner's clicks are). The next step is decided ahead of the clock, by
+  // the lookahead and up to a step: a second's room below.
+  const was = (await probe()).player.time;
   await click('trkDone');
   await sleep(600);
   v = await shown();
   p = await probe();
   let t = await lastTrack();
   const left = p.trackAt - p.player.time;
+  const from = p.trackAt - 5025;
   row('track length: done sets it on the loop playing: the key says 1:23:45, the core holds a time of 5025 s with both fades, counted from now',
-    v.view === 'vibe' && v.key === '1:23:45' && v.keyLabel === 'Track length: 1 hour 23 minutes 45 seconds' && t && t.kind === (3 | 4 | 8) && t.count === 5025 && left > 5024 && left <= 5025,
-    `${v.key}; kind ${t && t.kind}, count ${t && t.count}; ${left.toFixed(3)} s left`);
+    v.view === 'vibe' && v.key === '1:23:45' && v.keyLabel === 'Track length: 1 hour 23 minutes 45 seconds' && t && t.kind === (3 | 4 | 8) && t.count === 5025 && from >= was - 1 && from <= p.player.time + 0.01,
+    `${v.key}; kind ${t && t.kind}, count ${t && t.count}; ${left.toFixed(3)} s left, set ${(from - was).toFixed(3)} s after the clock before done`);
   // A tempo change doesn't move its second.
   const at = p.trackAt;
   await tev(() => { const r = document.getElementById('bpm'); r.value = String(Math.min(190, Number(r.value) + 30)); r.dispatchEvent(new Event('input', { bubbles: true })); });

@@ -2466,6 +2466,15 @@ async function trackRows(browser) {
     }
   }
   await tev(() => document.getElementById('lenCancel').click());
+  // Closing the gaps takes nothing from a key that has the room (session 30f).
+  await tab.setViewportSize({ width: 360, height: 640 });
+  await sleep(300);
+  const anyKeys = await tev(() => [...document.querySelectorAll('#picksList .pk-anykey')].map((k) => [k.getBoundingClientRect().height, k.parentElement.getBoundingClientRect().height]));
+  row('vibe: at 360x640 each any key is as tall as its line lets it be', anyKeys.every(([k, line]) => k >= Math.min(44, line - 4) - 1), anyKeys.map(([k]) => Math.round(k)).join(', '));
+  for (let i = 0; i < 3 && await tev(() => document.getElementById('viewLayers').hidden); i++) await tev(() => document.getElementById('viewBtn').click());
+  await sleep(300);
+  const layerKeys = await tev(() => [...document.querySelectorAll('.layer button')].map((k) => k.getBoundingClientRect().height));
+  row('layers: at 360x640 each key is 44 px or more', layerKeys.length === 10 && layerKeys.every((h) => h >= 44), layerKeys.map(Math.round).join(', '));
   row('track length: no page errors', !bad.length, bad.join('; '));
   await tab.close();
 }

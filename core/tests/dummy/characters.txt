@@ -1,7 +1,16 @@
-# A voice that joins dust's melody pool at version 3, heavily weighted so a
-# newer loop meets it.
+# What joins dust's pools at version 3, heavily weighted so a newer loop
+# meets each: a mode, a bass style, and a voice in each layer but the kit's.
 [character dust]
+scales = dummymode 40
+bassStyles = dummystyle 40
+bassVoices = dummybass 40
+chordVoices = dummychords 40
 melodyVoices = dummyvoice 40
+textures = dummyair 40
+
+# The kit joins tide's: dust names none (it draws the core's own).
+[character tide]
+kits = dummykit 40
 
 # A profile that joins at version 3, heavily weighted.
 [character dummyland]

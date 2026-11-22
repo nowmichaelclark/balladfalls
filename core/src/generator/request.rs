@@ -192,7 +192,13 @@ pub const LAYER_NAMES: [&str; 5] = ["drums", "bass", "chords", "melody", "textur
 /// the kit, the texture's its kind (less "none": that is the layer left
 /// out).
 pub const VOICE_ORDER: [&[&str]; 5] = [
-    &["brush", "tape", "hand"],
+    &[
+        "brush",
+        "tape",
+        "hand",
+        #[cfg(feature = "dummy")]
+        "dummykit",
+    ],
     &["sub", "round", "pluckbass", "moogbass", "fifths", "rhodesbass"],
     &[
         "keys", "pad", "harp", "accordion", "piano", "rhodes", "moogpad", "softpad", "analogpad", "prepared", "musicbox", "kalimba", "marimba",
@@ -968,7 +974,7 @@ const _: () = assert!(PINS_MAX <= 128, "the pins' bits are a u128");
 
 /// The settings' pins, by number from `SETTING_PINS` (`js/pins.js`, the
 /// same order; append only).
-pub const SETTINGS: [&str; 23] = [
+pub const SETTINGS: [&str; 23 + cfg!(feature = "dummy") as usize] = [
     "arc.shape",
     "arc.period",
     "arc.from",
@@ -992,6 +998,8 @@ pub const SETTINGS: [&str; 23] = [
     "lowBell.kind",
     "lowBell.drops",
     "twang.kind",
+    #[cfg(feature = "dummy")]
+    "dummy.kind",
 ];
 
 /// The least and the most of several ranges: what a setting drawn from
@@ -1096,8 +1104,10 @@ impl Pins {
             "progression.kind" => Allowed::Words(super::planing::KINDS),
             // lowBell's kind: none, struck or swelling (queue item 101g).
             "lowBell.kind" => Allowed::Words(super::choices::LOW_BELL_KINDS),
-            // twang's version: none, soft, slow or bright (queue item 101h).
+            // twang's version: none, or soft (queue items 101h and 105e).
             "twang.kind" => Allowed::Words(super::choices::TWANG_KINDS),
+            #[cfg(feature = "dummy")]
+            "dummy.kind" => Allowed::Words(super::choices::DUMMY_KINDS),
             // dropSpotlight: the bell on every chord, or in the drops alone.
             "lowBell.drops" => Allowed::Words(super::choices::SPOTLIGHT_KINDS),
             _ => return None,
@@ -1132,6 +1142,30 @@ impl Pins {
         match Self::allowed(number)? {
             Allowed::Values(v) => Some(v),
             _ => None,
+        }
+    }
+
+    /// The value pin `number` takes nearest `x`, for a number an older code
+    /// holds that its range or its list has left since (queue item 105e):
+    /// `None` for a pin of words, or no pin.
+    #[must_use]
+    pub fn nearest(number: usize, x: f64) -> Option<f64> {
+        match Self::allowed(number)? {
+            Allowed::Words(_) => None,
+            Allowed::Range([lo, hi], whole) => {
+                // Let be where it stands (a pin of -0 keeps its sign).
+                let near = if whole && js::floor(x) != x { js::round(x) } else { x };
+                Some(if near < lo { lo } else if near > hi { hi } else { near })
+            }
+            Allowed::Values(list) => {
+                let mut best: Option<f64> = None;
+                for &(v, _) in list {
+                    if best.is_none_or(|b| js::abs(v - x) < js::abs(b - x)) {
+                        best = Some(v);
+                    }
+                }
+                best
+            }
         }
     }
 

@@ -356,8 +356,9 @@ pub struct TwangDraw {
     /// The versions a loop plays (`soft` alone since Mikey's Batch 6 Album,
     /// 2026-11-17); a draw landing on another plays the first of these.
     pub kinds: Pool,
-    /// The versions drawn, by weight (`soft`, `slow`, `bright`): the batch's
-    /// draw kept whole, so the loops that play twang stay the ones that did.
+    /// The versions drawn, by weight (`soft`, and `slow` and `bright`, which
+    /// the core no longer has: item 105e): the batch's draw kept whole, so
+    /// the loops that play twang stay the ones that did.
     pub drawn: Pool,
     /// The vibes that lean each drawn version's share.
     pub kind_vibes: &'static [(&'static str, Table)],
@@ -559,7 +560,7 @@ pub struct VoiceCosts {
 mod tables {
     use super::{
         Arc, ArcPeriods, BassLift, Character, Choice, ColorTone, Degree, Dotted, Echo, Energy, FloorDrop, Gait, Joins, Kick, LateFloor, Mood, NumPool, PadSweep, Pedal,
-        Ids, Longform, LowBellDraw, Progression, Progressions, SubDuck, SweepRanges, Tuning, TwangDraw, Vibe, VoiceCosts, Wow, f,
+        Ids, Longform, LowBellDraw, Member, Numbers, Progression, Progressions, SubDuck, SweepRanges, Tuning, TwangDraw, Vibe, VoiceCosts, Wow, f,
     };
     include!(concat!(env!("OUT_DIR"), "/gen_data.rs"));
 }
@@ -617,8 +618,64 @@ impl super::list::Empty for Degree {
 }
 
 /// A share code's list (`data/codes.txt`, queue item 105): each member's
-/// name, its id in a code (forever its own) and the version it joined.
-pub type Ids = &'static [(&'static str, u32, u32)];
+/// name, its id in a code (forever its own), the version it joined, and
+/// whether it is still here. Every id ever given has its row.
+pub type Ids = &'static [(&'static str, u32, u32, Member)];
+
+/// What became of a share code's member (queue item 105e): a code naming
+/// one taken out still reads.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Member {
+    /// Still here: the core has it.
+    Here,
+    /// Taken out, nothing standing in: a code naming it goes without.
+    Gone,
+    /// Taken out, the member of this id in its list standing in.
+    StandIn(u32),
+}
+
+/// The numbers a code's field has ever taken (`[code numbers]`, queue item
+/// 105e): a code holds none outside them, and one inside that the field no
+/// longer takes plays the nearest it does.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Numbers {
+    /// From the least to the most, whole numbers only if `true`.
+    Range([f64; 2], bool),
+    /// One of these.
+    List(&'static [f64]),
+}
+
+impl Numbers {
+    /// Whether a build ever wrote `x` in the field.
+    #[must_use]
+    pub fn wrote(self, x: f64) -> bool {
+        match self {
+            Numbers::Range([lo, hi], whole) => x >= lo && x <= hi && (!whole || super::js::floor(x) == x),
+            Numbers::List(list) => list.contains(&x),
+        }
+    }
+}
+
+/// The numbers the field called `name` has ever taken, or `None` for a
+/// field of none.
+#[must_use]
+pub fn numbers(name: &str) -> Option<Numbers> {
+    CODE_NUMBERS.iter().find(|e| e.0 == name).map(|e| e.1)
+}
+
+/// The options of the choice `id` in `data/codes.txt`, gone ones among
+/// them.
+#[must_use]
+pub fn options_of(id: &str) -> Ids {
+    CODE_OPTIONS.iter().find(|e| e.0 == id).map_or(&[], |e| e.1)
+}
+
+/// The words of the setting `name` in `data/codes.txt`, gone ones among
+/// them, or `None` for a setting of numbers.
+#[must_use]
+pub fn words_of(name: &str) -> Option<Ids> {
+    CODE_WORDS.iter().find(|e| e.0 == name).map(|e| e.1)
+}
 
 /// The version `name` joined in `list`, or `None` for a name the list does
 /// not hold.
@@ -643,4 +700,35 @@ pub const fn joined(since: u32, version: u32) -> bool {
 #[must_use]
 pub fn there(list: Ids, name: &str, version: u32) -> bool {
     version == 0 || version >= CODE_NEWEST || joined(since(list, name).unwrap_or(2), version)
+}
+
+/// Whether the setting `setting`, drawn per loop outside the list of
+/// choices, draws at all for a loop at `version` (queue item 105e). **Every
+/// such draw asks this first** and plays today's where it is false, so a
+/// setting drawn per loop that joins later leaves an older code's loop, and
+/// the count of its changes, as it was (`data/codes.txt`'s rules).
+#[must_use]
+pub fn drawn_at(setting: &str, version: u32) -> bool {
+    there(CODE_SETTINGS, setting, version)
+}
+
+/// The most words or options a filtered pool holds (`joined_of`).
+pub const WORDS_MOST: usize = 8;
+
+/// `pool`'s members that had joined `list` by `version`, in their order:
+/// what a draw of a setting's word or a choice's option draws from (queue
+/// item 105e).
+#[must_use]
+pub fn joined_of(pool: Pool, list: Ids, version: u32) -> super::list::List<(&'static str, f64), WORDS_MOST> {
+    let mut out = super::list::List::new();
+    for &e in pool.iter().filter(|e| there(list, e.0, version)) {
+        out.push(e);
+    }
+    out
+}
+
+/// `joined_of` for the words of the setting `setting`.
+#[must_use]
+pub fn words_at(pool: Pool, setting: &str, version: u32) -> super::list::List<(&'static str, f64), WORDS_MOST> {
+    joined_of(pool, words_of(setting).unwrap_or(&[]), version)
 }

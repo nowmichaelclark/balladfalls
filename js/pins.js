@@ -106,11 +106,12 @@ const SETTINGS = [
   // dropSpotlight (item 101g): the bell on every chord (today), or struck in
   // the floor drops alone ('on'), for a loop that plays it.
   { name: 'lowBell.drops', words: ['today', 'on'] },
-  // twang's version (item 101h): none, soft, slow or bright, for a loop that
-  // plays a chord and has no kit busier than a soft one
-  // (core/src/blocks/twang.rs). The core numbers them by place, so every
-  // version drawn stays a word (`drawn`), though a loop plays soft alone.
-  { name: 'twang.kind', words: ['today', ...ids(TWANG.drawn)] },
+  // twang's version (item 101h): none or soft (item 105e took slow and
+  // bright out), for a loop that plays a chord and has no kit busier than a
+  // soft one (core/src/blocks/twang.rs). The core numbers them by place.
+  // A loop saved with a word since gone plays what a code holding it does
+  // (data/codes.txt).
+  { name: 'twang.kind', words: ['today', ...ids(TWANG.kinds)], gone: { slow: 'soft', bright: 'soft' } },
 ];
 if (CHOICES.length > CHOICE_PINS || SETTING_PINS + SETTINGS.length > SPACE_PINS) throw new Error('js/pins.js: a block of pins is full');
 export const PINS = [
@@ -133,6 +134,9 @@ export function isPinName(name) {
 
 const NUMBER_TEXT = /^-?\d+(\.\d+)?(e[-+]?\d+)?$/;
 
+// The word a pin plays for `value`: itself, or the stand-in of one taken out.
+const standIn = (p, value) => (p.gone && Object.hasOwn(p.gone, value) ? p.gone[value] : value);
+
 // The value pin `name` takes from `value` (text, a number or a word), or a
 // refusal.
 export function pinValue(name, value) {
@@ -140,8 +144,10 @@ export function pinValue(name, value) {
   if (i == null) throw new RequestError(NO_SUCH_SETTING);
   const p = PINS[i];
   if (p.words) {
-    if (typeof value !== 'string' || !p.words.includes(value)) throw new RequestError(BAD_SETTING);
-    return value;
+    if (typeof value !== 'string') throw new RequestError(BAD_SETTING);
+    const word = standIn(p, value);
+    if (!p.words.includes(word)) throw new RequestError(BAD_SETTING);
+    return word;
   }
   let x = value;
   if (typeof x === 'string') {
@@ -187,6 +193,6 @@ export function pinNumbers(pins) {
   if (!framed) return [];
   return Object.entries(framed).map(([n, v]) => {
     const p = PINS[BY_NAME.get(n)];
-    return [p.number, p.words ? p.words.indexOf(v) : v];
+    return [p.number, p.words ? p.words.indexOf(standIn(p, v)) : v];
   });
 }

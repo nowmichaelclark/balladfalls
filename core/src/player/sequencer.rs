@@ -899,7 +899,7 @@ impl Sequencer {
     /// wandering pass may draw (`_kickOn`, `kickKindOf`, by the pass's
     /// count).
     pub fn pass_begins(&mut self, lp: &Loop) {
-        self.kick_kind = lp.settings.kick.map(|k| if lp.pass.is_some_and(|p| p.breathes) { choices::kick_kind_of(lp.spec.seed, k.kind, self.loop_count, lp.spec.pins.get("tunedKick").is_some()) } else { k.kind });
+        self.kick_kind = lp.settings.kick.map(|k| if lp.pass.is_some_and(|p| p.breathes) { choices::kick_kind_of(lp.spec.seed, k.kind, self.loop_count, lp.spec.pins.get("tunedKick").is_some(), lp.spec.version) } else { k.kind });
     }
 
     /// `_advance`: the next step's time and place. True at the top of a
@@ -1248,7 +1248,7 @@ impl Sequencer {
                 self.low_bell(host, synth, lp, s_at, t, kind, Key { seed, pass, step: step32, ord: BELL_ORD });
             }
             if s.twang != 0 && !lp.rests(Layer::Chords) && !Self::is_silent_bar(lp, abs, rel) {
-                self.twang(host, synth, lp, [s_at, abs], t, s.twang, Key { seed, pass, step: step32, ord: TWANG_ORD });
+                self.twang(host, synth, lp, [s_at, abs], t, Key { seed, pass, step: step32, ord: TWANG_ORD });
             }
             if s.organ.is_some() {
                 self.organ(host, synth, lp, s_at, t, sd, abs);
@@ -1601,10 +1601,9 @@ impl Sequencer {
     /// has none): `spread` beats apart while the chord lasts, or with it
     /// (`spread` 0, as the approved clips played them: the sketch's clock
     /// ran fast, so its picks a beat apart all came at once).
-    /// A new root's chord takes the place of picks still to come. `version`
-    /// is the loop's (`choices::TWANG_KINDS`); `at[1]` the step from the
-    /// load.
-    fn twang<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, at: [f64; 2], t: f64, version: u8, key: Key) {
+    /// A new root's chord takes the place of picks still to come. `at[1]`
+    /// is the step from the load.
+    fn twang<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, at: [f64; 2], t: f64, key: Key) {
         let [s, abs] = at;
         let h = &lp.base.harmony;
         // How far apart the picks come, in steps (four a beat).
@@ -1655,7 +1654,7 @@ impl Sequencer {
                     self.twang_at = t;
                     self.twang_low = TWANG_LOW + pc;
                     self.twang_end = abs + (end - s);
-                    self.pick(host, synth, lp, self.twang_low, t, version, key);
+                    self.pick(host, synth, lp, self.twang_low, t, key);
                     if gap > 0.0 {
                         self.twang_next = 1;
                         self.twang_due = abs + gap;
@@ -1663,8 +1662,8 @@ impl Sequencer {
                         // Together (`spread` 0), as the approved clips
                         // played them.
                         let tenth = self.twang_low + 12.0 + self.twang_third;
-                        self.pick(host, synth, lp, self.twang_low + 7.0, t, version, Key { ord: key.ord + 1, ..key });
-                        self.pick(host, synth, lp, tenth, t, version, Key { ord: key.ord + 2, ..key });
+                        self.pick(host, synth, lp, self.twang_low + 7.0, t, Key { ord: key.ord + 1, ..key });
+                        self.pick(host, synth, lp, tenth, t, Key { ord: key.ord + 2, ..key });
                         self.twang_next = 0;
                     }
                     return;
@@ -1674,7 +1673,7 @@ impl Sequencer {
         if self.twang_next != 0 && abs >= self.twang_due {
             if abs < self.twang_end {
                 let midi = if self.twang_next == 1 { self.twang_low + 7.0 } else { self.twang_low + 12.0 + self.twang_third };
-                self.pick(host, synth, lp, midi, t, version, key);
+                self.pick(host, synth, lp, midi, t, key);
                 self.twang_next += 1;
                 self.twang_due += gap;
             }
@@ -1684,17 +1683,16 @@ impl Sequencer {
         }
     }
 
-    /// One of twang's picks: `midi` at `time`, the loop's `version`; if six
-    /// strings already ring, the oldest lets go as it starts.
-    #[allow(clippy::too_many_arguments)] // the pick's own place and times
-    fn pick<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, midi: f64, time: f64, version: u8, key: Key) {
+    /// One of twang's picks: `midi` at `time`; if six strings already ring,
+    /// the oldest lets go as it starts.
+    fn pick<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, midi: f64, time: f64, key: Key) {
         let place = usize::from(self.twang_place) % TWANG_STRINGS;
         // The string's saws, run on from its last pick (a fresh one at 0).
         let fresh = usize::from(self.twang_count) <= place && usize::from(self.twang_count) < TWANG_STRINGS;
         let then = if fresh { f64::NAN } else { self.twang_rings.get(place).copied().unwrap_or(f64::NAN) };
         let (was, last) = self.twang_strings.get(place).copied().unwrap_or(([0.0; 2], f64::NAN));
         let phases = twang::string_phases(was, last + lp.settings.tuning / 100.0, then, time);
-        if !synth.twang(host, key, midi, time, u32::from(version.saturating_sub(1)), lp.spec.bpm / 60.0, self.twang_zero, phases) {
+        if !synth.twang(host, key, midi, time, self.twang_zero, phases) {
             return;
         }
         if let Some(st) = self.twang_strings.get_mut(place) {

@@ -762,13 +762,17 @@ impl Render {
     /// in a loop they make busy it is counted where load then refuses it.
     fn settings_changes(&self, cx: &Cx) -> usize {
         let spec = cx.spec;
-        let (v, p) = (spec.vibes.as_ref(), &spec.pins);
+        let (v, p, version) = (spec.vibes.as_ref(), &spec.pins, spec.version);
         let chord = self.plays_chord();
+        // A setting that joined after the loop's version draws nothing
+        // (`data::drawn_at`), so it isn't counted; a new one is counted here.
         [
-            super::choices::tuning_of(spec.seed, v, p) != 0.0,
+            super::choices::tuning_of(spec.seed, v, p, version) != 0.0,
             cx.planing,
-            super::choices::low_bell_of(spec.seed, chord, v, p) != 0,
-            super::choices::twang_of(spec.seed, chord && self.soft_kit(cx), v, p) != 0,
+            super::choices::low_bell_of(spec.seed, chord, v, p, version) != 0,
+            super::choices::twang_of(spec.seed, chord && self.soft_kit(cx), v, p, version) != 0,
+            #[cfg(feature = "dummy")]
+            super::choices::dummy_of(spec.seed, p, version),
         ]
         .iter()
         .filter(|&&b| b)
@@ -1298,13 +1302,8 @@ impl Render {
 /// Choice `c`'s options other than today's that had joined by `version`
 /// (queue item 105), in their order: an option added later moves no older
 /// code's draw.
-fn options_at(c: &data::Choice, version: u32) -> List<(&'static str, f64), 8> {
-    let list = data::CODE_OPTIONS.iter().find(|e| e.0 == c.id).map_or(&[][..], |e| e.1);
-    let mut out = List::new();
-    for &o in c.options.get(1..).unwrap_or(&[]).iter().filter(|o| data::there(list, o.0, version)) {
-        out.push(o);
-    }
-    out
+fn options_at(c: &data::Choice, version: u32) -> List<(&'static str, f64), { data::WORDS_MOST }> {
+    data::joined_of(c.options.get(1..).unwrap_or(&[]), data::options_of(c.id), version)
 }
 
 impl Default for Render {

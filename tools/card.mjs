@@ -185,6 +185,46 @@ function inspect() {
   };
 }
 
+// Run in the page: the playhead as a row of round dots, for every meter (4/4
+// 16 steps, 6/8 12, 5/4 20, 7/8 14): a dot a step, round, the beats a little
+// bigger, a lit dot (ring and halo) round and bigger still, and only the two
+// dots that change touched a step. The page's own `buildPlayhead` draws it.
+async function checkDots() {
+  const ui = await import('/js/ui.js');
+  const host = document.getElementById('playhead');
+  const problems = [];
+  const own = host.children.length;
+  for (const steps of [16, 12, 20, 14]) {
+    const lights = ui.buildPlayhead(steps);
+    if (lights.length !== steps) problems.push(`${steps} steps: ${lights.length} dots`);
+    const hostBox = host.getBoundingClientRect();
+    let beats = 0;
+    for (const [i, d] of [...lights].entries()) {
+      const r = d.getBoundingClientRect();
+      const cs = getComputedStyle(d);
+      if (Math.abs(r.width - r.height) > 0.5) problems.push(`${steps} steps: dot ${i} is not square (${r.width} x ${r.height})`);
+      if (parseFloat(cs.borderTopLeftRadius) < r.width / 2 - 0.5) problems.push(`${steps} steps: dot ${i} is not round`);
+      if (r.left < hostBox.left - 1 || r.right > hostBox.right + 1) problems.push(`${steps} steps: dot ${i} lies outside the row`);
+      if (d.classList.contains('beat')) { beats++; if (r.width <= lights[1].getBoundingClientRect().width) problems.push(`${steps} steps: a beat is not bigger than a step`); }
+    }
+    if (beats !== Math.ceil(steps / 4)) problems.push(`${steps} steps: ${beats} beats`);
+    // Only the two dots that change are written a step.
+    ui.moveCursor(lights, null, -1);
+    const writes = [];
+    const mo = new MutationObserver((list) => { for (const m of list) writes.push(m.target); });
+    mo.observe(host, { attributes: true, subtree: true, attributeFilter: ['class'] });
+    ui.moveCursor(lights, null, 3);
+    ui.moveCursor(lights, null, 4);
+    await new Promise((r) => setTimeout(r, 0));
+    mo.disconnect();
+    const touched = new Set(writes.map((n) => [...lights].indexOf(n)));
+    if (touched.size !== 2 || ![3, 4].every((i) => touched.has(i))) problems.push(`${steps} steps: moving the cursor 3 to 4 touched dots ${[...touched].join(',')}, expected 3 and 4`);
+    ui.moveCursor(lights, null, -1);
+  }
+  ui.buildPlayhead(own);
+  return problems;
+}
+
 // ----------------------------------------------------------------- run
 
 async function open(browser, c, size, scale, dark) {
@@ -276,6 +316,9 @@ async function main() {
             }
             if (!seen.pageCount) pageProblems.push('no way back to the first page');
             else if (seen.length !== r.more.dots) pageProblems.push(`${r.more.dots} dots but ${seen.length} pages`);
+          }
+          if (size.name === '360' && scale === 100 && !c.album) {
+            for (const p of await page.evaluate(checkDots)) pageProblems.push(`playhead: ${p}`);
           }
           const text = seen.join('\n');
           for (const fact of r.facts) {

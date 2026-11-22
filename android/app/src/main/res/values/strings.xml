@@ -6,7 +6,6 @@
 
     <!-- The notification and the lock screen's controls (session 28). -->
     <string name="channel_playback">Playback</string>
-    <string name="channel_playback_about">Playing and saving</string>
     <string name="play">Play</string>
     <string name="pause">Pause</string>
     <string name="next">Next</string>

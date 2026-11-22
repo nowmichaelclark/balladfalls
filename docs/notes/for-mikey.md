@@ -439,10 +439,14 @@ the last one (same key). On the **Moto** and on the **tablet**:
   or a symbol where it will do and no spare "the", is applied to the rest.
   Every line changed or removed is below; say a row to put it back. What
   left the screen and explained a key is still that key's description for a
-  screen reader. Where I held back: the lines for something going wrong
-  keep their reason (no space, nothing saved, needs a newer app); delete
+  screen reader. Popups (your note the same day): two words at most where I
+  could, none where the screen already shows it (a new loop's name, left
+  album, a roll in Layers), and a screen reader still hears the whole
+  sentence. Where I held back: the lines for something going wrong
+  keep their reason (no space, nothing saved, needs update); delete
   with 3 loops keeps its count; share link and seed album stay on Share,
-  else both would be lost; "Please refresh." is your own wording, left.
+  else both would be lost; "Please refresh." is your own wording, left; so is the app's one-sentence
+  description, which an install box and a link's preview show.
 
 | Where | Before | After |
 |---|---|---|
@@ -459,6 +463,10 @@ the last one (same key). On the **Moto** and on the **tablet**:
 | Share | A whole album from one short code: its tracks are drawn from a single seed, each asked for the picks set now. | (gone) |
 | Share | copy its code, in Album from one seed | copy code |
 | Share | the box under the keys after every copy: the name, then the code | only when the clipboard refuses: the code alone |
+| Share | Code copied | Copied |
+| Share | Link copied | Copied |
+| Share | Rainy Day · 3 loops (the share sheet's title) | Rainy Day |
+| Share | 12 tracks from one seed (the share sheet's title) | 12 tracks |
 | **Export** | Save what plays as an audio file, to keep or to play anywhere. | (gone) |
 | Export | lossless (then export audio) | flac |
 | Export | small (then export audio) | opus |
@@ -487,28 +495,32 @@ the last one (same key). On the **Moto** and on the **tablet**:
 | Export | Something went wrong making the file, so nothing was saved. The music wasn't touched; you can try again. | Export failed. Nothing saved. |
 | Export | This browser can't export audio. A recent Chrome, Firefox or Safari can. | Can't export audio here. |
 | Export | MIDI exported | Exported |
+| Export | FLAC audio, Opus audio (in the save picker) | FLAC, Opus |
 | **Card** | press play to begin | press play |
 | Card | Tap to rename (the name's tip) | Rename |
 | Card | ~4m once through (an album's) | ~4m |
 | **Plain lines** | This browser can't play Driftloom; try a recent Chrome, Firefox or Safari | Can't play here. Try recent Chrome, Firefox or Safari. |
-| Plain lines | That code is from an older Driftloom and can't be opened. | Can't open older Driftloom codes. |
-| Plain lines | That code needs a newer Driftloom. | Needs a newer Driftloom. |
-| Plain lines | That doesn't look like a Driftloom code. | Not a Driftloom code. |
+| Plain lines | That code is from an older Driftloom and can't be opened. | Code too old |
+| Plain lines | That code needs a newer Driftloom. | Needs update |
+| Plain lines | That doesn't look like a Driftloom code. | Bad code |
 | Plain lines | That code needs an instrument this device doesn't have. | Missing instrument. |
-| Plain lines | That link's code can't be read. | Can't read link. |
+| Plain lines | That link's code can't be read. | Bad link |
 | Plain lines | Get the Driftloom app. (not shown until the app has a page) | Get app. |
 | Plain lines | This browser is too slow. | Browser too slow. |
-| **Now Playing** | Left the album. Next makes new loops | Left album |
+| **Now Playing** | Left the album. Next makes new loops | (no popup: the screen shows it) |
 | Now Playing | Next: ta-ku | an arrow, then ta-ku |
 | Now Playing | back to Rainy Day | a back arrow, then Rainy Day |
 | Now Playing | leave album | leave |
 | Now Playing | 1 of 3 | 1/3 |
-| Now Playing | New loop: ta-ku | ta-ku |
+| Now Playing | New loop: ta-ku | (no popup: the screen shows it) |
 | Now Playing | bar 812 of 3,072 · the peak | bar 812/3,072 · peak |
 | Now Playing | 1:12:03 played · 2:10:00 left | 1:12:03 · −2:10:00 |
 | Now Playing | to bar 812 · the peak, and 45:00 in (dragging) | → bar 812 · peak, and 45:00 |
 | Now Playing | the opening, the theme, a second theme, the peak, the return, the close, a breath, a lift | opening, theme, second theme, peak, return, close, breath, lift |
+| Now Playing | ta-ku (the popup on Next and Previous) | (no popup: the screen shows it); only with an album on the card |
+| Now Playing | Rainy Day Mix · 2/3 (the popup at each track) | (no popup: the screen shows it) |
 | **Vibe** | plays on | ∞ |
+| Vibe | can't do that: all layers off | all layers off |
 | **Vibes** | none: new loops as usual | any |
 | Vibes | 3 for new loops | 3 picked |
 | Vibes | clear all | clear |
@@ -516,23 +528,27 @@ the last one (same key). On the **Moto** and on the **tablet**:
 | Track length | plays until you move on (under on and on) | (gone) |
 | Track length | on and on (the key, and in the time's place) | ∞ |
 | **Layers** | roll | a die |
+| Layers | Re-rolled drums | (no popup: the screen shows it); Rolled drums from the keyboard elsewhere |
 | **Save** | Tick an album to save ta-ku to it. | (gone: the tick boxes) |
 | Save | ta-ku is saved. Untick to take it out. | (gone: the tick) |
 | Save | Changed since you saved it. | Changed |
 | Save | update it | update |
 | Save | only album: tap again to delete | delete? |
 | Save | Press play to make a loop first. | Press play |
-| Save | Could not save it - this browser is refusing to store data | Can't save: storage blocked |
-| Save | Could not save - this browser is refusing to store data | Can't save: storage blocked |
+| Save | Could not save it - this browser is refusing to store data | Storage blocked |
+| Save | Could not save - this browser is refusing to store data | Storage blocked |
 | Save | Could not change that album | Can't change album |
 | Save | Taken out of that album | Removed |
-| Save | Saved ta-ku as a new loop in Favorite Loops | Saved as new |
+| Save | Saved ta-ku as a new loop in Favorite Loops | Saved |
 | Save | ta-ku is saved | Already saved |
-| Save | Could not save that file | Can't save file |
+| Save | Could not save that file | Can't save |
 | Save | Saved to Rainy Day | Saved |
 | Save | Updated ta-ku | Updated |
 | Save | new album | + |
 | Save | No albums. | No albums |
+| Save | Deleted ta-ku | Deleted |
+| Save | Saved Ballad Falls.mid (the Android app's) | Saved |
+| Save | Nothing saved (its picker canceled) | (no popup: the screen shows it) |
 | **Library** | paste a code | paste code |
 | Library | share (an album's: it copies the code) | copy code |
 | Library | link (an album's) | share link |
@@ -541,15 +557,15 @@ the last one (same key). On the **Moto** and on the **tablet**:
 | Library | No other albums yet. Make one with new album. | No other albums |
 | Library | delete it and 3 loops only here? | delete with 3 loops? |
 | Library | only here: tap again to delete | delete? |
-| Library | Name this album (the box) | Album name |
+| Library | Name this album (the box) | Name |
 | Library | That name can't be shared; try another | Can't use name |
 | Library | Could not create the album | Can't make album |
-| Library | Could not move it | Can't move it |
+| Library | Could not move it | Can't move |
 | Library | Could not rename | Can't rename |
 | Library | That album is empty | Empty |
-| Library | That saved loop could not be opened | Can't open loop |
+| Library | That saved loop could not be opened | Can't open |
 | Library | new album | + |
-| Library | Created Rainy Day | Created |
+| Library | Created Rainy Day | (no popup: the screen shows it) |
 | Library | add loops | + |
 | Library | add ta-ku (in Add loops) | + ta-ku |
 | Library | play album | play |
@@ -561,17 +577,17 @@ the last one (same key). On the **Moto** and on the **tablet**:
 | Library | Removed from album | Removed |
 | Library | Album deleted | Deleted |
 | Library | No albums yet. | No albums |
-| Library | Loaded ta-ku | ta-ku |
+| Library | Loaded ta-ku | (no popup: the screen shows it) |
 | **Codes** | Paste a Driftloom code (the box) | Paste code |
 | Codes | Added ta-ku to Imported Loops | Imported |
 | Codes | Playing ta-ku (could not save it) | Opened, not saved |
-| Codes | Could not save those loops | Can't save loops |
+| Codes | Could not save those loops | Can't save |
 | Codes | Could not build a code for this loop | Can't make code |
 | Codes | Could not build a code for this album | Can't make code |
 | Codes | Could not build a link for this loop | Can't make link |
 | Codes | Could not make that album | Can't make album |
 | Codes | Copy it from the box below | Copy from box |
-| Codes | Added Rainy Day · 3 loops | Imported 3 loops |
+| Codes | Added Rainy Day · 3 loops | Imported |
 | Codes | Already saved in Rainy Day | Already saved |
 | **More** | Sound, processor, files, diagnostics (under Advanced) | (gone) |
 | **Advanced** | Plays one channel instead of stereo, for a single speaker or one earbud. The music is the same, only narrower. | (gone: Mono and its switch) |
@@ -586,7 +602,7 @@ the last one (same key). On the **Moto** and on the **tablet**:
 | Advanced | Skipped 2 unreadable loops | Skipped 2 |
 | Advanced | Nothing new in that backup | Nothing new |
 | Advanced | Nothing new in that file | Nothing new |
-| Advanced | That does not look like a Driftloom backup | Not a Driftloom backup. |
+| Advanced | That does not look like a Driftloom backup | Bad backup |
 | Advanced | That file could not be read | Can't read file |
 | Advanced | If something misbehaves, play for a minute with the screen off, come back, then copy this and send it over. | (gone) |
 | Advanced | open to read | (gone) |
@@ -599,13 +615,18 @@ the last one (same key). On the **Moto** and on the **tablet**:
 | Advanced | reset counters | reset |
 | Advanced | Counters cleared | Reset |
 | Advanced | Diagnostics copied | Copied |
+| Advanced | Restored 5 loops, skipped 2 | Restored 5, skipped 2 |
 | **Speed test** | Plays Driftloom's busiest loops silently at full and lite quality, mono and stereo, and times every block. Tap Measure, keep the screen on and this tab open (10 to 15 minutes on a slow phone), then tap Copy and send the text back. | Screen on, up to 15 min. |
 | Speed test | Measuring 3 of 16: vei-koan, full stereo, about 4 min left | 3 of 16 · 4 min left |
 | Speed test | Worst block at full quality: 12.3% of its deadline (vei-koan, full stereo); the yardstick is under 25%. | Worst block 12.3%, limit 25% |
-| Speed test | Done. Tap Copy and send the text back. | Done. Tap Copy. |
-| Speed test | Selected: copy it with the menu. | Selected. Copy it. |
-| **Android** | The loop playing, with its controls, and a file being saved. (the notification's channel) | Playing and saving |
+| Speed test | Done. Tap Copy and send the text back. | Done |
+| Speed test | Selected: copy it with the menu. | Selected |
+| **Tooltips** | Save or share | Save / share |
+| Tooltips | Back to Rainy Day | Back |
+| **System** | 72 bpm · Driftloom (the lock screen, the notification) | 72 bpm |
+| **Android** | The loop playing, with its controls, and a file being saved. (the notification's channel) | (gone) |
 | Android | Saving, 42% | Saving 42% |
+| Android | a title with the bundled page's address, over each box to type in (WebView's default; not seen on a device) | the box's own words: Name, Paste code, Paste backup |
 
 (A shared loop's name, the export sheet's words and the export's ending
 were decided 2026-11-17, `docs/DECISIONS.md`, "Share codes, requests and

@@ -1645,13 +1645,13 @@ async function codeRows(browser) {
   // What can't be opened says so in one plain line.
   await paste('DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR');
   let t = await toast();
-  row('codes: a version 1 code pasted: it is from an older Driftloom and can\'t be opened', t === 'Can\'t open older Driftloom codes.', t);
+  row('codes: a version 1 code pasted: it is from an older Driftloom and can\'t be opened', t === 'Code too old', t);
   const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
   let h = 0;
   for (const c of 'GRiSNBA') h = (h * 64 + A.indexOf(c) + 1) % 4093;
   await paste(`GRiSNBA${A[h & 63]}${A[h >> 6]}`);
   t = await toast();
-  row('codes: a newer build\'s code pasted: it needs a newer Driftloom', t === 'Needs a newer Driftloom.', t);
+  row('codes: a newer build\'s code pasted: it needs a newer Driftloom', t === 'Needs update', t);
 
   // An album's code pasted lands in the Library and plays; shared again, it
   // is the same album.
@@ -1661,7 +1661,7 @@ async function codeRows(browser) {
   const albumCode = encodeAlbum('Rainy Sunday', tracks);
   await paste(albumCode);
   t = await toast();
-  row('codes: an album\'s code pasted lands in the Library', t === 'Imported 3 loops' && await openAlbum('Rainy Sunday'), t);
+  row('codes: an album\'s code pasted lands in the Library', t === 'Imported' && await openAlbum('Rainy Sunday'), t);
   let again = null;
   try { again = decodeAlbum(await shareAlbum('Rainy Sunday')); } catch (err) { again = { error: err.message }; }
   const same = (a) => a && a.title === 'Rainy Sunday' && a.specs && a.specs.length === 3 && a.specs.every((s, i) => s.seed === tracks[i].seed && s.name === tracks[i].name && encodeSong(s) === encodeSong(tracks[i]));
@@ -1724,7 +1724,7 @@ async function codeRows(browser) {
   t = await toast();
   const back = await openAlbum('Rainy Sunday');
   const after = await shareAlbum('Rainy Sunday');
-  row('codes: a backup restored brings the Library back: the album\'s code the same as before', gone && /^Restored \d+ loops/.test(t) && back && after === before && /^[A-Za-z0-9_-]+$/.test(after), `${t}; ${after === before ? 'same code' : `${before} / ${after}`}`);
+  row('codes: a backup restored brings the Library back: the album\'s code the same as before', gone && /^Restored \d+/.test(t) && back && after === before && /^[A-Za-z0-9_-]+$/.test(after), `${t}; ${after === before ? 'same code' : `${before} / ${after}`}`);
   row('codes: no page errors in their tab', !bad.length, bad.join('; '));
   await tab.close();
 }
@@ -1798,12 +1798,12 @@ async function linkRows(browser) {
   await sleep(600);
   const seedCode = await share.evaluate(() => window.__rows.clip);
   const toastCode = await share.evaluate(() => document.getElementById('toast').textContent);
-  row('links: an album from one seed of 12 tracks has a code under 20 characters', typeof seedCode === 'string' && /^[A-Za-z0-9_-]{5,19}$/.test(seedCode) && /^Code copied/.test(toastCode), `${seedCode} ${toastCode}`);
+  row('links: an album from one seed of 12 tracks has a code under 20 characters', typeof seedCode === 'string' && /^[A-Za-z0-9_-]{5,19}$/.test(seedCode) && /^Copied/.test(toastCode), `${seedCode} ${toastCode}`);
   await share.evaluate(() => document.getElementById('seedAlbumLink').click());
   await sleep(600);
   const seedLink = await share.evaluate(() => window.__rows.clip);
   const linkCode = String(seedLink).slice(`${ORIGIN}/#c=`.length);
-  row('links: its link is the address with the code after #c= (a fresh seed each press), and "Link copied" says so', String(seedLink).startsWith(`${ORIGIN}/#c=`) && /^[A-Za-z0-9_-]{5,19}$/.test(linkCode) && /^Link copied/.test(await share.evaluate(() => document.getElementById('toast').textContent)), seedLink);
+  row('links: its link is the address with the code after #c= (a fresh seed each press), and "Copied" says so', String(seedLink).startsWith(`${ORIGIN}/#c=`) && /^[A-Za-z0-9_-]{5,19}$/.test(linkCode) && /^Copied/.test(await share.evaluate(() => document.getElementById('toast').textContent)), seedLink);
   await share.close();
   const want = decodeAlbum(linkCode);
   const second = await fresh(seedLink);
@@ -1827,7 +1827,7 @@ async function linkRows(browser) {
   const damaged = `${ORIGIN}/#c=${loopCode.slice(0, 4)}${loopCode[4] === 'A' ? 'B' : 'A'}${loopCode.slice(5)}`;
   tab = await fresh(damaged);
   st = await state(tab);
-  row('links: a link with a damaged code says so in one plain line', st.toast === 'Can\'t read link.' && st.hash === '', JSON.stringify(st));
+  row('links: a link with a damaged code says so in one plain line', st.toast === 'Bad link' && st.hash === '', JSON.stringify(st));
   await tab.evaluate((c) => { window.__rows.clip = c; }, loopCode);
   await tab.evaluate(() => document.getElementById('pasteCode').click());
   await sleep(1500);
@@ -1847,7 +1847,7 @@ async function linkRows(browser) {
   await tab.evaluate(() => document.getElementById('shareSong').click());
   await sleep(600);
   const copied = await tab.evaluate(() => ({ clip: window.__rows.clip, toast: document.getElementById('toast').textContent }));
-  row('links: share link without a share sheet copies the link', /^http:\/\/127\.0\.0\.1:\d+\/#c=[A-Za-z0-9_-]+$/.test(copied.clip) && /^Link copied/.test(copied.toast), JSON.stringify(copied));
+  row('links: share link without a share sheet copies the link', /^http:\/\/127\.0\.0\.1:\d+\/#c=[A-Za-z0-9_-]+$/.test(copied.clip) && /^Copied/.test(copied.toast), JSON.stringify(copied));
   await tab.close();
   tab = await fresh(`${ORIGIN}/`, { init: () => { navigator.share = async (d) => { window.__shared = d; }; } });
   await tab.evaluate(() => document.getElementById('shareSong').click());
@@ -1864,11 +1864,11 @@ async function linkRows(browser) {
   const newer = `GRiSNBA${A[h & 63]}${A[h >> 6]}`;
   const newerTab = await fresh(`${ORIGIN}/#c=${newer}`);
   st = await state(newerTab);
-  row('links: a link from a newer build says it needs a newer Driftloom', st.toast === 'Needs a newer Driftloom.', st.toast);
+  row('links: a link from a newer build says it needs a newer Driftloom', st.toast === 'Needs update', st.toast);
   await newerTab.close();
   const olderTab = await fresh(`${ORIGIN}/#c=DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR`);
   st = await state(olderTab);
-  row('links: a link with a version 1 code says it is from an older Driftloom', st.toast === 'Can\'t open older Driftloom codes.', st.toast);
+  row('links: a link with a version 1 code says it is from an older Driftloom', st.toast === 'Code too old', st.toast);
   await olderTab.close();
   await tab.close();
   row('links: no page errors in their tabs', !bad.length, bad.join('; '));

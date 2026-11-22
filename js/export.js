@@ -133,8 +133,8 @@ function loopName(spec) {
 
 // What each format is called in a file: its extension and media type.
 export const FORMATS = {
-  lossless: { ext: 'flac', type: 'audio/flac', description: 'FLAC audio', bytes: BYTES_PER_SECOND },
-  small: { ext: 'opus', type: 'audio/ogg', description: 'Opus audio', bytes: SMALL_BYTES_PER_SECOND },
+  lossless: { ext: 'flac', type: 'audio/flac', description: 'FLAC', bytes: BYTES_PER_SECOND },
+  small: { ext: 'opus', type: 'audio/ogg', description: 'Opus', bytes: SMALL_BYTES_PER_SECOND },
 };
 
 export function fileName(spec, format = 'lossless') {

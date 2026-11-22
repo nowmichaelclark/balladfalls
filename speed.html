@@ -147,7 +147,7 @@ async function run() {
     if (lm && ls) say(`summary: ${loop.name} lite ahead ${ls.r.speed.toFixed(1)}x stereo, ${lm.r.speed.toFixed(1)}x mono (stereo costs ${(lm.r.speed / ls.r.speed).toFixed(2)}x mono)`);
   }
   say(`took ${((performance.now() - t0) / 60000).toFixed(1)} min`);
-  status.textContent = 'Done. Tap Copy.';
+  status.textContent = 'Done';
   document.title = 'Driftloom speed test: done';
   try { await wake?.release(); } catch { /* the screen may sleep again */ }
   go.disabled = false;
@@ -160,7 +160,7 @@ copy.addEventListener('click', async () => {
   catch {
     const r = document.createRange(); r.selectNodeContents(out);
     const s = getSelection(); s.removeAllRanges(); s.addRange(r);
-    status.textContent = 'Selected. Copy it.';
+    status.textContent = 'Selected';
   }
 });
 if (q.has('auto')) run();

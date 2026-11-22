@@ -433,7 +433,7 @@
     </div>
     <div class="row row-2">
       <button id="libraryBtn" type="button" class="btn" aria-label="Library" title="Library"></button>
-      <button id="saveBtn" type="button" class="btn" aria-label="Save or share" title="Save or share"></button>
+      <button id="saveBtn" type="button" class="btn" aria-label="Save or share" title="Save / share"></button>
     </div>
     <div class="row row-3">
       <button id="nowBtn" type="button" class="btn" aria-label="Now playing" title="Now playing"></button>
@@ -441,7 +441,10 @@
     </div>
   </nav>
 
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <!-- A popup is only seen, and only for what the screen doesn't show
+       already; what is said, in whole words, is the status (js/ui.js). -->
+  <div id="toast" class="toast" aria-hidden="true"></div>
+  <p id="announce" class="vh" role="status" aria-live="polite"></p>
 </main>
 
 <script type="module" src="js/main.js"></script>

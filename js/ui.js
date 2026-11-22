@@ -665,12 +665,19 @@ export function plainLine(text, link = null) {
 }
 
 let toastTimer = null;
-export function toast(message) {
+export function toast(message, said = message) {
+  announce(said);
   const t = el('toast');
   t.textContent = message;
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// Said to a screen reader and not shown (session 30e; Mikey, 2026-11-22,
+// the popups too): what the screen shows already needs no popup.
+export function announce(said) {
+  el('announce').textContent = said;
 }
 
 export function download(blob, filename) {
@@ -685,7 +692,11 @@ export function download(blob, filename) {
   // (js/app.js, session 28).
   const app = appLink();
   if (app) {
-    app.saveBlob(blob, safe).then((r) => toast(r.name ? `Saved ${r.name}` : r.why === 'cancelled' ? 'Nothing saved' : "Can't save file"));
+    app.saveBlob(blob, safe).then((r) => {
+      if (r.name) toast('Saved', `Saved ${r.name}`);
+      else if (r.why === 'cancelled') announce('Nothing saved');
+      else toast("Can't save", "Can't save that file");
+    });
     return;
   }
   const url = URL.createObjectURL(blob);

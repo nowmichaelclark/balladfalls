@@ -359,7 +359,11 @@ export function renderPanel() {
         const note = document.createElement('span');
         note.className = 'pk-any pk-cant';
         note.setAttribute('role', 'status');
-        note.textContent = `can't do that: ${cant}`;
+        // The reason alone on screen (session 30e).
+        const lead = document.createElement('span');
+        lead.className = 'vh';
+        lead.textContent = "can't do that: ";
+        note.append(lead, cant);
         vals.append(note);
       }
     } else if (line.id === 'key' && !isAny.key) {

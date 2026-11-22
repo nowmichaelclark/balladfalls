@@ -8,6 +8,7 @@ import { picksAsk, PlayerEngine } from './player.js';
 import { patternToMidi } from './midi.js';
 import { AudioExport } from './export.js';
 import { MediaBridge } from './media.js';
+import { appBridge } from './app.js';
 import * as share from './share.js';
 
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
@@ -36,28 +37,28 @@ const NOT_LOADED = 'Please refresh.';
 // until the Android app has a page (F-Droid, queue item 107); the second
 // sentence shows only when it is set.
 const TOO_SLOW = 'Browser too slow.';
-// The app's name, where a line names it (the app is renamed at 1.0: session
-// 31a changes it here). The lines a pasted code gets name it, as the core's
-// "needs a newer version" leaves the host to.
+// The app's name, where the page needs it (the app is renamed at 1.0:
+// session 31a changes it here). Since session 30e no popup names it.
 const APP_NAME = 'Driftloom';
 // The app's address, where a link to a loop has none of the page's own (the
 // Android app's files are inside it). Renamed with the app; index.html's
 // preview tags carry the same address and name (test/preview.test.mjs holds
 // them, the manifest and these two together).
 const APP_URL = 'https://driftloom.nowmichaelclark.workers.dev/';
-const OLD_CODE = `Can't open older ${APP_NAME} codes.`;
-const NEWER_CODE = `Needs a newer ${APP_NAME}.`;
-const NOT_A_CODE = `Not a ${APP_NAME} code.`;
-const NOT_A_BACKUP = `Not a ${APP_NAME} backup.`;
+// Each a popup of two or three words, and what a screen reader hears for it.
+const OLD_CODE = ['Code too old', `That code is from an older ${APP_NAME} and can't be opened.`];
+const NEWER_CODE = ['Needs update', `That code needs a newer ${APP_NAME}.`];
+const NOT_A_CODE = ['Bad code', `That doesn't look like a ${APP_NAME} code.`];
+const NOT_A_BACKUP = ['Bad backup', `That doesn't look like a ${APP_NAME} backup.`];
 // The core's refusal for a code that names an instrument this device does
 // not have (it can't say so yet: today it says "needs a newer version" for
 // any id it lacks, and session B4 settles whether it plays something close
 // instead). share.codeKind answers 'instrument' for such a refusal.
-const INSTRUMENT_CODE = `Missing instrument.`;
+const INSTRUMENT_CODE = ['Missing instrument', "That code needs an instrument this device doesn't have."];
 // A link whose code is damaged (cut short, or a character changed).
-const BAD_LINK = `Can't read link.`;
+const BAD_LINK = ['Bad link', "That link's code can't be read."];
 // Storage refused (a private window, or the site's storage full).
-const CANT_SAVE = "Can't save: storage blocked";
+const CANT_SAVE = ['Storage blocked', "Can't save: this browser is refusing to store data."];
 const GET_APP = 'Get app.';
 const APP_LINK = '';
 
@@ -427,7 +428,7 @@ function goBack() {
     const spec = cloneSpec(state.history[state.historyIndex]);
     loadSpec(spec, { keepPosition: false, pushToHistory: false });
     if (!state.engine.playing) togglePlay();
-    ui.toast(spec.name);
+    sayLoop(spec.name);
   }
 }
 
@@ -449,7 +450,14 @@ function goForward() {
   const spec = cloneSpec(state.history[state.historyIndex]);
   loadSpec(spec, { keepPosition: false, pushToHistory: false });
   if (!state.engine.playing) togglePlay();
-  ui.toast(spec.name);
+  sayLoop(spec.name);
+}
+
+// The loop come to: the card names it, so it is only said, unless the card
+// is showing an album.
+function sayLoop(name, said = name) {
+  if (library.shownAlbum()) ui.toast(name, said);
+  else ui.announce(said);
 }
 
 function resetHistory(spec) {
@@ -726,7 +734,7 @@ function viewsReset() {
 // engine while the audio graph is being built, before any load happens.
 function syncMediaMetadata() {
   if (!state.media || !state.spec) return;
-  state.media.setMetadata(state.spec.name, `${state.spec.bpm} bpm · Driftloom`, state.spec);
+  state.media.setMetadata(state.spec.name, `${state.spec.bpm} bpm`, state.spec);
 }
 
 // Track length (session 30c, queue item 111): its view, opened from the Vibe
@@ -856,12 +864,13 @@ function saveIn(albumId) {
   if (!state.spec) return;
   if (!isSaved()) {
     const entry = store.save(state.spec);
-    if (!entry) { ui.toast(CANT_SAVE); return; }
+    if (!entry) { ui.toast(...CANT_SAVE); return; }
     state.currentId = entry.id;
   }
   if (!store.addToAlbum(albumId, state.currentId)) { ui.toast("Can't change album"); return; }
   const album = store.loadAlbums().find((a) => a.id === albumId);
-  ui.toast(album ? 'Saved' : "Can't change album");
+  if (album) ui.toast('Saved', `Saved to ${album.title}`);
+  else ui.toast("Can't change album");
   savedChanged();
   refreshCard();
 }
@@ -873,9 +882,9 @@ function unsaveFrom(albumId) {
   if (!res.ok) { ui.toast("Can't change album"); return; }
   if (res.deleted) {
     state.currentId = null;
-    ui.toast(`Deleted ${name}`);
+    ui.toast('Deleted', `Deleted ${name}`);
   } else {
-    ui.toast('Removed');
+    ui.toast('Removed', `Removed ${name} from that album`);
   }
   savedChanged();
   refreshCard();
@@ -884,10 +893,10 @@ function unsaveFrom(albumId) {
 function updateSaved() {
   if (!isSaved()) return;
   if (!store.replaceSpec(state.currentId, state.spec)) {
-    ui.toast(CANT_SAVE);
+    ui.toast(...CANT_SAVE);
     return;
   }
-  ui.toast('Updated');
+  ui.toast('Updated', `Updated ${state.spec.name}`);
   savedChanged();
 }
 
@@ -896,10 +905,10 @@ function updateSaved() {
 function saveAsNew() {
   if (!state.spec) return;
   const entry = store.save(state.spec);
-  if (!entry) { ui.toast(CANT_SAVE); return; }
+  if (!entry) { ui.toast(...CANT_SAVE); return; }
   state.currentId = entry.id;
   store.addToAlbum(store.FAVORITES, entry.id);
-  ui.toast('Saved as new');
+  ui.toast('Saved', `Saved ${state.spec.name} as a new loop in Favorite Loops`);
   savedChanged();
 }
 
@@ -1080,7 +1089,7 @@ function onOwn(seed, tag) {
     }
     pushHistory(spec);
     loadSpec(spec, { pushToHistory: false });
-    ui.toast(spec.name);
+    sayLoop(spec.name, `New loop: ${spec.name}`);
     updateHistoryButtons();
   }, 0);
 }
@@ -1159,8 +1168,8 @@ function renderNow() {
     if (album) {
       action.innerHTML = ui.icon('arrowLeft');
       action.append(album.title);
-      action.title = `Back to ${album.title}`;
-      action.setAttribute('aria-label', action.title);
+      action.title = 'Back';
+      action.setAttribute('aria-label', `Back to ${album.title}`);
       action.onclick = () => playAlbum(album.id, state.lastAlbum.index);
     }
   } else {
@@ -1333,7 +1342,7 @@ function leaveAlbum() {
   renderNow();
   armNext();
   updateHistoryButtons();
-  ui.toast('Left album');
+  ui.announce('Left the album. Next makes new loops');
 }
 
 function playAlbum(albumId, index = 0, play = true) {
@@ -1341,7 +1350,7 @@ function playAlbum(albumId, index = 0, play = true) {
   if (!album) return;
   const saved = new Set(store.loadAll().map((e) => e.id));
   const present = album.ids.filter((id) => saved.has(id));
-  if (!present.length) { ui.toast('Empty'); return; }
+  if (!present.length) { ui.toast('Empty', 'That album is empty'); return; }
   state.playlist = { albumId: album.id, title: album.title, ids: present, index: index - 1 };
   advancePlaylist(1, play);
 }
@@ -1351,10 +1360,10 @@ async function shareAlbum(albumId, asLink = false) {
   if (!album) return;
   const byId = new Map(store.loadAll().map((e) => [e.id, e]));
   const specs = album.ids.map((id) => byId.get(id)).filter(Boolean).map((e) => e.spec);
-  if (!specs.length) { ui.toast('Empty'); return; }
+  if (!specs.length) { ui.toast('Empty', 'That album is empty'); return; }
   try {
     const code = share.encodeAlbum(album.title, specs);
-    const label = `${album.title} · ${specs.length} loops`;
+    const label = album.title;
     if (asLink) await shareLink(code, label);
     else await offerCode(code, label);
   } catch (err) {
@@ -1370,7 +1379,7 @@ async function offerCode(code, label, what = 'Code') {
   try {
     await navigator.clipboard.writeText(code);
     out.hidden = true;
-    ui.toast(`${what} copied`);
+    ui.toast('Copied', `${what} copied`);
   } catch {
     // The box, only now (session 30e), holds the code alone, so all of it
     // selected is the code. It lives under Save > Share; take them to it.
@@ -1380,7 +1389,7 @@ async function offerCode(code, label, what = 'Code') {
     setView('save');
     library.showShare();
     out.scrollIntoView({ block: 'nearest' });
-    ui.toast('Copy from box');
+    ui.toast('Copy from box', 'The clipboard is blocked: copy it from the box');
   }
 }
 
@@ -1412,13 +1421,18 @@ async function seedAlbum(asLink) {
   const count = Number(ui.el('seedCount').value) || 12;
   try {
     const code = share.encodeSeedAlbum('', count, picks.requestFor(state));
-    const label = `${count} tracks from one seed`;
+    const label = `${count} tracks`;
     if (asLink) await shareLink(code, label);
     else await offerCode(code, label);
   } catch (err) {
     console.warn('Could not make an album', err);
     ui.toast(err instanceof RequestError ? err.message : "Can't make album");
   }
+}
+
+function restoredToast({ added, rejected }) {
+  ui.toast(`Restored ${added}${rejected ? `, skipped ${rejected}` : ''}`,
+    `Restored ${added} loop${added === 1 ? '' : 's'}${rejected ? `, skipped ${rejected} unreadable` : ''}`);
 }
 
 function syncToneInputs(spec) {
@@ -1437,11 +1451,11 @@ function openSaved(entry) {
     loadSpec(cloneSpec(entry.spec), { id: entry.id, pushToHistory: false });
   } catch (err) {
     console.warn('Could not open saved loop', err);
-    ui.toast("Can't open loop");
+    ui.toast("Can't open", 'That saved loop could not be opened');
     return;
   }
   if (!state.engine.playing) togglePlay();
-  ui.toast(entry.spec.name);
+  sayLoop(entry.spec.name, `Loaded ${entry.spec.name}`);
 }
 
 // ------------------------------------------------------------ callbacks
@@ -1528,7 +1542,7 @@ function advancePlaylist(step, play = true) {
   }
   loadSpec(cloneSpec(entry.spec), { id: entry.id, pushToHistory: false });
   if (play && !state.engine.playing) togglePlay();
-  ui.toast(`${pl.title} · ${pl.index + 1}/${pl.ids.length}`);
+  ui.announce(`${pl.title}, ${pl.index + 1} of ${pl.ids.length}: ${entry.spec.name}`);
 }
 
 // ------------------------------------------------------------- actions
@@ -1620,7 +1634,8 @@ function reroll(layer) {
   if (state.historyIndex >= 0 && state.history[state.historyIndex]) {
     state.history[state.historyIndex] = cloneSpec(next);
   }
-  ui.toast(`Re-rolled ${layer}`);
+  if (state.view === 'layers') ui.announce(`Re-rolled ${layer}`);
+  else ui.toast(`Rolled ${layer}`, `Re-rolled ${layer}`);
 }
 
 function toggleMute(layer) {
@@ -1653,7 +1668,8 @@ function exportMidi(spec = state.spec) {
   if (!spec) return;
   const blob = patternToMidi(render(spec), { repeats: 4 });
   ui.download(blob, `${spec.name}-${spec.bpm}bpm.mid`);
-  ui.toast('Exported');
+  // In the Android app its picker comes next, and says Saved itself.
+  if (!appBridge()) ui.toast('Exported', 'MIDI exported');
 }
 
 // Paste a song or album code: from the clipboard if the browser allows it,
@@ -1691,12 +1707,12 @@ function openCode(text, { play, link = false }) {
   // A version 1 code (session 23: the app speaks version 2 only), or one
   // from a newer build, or one that needs what this device lacks: one plain
   // line each, not an error.
-  if (kind === 'old') { ui.toast(OLD_CODE); return; }
-  if (kind === 'newer') { ui.toast(NEWER_CODE); return; }
-  if (kind === 'instrument') { ui.toast(INSTRUMENT_CODE); return; }
+  if (kind === 'old') { ui.toast(...OLD_CODE); return; }
+  if (kind === 'newer') { ui.toast(...NEWER_CODE); return; }
+  if (kind === 'instrument') { ui.toast(...INSTRUMENT_CODE); return; }
   if (!kind) {
-    if (link) ui.toast(BAD_LINK);
-    else if (text.trim()) ui.toast(NOT_A_CODE);
+    if (link) ui.toast(...BAD_LINK);
+    else if (text.trim()) ui.toast(...NOT_A_CODE);
     return;
   }
   try {
@@ -1713,27 +1729,29 @@ function openCode(text, { play, link = false }) {
         const ids = store.addSpecs([spec]);
         if (ids) store.addToAlbum(store.IMPORTED, ids[0]);
         loadSpec(spec, { id: ids ? ids[0] : null });
-        ui.toast(ids ? 'Imported' : 'Opened, not saved');
+        if (ids) ui.toast('Imported', `Added ${spec.name} to Imported Loops`);
+        else ui.toast('Opened, not saved');
       }
       if (play && !state.engine.playing) togglePlay();
     } else {
       const { title, specs } = share.decodeAlbum(text);
       const ids = store.addSpecs(specs);
       if (!ids) {
-        ui.toast("Can't save loops");
+        ui.toast("Can't save", "Can't save those loops");
         return;
       }
       const album = store.createAlbum(title);
       if (album) store.setAlbumIds(album.id, ids);
       savedChanged();
-      ui.toast(`Imported ${specs.length} loops`);
-      // From a link the album is open at its first track, ready to play.
+      // From a link the album is open at its first track, ready to play. (Its
+      // place is said as it opens: the import is said after, so it is heard.)
       if (link && album) playAlbum(album.id, 0, false);
+      ui.toast('Imported', `Added ${title}, ${specs.length} loops`);
     }
   } catch (err) {
     console.warn('Could not open the code', err);
-    if (err instanceof share.CodeError && err.message === 'needs a newer version') ui.toast(NEWER_CODE);
-    else ui.toast(link ? BAD_LINK : NOT_A_CODE);
+    if (err instanceof share.CodeError && err.message === 'needs a newer version') ui.toast(...NEWER_CODE);
+    else ui.toast(...(link ? BAD_LINK : NOT_A_CODE));
   }
 }
 
@@ -2063,7 +2081,7 @@ function wire() {
   ui.el('diagReset').addEventListener('click', () => {
     if (state.engine) state.engine.clearMetrics();
     renderDiag();
-    ui.toast('Reset');
+    ui.toast('Reset', 'Counters cleared');
   });
   ui.el('diagCopy').addEventListener('click', async () => {
     renderDiag();
@@ -2071,9 +2089,9 @@ function wire() {
       await navigator.clipboard.writeText(ui.el('diagOut').textContent);
       // The views' report starts again from here.
       viewsReset();
-      ui.toast('Copied');
+      ui.toast('Copied', 'Diagnostics copied');
     } catch {
-      ui.toast('Copy from box');
+      ui.toast('Copy from box', 'Select the report and copy it');
     }
   });
 
@@ -2104,7 +2122,7 @@ function wire() {
   ui.el('copyBackup').addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(await store.exportAll().text());
-      ui.toast('Copied');
+      ui.toast('Copied', 'Backup copied. Paste it somewhere safe.');
     } catch {
       ui.toast('Clipboard blocked');
     }
@@ -2121,11 +2139,12 @@ function wire() {
     try {
       const res = store.importAll(text);
       savedChanged();
-      if (res.failed) ui.toast("Can't save");
-      else if (res.added) ui.toast(`Restored ${res.added} loops${res.rejected ? `, skipped ${res.rejected}` : ''}`);
-      else ui.toast(res.rejected ? `Skipped ${res.rejected}` : 'Nothing new');
+      if (res.failed) ui.toast("Can't save", "Can't save the restored loops");
+      else if (res.added) restoredToast(res);
+      else if (res.rejected) ui.toast(`Skipped ${res.rejected}`, `Skipped ${res.rejected} unreadable loops`);
+      else ui.toast('Nothing new');
     } catch {
-      ui.toast(NOT_A_BACKUP);
+      ui.toast(...NOT_A_BACKUP);
     }
   });
   ui.el('importFile').addEventListener('change', async (e) => {
@@ -2134,9 +2153,10 @@ function wire() {
     try {
       const res = store.importAll(await file.text());
       savedChanged();
-      if (res.failed) ui.toast("Can't save");
-      else if (res.added) ui.toast(`Restored ${res.added} loops${res.rejected ? `, skipped ${res.rejected}` : ''}`);
-      else ui.toast(res.rejected ? `Skipped ${res.rejected}` : 'Nothing new');
+      if (res.failed) ui.toast("Can't save", "Can't save the restored loops");
+      else if (res.added) restoredToast(res);
+      else if (res.rejected) ui.toast(`Skipped ${res.rejected}`, `Skipped ${res.rejected} unreadable loops`);
+      else ui.toast('Nothing new');
     } catch {
       ui.toast("Can't read file");
     }

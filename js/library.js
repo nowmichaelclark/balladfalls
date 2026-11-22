@@ -396,11 +396,11 @@ function listedAlbums(alsoShow = null) {
 }
 
 function newAlbumThen(after) {
-  const title = prompt('Album name', 'Untitled');
+  const title = prompt('Name', 'Untitled');
   if (!title || !title.trim()) return;
   // An album's name travels with its code: only what a code can carry.
   const name = fitName(title, store.NAME_MAX);
-  if (!name) { ui.toast("Can't use name"); return; }
+  if (!name) { ui.toast("Can't use name", "That name can't be shared; try another"); return; }
   const album = store.createAlbum(name);
   if (!album) { ui.toast("Can't make album"); return; }
   after(album);
@@ -433,7 +433,7 @@ function renderAlbums() {
   const playing = lib.app.state.playlist;
   const actions = make('div', 'lib-actions');
   actions.append(
-    key('', () => newAlbumThen(() => { ui.toast('Created'); render(); }), { icon: 'plus', aria: 'New album' }),
+    key('', () => newAlbumThen((a) => { ui.announce(`Created ${a.title}`); render(); }), { icon: 'plus', aria: 'New album' }),
     key('paste code', () => lib.app.pasteCode()),
   );
   const rows = listedAlbums().map((album) => {
@@ -488,7 +488,8 @@ function renderAlbum(album) {
         const res = store.removeFromAlbum(album.id, id);
         if (!res.ok) { ui.toast("Can't change album"); return; }
         if (res.deleted && lib.app.state.currentId === id) lib.app.state.currentId = null;
-        ui.toast(res.deleted ? `Deleted ${spec.name}` : 'Removed');
+        if (res.deleted) ui.toast('Deleted', `Deleted ${spec.name}`);
+        else ui.toast('Removed', `Removed ${spec.name} from ${album.title}`);
         lib.app.savedChanged();
         lib.app.cardChanged();
       }));
@@ -508,7 +509,7 @@ function renderAlbum(album) {
       const pl = lib.app.state.playlist;
       if (pl && pl.albumId === album.id) lib.app.state.playlist = null;
       store.removeAlbum(album.id);
-      ui.toast('Deleted');
+      ui.toast('Deleted', `Deleted ${album.title}`);
       lib.app.savedChanged();
       closeAlbum();
     }, false));
@@ -527,8 +528,8 @@ function renderMove(album) {
   if (!entry) { lib.mode = null; render(); return; }
   const done = () => { lib.mode = null; lib.moving = null; render(); };
   const go = (target) => {
-    if (!store.moveToAlbum(entry.id, album.id, target.id)) { ui.toast("Can't move it"); return; }
-    ui.toast('Moved');
+    if (!store.moveToAlbum(entry.id, album.id, target.id)) { ui.toast("Can't move", `Can't move ${entry.spec.name}`); return; }
+    ui.toast('Moved', `Moved ${entry.spec.name} to ${target.title}`);
     lib.app.savedChanged();
     lib.app.cardChanged();
     done();
@@ -574,7 +575,7 @@ function renderPicker(album) {
         const res = store.removeFromAlbum(album.id, entry.id);
         if (res.deleted) {
           if (lib.app.state.currentId === entry.id) lib.app.state.currentId = null;
-          ui.toast(`Deleted ${entry.spec.name}`);
+          ui.toast('Deleted', `Deleted ${entry.spec.name}`);
         }
       }
       lib.app.savedChanged();
@@ -678,7 +679,6 @@ export function renderSave() {
     scroller('save', rows.length ? lrows('Albums', rows) : empty('No albums')),
     foot(key('', () => newAlbumThen((a) => {
       app.saveIn(a.id);
-      ui.toast('Saved');
     }), { icon: 'plus', aria: 'New album' })),
   )]);
 }

@@ -185,12 +185,11 @@ merge request is faster and keeps the recipe in this repository.
 
 ## Crackles in the Android app (item 115, a 1.0 blocker, session 30g)
 
-Your checks of 2026-11-22: screen off, on full and Lite alike, on the phone's
-speaker, maybe faintly on the lit lock screen. 30g will ask for one listen to
-its fix. Two small ones, whenever you can:
-
-- **Press Home while it plays, screen on,** two minutes: any crackle?
-- **Chrome:** was the screen off when you heard none there?
+Your checks of 2026-11-22 are all in (`docs/notes/115-crackles.md`): only in
+the app with the screen off (maybe faintly on the lit lock screen), on full
+and Lite; clean behind Home and other apps, and in Chrome with the screen on
+or off. Nothing more to try: 30g will ask for one listen to its fix. Until
+then, the site in Chrome for listening with the screen off.
 
 ## The Android app, screen off (item 107d, v188, PR #431)
 

@@ -31,8 +31,17 @@ but it's not at the black lock screen and I can still see my phone
 background. But those crackles are very brief so I'm not even sure if they
 are there or I am hearing something that's not there."
 
-Not yet known: Chrome with the screen off; the app behind another with the
-screen on (Home); headphones.
+**His fourth answer, the same evening, settles both open questions:**
+"E9T-ZxDxj stays clean when on the home screen or even when in other apps.
+I tried chrome with the screen on and off with both lite and no lite- no
+crackles".
+
+| | screen on, in front | screen on, behind Home or another app | screen off |
+|---|---|---|---|
+| the app | clean (full and Lite) | clean | crackles (full and Lite) |
+| the site in Chrome | clean (full and Lite) | not tried | clean (full and Lite) |
+
+Not yet known: headphones.
 
 Diagnostics after it (copied paused, the stream stopped): late, missed,
 dropped and underruns all 0 again, so **the counters don't see these
@@ -92,11 +101,8 @@ reset-on-fork), reopens 0.
   (<https://android.googlesource.com/platform/external/oboe/+/7d25f15f%5E/docs/notes/glitches.md>);
   a report of the same crackles on other phones eased with the mode None
   (<https://github.com/google/oboe/issues/564>). Neither is about the screen.
-- **Or the app not being in front, the dark screen only making it worse**
-  (if the faint crackles on the lit lock screen are real). Android moves an
-  app that isn't on top to fewer or smaller cores, a foreground service's too,
-  and a real-time thread stays within the cores it is given. Crackles after
-  Home, the screen on, would show it.
+- Not being in front isn't enough by itself: Home and other apps are clean.
+  The lit lock screen's faint ones, if real, go with the screen locking.
 - The speaker's own path (its protection and processing) adds to it:
   headphones would show that.
 - A paused page is frozen after a minute with the screen off, and the lock
@@ -111,8 +117,8 @@ reset-on-fork), reopens 0.
   browser's, never measured for the app's 32 ms buffer and real-time thread.
   His choice since ("yours") hides the reason it moved.
 - `AAudioStream_getXRunCount` misses glitches on this phone's path. The
-  samples themselves are unlikely to be at fault: the same loop is clean with
-  the screen on.
+  samples are very unlikely to be at fault: the same loop is clean with the
+  screen on, and in Chrome with it off.
 - The long tasks are the blocking boxes (`prompt`: paste code, Name) waiting
   for him, not work.
 

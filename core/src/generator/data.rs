@@ -465,6 +465,11 @@ pub struct Longform {
     pub lengths: [f64; 2],
     /// How long a move glides, in seconds, where it can.
     pub glide: f64,
+    /// The share of loops made with no length asked that are long pieces
+    /// (`[longform unasked]`, queue item 117: Mikey's "Sometimes").
+    pub unasked: f64,
+    /// Their lengths, in bars, by weight: each past the loop's own.
+    pub unasked_lengths: NumPool,
 }
 
 /// How a long piece's units meet (`[longform joins]`, session 15): how

@@ -22,7 +22,7 @@ use std::cell::Cell;
 use dlcore::block::Event;
 use dlcore::generator::Generator;
 use dlcore::generator::canon::Fnv;
-use dlcore::generator::data::CHARACTERS;
+use dlcore::generator::data::{CHARACTERS, LONGFORM};
 use dlcore::generator::piece::{self, Piece, SECTION_BARS};
 use dlcore::generator::request::{BAD_LENGTH, LENGTH_MOST, Length};
 use dlcore::generator::rng::Rng;
@@ -244,6 +244,45 @@ fn nothing_asked_draws_as_ever() {
                 if asked > SECTION_BARS {
                     assert_eq!(x.bars, y.bars, "{seed}");
                 }
+            }
+        }
+    });
+}
+
+#[test]
+fn nothing_asked_is_sometimes_a_long_piece() {
+    // Queue item 117 (Mikey, 2026-11-23: "Sometimes"): with no length asked
+    // about a loop in ten is a long piece, of a length from `[longform
+    // unasked]`, never Endless, with a journey drawn; and the draw is its
+    // own stream, so the loop itself is what a long length asked makes of
+    // the same seed (every other draw where it was, the loop's own bars).
+    roomy(|| {
+        let lengths = LONGFORM.unasked_lengths;
+        let mut rng = Rng::new(20_261_009);
+        let mut drawn = Box::new(Generator::new());
+        let mut asked = Box::new(Generator::new());
+        let (n, mut long) = (2000, 0);
+        for _ in 0..n {
+            let seed = rng.seed32();
+            drawn.load_with(seed, &Request::new());
+            let Some(length) = drawn.spec().length else { continue };
+            long += 1;
+            let Length::Bars(bars) = length else { panic!("{seed}: Endless is only ever asked") };
+            // Whole bars, compared exactly.
+            assert!(lengths.iter().any(|&(of, _)| of.to_bits() == bars.to_bits()), "{seed}: {bars} bars is no length of the list");
+            assert!(drawn.form().is_some(), "{seed}: a long piece has a plan, and so a journey");
+            asked.load_with(seed, &asking(bars));
+            let (x, y) = (drawn.spec(), asked.spec());
+            assert_eq!((x.bars, x.bpm, x.root, x.scale, x.swing, x.layer_seeds, x.tone, x.steps_per_bar), (y.bars, y.bpm, y.root, y.scale, y.swing, y.layer_seeds, y.tone, y.steps_per_bar), "{seed}");
+            assert!(x.bars <= SECTION_BARS, "{seed}: the loop keeps its style's bars");
+        }
+        let share = f64::from(long) / f64::from(n);
+        assert!((0.08..=0.12).contains(&share), "{long} of {n} long: about one in ten");
+        // A length asked, short or long, is never overruled by the draw.
+        for seed in [7, 1_086_007_177, 819_045_617] {
+            for bars in [8.0, 1024.0] {
+                asked.load_with(seed, &asking(bars));
+                assert_eq!(asked.spec().length, Some(Length::Bars(bars)), "{seed}");
             }
         }
     });

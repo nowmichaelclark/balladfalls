@@ -725,8 +725,8 @@ impl Form {
     /// The plan of the piece of `spec`, made with `edits` (the request's:
     /// a tone edited is never moved), whose loop plays the layers `present`
     /// (a bit each in `LAYERS`' order). None for a loop that is no long
-    /// piece: no length asked, or one of up to 32 bars, which plays as it
-    /// always has.
+    /// piece: no length (asked, or drawn with none asked: queue item 117),
+    /// or one of up to 32 bars, which plays as it always has.
     #[must_use]
     pub fn of(spec: &Spec, edits: &Edits, present: u8) -> Option<Form> {
         Self::of_loop(spec, edits, present, 0b1_1111)

@@ -883,6 +883,18 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
     arc.only(&["minutes", "long", "small", "need", "full", "short", "energy.*", "peak", "height", "second", "returns", "builds", "close", "common", "dark", "stay", "kinds", "gentle", "prepare", "call", "outline"]);
     let wander = find("wander");
     wander.only(&["hold", "sections", "key", "theme", "density", "apart", "reach", "lengths", "glide"]);
+    // A long piece with no length asked (queue item 117): a share, and
+    // lengths past the loop's own (a whole number of bars, 33 up: a shorter
+    // one would be a loop), never Endless.
+    let unasked = find("unasked");
+    unasked.only(&["share", "lengths"]);
+    let share = unasked.num("share").unwrap_or_else(|| panic!("{}: missing", unasked.at("share")));
+    assert!((0.0..=1.0).contains(&share), "{}: expected a share, 0 to 1", unasked.at("share"));
+    let lengths = unasked.numpool("lengths").unwrap_or_else(|| panic!("{}: missing", unasked.at("lengths")));
+    assert!(!lengths.is_empty(), "{}: expected a length", unasked.at("lengths"));
+    for &(bars, w) in &lengths {
+        assert!(bars > 32.0 && bars.fract() == 0.0 && bars <= 32_768.0 && w > 0.0, "{}: expected whole bars from 33 to 32,768, each with a weight", unasked.at("lengths"));
+    }
     let mut energy = String::from("&[");
     for (part, key) in arc.parts("energy") {
         assert!(ROLES.contains(&part.as_str()), "{}: no such role", arc.at(&key));
@@ -891,7 +903,7 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
     energy.push(']');
     let _ = writeln!(
         out,
-        "/// The long pieces' numbers (`data/longform.txt`).\npub static LONGFORM: Longform = Longform {{ weights: {}, endless: {}, vibes: {}, minutes: {}, long: {}, small: {}, need: {}, full: {}, short: {}, energy: {}, peak: {}, height: {}, second: {}, returns: {}, builds: {}, close: {}, common: {}, dark: {}, stay: {}, kinds: {}, gentle: {}, prepare: {}, call: {}, outline: {}, hold: {}, sections: {}, key: {}, theme: {}, density: {}, apart: {}, reach: {}, lengths: {}, glide: {} }};",
+        "/// The long pieces' numbers (`data/longform.txt`).\npub static LONGFORM: Longform = Longform {{ weights: {}, endless: {}, vibes: {}, minutes: {}, long: {}, small: {}, need: {}, full: {}, short: {}, energy: {}, peak: {}, height: {}, second: {}, returns: {}, builds: {}, close: {}, common: {}, dark: {}, stay: {}, kinds: {}, gentle: {}, prepare: {}, call: {}, outline: {}, hold: {}, sections: {}, key: {}, theme: {}, density: {}, apart: {}, reach: {}, lengths: {}, glide: {}, unasked: {}, unasked_lengths: {} }};",
         named(&journey, "weights", &["arc", "wander"]),
         journey.need_num("endless"),
         leaning(&journey, "vibes"),
@@ -924,7 +936,9 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
         wander.need_num("apart"),
         wander.need_num("reach"),
         wander.need_range("lengths"),
-        wander.need_num("glide")
+        wander.need_num("glide"),
+        f(share),
+        show_numpool(lengths)
     );
     // How an arc's energy is heard (session 13): each layer that may fade,
     // by name, with the two energies of its fade.

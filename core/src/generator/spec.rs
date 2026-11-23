@@ -64,9 +64,14 @@ pub struct Spec {
     /// The theme asked (queue item 85d): the seed whose loop this one bends,
     /// kept, so `metre` finds its gait again and a share code carries it.
     pub theme: Option<u32>,
-    /// The length asked (queue item 88), kept: the piece's (`piece::Piece`),
-    /// and a share code carries it.
+    /// The piece's length (`piece::Piece`): the one asked (queue item 88),
+    /// which a share code carries, or with none asked one drawn from the
+    /// seed for about a loop in ten (queue item 117), which a code leaves to
+    /// the seed (the request is what a code writes).
     pub length: Option<Length>,
+    /// Whether `length` was drawn, none asked (queue item 117): the page's
+    /// record says so (`lengthDrawn`), so its request leaves it to the seed.
+    pub length_drawn: bool,
     /// The journey asked of a long piece (queue item 102), kept the same
     /// way; not written among the spec's text, which is as it was.
     pub journey: Option<request::Journey>,
@@ -152,6 +157,7 @@ impl Spec {
         pins: request::Pins::NONE,
         theme: None,
         length: None,
+        length_drawn: false,
         journey: None,
         version: 0,
         keys: 0,
@@ -331,7 +337,7 @@ impl Spec {
             w.num(f64::from(self.layer_seed(layer)));
         }
         w.end_obj();
-        write_length(w, self.length);
+        write_length(w, self.length, self.length_drawn);
         w.key("mix");
         write_weights(w, &self.mix, |k| CHARACTERS[k].id);
         w.key("mood");
@@ -750,6 +756,9 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         Some(Length::Bars(n)) if n <= SECTION_BARS => n,
         _ => bars,
     };
+    // With no length asked, sometimes a long piece (queue item 117): its own
+    // stream, so a loop that stays short draws everything as before.
+    let length = request.length().or_else(|| unasked_length(seed));
     // A theme keeps its own gait and metre; a tempo asked then plays in it.
     let gait = match (request.theme(), &held) {
         (Some(th), Some(_)) => theme_gait(th, &mix, request.version()),
@@ -846,7 +855,8 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         tempo: t,
         pins: *request.pins(),
         theme: request.theme(),
-        length: request.length(),
+        length,
+        length_drawn: request.length().is_none() && length.is_some(),
         journey: request.journey(),
         version: request.version(),
         keys: request.keys(),
@@ -865,8 +875,30 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     spec
 }
 
-/// The length asked, if one was (`length`: its bars, or "endless").
-fn write_length<S: Sink>(w: &mut Writer<S>, length: Option<Length>) {
+/// Salts the stream a loop with no length asked draws a long piece from.
+const UNASKED_SALT: u32 = 0x4c4f_4e47;
+
+/// A long piece for a loop made with no length asked (queue item 117; Mikey,
+/// 2026-11-23: "Sometimes"): `[longform unasked]`'s share of loops, each a
+/// length from its list by weight, both drawn from the seed alone on a
+/// stream of its own, so no other draw moves and a loop that stays short
+/// plays exactly as before. The loop keeps the bars its style drew; the
+/// piece is sections of it, as a long length asked is, and its journey is
+/// drawn as any long piece's (`longform::Form`). Never Endless: that is
+/// only ever asked. A code still writes no length (the request has none):
+/// the seed draws it again.
+fn unasked_length(seed: u32) -> Option<Length> {
+    let mut r = Rng::new(js::salted(seed, UNASKED_SALT, 1));
+    let long = &data::LONGFORM;
+    if !(r.f() < long.unasked) {
+        return None;
+    }
+    r.weighted(long.unasked_lengths).map(Length::Bars)
+}
+
+/// The length the loop's piece is (`length`: its bars, or "endless"):
+/// asked, or drawn with none asked, which `lengthDrawn` says.
+fn write_length<S: Sink>(w: &mut Writer<S>, length: Option<Length>, drawn: bool) {
     match length {
         Some(Length::Bars(n)) => {
             w.key("length");
@@ -877,6 +909,10 @@ fn write_length<S: Sink>(w: &mut Writer<S>, length: Option<Length>) {
             w.str("endless");
         }
         None => {}
+    }
+    if drawn {
+        w.key("lengthDrawn");
+        w.bool(true);
     }
 }
 

@@ -298,8 +298,15 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   sessions 30h to 30n (`docs/sessions/README.md`), his four answers in
   `docs/DECISIONS.md`; the new name stays out of the repo (30l's icon is left
   open for 31). **Order:** 30h and 30i first, then 30j beside 30l, 30k beside
-  30m, then 30n beside 30g's Left list. **Running:** 30h (v202, branch
-  `s30h-timeline`) and 30i (v203, `s30i-any-bars`), started 2026-11-23.
+  30m, then 30n beside 30g's Left list. **Merged:** #462 (30i, v203: any
+  bars sometimes a long piece, 10.25% of 10,000, `tools/unasked.mjs`; the
+  longform references now the loop's own bars, checked sample for sample),
+  #461 (30h, v204: the timeline a slider, a jump held while paused, the way
+  back gone; ten rows 10 of 10 on 565a050, the export row's one failure in
+  forty unexplained). v202 unused. **Running:** 30j (#463, v205). **Cards
+  for Mikey** (the app starts no session on an automated turn): 30l, 30m.
+  **Learned:** two export dispatches on one ref a second apart cancel the
+  first while pending (its concurrency group): dispatch ten rows alone.
 - **Brain B-parallel 3 (Opus 5.5, 2026-11-22 to 23, in Claude Code; ended
   at Mikey's word, the next brain to take his list: `brain-parallel-4.md`).**
   **Merged:** 30d (#446, v192), 30c (#448, v193), 24c (#450, v194), 30e

@@ -1480,6 +1480,14 @@ async function main() {
       const own = (await owns()).pop();
       row('picks: the next new loop is the core\'s own and leans on them', (p.d.vibes || '').split('|').some((x) => x.startsWith(`${vibe}:`)) && p.d.name === (await name())
         && own && own.seed === Number(p.d.seed), `${vibe}: ${p.d.vibes}`);
+      // With nothing asked of the bars, about 1 new loop in 10 is a long
+      // piece the core drew (queue item 117), which ends: the rows after
+      // (the export's) want a loop that plays on, so Next again past one.
+      for (let i = 0; i < 6 && p.d.length != null; i++) {
+        await key('Alt+Shift+ArrowRight');
+        await sleep(3000);
+        p = await probe();
+      }
     }
     await ev(() => document.getElementById('vibesClear').click());
 
@@ -2934,8 +2942,10 @@ async function pickerRows(browser) {
   await tab.goto(`${ORIGIN}/`);
   await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
   await sleep(1500);
-  await tab.click('#playBtn');
-  await sleep(3000);
+  // A fixed first loop that plays on (a fresh one may be a long piece the
+  // core drew, which ends), pasted as a listener would.
+  await tev((code) => { window.__rows.clip = code; document.getElementById('pasteCode').click(); }, LOOPS.shatter.code);
+  await sleep(3500);
   const probe = async () => {
     const m = await tev(() => window.__rows.probe());
     return m ? { ...m, d: about(m.about) } : null;
@@ -2944,7 +2954,7 @@ async function pickerRows(browser) {
   const sent = () => tev(() => window.__rows.posts.filter((m) => m.type === 'playPicks'));
   const line = (id) => tev((i) => {
     const b = document.querySelector(`#picksList .pk-go-${i}`);
-    return b ? { text: b.textContent.trim(), label: b.getAttribute('aria-label') } : null;
+    return b ? { text: b.textContent.replace(/\u00a0/g, ' ').trim(), label: b.getAttribute('aria-label') } : null;
   }, id);
   // What a picker shows: its value line (or number), the keys lit on the
   // page shown, the any key, the page, the tab.
@@ -3128,9 +3138,14 @@ async function pickerRows(browser) {
   const bpm = Number(d.bpm);
   const mix = (d.mix || '').split('|').map((x) => x.split(':'));
   const plays = (d.layers || '').split('|');
-  row('pickers: the next loop, the core\'s own, is drawn under them: 70 to 85 bpm, D or G dorian, tide, no drums, the melody playing',
-    d.seed !== playing && bpm >= 70 && bpm <= 85 && ['2', '7'].includes(d.root) && d.scale === 'dorian' && mix.length === 1 && mix[0][0] === 'tide' && plays[0] === '0' && plays[3] === '1',
-    `${d.bpm} bpm, root ${d.root} ${d.scale}, mix ${d.mix}, layers ${d.layers}`);
+  // A layer off is the loop's own mute (core/src/generator/asked.rs): drawn,
+  // and silent; the Layers view shows it off.
+  for (let i = 0; i < 3 && await tev(() => document.getElementById('viewLayers').hidden); i++) await tab.click('#viewBtn');
+  await sleep(400);
+  const drums = await tev(() => document.querySelector('.layer[data-layer="drums"] .btn-on').getAttribute('aria-checked'));
+  row('pickers: the next loop, the core\'s own, is drawn under them: 70 to 85 bpm, D or G dorian, tide, the drums off, the melody playing',
+    d.seed !== playing && bpm >= 70 && bpm <= 85 && ['2', '7'].includes(d.root) && d.scale === 'dorian' && mix.length === 1 && mix[0][0] === 'tide' && drums === 'false' && plays[3] === '1',
+    `${d.bpm} bpm, root ${d.root} ${d.scale}, mix ${d.mix}, drums on ${drums}, layers drawn ${d.layers}`);
   await tev(() => {
     window.__rows.clip = '';
     if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
@@ -3141,7 +3156,7 @@ async function pickerRows(browser) {
   let back = null;
   try { back = decodeSong(await tev(() => window.__rows.clip)); } catch (err) { back = { error: err.message }; }
   row('pickers: its spec, read back from its share code, carries what was asked: the tempo, the notes and the scale, the style, the voice and the layers',
-    back && back.seed >>> 0 === Number(d.seed) && JSON.stringify(back.tempo) === '[70,85]' && JSON.stringify(back.askKey) === '[2,7]' && JSON.stringify(back.askScale) === '["dorian"]'
+    back && back.seed >>> 0 === Number(d.seed) && back.mutes && back.mutes.drums === true && JSON.stringify(back.tempo) === '[70,85]' && JSON.stringify(back.askKey) === '[2,7]' && JSON.stringify(back.askScale) === '["dorian"]'
       && JSON.stringify(back.askStyle) === '["tide"]' && JSON.stringify(back.askVoices) === '{"melody":["kalimba"]}' && JSON.stringify(back.askLayers) === '{"drums":"off","melody":"on"}',
     back && JSON.stringify({ tempo: back.tempo, key: back.askKey, scale: back.askScale, style: back.askStyle, voices: back.askVoices, layers: back.askLayers, error: back.error }));
 
@@ -3154,6 +3169,9 @@ async function pickerRows(browser) {
   const kept = [];
   for (const id of ['tempo', 'key', 'style', 'voices']) kept.push((await line(id)).text);
   row('pickers: the picks kept across a reload', kept.join(' | ') === '70–85 bpm | D or G dorian | tide | kalimba, no drums, melody always', kept.join(' | '));
+  // Playing again, so there is a core to send the picks to.
+  await tab.click('#playBtn');
+  await sleep(3000);
 
   // A picker opens on what is picked: the scale's page, the lit keys.
   await openLine('style');

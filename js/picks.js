@@ -336,7 +336,8 @@ export function renderPanel() {
       // Track length view's key (session 30c): the loop playing's, not a
       // pick for new loops, so the line's any key leaves it.
       const tb = lineButton('pk-go-tempo', () => api.openPicker('tempo'));
-      tb.setAttribute('aria-label', `Tempo: ${tempo ? spoken(tempoText(tempo)) : 'any tempo'}`);
+      // The words on it, said whole (WCAG 2.5.3): "Tempo: 70–85 bpm".
+      tb.setAttribute('aria-label', `Tempo: ${tempo ? tempoText(tempo).replace(/\u00a0/g, ' ') : 'any tempo'}`);
       if (isAny.pace) {
         tb.append(plain('any tempo'));
         vals.append(tb);

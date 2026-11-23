@@ -200,6 +200,12 @@ function renderTempo() {
   const anyKey = el('tmpAny');
   anyKey.classList.toggle('armed', any);
   anyKey.setAttribute('aria-pressed', any ? 'true' : 'false');
+  // The number keeps its size until it would not fit between −1 and +1
+  // (a range at large text), then steps down, as Bars' does.
+  num.style.fontSize = '';
+  for (let i = 0; i < 10 && num.scrollWidth > num.clientWidth + 1; i++) {
+    num.style.fontSize = `${parseFloat(getComputedStyle(num).fontSize) * 0.9}px`;
+  }
 }
 
 function setTempo(lo, hi) {

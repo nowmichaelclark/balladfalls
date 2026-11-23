@@ -2981,8 +2981,15 @@ async function pickerRows(browser) {
     b.click();
     return true;
   }, [p, text]);
+  // The vibe key is Now Playing's: from anywhere else, there first.
+  const toVibe = async () => {
+    if ((await view()) === 'vibe') return;
+    if ((await view()) !== 'now') { await tab.click('#nowBtn'); await sleep(250); }
+    await tab.click('#vibesBtn');
+    await sleep(250);
+  };
   const openLine = async (id) => {
-    if ((await view()) !== 'vibe') { await tab.click('#vibesBtn'); await sleep(250); }
+    await toVibe();
     await tab.click(`#picksList .pk-go-${id}`);
     await sleep(300);
   };
@@ -3164,8 +3171,8 @@ async function pickerRows(browser) {
   await tab.reload();
   await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
   await sleep(1500);
-  await tab.click('#vibesBtn');
-  await sleep(300);
+  // (It opens where it was left: the Layers view.)
+  await toVibe();
   const kept = [];
   for (const id of ['tempo', 'key', 'style', 'voices']) kept.push((await line(id)).text);
   row('pickers: the picks kept across a reload', kept.join(' | ') === '70–85 bpm | D or G dorian | tide | kalimba, no drums, melody always', kept.join(' | '));

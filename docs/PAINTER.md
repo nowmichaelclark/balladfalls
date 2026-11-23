@@ -25,7 +25,8 @@ used soon. The rest waits for its phase of the core work.
 - **Bottom buttons have no lights or LEDs;** they only change icon (for
   now only the bottom-right Sound / Layers switch does).
 - **Only three settings exist:** the theme, "lighter on processor" and
-  Mono. Everything new below is a pick, a sheet or a message, not a
+  Mono. A fourth comes with item 122 (Mikey, 2026-11-23): the letter keys'
+  switch, in Advanced. Everything new below is a pick, a sheet or a message, not a
   setting.
 - **The music is stereo** (since v116), with a **Mono** switch in the
   settings for anyone who prefers it (Mikey, 2026-10-15). It sits in
@@ -47,8 +48,9 @@ used soon. The rest waits for its phase of the core work.
 - **The panel asks its own height** (the container `middle`: 340, 300,
   240 px): a view closes its gaps by it, and never scrolls to fit.
 - **Targets:** 44 px where there is room, never under 24.
-- **Keys:** no letter, number or symbol does anything alone or with Shift
-  (Mikey, 2026-11-22; WCAG 2.1.4): a shortcut has Alt or Ctrl, and
+- **Keys:** superseded by item 122 (Mikey, 2026-11-23: intuitive over
+  accessible where they pull apart): letter keys as music players have
+  them, and a switch in Advanced to turn them off (WCAG 2.1.4);
   `js/shortcuts.js` lists them.
 - **The bar is WCAG 2.2 AA** in every theme and in forced colors, held by
   `tools/a11y.mjs`: text 4.5:1 (3:1 large), marks and rings 3:1. A hue used

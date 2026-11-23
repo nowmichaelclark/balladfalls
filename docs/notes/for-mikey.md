@@ -13,6 +13,20 @@ list of changes. The rest of the road is cut into sessions, each with a prompt t
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## The timeline (item 116, v204, PR #461)
+
+- **On the Moto (two minutes), a short loop and a long piece:** playing, tap
+  the bar under the time halfway and drag it: the music goes on from there.
+  Pause, tap a quarter along: the bar and the time move, nothing plays; Play
+  starts there. With a Track length (say 3:00), a tap near the end leaves
+  that much to go. Then pick 256 bars, pause, tap the line: the head and
+  "bar N/256" move, and Play starts there. Say if a tap ever misses the bar,
+  or lands somewhere else.
+- **The way back:** play an album, leave it (the arrow key appears), press
+  Next: the arrow key is gone. It also goes when a Track length ends and a
+  new loop starts; it stays when you go back through your history or open a
+  saved loop (no new track there). Say if you want it gone then too.
+
 ## "Any bars" is sometimes a long piece (item 117, v203, session 30i)
 
 - **Two to hear** (corpus seed 20261009, nothing picked; paste the code):

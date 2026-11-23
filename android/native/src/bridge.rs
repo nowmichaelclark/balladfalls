@@ -291,15 +291,7 @@ impl Bridge {
             }
             "playJump" => {
                 self.urgent = true;
-                let at = num("at");
-                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, reason = "a whole section number, saturating")]
-                let to = match m.get("kind").u32() {
-                    0 if at.is_finite() && at >= 0.0 => Some(Jump::Section(at as u64)),
-                    1 => Some(Jump::Bar(at)),
-                    2 => Some(Jump::Seconds(at)),
-                    _ => None,
-                };
-                Command::Jump(to)
+                Command::Jump(Jump::of(m.get("kind").u32(), num("at")))
             }
             "playTone" => Command::Tone([num("warmth"), num("space"), num("wobble")]),
             "probe" => Command::Probe(num("id")),
@@ -872,5 +864,37 @@ mod tests {
         assert_eq!(p[0].get("lanes").num(), 1.0, "the new player's layout");
         let t = of_type(&posted, "native").last().unwrap().get("time").num();
         assert!(t > 4.9, "the clock went on: {t}");
+    }
+
+    /// Session 30h (queue item 116): the page's rail through the same
+    /// messages as the web's. A step asked while paused is held: the page
+    /// hears where Play goes on from, nothing lands while paused, and Play
+    /// lands on that step; a step asked playing lands on it.
+    #[test]
+    fn a_step_asked_while_paused_lands_at_play_and_one_playing_at_once() {
+        let jumps = |posted: &[Value]| -> Vec<u32> {
+            of_type(posted, "events")
+                .iter()
+                .flat_map(|m| m.get("events").items().chunks(4).filter(|e| e[1].u32() == 8).map(|e| e[3].u32()).collect::<Vec<_>>())
+                .collect()
+        };
+        let (engine, mut bridge) = page("lite");
+        let mut at = Instant::now();
+        post(&engine, &mut bridge, r#"{"type":"playLoad","seed":2693262067,"ask":null,"at":0}"#);
+        let _ = play(&engine, &mut bridge, 4.0, &mut at);
+        post(&engine, &mut bridge, r#"{"type":"playJump","kind":3,"at":37}"#);
+        let posted = play(&engine, &mut bridge, 1.0, &mut at);
+        assert_eq!(jumps(&posted), vec![37], "playing, on the step asked");
+        post(&engine, &mut bridge, r#"{"type":"playStop"}"#);
+        let _ = play(&engine, &mut bridge, 0.5, &mut at);
+        post(&engine, &mut bridge, r#"{"type":"playJump","kind":3,"at":83}"#);
+        let posted = play(&engine, &mut bridge, 1.0, &mut at);
+        assert!(jumps(&posted).is_empty(), "nothing lands while paused");
+        let place = of_type(&posted, "events").iter().rev().map(|m| m.get("place")).find(|p| !p.is_null()).cloned();
+        let place = place.expect("the held place is said");
+        assert!(place.get("bar").num() > 0.0, "where Play goes on from");
+        post(&engine, &mut bridge, r#"{"type":"playResume","at":0}"#);
+        let posted = play(&engine, &mut bridge, 1.0, &mut at);
+        assert_eq!(jumps(&posted), vec![83], "Play goes on from the step held");
     }
 }

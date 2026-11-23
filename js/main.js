@@ -4,7 +4,7 @@ import { Output } from './output.js';
 import { loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES } from './core.js';
 import { nativeBridge, NativeContext } from './native.js';
 import * as quality from './quality.js';
-import { picksAsk, PlayerEngine } from './player.js';
+import { JUMP, picksAsk, PlayerEngine } from './player.js';
 import { patternToMidi } from './midi.js';
 import { AudioExport } from './export.js';
 import { MediaBridge } from './media.js';
@@ -16,7 +16,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v203';
+const BUILD = 'v204';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -134,6 +134,10 @@ const state = {
   lastAlbum: null,
   // Now Playing's last audible position, in steps, held while paused.
   nowSteps: 0,
+  // The rail pressed (session 30h): { id, f } while a finger or the pointer
+  // is down on it, and the step the keys last asked for (and when).
+  railDrag: null,
+  railAsked: null,
   // The spec the cover was last drawn for, so the card is not redrawn when
   // only its words change.
   coverFor: null,
@@ -269,6 +273,8 @@ function makeAudio() {
   // The core's own loops and its answer to the picks (queue item 95).
   engine.onOwn = onOwn;
   engine.onPicks = onPicksHeld;
+  // A jump held while paused (session 30h): the place drawn when it is said.
+  engine.onPlace = () => { if (state.view === 'now') renderNow(); };
   if (state.lastPicks) engine.setPicks(state.lastPicks.ask, state.lastPicks.tag);
   engine.visualOffset = (parseInt(ui.el('playheadSync').value, 10) || 0) / 1000;
   const wander = parseFloat(ui.el('driftAmount').value);
@@ -1110,6 +1116,9 @@ function onOwn(seed, tag) {
       spec = drawSpec(seed, state.vibes);
     }
     state.playlist = null;
+    // A new track made (Next, or the core's own at a track's end): the
+    // album's way back goes until another album is left (session 30h).
+    state.lastAlbum = null;
     if (state.spec) {
       const last = state.history[state.history.length - 1];
       if (!last || JSON.stringify(last) !== JSON.stringify(state.spec)) pushHistory(state.spec);
@@ -1241,6 +1250,7 @@ function updateNowClock() {
   if (!spec || !e || !e.live) {
     setNowText('0:00');
     ui.el('nowFill').style.transform = 'scaleX(0)';
+    sayRail(null, 0);
     piece.updatePiece();
     return;
   }
@@ -1251,20 +1261,144 @@ function updateNowClock() {
   // whole passes, or a phrase line inside one); a loop's own length, however
   // long, never ends it. Today's clock: the long-piece display waits for a
   // Painter session.
-  const end = e.endStep();
-  const round = e.roundSteps();
-  if (end != null) {
-    text = `\u2212${clock(Math.max(0, end - pos) * e.stepDur)}`;
-    frac = Math.min(1, Math.max(0, (pos - e.countFrom) / Math.max(1, end - e.countFrom)));
+  const span = railSpan();
+  const drag = state.railDrag;
+  // Pressed (session 30h): the rail and the clock show where a let-go goes.
+  const at = drag && span ? railStep(span, drag.f) : pos;
+  if (span.track) {
+    text = `\u2212${clock(Math.max(0, span.to - at) * e.stepDur)}`;
+    frac = Math.min(1, Math.max(0, (at - span.from) / (span.to - span.from)));
   } else {
-    const total = Number.isFinite(round) ? round : e.base.totalSteps;
-    text = clock(pos * e.stepDur);
-    frac = (pos % total) / total;
+    text = clock(at * e.stepDur);
+    frac = Math.min(1, Math.max(0, (at - span.from) / (span.to - span.from)));
   }
   setNowText(text);
   ui.el('nowFill').style.transform = `scaleX(${frac.toFixed(4)})`;
+  sayRail(span, at);
   // A long piece's line and where you are (queue item 106b).
   piece.updatePiece();
+}
+
+// ------------------------------------------------ the rail (session 30h)
+
+// What a short loop's rail spans (queue item 116), in steps from the load:
+// the track, from where its count began to where it ends, where a Track
+// length is set; else the round playing, the loop's pass (a short piece's
+// whole length, where its bars picker set one). Null with nothing loaded.
+function railSpan() {
+  const e = state.engine;
+  if (!state.spec || !e || !e.live) return null;
+  const end = e.endStep();
+  if (end != null) return { from: e.countFrom, to: Math.max(e.countFrom + 1, end), track: true };
+  const round = e.roundSteps();
+  const total = Number.isFinite(round) && round > 0 ? round : e.base.totalSteps;
+  const pos = Math.max(0, state.nowSteps || 0);
+  const from = Math.floor(pos / total) * total;
+  return { from, to: from + total, track: false };
+}
+
+// The step at `f` (0 to 1) of the rail: its first at 0, its last at 1.
+function railStep(span, f) {
+  return Math.max(span.from, Math.min(span.to - 1, Math.floor(span.from + f * (span.to - span.from))));
+}
+
+// Go to step `step` of the loop (`Jump::Step`): playing, heard there a few
+// blocks on; paused, the playhead goes there now and Play starts from it.
+// The track's clock moves with it, its fades too (the core's).
+function railSeek(step) {
+  const e = state.engine;
+  if (!e || !e.jumpTo(JUMP.step, step)) return false;
+  state.railAsked = { step, at: performance.now() };
+  if (!e.playing) {
+    state.nowSteps = step;
+    updateNowClock();
+  }
+  return true;
+}
+
+// The rail as a slider says it (a screen reader's; nothing on screen): the
+// time into the track of its length, or the bar of the round. Only rewritten
+// when it moves.
+function sayRail(span, at) {
+  const rail = ui.el('nowRail');
+  let said;
+  if (!span) {
+    said = '';
+  } else if (span.track) {
+    const sd = state.engine.stepDur;
+    const total = Math.round((span.to - span.from) * sd);
+    const into = Math.min(total, Math.round(Math.max(0, at - span.from) * sd));
+    said = `0|${total}|${into}|${clock(into)} of ${clock(total)}`;
+  } else {
+    const spb = (state.spec && state.spec.stepsPerBar) || 16;
+    const bars = Math.max(1, Math.round((span.to - span.from) / spb));
+    const bar = Math.min(bars, Math.floor(Math.max(0, at - span.from) / spb) + 1);
+    said = `1|${bars}|${bar}|bar ${bar} of ${bars}`;
+  }
+  if (rail.dataset.said === said) return;
+  rail.dataset.said = said;
+  if (!said) {
+    rail.setAttribute('aria-disabled', 'true');
+    rail.setAttribute('aria-valuetext', 'nothing playing');
+    return;
+  }
+  const [min, max, now, text] = said.split('|');
+  rail.removeAttribute('aria-disabled');
+  rail.setAttribute('aria-valuemin', min);
+  rail.setAttribute('aria-valuemax', max);
+  rail.setAttribute('aria-valuenow', now);
+  rail.setAttribute('aria-valuetext', text);
+}
+
+// The rail's pointer, finger and keys (session 30h, as the long piece's
+// line): press or drag shows where, let go goes there; the arrows a bar each
+// way, Page Up and Down a phrase (four bars), Home its start, End its last
+// bar.
+function wireRail() {
+  const rail = ui.el('nowRail');
+  const frac = (ev) => {
+    const r = rail.getBoundingClientRect();
+    return r.width > 0 ? Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)) : 0;
+  };
+  rail.addEventListener('pointerdown', (ev) => {
+    if (ev.button > 0 || !railSpan()) return;
+    try { rail.setPointerCapture(ev.pointerId); } catch { /* a pointer that is gone: the move events still come */ }
+    state.railDrag = { id: ev.pointerId, f: frac(ev) };
+    updateNowClock();
+    ev.preventDefault();
+  });
+  rail.addEventListener('pointermove', (ev) => {
+    if (!state.railDrag || ev.pointerId !== state.railDrag.id) return;
+    state.railDrag.f = frac(ev);
+    updateNowClock();
+  });
+  const finish = (ev, go) => {
+    const drag = state.railDrag;
+    if (!drag || ev.pointerId !== drag.id) return;
+    state.railDrag = null;
+    const span = railSpan();
+    if (go && span) railSeek(railStep(span, drag.f));
+    updateNowClock();
+  };
+  rail.addEventListener('pointerup', (ev) => finish(ev, true));
+  rail.addEventListener('pointercancel', (ev) => finish(ev, false));
+  rail.addEventListener('keydown', (ev) => {
+    const span = railSpan();
+    if (!span || ev.altKey || ev.ctrlKey || ev.metaKey) return;
+    const spb = state.spec.stepsPerBar || 16;
+    // Keys held or pressed quickly go on from the last one asked, not from
+    // what is heard yet (a jump is heard a few blocks on).
+    const asked = state.railAsked && performance.now() - state.railAsked.at < 600 ? state.railAsked.step : null;
+    const from = asked != null ? asked : Math.floor(state.nowSteps || 0);
+    const by = { ArrowRight: spb, ArrowUp: spb, ArrowLeft: -spb, ArrowDown: -spb, PageUp: 4 * spb, PageDown: -4 * spb }[ev.key];
+    let to = null;
+    if (by) to = from + by;
+    else if (ev.key === 'Home') to = span.from;
+    else if (ev.key === 'End') to = span.to - spb;
+    if (to == null) return;
+    ev.preventDefault();
+    railSeek(Math.max(span.from, Math.min(span.to - 1, to)));
+  });
 }
 
 // A short screen: the piece's line and words take less room before Now
@@ -1645,8 +1779,11 @@ function setPlayButton(playing) {
 }
 
 function newLoop() {
-  // Making something new is leaving the album.
+  // Making something new is leaving the album, and its way back goes
+  // (session 30h).
   state.playlist = null;
+  state.lastAlbum = null;
+  if (state.view === 'now') renderNow();
   ensureAudio();
   // The core makes it (queue item 95), with the picks it holds; the page
   // catches up when it starts (`onOwn`), which keeps the history and says
@@ -1966,6 +2103,8 @@ function wire() {
     // It goes dim with nothing picked: the focus to close beside it.
     ui.el('vibesClose').focus({ preventScroll: true });
   });
+  // A short loop's rail moves the playhead (session 30h).
+  wireRail();
   // A long piece on Now Playing (queue item 106b): its line, where you are,
   // and the jump (session 17's command).
   piece.wirePiece({

@@ -129,6 +129,31 @@ pub enum Jump {
     /// A time from the piece's start, in seconds at the tempo playing, on
     /// the phrase line at or before it.
     Seconds(f64),
+    /// A step from the load (0), exactly (session 30h, queue item 116: a
+    /// short loop's rail, which a listener presses anywhere): the step
+    /// asked, not a phrase line, and the track's clock moves with it, so a
+    /// time's track ends as long after it as it would have from that step.
+    Step(u64),
+}
+
+impl Jump {
+    /// The jump a host's two numbers say (`dl_play_jump`, the C host's and
+    /// the native app's same command): `kind` 0 a section (`at` a whole
+    /// number), 1 a bar, 2 a time in seconds, 3 a step from the load (a
+    /// whole number). One place reads them, so every host takes the same.
+    /// None for any other kind, or a section or a step that is no number.
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a whole number, saturating
+    pub fn of(kind: u32, at: f64) -> Option<Jump> {
+        let whole = at.is_finite() && at >= 0.0;
+        match kind {
+            0 if whole => Some(Jump::Section(at as u64)),
+            1 => Some(Jump::Bar(at)),
+            2 => Some(Jump::Seconds(at)),
+            3 if whole => Some(Jump::Step(at as u64)),
+            _ => None,
+        }
+    }
 }
 
 /// Where the loop playing is, as a listener hears it (session 17,
@@ -297,6 +322,17 @@ pub struct Player {
     /// pass heard; 4, it lands), one a block, as a load is spread.
     jump_to: u64,
     jumping: u8,
+    /// A jump asked while stopped (session 30h: the app's line pressed while
+    /// paused), taken up at the resume: until then `place` reads it.
+    jump_held: bool,
+    /// A step jump moves a time's track (`Jump::Step`): whether this one
+    /// does, and the seconds of the track left from the step it lands on,
+    /// as the track's clock stood when it was asked.
+    jump_timed: bool,
+    jump_left: f64,
+    /// Whether the track's fade in played at its start (a time set as a
+    /// loop plays has none), so a jump back to it plays it again.
+    track_rose: bool,
 }
 
 impl Player {
@@ -356,6 +392,10 @@ impl Player {
             events: Events::new(),
             jump_to: 0,
             jumping: 0,
+            jump_held: false,
+            jump_timed: false,
+            jump_left: 0.0,
+            track_rose: false,
         }
     }
 
@@ -411,6 +451,7 @@ impl Player {
         self.own = false;
         self.events.clear();
         self.jumping = 0;
+        self.jump_held = false;
         let now = self.now(host);
         self.synth.start(host, rate, !full, now);
     }
@@ -447,6 +488,7 @@ impl Player {
         self.resumed = false;
         self.own = false;
         self.jumping = 0;
+        self.jump_held = false;
     }
 
     /// `load_at` for a loop that was already playing on another core (queue
@@ -685,6 +727,8 @@ impl Player {
         self.track = track;
         self.fades = fades;
         self.ended = false;
+        // A step's jump held counts from the new track, not the old one's clock.
+        self.jump_timed = false;
         let now = self.now(host);
         self.track_at = match track {
             Track::Seconds(n) if self.state == State::Playing => now + f64::from(n),
@@ -777,6 +821,7 @@ impl Player {
     fn plan_track(&mut self, from: f64, fresh: bool) {
         let (fade_in, fade_out) = self.track.fade_lengths(self.fades);
         let rises = fresh && fade_in > 0.0;
+        self.track_rose = rises;
         // A fade in where the gain stands above silence dips there first,
         // to be at silence on the loop's first step.
         let dip = if rises && self.gain_at(from) > 0.0 { GAIN_DIP } else { 0.0 };
@@ -803,6 +848,44 @@ impl Player {
                 self.gain_push(down, 1.0);
             }
             self.gain_push(end, 0.0);
+        }
+        self.replan = true;
+    }
+
+    /// The gain's plan after a step's jump moved a time's track (session
+    /// 30h): what it holds at `from` kept, gliding over `GAIN_DIP` to where
+    /// the track's own fades have it on its clock there (part way up its
+    /// fade in, or down its fade out, or at its level), and its fades from
+    /// there as they would have come.
+    fn plan_moved(&mut self, from: f64) {
+        let Track::Seconds(n) = self.track else { return };
+        let (fade_in, fade_out) = self.track.fade_lengths(self.fades);
+        let fade_in = if self.track_rose { fade_in } else { 0.0 };
+        let end = self.track_at;
+        let begun = end - f64::from(n);
+        let level = |t: f64| {
+            let up = if fade_in > 0.0 { ((t - begun) / fade_in).clamp(0.0, 1.0) } else { 1.0 };
+            let down = if fade_out > 0.0 { ((end - t) / fade_out).clamp(0.0, 1.0) } else { 1.0 };
+            js::min(up, down)
+        };
+        let at = self.gain_at(from);
+        let keep = self.gain[..self.gain_len].iter().take_while(|p| p.0 < from).count();
+        self.gain_len = keep;
+        self.gain_push(from, at);
+        let to = from + GAIN_DIP;
+        self.gain_push(to, level(to));
+        let up = begun + fade_in;
+        if up > to {
+            self.gain_push(up, level(up));
+        }
+        if fade_out > 0.0 {
+            let down = end - fade_out;
+            if down > to && down > up {
+                self.gain_push(down, level(down));
+            }
+            if end > to {
+                self.gain_push(end, 0.0);
+            }
         }
         self.replan = true;
     }
@@ -851,14 +934,18 @@ impl Player {
     }
 
     /// The step from the loop's load the track ends at, as it stands; none
-    /// while it plays on (or nothing plays).
+    /// while it plays on (or nothing plays, or it has ended).
     #[must_use]
     pub fn track_end(&self) -> Option<u64> {
-        if self.state != State::Playing {
+        // Stopped, where it stood (session 30h: a jump while paused is told
+        // with the track's end, which the app's rail is drawn to); none once
+        // it has ended.
+        let live = self.state == State::Playing || (self.paused() && !self.ended);
+        if !live {
             return None;
         }
-        if let Some(t) = self.track_at() {
-            return Some(self.step_at(t));
+        if matches!(self.track, Track::Seconds(_)) && self.track_at > 0.0 {
+            return Some(self.step_at(self.track_at));
         }
         self.track.end_step(self.generator.spec(), self.count_from)
     }
@@ -913,9 +1000,12 @@ impl Player {
     /// Stop deciding (the app's Pause): the loop stays loaded, a load under
     /// way is dropped, and what was handed over plays out (a host that wants
     /// silence at once cancels it, `Core::cancel`). The changes waiting are
-    /// dropped.
+    /// dropped; a jump under way is held, to land at the resume.
     pub fn stop(&mut self) {
         self.pending = [Maybe::NONE; SLOTS];
+        if self.jumping != 0 && self.state == State::Playing {
+            self.jump_held = true;
+        }
         self.jumping = 0;
         if self.state == State::Loading || self.state == State::Wandering {
             self.state = State::Idle;
@@ -930,9 +1020,14 @@ impl Player {
     /// it stood, its next step at `at` seconds on the core's clock (or as
     /// soon as the next block, if that has passed).
     pub fn resume(&mut self, at: f64) {
-        if self.state == State::Idle && self.generator.stage() == crate::generator::Stage::Done && self.seq.bpm > 0.0 {
+        if self.paused() {
             self.resume_at = Some(if at.is_finite() { at } else { 0.0 });
         }
+    }
+
+    /// Stopped with a loop made (`stop`), which `resume` goes on with.
+    fn paused(&self) -> bool {
+        self.state == State::Idle && self.generator.stage() == crate::generator::Stage::Done && self.seq.bpm > 0.0
     }
 
     /// Make what is left of the loop asked for, now, and start it (its first
@@ -986,10 +1081,14 @@ impl Player {
     /// blocks after it is asked. What plays there is what playing would have
     /// reached (`Sequencer::jumped` says what that takes); it is told as
     /// `Kind::Jump`. A change waiting waits on, worked out from the new
-    /// place; the track counts as it did, from the load. False, and nothing
-    /// moves, with no loop playing or for a place that is not a number.
+    /// place; the track counts as it did, from the load, but for a step
+    /// (`Jump::Step`), which moves a time's track with it. Stopped (the
+    /// app's Pause), it is held: `place` reads it, and it lands as `resume`
+    /// goes on, from there (session 30h). False, and nothing moves, with no
+    /// loop playing or stopped, or for a place that is not a number.
     pub fn jump(&mut self, to: Jump) -> bool {
-        if self.state != State::Playing {
+        let paused = self.paused();
+        if self.state != State::Playing && !paused {
             return false;
         }
         let spec = self.generator.spec();
@@ -1003,16 +1102,43 @@ impl Player {
             Jump::Section(n) => Self::section_start(spec, n),
             Jump::Bar(b) if b.is_finite() && b >= 0.0 => track::phrase_before(spec, (js::floor(b) * spb) as u64),
             Jump::Seconds(t) if t.is_finite() && t >= 0.0 => track::phrase_before(spec, js::floor(t / sd) as u64),
+            Jump::Step(n) => n,
             _ => return false,
         };
-        // A piece that comes round: within its round, its last line at most.
+        // A piece that comes round: within its round, its last line at most
+        // (a step is the one asked, in any round).
         let target = match (Piece::of(spec).and_then(|p| p.end), track::round_steps(spec)) {
-            (Some(_), Some(round)) if target >= round => track::phrase_before(spec, round - 1),
+            (Some(_), Some(round)) if target >= round && !matches!(to, Jump::Step(_)) => track::phrase_before(spec, round - 1),
             _ => target,
         };
+        // A step moves a time's track: what is left of it from there.
+        let left = if matches!(to, Jump::Step(_)) { self.track_left_at(target) } else { None };
+        self.jump_timed = left.is_some();
+        self.jump_left = left.unwrap_or(0.0);
         self.jump_to = target;
-        self.jumping = 1;
+        self.jumping = if paused { 0 } else { self.first_stage() };
+        self.jump_held = paused;
         true
+    }
+
+    /// A jump's first stage (`jump_stage`): the section's second tune for a
+    /// piece with a plan; a loop with none has no tune to make, so it starts
+    /// at its pass, a block sooner (a short loop's rail, heard within 0.06 s).
+    fn first_stage(&self) -> u8 {
+        if self.journeyed { 1 } else { 2 }
+    }
+
+    /// The seconds of a time's track left from step `step` (from the load),
+    /// on the track's clock as it stands: its second, less the time that
+    /// step falls at at the tempo playing. None for any other track, or a
+    /// time not yet counting.
+    #[allow(clippy::cast_precision_loss)] // steps, far below 2^53
+    fn track_left_at(&self, step: u64) -> Option<f64> {
+        let sd = self.seq.step_dur();
+        if !(matches!(self.track, Track::Seconds(_)) && self.track_at > 0.0 && sd.is_finite() && sd > 0.0) {
+            return None;
+        }
+        Some(self.track_at - (self.seq.next_step_time + (step as f64 - self.seq.abs_step as f64) * sd))
     }
 
     /// The first step of section `n` (a loop's pass) from the piece's start.
@@ -1095,6 +1221,16 @@ impl Player {
         if self.track.end_step(self.generator.spec(), self.count_from).is_some_and(|end| abs < end) {
             self.ended = false;
         }
+        // A step's jump moves a time's track (session 30h): it ends as long
+        // after the step as it would have from there, its fades with it.
+        if self.jump_timed && matches!(self.track, Track::Seconds(_)) && self.track_at > 0.0 {
+            self.track_at = start + self.jump_left.max(0.0);
+            if self.track_at > start {
+                self.ended = false;
+            }
+            self.plan_moved(start);
+        }
+        self.jump_timed = false;
         self.events.push(Event { time: start, kind: Kind::Jump, number: abs, step: abs });
     }
 
@@ -1104,7 +1240,9 @@ impl Player {
     #[must_use]
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole steps, far below 2^53
     pub fn place<H: Host>(&self, host: &H) -> Option<Place> {
-        if self.state != State::Playing {
+        // Stopped with a jump held (session 30h): where it will go on from.
+        let held = self.jump_held && self.paused();
+        if self.state != State::Playing && !held {
             return None;
         }
         let spec = self.generator.spec();
@@ -1114,7 +1252,7 @@ impl Player {
             return None;
         }
         let ahead = js::ceil((self.seq.next_step_time - self.now(host)) / sd).max(0.0) as u64;
-        let heard = self.seq.abs_step.saturating_sub(ahead);
+        let heard = if held { self.jump_to } else { self.seq.abs_step.saturating_sub(ahead) };
         let endless = Piece::of(spec).is_some_and(|p| p.end.is_none());
         let round = if endless { None } else { track::round_steps(spec) };
         let into = round.map_or(heard, |r| heard % r);
@@ -1128,9 +1266,16 @@ impl Player {
         };
         // A time's track: the seconds to its end, or the round's, sooner.
         let left = left.map(|l| l as f64 * sd);
-        let left = match self.track_at() {
-            Some(t) => {
-                let to = (t - self.now(host)).max(0.0);
+        // Held, the track's clock as it stands at the pause (or, for a
+        // step's jump, as it will stand there).
+        let to = if held {
+            self.track_left_at(if self.jump_timed { self.jump_to } else { self.seq.abs_step })
+        } else {
+            self.track_at().map(|t| t - self.now(host))
+        };
+        let left = match to {
+            Some(to) => {
+                let to = to.max(0.0);
                 Some(match round {
                     Some(r) => to.min((r - into) as f64 * sd),
                     None => to,
@@ -1785,6 +1930,12 @@ impl Player {
             // Written again whatever moved: a host's stop may have cancelled
             // what was scheduled.
             self.replan = self.replan || self.gain_moved;
+            // A jump asked while stopped lands now, a stage a block, and
+            // the music goes on from there (session 30h).
+            if self.jump_held {
+                self.jump_held = false;
+                self.jumping = self.first_stage();
+            }
         }
         if self.state != State::Playing {
             return Work::None;

@@ -517,9 +517,11 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   const count = () => ev(() => window.__rows.exports.length);
   const lateLine = async () => (await diag()).split('\n').find((l) => l.startsWith('engine:')) || '';
   const nothingLate = (line) => /late: 0\s+missed: 0\s+dropped: 0/.test(line);
+  // Three seconds of listening (session 30h: 1.5 s fell in a quiet start once
+  // in forty runs, a new loop opening after the track's end).
   const playing = async () => {
     const p = await probe();
-    return p && p.player.state === 3 && (await level(1500)) > 1e-4;
+    return p && p.player.state === 3 && (await level(3000)) > 1e-4;
   };
   const setLite = async (on) => {
     const now = await ev(() => document.getElementById('liteMode').getAttribute('aria-checked') === 'true');
@@ -577,7 +579,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     row(`export audio (${pace}): a minute to the file chosen, written as it went, a FLAC of the loop playing that ends where the core says, the music on and nothing late`,
       done && done.type === 'done' && start.pace === pace && start.sink === 'handle' && file.size === done.bytes && si && si.rate === 44100 && si.bits === 16 && si.total === done.frames
       && done.seconds >= 60 && done.seconds < 60 + 30 && moved >= 2 && !done.counts.late && !done.counts.missed && !done.counts.dropped && s.done && meanwhile && nothingLate(line),
-      `${done && done.type} ${done && done.why || ''}, ${file.size} bytes, ${si && si.total} frames, ${done && done.seconds && done.seconds.toFixed(1)} s in ${done && done.took && done.took.toFixed(1)} s (${speeds[pace].toFixed(1)}x), ${moved} progress reports; ${s.saved}; ${line}`);
+      `${done && done.type} ${done && done.why || ''}, ${file.size} of ${done && done.bytes} bytes, ${si && si.total} frames, ${done && done.seconds && done.seconds.toFixed(1)} s in ${done && done.took && done.took.toFixed(1)} s (${speeds[pace].toFixed(1)}x), ${moved} progress reports; ${start.pace} to ${start.sink}; ${s.done ? 'done shown' : 'no done'}; ${meanwhile ? 'playing' : 'not playing'}; ${s.saved}; ${line}`);
     await clickId('exportDoneBtn');
   }
   row('export audio: gentle ("lighter on processor" on) is slower than fast, and both faster than real time', speeds.fast > speeds.gentle && speeds.gentle > 1, `fast ${speeds.fast.toFixed(1)}x, gentle ${speeds.gentle.toFixed(1)}x real time`);

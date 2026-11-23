@@ -137,3 +137,23 @@ The brain's reading: the version filter on additions costs no characters and sta
 ## The vibes go to 88 (2026-10-29)
 
 - 2026-10-29 -- **The vibes go to 88 (Mikey, 2026-10-29):** twenty join beside glacial (dewy, dusky, moonlit, rainy, whimsical, dreamy, chill, groovy, pulsing, cruising, droning, cosmic, bubbly, earthy, soaring, jazzy, breezy, rippling, playful, mellow) and four leave (soft, energetic, silly, comfy; enthusiastic, goofy, cozy, restful and soothing stay). Turned down: nostalgic ("it has too many meanings of what it could be to be a good mood word for music") and sleepy. The reasons and drafts: `docs/VIBES.md`, "The vibes to 88". Queue item 76b.
+
+## Driftloom has its own Rust audio engine (2026-10-10)
+
+- 2026-10-10 -- **Driftloom has its own Rust audio engine, and copying Chromium is no longer the goal.** The port used Chromium as the reference so that every step could be proven; now that the whole sound path runs in the core, the core is the thing. Aim for what audiophiles, game developers and programmers who value efficient, easy-to-run software would favor: an app and an engine people marvel at for its beauty and commitment to excellence. Do things better than Chromium where better is possible, and in the way that fits Driftloom's own aims.
+
+## Rust building blocks and data recipes, the line as it stood (2026-10-12)
+
+- 2026-10-12 -- **Both: hand-written Rust building blocks, and instruments as small data recipes.** A seed or share code is a recipe, so "same seed, same music" holds only with the same core version and the same data (brain). **Mikey likes doing both** (2026-10-12): hand-written Rust building blocks, and instruments as small data recipes (patches) that wire and set them -- like a synth's presets. The code should at least say what it needs (core version, packs with hashes) and degrade clearly when something is missing. The brain's reasoning (instruments as data, a few hundred bytes, named by a hash): [the full text](archive/decisions-reasoning.md#a-seed-or-share-code-is-a-recipe-brain-2026-10-12).
+
+## Next picks, the line as it stood (2026-10-13)
+
+- 2026-10-13 -- **Next picks, the design (Mikey, 2026-10-13):** chosen after four rounds and 70 options (Painter session 5); the brief is `design/next-picks.md` (it wins over the renders). Painter 6 (app track) builds the screens: moods wired to vibes; length and tempo to today's generator only if cheap, clamped. The real wiring is queue items 48-53 (phases 2 and 3). **Both answered, 2026-10-14** (`design/next-picks.md`, "Decided"): in an album, leave the album to see the picks; the top-left key reads "vibe" and opens the panel, called Vibe (no title on screen); length and tempo each get their own any key in their pickers, and Endless is one ∞ key. The description of the design and the two questions in full: [the full text](archive/decisions-reasoning.md#next-picks-the-design-mikey-2026-10-13).
+
+## The bars picker, the line as it stood (2026-11-03)
+
+- 2026-11-03 -- **The bars picker sets how many bars a loop is, not when it ends (Mikey, 2026-11-03):** "It should only determine the amount of bars a loop is; not when it ends. Where a loop ends should be set by the length slider (where things like tempo and warmth live)." A loop of any length repeats until the length slider hands over; when the slider is shorter than one pass of a long loop, it ends at the next phrase line with a short fade (yes); the picker is renamed "Bars" (yes). Item 88b. (The brain's brief for 88 had read the picker as how long a piece plays.)
+
+## Batch 6 kept, the line as it stood (2026-11-17)
+
+- 2026-11-17 -- **Batch 6 kept, twang soft only (Mikey, the Batch 6 Album, 2026-11-17):** Keep on every batch 6 sound (deepDuck, wideSweep wide and fast, slowOpening, tuningOffset, padWow, widePad, tripletKit, dottedPulse's pulse and 3-3-2, colorTone, planingSevenths, lowBell, dropSpotlight), so the hands' conservative taste calls stand; twang Tune: "I only liked the soft version. The bright and slow sounded off to me." Its share: "right now 2% or more is okay", so every loop that draws twang plays the soft kind (the brain's pick: the fewest loops move). Later, each sound's share is tuned vibe by vibe: "some moods may lean more into the soft twang and some may lean away from it" (the queue, "Later, not queued").

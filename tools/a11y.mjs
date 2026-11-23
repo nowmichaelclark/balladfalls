@@ -134,7 +134,7 @@ const SCREENS = [
     for (const n of [2, 5, 9]) await click(p, `#vibesList button:nth-child(${n})`);
   }],
   ['vibe, picked', async (p) => { await click(p, '#vibesClose'); }],
-  ['bars, any', async (p) => { await click(p, '#picksList .pk-line-pace button.pk-val:not(.pk-track)'); }],
+  ['bars, any', async (p) => { await click(p, '#picksList .pk-go-bars'); }],
   ['bars, a long piece', async (p) => {
     await p.evaluate(() => {
       const s = document.getElementById('lenSlide');
@@ -152,7 +152,45 @@ const SCREENS = [
       n.dispatchEvent(new Event('blur'));
     });
   }],
-  ['sound', async (p) => { await click(p, '#trkCancel'); await toEdit(p, 'viewSounds'); }],
+  ['tempo, any', async (p) => { await click(p, '#trkCancel'); await click(p, '#picksList .pk-go-tempo'); }],
+  ['tempo, a range', async (p) => {
+    await p.evaluate(() => {
+      for (const [id, v] of [['tmpLo', 70], ['tmpHi', 85]]) {
+        const s = document.getElementById(id);
+        s.value = String(v);
+        s.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
+  }],
+  ['key, notes', async (p) => {
+    await click(p, '#tmpDone');
+    await click(p, '#picksList .pk-go-key');
+    await click(p, '#keyGrid button:nth-child(3)');
+    await click(p, '#keyGrid button:nth-child(8)');
+  }],
+  ['key, scales', async (p) => {
+    await click(p, '#viewKey .pv-tab[data-tab="scale"]');
+    await click(p, '#keyGrid button:nth-child(1)');
+    await click(p, '#keyNext');
+  }],
+  ['style', async (p) => {
+    await click(p, '#keyDone');
+    await click(p, '#picksList .pk-go-style');
+    await click(p, '#styGrid button:nth-child(2)');
+  }],
+  ['voices', async (p) => {
+    await click(p, '#styDone');
+    await click(p, '#picksList .pk-go-voices');
+    await click(p, '#viewVoices .pv-tab[data-tab="melody"]');
+    await click(p, '#voxGrid button:nth-child(1)');
+    await click(p, '#voxOn');
+  }],
+  ['voices, a layer off', async (p) => {
+    await click(p, '#viewVoices .pv-tab[data-tab="drums"]');
+    await click(p, '#voxOff');
+  }],
+  ['vibe, every line picked', async (p) => { await click(p, '#voxDone'); }],
+  ['sound', async (p) => { await toEdit(p, 'viewSounds'); }],
   ['layers', async (p) => {
     await click(p, '#viewBtn');
     await p.evaluate(() => {
@@ -752,8 +790,16 @@ async function focusFollows(browser) {
     ['#vibesBtn', '#picksClose'],
     ['#picksList .pk-line-mood .pk-val', '#vibesClose'],
     ['#vibesClose', '#picksList .pk-line-mood .pk-val'],
-    ['#picksList .pk-line-pace button.pk-val:not(.pk-track)', '#lenCancel'],
-    ['#lenCancel', '#picksList .pk-line-pace button.pk-val:not(.pk-track)'],
+    ['#picksList .pk-go-bars', '#lenCancel'],
+    ['#lenCancel', '#picksList .pk-go-bars'],
+    ['#picksList .pk-go-tempo', '#tmpCancel'],
+    ['#tmpCancel', '#picksList .pk-go-tempo'],
+    ['#picksList .pk-go-key', '#keyCancel'],
+    ['#keyCancel', '#picksList .pk-go-key'],
+    ['#picksList .pk-go-style', '#styCancel'],
+    ['#styCancel', '#picksList .pk-go-style'],
+    ['#picksList .pk-go-voices', '#voxCancel'],
+    ['#voxCancel', '#picksList .pk-go-voices'],
     ['#picksList .pk-track', '#trkCancel'],
     ['#trkCancel', '#picksList .pk-track'],
     ['#picksClose', '#vibesBtn'],

@@ -14,9 +14,10 @@
 // generator as its request (`requestFor`; queue items 85, 88 and 89: any
 // length from 1 bar to 32,768, or Endless; one key or mode, or a set to
 // choose from), the style (queue item 90: one profile or a set), and the
-// voices of each layer and the layers on or off (queue item 91). None of
-// the key, style and voices lines has a picker yet: they show what is picked
-// but cannot be tapped until a Painter session designs their pickers.
+// voices of each layer and the layers on or off (queue item 91). The tempo,
+// the key, the style and the voices open their pickers (session 30j, queue
+// item 118; js/pickers.js); clear all, in the panel's head, puts every line
+// back to chance.
 
 import { el } from './ui.js';
 import { clock, spokenTime, trackOfSpec } from './tracklen.js';
@@ -334,23 +335,24 @@ export function renderPanel() {
       // the Bars picker (queue item 88b: was Length). Beside them, the
       // Track length view's key (session 30c): the loop playing's, not a
       // pick for new loops, so the line's any key leaves it.
+      const tb = lineButton('pk-go-tempo', () => api.openPicker('tempo'));
+      tb.setAttribute('aria-label', `Tempo: ${tempo ? spoken(tempoText(tempo)) : 'any tempo'}`);
       if (isAny.pace) {
-        vals.append(plain('any tempo'));
+        tb.append(plain('any tempo'));
+        vals.append(tb);
         const sep = document.createElement('span');
         sep.className = 'pk-any pk-sep';
         sep.setAttribute('aria-hidden', 'true');
         sep.textContent = '·';
         vals.append(sep);
-        const b = lineButton('', () => api.openLength());
+        const b = lineButton('pk-go-bars', () => api.openLength());
         b.append(plain('any bars'));
         b.setAttribute('aria-label', 'Bars: any bars');
         vals.append(b);
       } else {
-        const t = document.createElement('span');
-        t.className = 'pk-val static';
-        t.append(tempo ? pill(tempoText(tempo), 'tempo') : pill('any tempo', 'tempo', { dashed: true }));
-        vals.append(t);
-        const b = lineButton('', () => api.openLength());
+        tb.append(tempo ? pill(tempoText(tempo), 'tempo') : pill('any tempo', 'tempo', { dashed: true }));
+        vals.append(tb);
+        const b = lineButton('pk-go-bars', () => api.openLength());
         b.append(length != null ? pill(lengthText(length), 'length') : pill('any bars', 'length', { dashed: true }));
         if (journey) b.append(pill(journey, 'journey'));
         b.setAttribute('aria-label', `Bars: ${length != null ? spoken(lengthText(length)) : 'any bars'}${journey ? `, ${journey} journey` : ''}`);
@@ -369,27 +371,14 @@ export function renderPanel() {
         note.append(lead, cant);
         vals.append(note);
       }
-    } else if (line.id === 'key' && !isAny.key) {
-      // The key and the mode have no picker yet, so they are shown, not
-      // tapped: "D dorian".
-      const t = document.createElement('span');
-      t.className = 'pk-val static';
-      t.append(pill(keyText(key, scale), 'key'));
-      vals.append(t);
-    } else if (line.id === 'voices' && !isAny.voices) {
-      // The voices have no picker yet either, so they are shown, not tapped.
-      const t = document.createElement('span');
-      t.className = 'pk-val static';
-      t.append(pill(voicesText(voices, layers), 'voices'));
-      vals.append(t);
-    } else if (line.id === 'style' && !isAny.style) {
-      // The style has no picker yet either, so it is shown, not tapped.
-      const t = document.createElement('span');
-      t.className = 'pk-val static';
-      t.append(pill(styleText(style), 'style'));
-      vals.append(t);
     } else {
-      vals.append(plain(line.any));
+      // The key, the style and the voices open their pickers (session 30j),
+      // picked or not: the value, or the line's "any" words.
+      const words = line.id === 'key' ? keyText(key, scale) : line.id === 'style' ? styleText(style) : voicesText(voices, layers);
+      const b = lineButton(`fill pk-go-${line.id}`, () => api.openPicker(line.id));
+      b.append(isAny[line.id] ? plain(line.any) : pill(words, line.id));
+      b.setAttribute('aria-label', `${line.id[0].toUpperCase()}${line.id.slice(1)}: ${isAny[line.id] ? line.any : spoken(words)}`);
+      vals.append(b);
     }
 
     // The any key: lit while the whole line is left to chance; pressing an
@@ -407,6 +396,8 @@ export function renderPanel() {
     row.append(vals, any);
     list.append(row);
   }
+  // Clear all: dim while there is nothing to clear.
+  el('picksClear').disabled = Object.values(isAny).every(Boolean);
   fitPanel();
   if (had >= 0) {
     const all = list.querySelectorAll('button');
@@ -563,6 +554,11 @@ export function wirePicks(handlers) {
   api = handlers;
   el('nowPicks').addEventListener('click', () => api.setView('vibe'));
   el('picksClose').addEventListener('click', () => api.setView('now'));
+  el('picksClear').addEventListener('click', () => {
+    api.clearAll();
+    // It goes dim with nothing picked: the focus to close beside it.
+    el('picksClose').focus({ preventScroll: true });
+  });
 
   el('lenCancel').addEventListener('click', () => {
     // Nothing was changed while the picker was open, so leaving it is

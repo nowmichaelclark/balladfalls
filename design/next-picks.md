@@ -83,8 +83,8 @@ weight, `--text-secondary`.
   - the values, as one button that fills the line (left aligned; on line
     two, tempo and length are two buttons side by side). Tapping a value
     opens its picker: moods open the Vibes list (as today), length opens
-    the Length picker below. Tempo, key, style and voices pickers are
-    not designed yet; until they are, those values can't be tapped.
+    the Length picker below. Tempo, key, style and voices open their own
+    pickers (session 30j, below).
   - an **any** key on the right: `vkey word`, at least 52 × 40px, text
     "any". **Lit** (`.vkey.armed`) when the whole line is left to chance;
     tapping a lit key does nothing, tapping an unlit one clears that line
@@ -177,6 +177,40 @@ section wins.
    alone is enough; the dashed "any tempo" / "any length" pill exists for
    when tempo and length differ (for example, length picked from the
    picker while tempo is still "any").
+
+## Tempo, key, style and voices (session 30j, queue item 118)
+
+Built plain by the hands on 2026-11-24 (Mikey, 2026-11-23: "We don't have
+viewport menus for tempo, key, style or voices"), in the Bars view's parts,
+for a Painter session (30k) to restyle. `js/pickers.js`.
+
+- **Four views**, each opened from its value on the Vibe panel (every line
+  is a key now, "any" or picked). Head: **cancel**, the title, **done**, as
+  Bars: cancel keeps what was there, done keeps what is shown.
+- **The three states, one way everywhere:** keys lit the app's way (a ring
+  in the primary text color, the line's color inside it) are what is asked;
+  one lit is pinned, several are a set; none lit, and the **any** key at
+  the foot's right lit, is left to chance. Under the head, what is asked in
+  the panel's words ("D or G dorian"); on a short panel (under 280 px) it
+  takes the title's place.
+- **Tempo:** the number as Bars' (typed: "80" or "70-85"), −1 and +1 move
+  the whole pick, and the range control: two sliders, the slow end over the
+  fast end (32 to 190 bpm, all the core takes), each pushing the other;
+  together the tempo is pinned, apart a range, the fill between them.
+- **Key:** two tabs, **note** (the twelve) and **scale** (the nineteen
+  modes); the tab shown is underlined, a dot marks a tab that asks
+  something; the any key clears the tab shown.
+- **Style:** the sixteen profiles.
+- **Voices:** a tab a layer (drums, bass, keys, melody, air, as Layers names
+  them); each its own voices, and **on** (always plays) and **off** (never),
+  pressed again back to chance; off rests while the other four are off (all
+  five off is the one request the core refuses).
+- **Long lists page, never scroll:** as many keys as the room holds at 44 px
+  (40 or less only where it saves a page, never under 32), then ‹ › and
+  where you are ("2/4").
+- **Clear all:** a **clear** key at the left of the Vibe panel's head, dim
+  when nothing is picked: every line back to any, the moods too. The Track
+  length stays (the loop playing's, not a pick).
 
 ## Building notes
 

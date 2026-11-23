@@ -1879,18 +1879,21 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
    cells, so the lit fill stands out from it at 3:1) and a
    lit fill in the lamp's colours, ending in a lit bead built like
    the lit playhead cell (fill, light ring, same-hue halo). */
-.np-bar { position: relative; height: 6px; margin: 0 4px; border-radius: 3px; background: color-mix(in srgb, var(--text-primary) 7%, transparent); }
+.np-bar { position: relative; flex: 0 0 auto; height: 24px; margin: -6px 4px; border-radius: 6px; }
 /* The rail moves the playhead (session 30h): a press, a drag, the keys.
-   The bar stays 6px; its target is 27px tall, reaching up over the clock
-   (nothing to press there) and not down to the key under it (5px, inside
-   the smallest gap, 6px). */
+   Its box is the 24px target (half of it in the gaps around it, so the
+   page doesn't move); the bar drawn in it stays 6px. */
+.np-bar::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 9px; height: 6px; border-radius: 3px;
+  background: color-mix(in srgb, var(--text-primary) 7%, transparent);
+}
 .np-bar { touch-action: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.np-bar::before { content: ''; position: absolute; left: -4px; right: -4px; top: -16px; bottom: -5px; }
 .np-bar[aria-disabled="true"] { cursor: default; }
 .np-bar:focus, .pc-line:focus { outline: none; }
-.np-bar:focus-visible, .pc-line:focus-visible { outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: 4px; }
+.np-bar:focus-visible { outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: 2px; }
+.pc-line:focus-visible { outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: 4px; }
 .np-bar i {
-  position: absolute; left: 0; top: 0; bottom: 0; width: var(--p); border-radius: inherit;
+  position: absolute; left: 0; top: 9px; height: 6px; width: var(--p); border-radius: 3px;
   background: var(--np-fill);
 }
 .np-bar i::after {
@@ -2039,7 +2042,7 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
   .tab[aria-selected="true"]::before { border: 2px solid Highlight; }
   .np-dots i { background: GrayText; box-shadow: none; }
   .np-dots i.on { background: Highlight; }
-  .np-bar { background: GrayText; }
+  .np-bar::before { background: GrayText; }
   .np-bar i, .np-bar i::after { background: Highlight; box-shadow: none; }
   .sw::after { box-shadow: inset 0 0 0 1px CanvasText; forced-color-adjust: none; }
   .sw[aria-checked="true"]::after { box-shadow: inset 0 0 0 3px Highlight; }

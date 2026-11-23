@@ -2685,7 +2685,12 @@ async function timelineRows(browser) {
       },
       clock: () => tev(() => (window.__rows.ctx ? window.__rows.ctx.currentTime : 0)),
       playing: () => tev(() => document.getElementById('playBtn').getAttribute('aria-label') === 'Pause'),
-      lastJump: () => tev(() => window.__rows.posts.filter((m) => m.type === 'playJump').pop() || null),
+      // The last jump the page asked (the record's own `at` is the clock's;
+      // the jump's is the message's).
+      lastJump: () => tev(() => {
+        const m = window.__rows.posts.filter((x) => x.type === 'playJump').pop();
+        return m ? { kind: m.msg.kind, at: m.msg.at } : null;
+      }),
       jumpCount: () => tev(() => window.__rows.posts.filter((m) => m.type === 'playJump').length),
       // The core's Jump events whose batch came at or after `t` (the audio
       // clock): the step each landed on, and its time.

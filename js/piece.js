@@ -468,6 +468,15 @@ export function updatePiece() {
   } else if (!at && !dragging) {
     setText('pieceBars', view.model.endless ? 'bar 1' : `bar 1/${group(view.model.last)}`);
     setText('pieceTimes', '');
+    // A slider says its value, before the core has said where it is too
+    // (session 30h: the line takes a press with nothing playing).
+    const said = placeWords(view.model, null).said;
+    if (line.getAttribute('aria-valuetext') !== said) {
+      line.setAttribute('aria-valuemin', String(Math.round(view.model.first)));
+      line.setAttribute('aria-valuemax', String(Math.round(view.model.last)));
+      line.setAttribute('aria-valuenow', '1');
+      line.setAttribute('aria-valuetext', said);
+    }
   }
   return true;
 }

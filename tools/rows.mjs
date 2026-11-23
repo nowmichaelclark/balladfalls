@@ -525,11 +525,16 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   const count = () => ev(() => window.__rows.exports.length);
   const lateLine = async () => (await diag()).split('\n').find((l) => l.startsWith('engine:')) || '';
   const nothingLate = (line) => /late: 0\s+missed: 0\s+dropped: 0/.test(line);
-  // Three seconds of listening (session 30h: 1.5 s fell in a quiet start once
-  // in forty runs, a new loop opening after the track's end).
+  // Six seconds of listening, as the main rows' "something plays" (session
+  // 30h: 1.5 s fell in a quiet start once in forty runs; session 30j: 3 s
+  // fell in one once in ten, after a Cancel): what was heard is kept for the
+  // row's words.
+  let heard = '';
   const playing = async () => {
     const p = await probe();
-    return p && p.player.state === 3 && (await level(3000)) > 1e-4;
+    const lv = await level(6000);
+    heard = `state ${p && p.player.state}, level ${lv.toExponential(1)}`;
+    return p && p.player.state === 3 && lv > 1e-4;
   };
   const setLite = async (on) => {
     const now = await ev(() => document.getElementById('liteMode').getAttribute('aria-checked') === 'true');
@@ -603,8 +608,10 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   let m = await said(['cancelled', 'done', 'failed'], from, 30000);
   s = await sheet();
   let files = await ev(() => window.__rows.opfs());
-  row('export audio: Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && s.why === 'Canceled.' && !files.includes('picked.flac') && (await playing()) && nothingLate(await lateLine()),
-    `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}`);
+  let on = await playing();
+  let late = await lateLine();
+  row('export audio: Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && s.why === 'Canceled.' && !files.includes('picked.flac') && on && nothingLate(late),
+    `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}; ${heard}; ${late}`);
   await clickId('exportOk');
 
   // The free space checked first.
@@ -668,8 +675,10 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   m = await said(['cancelled', 'done', 'failed'], from, 30000);
   s = await sheet();
   files = await ev(() => window.__rows.opfs());
-  row('export audio (small): Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && s.why === 'Canceled.' && !files.includes('picked.opus') && (await playing()) && nothingLate(await lateLine()),
-    `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}`);
+  on = await playing();
+  late = await lateLine();
+  row('export audio (small): Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && s.why === 'Canceled.' && !files.includes('picked.opus') && on && nothingLate(late),
+    `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}; ${heard}; ${late}`);
   await clickId('exportOk');
 
   // The format pressed is kept through the Track length view, and an export

@@ -36,7 +36,8 @@ export const STEPS_PER_BAR = 16;
 // longest any profile draws, and for 'endless', the loop keeps the bars its
 // profile drew and the piece is that loop played section after section.
 
-// The piece of the loop of `spec`, or null for a loop with no length asked:
+// The piece of the loop of `spec`, or null for a loop that is no piece (no
+// length asked, and none drawn: queue item 117):
 // { bars: a section's, sections: a round's (Infinity for 'endless'), last:
 // the bars a round's last section plays }.
 export function pieceOf(spec) {
@@ -49,8 +50,8 @@ export function pieceOf(spec) {
   return { bars, sections, last: rest || bars };
 }
 
-// The bars a pass of the loop of `spec` plays (queue item 88b): the length
-// asked (Infinity for 'endless'), else the loop's own. What the card shows,
+// The bars a pass of the loop of `spec` plays (queue item 88b): the piece's
+// length, asked or drawn (Infinity for 'endless'), else the loop's own. What the card shows,
 // and what a track of whole passes counts one as.
 export function loopBars(spec) {
   if (!spec) return 0;
@@ -254,7 +255,9 @@ export function requestOf(spec) {
     tempo: spec && Array.isArray(spec.tempo) ? spec.tempo.slice() : null,
     theme: spec && spec.theme != null ? spec.theme : null,
     pins: spec && spec.pins ? { ...spec.pins } : null,
-    length: spec && spec.length != null ? spec.length : null,
+    // A length the seed drew (queue item 117) is not asked: the seed draws
+    // it again.
+    length: spec && spec.length != null && !spec.lengthDrawn ? spec.length : null,
     key: spec && Array.isArray(spec.askKey) ? spec.askKey.slice() : null,
     scale: spec && Array.isArray(spec.askScale) ? spec.askScale.slice() : null,
     style: spec && Array.isArray(spec.askStyle) ? spec.askStyle.slice() : null,

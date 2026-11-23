@@ -184,6 +184,14 @@ function record(asked) {
   if (asked.tempo) spec.tempo = asked.tempo.slice();
   if (asked.pins) spec.pins = { ...asked.pins };
   if (asked.length != null) spec.length = asked.length;
+  // With none asked, the core sometimes draws a long piece from the seed
+  // (queue item 117): its length is the piece's, as an asked one is, for
+  // everything that shows or counts the piece; marked drawn so its request,
+  // and so a share code, leaves it to the seed (`requestOf`).
+  else if (d.length) {
+    spec.length = d.length === 'endless' ? 'endless' : Number(d.length);
+    spec.lengthDrawn = true;
+  }
   if (asked.theme != null) spec.theme = asked.theme;
   if (asked.journey) spec.askJourney = asked.journey;
   if (asked.style) spec.askStyle = asked.style.slice();

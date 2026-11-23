@@ -38,7 +38,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pieceMap } from './gen-lib.mjs';
-import { HOLE_DB, dlrender, joinDepths, readWav } from './longform-played.mjs';
+import { HOLE_DB, dlrender, itself, joinDepths, readWav } from './longform-played.mjs';
 import { Rng } from '../js/rng.js';
 
 const args = process.argv.slice(2);
@@ -64,7 +64,9 @@ function playSeed(seed, requests, minutes) {
   });
   const out = [];
   try {
-    const loop = one(null, Math.max(...plans.map((p) => p.seconds)), path.join(tmp, 'loop.wav'));
+    // The loop as itself: its own bars asked (with none asked it is
+    // sometimes a long piece, queue item 117).
+    const loop = one(itself(seed), Math.max(...plans.map((p) => p.seconds)), path.join(tmp, 'loop.wav'));
     for (const p of plans) {
       const piece = one(p.request, p.seconds, path.join(tmp, 'piece.wav'));
       for (const d of joinDepths(seed, p.request, p.sections, 0.05, piece, loop, RATE)) out.push({ seed, request: p.request, ...d });

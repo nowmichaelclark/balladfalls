@@ -24,6 +24,18 @@ vibes = still 0.3, serene 0.4, meditative 0.3, glacial 0.3, droning 0.25,
     adventurous 3, triumphant 3, soaring 2.5, lively 2, playful 2,
     wondrous 2, joyful 2, bouncy 2
 
+# A long piece with no length asked (queue item 117; Mikey, 2026-11-23:
+# "Sometimes"): a loop made with no length asked is a long piece this share
+# of the time, its length drawn from `lengths` (bars, by weight), on a
+# stream of its own from the seed, so a loop that stays short plays exactly
+# as before. Its journey is drawn as any long piece's is (above). Endless is
+# never drawn: it is only ever asked. For Mikey's ears: the share and the
+# lengths, weighted toward the short end (64 to 128 bars seven times in ten;
+# about 2 to 10 minutes at most tempos, 512 bars about 20 to 40).
+[longform unasked]
+share = 0.1
+lengths = 64 6, 96 4, 128 4, 192 2, 256 2, 384 1, 512 1
+
 # The arc: a run of roles with one peak. Its spans are set in time and
 # turned into sections (or phrases) at the loop's tempo.
 [longform arc]

@@ -1446,3 +1446,32 @@ fn a_request_reads_back_from_its_text() {
     code::request_text(&read.request, &mut text).expect("text");
     assert_eq!(text, format!("version={}", data::CODE_NEWEST));
 }
+
+#[test]
+fn a_drawn_long_piece_writes_no_length_and_comes_back_the_same() {
+    // Queue item 117: with no length asked the seed sometimes draws a long
+    // piece. Its code writes no length (the request has none): read back, the
+    // seed draws the same piece, every part's hash the same (`round_trip`).
+    roomy(|| {
+        let mut g = Box::new(Generator::new());
+        let mut rng = Rng::new(20_261_009);
+        let mut found = 0;
+        for _ in 0..2000 {
+            if found == 12 {
+                break;
+            }
+            let seed = rng.seed32();
+            let l = Loop::of(seed);
+            g.load_with(seed, &l.request);
+            let Some(drawn) = g.spec().length else { continue };
+            found += 1;
+            let text = round_trip(Some(&mut g), &l);
+            assert_eq!(text, write(&Loop::of(seed)), "{seed}: the code of a seed alone");
+            let back = code::read_loop(text.as_bytes()).expect("a code");
+            assert_eq!(back.request.length(), None, "{text}: no length written");
+            g.load_with(seed, &back.request);
+            assert_eq!(g.spec().length, Some(drawn), "{text}: the same piece");
+        }
+        assert_eq!(found, 12, "twelve long pieces drawn in 2,000 loops");
+    });
+}

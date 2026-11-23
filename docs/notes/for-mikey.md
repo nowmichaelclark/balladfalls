@@ -13,6 +13,22 @@ list of changes. The rest of the road is cut into sessions, each with a prompt t
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## "Any bars" is sometimes a long piece (item 117, v203, session 30i)
+
+- **Two to hear** (corpus seed 20261009, nothing picked; paste the code):
+  soath-wa `EKky18BHD` (#27), an arc of 128 bars, about 9:40 a round:
+  theme B comes in a fifth up at 3:01 and the peak is at 6:02; woth-rul
+  `E3CZtsAI4` (#14), a wander of 128 bars, about 6:10: its one move (a
+  layer) at 2:19, the close at 5:59. The Vibe panel still says any bars.
+- **For your ears:** about 1 new loop in 10 (10.25% measured), 64 to 512
+  bars weighted to the short end (64, 96 or 128 bars 7 times in 10; a
+  round 1 to 39 minutes, typically 4). Two numbers in `data/longform.txt`,
+  `[longform unasked]`, if you want more or fewer, longer or shorter.
+- **What never comes unasked** (`node tools/unasked.mjs`, 10,000 loops):
+  everything the data lists comes, except what only a pick gives (any vibe,
+  Endless, a friend loop's theme). Before this change the long lengths and
+  their journeys never came either; no bugs found.
+
 ## The final pass, and accessibility (item 114, v196 to v198, #452, #453, #454)
 
 - **Look at the sheets,** before and after, every screen: the branch

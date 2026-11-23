@@ -129,3 +129,84 @@ reset-on-fork), reopens 0.
   (`AppWebView`), so the "while hidden" lines are paused time only.
 - A full ten minutes with the screen off: 395 s of sound in all, so that
   test is still to do.
+
+## Session 30g's build (v201): the stream on a music player's path
+
+The cause is not proven. What was found in the sources:
+
+- Chrome opens `playback` as AAudio's power-saving mode with 1,024-frame
+  callbacks at 48 kHz (`aaudio_stream_wrapper.cc`, `aaudio_output.cc`,
+  `audio_latency.cc`, `renderer_webaudiodevice_impl.cc`; the last link, from
+  the hint to the playback tag, is read from their names, not followed).
+- That mode is Android's deep buffer, "a mixer that wakes up less often than
+  the FAST mixer", and never MMAP (`AudioStreamTrack.cpp`,
+  `AudioStreamBuilder.cpp`; the same on 8.1 and 13).
+- The old stream's 1536 of 1536 frames is eight bursts of 192, what AAudio's
+  legacy fast track asks for: so it went through the fast mixer (inferred
+  from the numbers). A glitch after the track, in that mixer or below it,
+  needn't reach the track's underrun count, which fits the zeros.
+
+The change is that same mode and callback size, AAudio's own buffer kept.
+Rejected:
+
+- a larger buffer on low latency: it was already at its capacity, and the
+  same fast mixer stays;
+- the mode None: "a normal mixer in front of the FAST mixer", so still it;
+- Chrome's shrink to two bursts: less margin, for latency a music player
+  doesn't need;
+- a lock or a stronger wake lock: the partial one is held, and the counters
+  saw no missed callback.
+
+What it costs, for Mikey's ears and phone: Pause, Next and Play are heard
+later by the new latency (Diagnostics says it); the speaker's own processing
+may differ (the fast path can skip effects the music path has); the callback
+thread loses real-time priority, so its measured busy share may rise and the
+Lite rule (step 6) is still to be measured.
+
+The new counts in Diagnostics: playback behind the phone's clock (over
+10 ms, held for a second), callbacks over their deadline, the worst four and
+the longest gap between two. Zeros don't prove a clean sound: a glitch that
+doesn't stop the device's position isn't seen. (A count of gaps longer than
+AAudio's buffer was dropped after Mikey's listen: it read 123 on playback
+they heard as clean, because the mixer and the device hold more than that
+buffer on this path.)
+
+CI's emulator on it (run 45038681309, f6c3ce0, every job green) **did not
+get this path**: asked for power saving, it gave the mode None (burst 2180,
+buffer 4360, 152 to 165 ms measured, the thread normal). So its zero
+underruns in five minutes, and in ten with the screen off, say nothing of a
+deep buffer; nor that a phone is free of crackles. Its worst callback with
+the screen off took 41.4 ms (194% of its deadline) and the 91 ms buffer took
+it with no underrun. The phone's `stream:` line has to say "power saving"
+for the listen to test this change.
+
+## Mikey's listen on v201 (f6c3ce0's APK, 2026-11-23): no crackles
+
+The listen that closes item 115 once #458 merges. Mikey, on the moto g
+stylus 5G (2022), headphones, after hearing the crackles on v195 with the
+same headphones first:
+
+> I didn't do the test for as long as you asked, but I did it long enough to
+> satisfy my own thoughts: There are no more crackles. This time I used
+> headphones, but I also used headphones on v195 first to ensure I could
+> hear the crackling there and I could. Now, I don't hear any crackles at
+> all in the app no matter which style of playing, lite on or off, or
+> anything else.
+
+Shorter than the ten minutes asked, by their choice. Their Diagnostics,
+copied while playing, about eleven minutes in:
+
+- `stream:` 48 kHz stereo, burst 1924, callbacks of 1024, buffer 3848 of
+  3848, **power saving**, shared, thread normal/0, reopens 0, latency 222 ms
+  (measured), busiest callback 67.2% of its deadline, mean 15.10%, sound
+  634.5 s. So the phone gave the new path.
+- `glitches:` 0 underruns, 0 times playback fell behind (and 123 gaps past
+  the buffer, the dropped count above).
+- `callbacks:` 0 over their deadline, longest gap 87 ms; the worst four 67%
+  (14.3 ms, 1024 frames, nothing but playing), 64%, 60%, 59%.
+- `busiest:` 22% over 20 s and over 60 s, full ("lite: false, yours"), under
+  the 50% line that moves it to Lite; render stereo 13.6% of real time; late,
+  missed and dropped 0.
+
+Asked afterward whether Pause and Next felt slow in v201 (about 0.2 s later
+than before): "Didn't notice". The 222 ms is accepted; no follow-up.

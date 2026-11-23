@@ -107,7 +107,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 30e | `30e-fewer-words.md` | 113: fewer words: keys, icons and switches; the share screen as keys | Opus 5.5, high | 21, 24, 28, 30a to 30d | 24c, 29 | yes, 2026-11-22 (#449) |
 | 30f | `30f-painter-final.md` | 114: the Painter's final touches, and accessibility | Opus 5.5, high | 29, 30e | none | yes, 2026-11-22 (#452, #453, #454, #455, #457) |
 | | | **Then in order, one at a time** | | | | |
-| 30g | `30g-crackles.md` | 115: no crackles in the Android app (a 1.0 blocker, Mikey 2026-11-22) | Opus 5.5, high | 29 | 30f (the app's audio path only, merging after it) | |
+| 30g | `30g-crackles.md` | 115: no crackles in the Android app (a 1.0 blocker, Mikey 2026-11-22) | Opus 5.5, high | 29 | 30f (the app's audio path only, merging after it) | yes, 2026-11-23 (#458, Mikey heard it clean; steps left in its file's Left list) |
 | 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | 18, 21, 24, 24c, 29, B4, 30f, 30g | none | |
 | B5 | `brain-5-release.md` | Brain: the release check | Opus 5.5, high | 30 | none | |
 | | **you** | Your signing key (chosen 2026-11-22: your own; the steps are in `docs/notes/for-mikey.md`); buy the new name's domain and attach it to the Worker, if not done. **31a waits for this.** | | 29 | | |

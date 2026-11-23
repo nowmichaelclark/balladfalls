@@ -604,3 +604,16 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   number (`js/shortcuts.js`). Not proven on a phone: two steps in
   `docs/notes/for-mikey.md`. Listen for nothing. No
   album loop.
+- #458, the Android app's stream on a music player's path (item 115, session
+  30g, v201), preview URL:
+  <https://claude-s30g-crackles-c234de-driftloom.nowmichaelclark.workers.dev>
+  (the branch's; the site's sound is unchanged): the app opens AAudio's
+  power-saving mode (Android's deep buffer) in 1,024-frame callbacks, as
+  Chrome does for `latencyHint: 'playback'`, in place of the low-latency
+  path that crackled with the screen off. Diagnostics counts what a crackle
+  leaves without resting on AAudio's underruns (playback behind the clock,
+  late callbacks, the worst four, the longest gap). Mikey heard it clean on
+  the moto g stylus 5G (2022), headphones, after hearing v195 crackle on
+  them (`docs/notes/115-crackles.md`). Pause and Next are heard about
+  222 ms later there, which Mikey didn't notice. Listen for no crackles
+  with the screen off. No album loop.

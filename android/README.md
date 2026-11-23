@@ -30,6 +30,7 @@ listing, build recipe, release workflow and checks (the sections "F-Droid",
   one call), `src/bridge.rs` (the page's messages as commands, and the
   reports back as the worklet's messages; `src/json.rs` reads them),
   `src/aaudio.rs` (the stream), `src/jni.rs` (five JVM calls, by hand),
+  `src/watch.rs` (what a phone can say about a crackle, for Diagnostics),
   `src/lib.rs` (the bridge's functions).
   `build.sh` builds `libdriftloom.so` for each ABI; `abi-check.c` holds the
   numbers written by hand there to the NDK's own headers at every build.
@@ -142,11 +143,13 @@ The Kotlin package (`app.loops`, the `namespace`) is not the id and stays.
   the app's floor doesn't need, and its reopening on a device change is a few
   lines in `native/src/aaudio.rs`. So the native side is Rust and the NDK's
   linker, nothing else.
-- **The stream:** float, stereo, the device's own rate, the low-latency mode
-  (the fast path, its callback thread at real-time priority where the system
-  grants it: the debug screen shows what it got), shared with other apps
-  (exclusive is lower latency and more often trouble; the conservative
-  choice), AAudio's own buffer size. A device change (headphones in or out)
+- **The stream:** float, stereo, the device's own rate, the power-saving mode
+  (session 30g, item 115: Android's deep buffer, a music player's path) in
+  callbacks of 1,024 frames, as Chrome opens for the site's
+  `latencyHint: 'playback'`; Diagnostics shows what the system gave, shared
+  with other apps (exclusive is lower latency and more often trouble; the
+  conservative choice), AAudio's own buffer size (until 30g the low-latency
+  path, 192 frames a callback on the moto g: `docs/notes/115-crackles.md`). A device change (headphones in or out)
   closes the stream and opens another at the same rate; the loop plays on.
 - **Nothing allocated or locked in the callback** (`docs/CORE.md`, promise 2):
   the commands come by a lock-free queue of fixed slots, the counts go back

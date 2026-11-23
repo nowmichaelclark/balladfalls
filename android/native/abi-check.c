@@ -23,7 +23,7 @@ _Static_assert(AAUDIO_UNSPECIFIED == 0, "aaudio.rs: UNSPECIFIED");
 _Static_assert(AAUDIO_DIRECTION_OUTPUT == 0, "aaudio.rs: DIRECTION_OUTPUT");
 _Static_assert(AAUDIO_FORMAT_PCM_FLOAT == 2, "aaudio.rs: FORMAT_PCM_FLOAT");
 _Static_assert(AAUDIO_SHARING_MODE_SHARED == 1, "aaudio.rs: SHARING_MODE_SHARED");
-_Static_assert(AAUDIO_PERFORMANCE_MODE_LOW_LATENCY == 12, "aaudio.rs: PERFORMANCE_MODE_LOW_LATENCY");
+_Static_assert(AAUDIO_PERFORMANCE_MODE_POWER_SAVING == 11, "aaudio.rs: PERFORMANCE_MODE_POWER_SAVING");
 _Static_assert(AAUDIO_CALLBACK_RESULT_CONTINUE == 0, "aaudio.rs: CALLBACK_RESULT_CONTINUE");
 _Static_assert(AAUDIO_OK == 0, "aaudio.rs: OK");
 _Static_assert(AAUDIO_ERROR_DISCONNECTED == -899, "aaudio.rs: ERROR_DISCONNECTED");
@@ -62,3 +62,5 @@ static int32_t (*const f21)(AAudioStream *) = AAudioStream_getBufferCapacityInFr
 static int32_t (*const f22)(AAudioStream *) = AAudioStream_getXRunCount;
 static aaudio_performance_mode_t (*const f23)(AAudioStream *) = AAudioStream_getPerformanceMode;
 static aaudio_sharing_mode_t (*const f24)(AAudioStream *) = AAudioStream_getSharingMode;
+static void (*const f25)(AAudioStreamBuilder *, int32_t) = AAudioStreamBuilder_setFramesPerDataCallback;
+static int32_t (*const f26)(AAudioStream *) = AAudioStream_getFramesPerDataCallback;

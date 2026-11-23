@@ -10,6 +10,7 @@
 //! - `bridge`: the page's side (session 27): the worklet's messages from
 //!   `js/core.js` as the engine's commands, and the engine's reports back
 //!   as the worklet's messages, with `json`, the little reader they need.
+//! - `watch`: what a phone can say about a crackle (session 30g).
 //! - `jni`: the five JVM calls the bridge below makes.
 //!
 //! The bridge is `app.loops.NativeCore` (Kotlin), a function each:
@@ -25,6 +26,8 @@ mod engine;
 mod json;
 mod jni;
 mod ring;
+#[cfg_attr(not(target_os = "android"), allow(dead_code, reason = "the playhead is the stream's"))]
+mod watch;
 
 #[cfg(target_os = "android")]
 mod aaudio;
@@ -46,6 +49,7 @@ mod output {
         pub capacity: i32,
         pub performance: i32,
         pub sharing: i32,
+        pub callback: i32,
     }
 
     pub struct Stream {
@@ -56,6 +60,9 @@ mod output {
         pub policy: i32,
         pub priority: i32,
         pub latency: f64,
+        pub behind: u32,
+        pub behind_lost: f64,
+        pub behind_ago: f64,
     }
 
     pub fn engine() -> Option<&'static Engine> {
@@ -69,7 +76,7 @@ mod output {
         Err("no audio device on this machine".into())
     }
     pub fn stream() -> Stream {
-        Stream { running: false, underruns: 0, reopens: 0, info: Info::default(), policy: -1, priority: -1, latency: 0.0 }
+        Stream { running: false, underruns: 0, reopens: 0, info: Info::default(), policy: -1, priority: -1, latency: 0.0, behind: 0, behind_lost: 0.0, behind_ago: 0.0 }
     }
 }
 
@@ -357,6 +364,10 @@ fn figures(e: &Engine) -> Figures {
         refused: c.refused.load(Ordering::Relaxed),
         lost: c.out_lost.load(Ordering::Relaxed),
         latency: s.latency,
+        callback: s.info.callback,
+        behind: s.behind,
+        behind_lost: s.behind_lost,
+        behind_ago: s.behind_ago,
     }
 }
 

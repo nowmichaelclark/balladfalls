@@ -294,6 +294,18 @@ joyful, bouncy toward the arc). Measured: 49% arcs at finite lengths, about
 (`Request::with_journey`). The page's request and the codes don't carry it
 yet (sessions 17, 18 and 22).
 
+**With no length asked** (item 117, session 30i; Mikey, 2026-11-23:
+"Sometimes"), a loop is a long piece a tenth of the time, drawn from its
+seed on a stream of its own (`spec::unasked_length`, `[longform
+unasked]`): 64, 96, 128, 192, 256, 384 or 512 bars, weighted 6, 4, 4, 2,
+2, 1, 1 toward the short end (for Mikey's ears), never Endless. The loop
+keeps its style's bars, the piece is sections of it as an asked length's
+is, and its journey is drawn as above. A loop that stays short plays as
+before, and a code writes no length: the seed draws it again. Measured
+(`node tools/unasked.mjs`, 10,000 corpus loops): 10.25% long, 529 arcs and
+496 wanders, 1.3 to 38.6 minutes a round, median 4.3; the loops' own
+figures unmoved.
+
 ## Keys
 
 The related set is found once, from the loop's key: the same mode a fifth

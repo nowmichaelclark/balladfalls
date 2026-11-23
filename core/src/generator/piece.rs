@@ -35,8 +35,12 @@
 //! does.
 //!
 //! A piece's section `n` is its loop's pass `n`: the player counts them
-//! from the piece's start (a loop with no length asked keeps today's first
+//! from the piece's start (a loop that is no piece keeps today's first
 //! pass, drawn at the count the loop before it reached).
+//!
+//! **With no length asked** a loop is sometimes a long piece all the same
+//! (queue item 117): the spec's length is then one the seed drew
+//! (`spec::new_spec`), and the piece is counted from it as from one asked.
 
 use super::data::MAX_BARS;
 use super::js;
@@ -60,8 +64,8 @@ pub struct Piece {
 }
 
 impl Piece {
-    /// The piece of the loop of `spec`: none for a loop with no length
-    /// asked, which loops as it always did.
+    /// The piece of the loop of `spec`: none for a loop with no length (none
+    /// asked and none drawn), which loops as it always did.
     #[must_use]
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole numbers below 2^53, checked by the request
     pub fn of(spec: &Spec) -> Option<Piece> {

@@ -154,8 +154,9 @@ impl Player {
     ///   feelings and theirs), `feel` (lift, energy, warmth), and with vibes
     ///   `vibes` (each and the weight it drew) and `strength`;
     /// - `root` (0 is C), `scale`, `bpm` (the tempo playing), `metre`,
-    ///   `steps_per_bar`, `bars` (the loop's), `length` (the length asked:
-    ///   bars, or `endless`; only if asked);
+    ///   `steps_per_bar`, `bars` (the loop's), `length` (the piece's: bars,
+    ///   or `endless`; asked, or drawn with none asked (queue item 117); only
+    ///   for a piece);
     /// - `swing`, `coherence`, `tone` (warmth, space, wobble);
     /// - `layer_seeds` (in the core's layer order), `rolled` (the layers
     ///   re-rolled, by name; only if any), `cycles` (each layer's own, in

@@ -65,6 +65,7 @@ node_part() {
   done
   node tools/gen-golden.mjs --check
   node tools/stats.mjs --check
+  node tools/unasked.mjs --check
 }
 
 baseline() {

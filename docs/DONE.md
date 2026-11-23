@@ -617,9 +617,20 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   them (`docs/notes/115-crackles.md`). Pause and Next are heard about
   222 ms later there, which Mikey didn't notice. Listen for no crackles
   with the screen off. No album loop.
+- #462, "any bars" sometimes a long piece (item 117, session 30i, v203),
+  preview URL:
+  <https://claude-s30i-any-bars-cb7df5-driftloom.nowmichaelclark.workers.dev>
+  (the branch's): with no length asked, about 1 new loop in 10 (10.25% of
+  10,000 corpus loops) is a long piece of 64 to 512 bars, weighted to the
+  short end, its journey (arc or wander) drawn; every other loop plays as
+  before, and a code still writes no length. What never comes unasked,
+  measured (`tools/unasked.mjs`): only what a pick gives (a vibe, Endless, a
+  theme). Listen to soath-wa `EKky18BHD` (corpus #27), an arc of 128 bars:
+  theme B at 3:01, the peak at 6:02; and woth-rul `E3CZtsAI4` (#14), a
+  wander of 128 bars: its one move at 2:19. No album loop beyond these two.
 - #461, the timeline moves the playhead on any loop, paused or playing, and
   the album's way back goes once a new track is made (item 116, session 30h,
-  v202), preview URL:
+  v204), preview URL:
   <https://claude-s30h-timeline-d9cac7-driftloom.nowmichaelclark.workers.dev>
   (the branch's): a short loop's rail is a slider (press, drag, the arrows a
   bar), landing on the step asked within 0.06 s (`Jump::Step`), the track's

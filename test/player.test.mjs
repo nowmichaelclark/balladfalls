@@ -254,8 +254,12 @@ console.log('\nThe page\'s record, its notes and the grid, against the core (24 
   const corpus = CASES.filter((c) => c.set === 'corpus').slice(0, 24);
   corpus.forEach((c, i) => {
     const x = start(c.seed);
-    describes(c.name, x, edited(c.seed, null), c);
-    grids(c.name, x, edited(c.seed, null), c, i < 10 ? 3 : 1);
+    const spec = edited(c.seed, null);
+    describes(c.name, x, spec, c);
+    // A long piece drawn with nothing asked (queue item 117) plays its
+    // sections heard (its plan rests and thins layers), which the goldens'
+    // passes don't hold: tests/longform.rs and tools/longform.mjs do.
+    if (spec.length == null) grids(c.name, x, spec, c, i < 10 ? 3 : 1);
   });
 }
 
@@ -279,7 +283,7 @@ console.log('A code\'s edits, against the core\'s (the generation goldens\' edit
     const x = start(c.seed, c.request);
     const spec = edited(c.seed, c.request);
     describes(c.name, x, spec, c);
-    grids(c.name, x, spec, c, 1);
+    if (spec.length == null) grids(c.name, x, spec, c, 1);
   }
 }
 

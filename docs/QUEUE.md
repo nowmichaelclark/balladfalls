@@ -836,6 +836,16 @@ stay channel sources until an ears session needs a voice's note-by-note play
   runs it on Endless; `tools/export-long.mjs`'s "no fill-ins" passes with no
   count; `tools/track-fades.mjs`'s "first 5 ms silence" passes with the fade
   in off.
+- **The export rows' "music on" on a sparse loop; for session 30** (hands
+  30j, 2026-11-24, #463): it failed twice in about twenty passes after v204
+  (30h's branch once; run 45271085229, pass 9, the small export's Cancel
+  row), never in about sixty before. Not #461 or #462: the loop playing
+  was neisk-nesk (`ELU8xSDBAF7`, seed 3536307467, 8 bars that play on,
+  hollow, no drums), the random loop the picks rows' Next drew, which is
+  silent for up to 6 s at a time (about 48 s in 4 minutes, rendered in
+  Node, full and lite). The export rows now paste the fixed busy loop
+  (shatter) first and keep 3 s of listening; any other "music on" row on a
+  random loop can fail the same way.
 - **F-Droid's CI passes a byte check it didn't make; for session 30** (hands
   30e, 2026-11-22, #449): `android/fdroid/compare-apks.sh` exits 0 with "no
   F-Droid build to compare with" when that APK is missing, so "the same

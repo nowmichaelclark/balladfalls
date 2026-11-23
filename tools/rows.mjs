@@ -525,14 +525,13 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   const count = () => ev(() => window.__rows.exports.length);
   const lateLine = async () => (await diag()).split('\n').find((l) => l.startsWith('engine:')) || '';
   const nothingLate = (line) => /late: 0\s+missed: 0\s+dropped: 0/.test(line);
-  // Six seconds of listening, as the main rows' "something plays" (session
-  // 30h: 1.5 s fell in a quiet start once in forty runs; session 30j: 3 s
-  // fell in one once in ten, after a Cancel): what was heard is kept for the
-  // row's words.
+  // Three seconds of listening (session 30h: 1.5 s fell in a quiet start once
+  // in forty runs, a new loop opening after the track's end), on the fixed
+  // busy loop (below): what was heard is kept for the row's words.
   let heard = '';
   const playing = async () => {
     const p = await probe();
-    const lv = await level(6000);
+    const lv = await level(3000);
     heard = `state ${p && p.player.state}, level ${lv.toExponential(1)}`;
     return p && p.player.state === 3 && lv > 1e-4;
   };
@@ -545,6 +544,13 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   };
 
   console.log('\n  export audio (queue items 104b and 104c; its length the track\'s, session 30c)');
+  // The fixed busy loop the rows begin with, pasted again (session 30j):
+  // the loop the picks' Next drew is any loop, and a sparse one is silent
+  // for seconds at a time (neisk-nesk, run 45271085229: up to 6 s), which
+  // a "music on" row then reads as stopped.
+  await ev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
+  await clickId('pasteCode');
+  await sleep(3500);
   // On and on: the export asks how long first.
   await trackTo(ev, null);
   await share();

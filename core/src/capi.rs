@@ -688,19 +688,13 @@ pub extern "C" fn dl_player_track_end(player: *mut Engine) -> i64 {
 /// Go on from somewhere else in the loop playing (session 17,
 /// `Player::jump`): `kind` 0 a section (`at`, a whole number), 1 a bar, 2 a
 /// time in seconds, each from the piece's start, landing on the phrase line
-/// at or before it. 1 if it was asked; 0 with nothing playing, for no such
-/// kind, or a place that is not a number.
+/// at or before it; 3 a step from the load, exactly (`Jump::of`). Stopped,
+/// it is held and lands at the resume. 1 if it was asked; 0 with nothing
+/// playing or stopped, for no such kind, or a place that is not a number.
 #[unsafe(no_mangle)]
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a whole section number, saturating
 pub extern "C" fn dl_player_jump(player: *mut Engine, kind: u32, at: f64) -> c_int {
     let Some(e) = engine(player) else { return 0 };
-    let to = match kind {
-        0 if at.is_finite() && at >= 0.0 => crate::player::Jump::Section(at as u64),
-        1 => crate::player::Jump::Bar(at),
-        2 => crate::player::Jump::Seconds(at),
-        _ => return 0,
-    };
-    c_int::from(e.player.jump(to))
+    crate::player::Jump::of(kind, at).map_or(0, |to| c_int::from(e.player.jump(to)))
 }
 
 /// Where the loop playing is, as heard (`Player::place`), as C sees it

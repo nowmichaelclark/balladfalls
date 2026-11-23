@@ -95,7 +95,10 @@
         </div>
         <div class="np-mid">
           <div id="nowBig" class="np-time">0:00</div>
-          <div id="nowRail" class="np-bar" aria-hidden="true"><i id="nowFill"></i></div>
+          <!-- The rail moves the playhead (session 30h): press, drag or the
+               arrows, playing or paused. It spans the track where a Track
+               length is set, else the loop's round. -->
+          <div id="nowRail" class="np-bar" role="slider" tabindex="0" aria-label="Place in the track" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0" aria-disabled="true"><i id="nowFill" aria-hidden="true"></i></div>
           <!-- A long piece (session 18, queue item 106b): its line of
                sections with the map's markers, where you are, and a key each
                way to the section before or after. Shown in the rail's place

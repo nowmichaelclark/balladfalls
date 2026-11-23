@@ -296,8 +296,10 @@ export function wirePiece(handlers) {
     const r = bounds();
     return barAt(view.model, e.clientX - r.left, r.width);
   };
+  // Playing or paused (session 30h): paused, the playhead goes there and
+  // Play starts from it.
   line.addEventListener('pointerdown', (e) => {
-    if (!view || !view.model || !host.playing() || e.button > 0) return;
+    if (!view || !view.model || e.button > 0) return;
     try { line.setPointerCapture(e.pointerId); } catch (err) { /* a pointer that is gone: the move events still come */ }
     dragging = { id: e.pointerId, bar: barOf(e) };
     showGhost();
@@ -330,14 +332,34 @@ export function wirePiece(handlers) {
 }
 
 function jumpToBar(bar) {
-  if (!host.jump(JUMP.bar, Math.max(0, Math.floor(bar)))) return;
-  // The words come from the core's next word, where it landed.
+  const to = Math.max(0, Math.floor(bar));
+  if (!host.jump(JUMP.bar, to)) return;
+  // The words come from the core's next word, where it landed. Paused
+  // (session 30h), the playhead goes to the bar asked at once, until the
+  // core says where Play goes on from (its phrase line).
+  if (view && !host.playing() && view.model) view.place = askedPlace(view.model, to);
   if (view) view.shown = null;
+  if (!host.playing()) updatePiece();
+}
+
+// The place a jump asked while paused shows until the core's word: the bar
+// asked, the time to it at the tempo, and what is left of the piece.
+function askedPlace(model, bar) {
+  const last = view.place;
+  const per = last && last.bar > 1 ? last.played / last.bar : host.barSeconds();
+  const p = pieceOf(model.spec);
+  return {
+    bar,
+    bars: model.endless ? null : model.last,
+    played: bar * per,
+    left: model.endless ? null : Math.max(0, model.last - bar) * per,
+    section: p ? Math.floor(bar / p.bars) : 0,
+  };
 }
 
 function toSection(dir) {
-  if (!view || !view.model || !host.playing()) return;
-  const place = host.place();
+  if (!view || !view.model) return;
+  const place = host.place() || view.place;
   const at = place ? place.bar : 0;
   const mark = neighbor(view.model, at, dir);
   if (!mark) return;
@@ -403,9 +425,8 @@ export function updatePiece() {
   const place = host.place();
   const playing = host.playing();
   const line = document.getElementById('pieceLine');
+  // Paused, the bead looks paused; the line still moves it (session 30h).
   root.classList.toggle('idle', !playing);
-  const off = playing ? 'false' : 'true';
-  if (line.getAttribute('aria-disabled') !== off) line.setAttribute('aria-disabled', off);
   // Endless: a window; asked again when the playhead leaves it.
   if (view.model.endless && place) {
     const w = windowOf(spec, place.section);
@@ -441,8 +462,8 @@ export function updatePiece() {
       line.setAttribute('aria-valuetext', words.said);
       const prev = neighbor(view.model, at.bar, -1);
       const next = neighbor(view.model, at.bar, 1);
-      document.getElementById('piecePrev').disabled = !playing || !prev;
-      document.getElementById('pieceNext').disabled = !playing || !next;
+      document.getElementById('piecePrev').disabled = !prev;
+      document.getElementById('pieceNext').disabled = !next;
     }
   } else if (!at && !dragging) {
     setText('pieceBars', view.model.endless ? 'bar 1' : `bar 1/${group(view.model.last)}`);

@@ -58,8 +58,9 @@ export const MOMENT = { now: 0, beat: 1, bar: 2, phrase: 3, pass: 4, end: 5 };
 // The kinds of event the player reports (`Kind::ALL`).
 export const KIND = { step: 0, pass: 1, section: 2, phrase: 3, loop: 4, revised: 5, end: 6, own: 7, jump: 8, heard: 9 };
 // Where a jump goes (session 17, item 106a; `Player::jump`): a section, a bar
-// or a time in seconds, each from the piece's start.
-export const JUMP = { section: 0, bar: 1, time: 2 };
+// or a time in seconds, each from the piece's start; or a step from the load,
+// exactly (session 30h: a short loop's rail, `Jump::Step`).
+export const JUMP = { section: 0, bar: 1, time: 2, step: 3 };
 // How long the old loop takes to fall to nothing at Next, Previous or a loop
 // picked while one plays, in seconds: the core's own crossfade for a change
 // (`player::change::CROSSFADE`). For Mikey's ears.
@@ -98,6 +99,8 @@ export class PlayerEngine {
     // the picks numbered `tag` its request. And the core's answer to the
     // picks: ({ tag, met, why }).
     this.onOwn = null;
+    // A place the core said while paused (session 30h), for the page to draw.
+    this.onPlace = null;
     this.onPicks = null;
     // The picks sent ({ ask, tag }), the core they were sent to, the core
     // given a seed to draw from, an own loop asked while no core could take
@@ -246,6 +249,8 @@ export class PlayerEngine {
     if (!keepPosition) {
       this.gridQueue = [];
       this.countFrom = 0;
+      // The last loop's place is not this one's.
+      this.placeHeard = null;
     }
     const core = this._core();
     if (!this.playing || !core) {
@@ -469,28 +474,37 @@ export class PlayerEngine {
     }
     if (m.trackEnd != null) this.trackEnd = m.trackEnd >= 0 ? m.trackEnd : null;
     if (m.place !== undefined) this.placeHeard = m.place;
+    // Paused, the frames are not drawn: a place the core says (a jump held,
+    // session 30h) is drawn when it comes.
+    if (!this.playing && m.place && this.onPlace) this.onPlace(m.place);
   }
 
-  // Go on from somewhere else in the piece playing (session 17, item 106a):
-  // `kind` a JUMP, `at` from the piece's start. The core lands on the phrase
-  // line at or before it, heard a few blocks on; what was queued to draw from
-  // the old place is dropped, and the core's events say the rest (`jump`,
-  // then the steps from there). False with nothing playing.
+  // Go on from somewhere else in the loop (session 17, item 106a): `kind` a
+  // JUMP, `at` from the piece's start (a step: from the load). The core lands
+  // on the phrase line at or before it (a step: on it), heard a few blocks
+  // on; what was queued to draw from the old place is dropped, and the core's
+  // events say the rest (`jump`, then the steps from there). Paused (session
+  // 30h), the core holds it and Play goes on from there; its place comes as
+  // it is said (`onPlace`). False with no loop in the core to move in: none
+  // yet, or another waiting for Play (`load` while paused) or for the core.
   jumpTo(kind, at) {
     const core = this._core();
-    if (!core || !this.playing || !Number.isFinite(at) || at < 0) return false;
+    if (!core || !this.spec || this.needs || this.wantOwn || !Number.isFinite(at) || at < 0) return false;
     core.playJump(kind, at);
     this.visualQueue = [];
     this.gridQueue = [];
     this.heardSteps.dropGrids();
+    // The old place is not where it is now: the core's next word is.
+    if (!this.playing) this.placeHeard = null;
     return true;
   }
 
   // Where the listener is in the piece, as the core last said (session 17,
   // `Player::place`): { bar, bars, played, left, section } (bars and left
-  // null for Endless), or null with nothing playing.
+  // null for Endless), or null before it has said; paused, where it stood
+  // (or a jump held, where Play goes on from).
   place() {
-    return this.playing ? this.placeHeard || null : null;
+    return this.placeHeard || null;
   }
 
   // The layers' grid as a pattern js/ui.js draws (`renderGrids`): each

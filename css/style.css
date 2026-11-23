@@ -1880,6 +1880,15 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
    lit fill in the lamp's colours, ending in a lit bead built like
    the lit playhead cell (fill, light ring, same-hue halo). */
 .np-bar { position: relative; height: 6px; margin: 0 4px; border-radius: 3px; background: color-mix(in srgb, var(--text-primary) 7%, transparent); }
+/* The rail moves the playhead (session 30h): a press, a drag, the keys.
+   The bar stays 6px; its target is 27px tall, reaching up over the clock
+   (nothing to press there) and not down to the key under it (5px, inside
+   the smallest gap, 6px). */
+.np-bar { touch-action: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.np-bar::before { content: ''; position: absolute; left: -4px; right: -4px; top: -16px; bottom: -5px; }
+.np-bar[aria-disabled="true"] { cursor: default; }
+.np-bar:focus, .pc-line:focus { outline: none; }
+.np-bar:focus-visible, .pc-line:focus-visible { outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: 4px; }
 .np-bar i {
   position: absolute; left: 0; top: 0; bottom: 0; width: var(--p); border-radius: inherit;
   background: var(--np-fill);
@@ -1925,7 +1934,6 @@ body .phone:not(.playing) .playhead i.on::before { opacity: 0; animation: none; 
 }
 .pc-ghost::before { content: ''; position: absolute; left: -1px; top: 0; bottom: 0; width: 2px; background: var(--text-primary); opacity: 0.75; }
 .np-piece.idle .pc-head::after { box-shadow: 0 0 0 2px var(--lit-ring, rgba(255,255,255,0.85)); }
-.np-piece.idle .pc-line { cursor: default; }
 .pc-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
 .pc-key { min-width: 44px; width: 44px; min-height: 44px; padding: 0; }
 .pc-key:disabled { opacity: 0.55; }

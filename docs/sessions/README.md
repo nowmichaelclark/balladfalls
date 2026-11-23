@@ -79,7 +79,8 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 |---|---|---|---|---|---|---|
 | B-par | `brain-parallel.md` | Brain, in Claude Code: makes this plan parallel, then starts and oversees the hands sessions two at a time, up to B4 (Mikey, 2026-11-17), and 30a to 30d as they open (2026-11-18) | Opus 5.5, high | B2 | every row to 30d | yes, 2026-11-18 (17 to 24, 26 to 28 merged; handed to B-par2) |
 | B-par2 | `brain-parallel-2.md` | Brain, in Claude Code: picks up B-parallel's chains (24b, 28, 29) and starts Mikey's 30a to 30d, two at a time; tells Mikey when B4 can start; stops when 30e is next (Mikey, 2026-11-18) | Opus 5.5, high | B-par | every row to 30d, and B4 | yes, 2026-11-18 (24b, 29, 30b, 30a merged; 30d left as draft #446; handed to B-par3) |
-| B-par3 | `brain-parallel-3.md` | Brain: resumes 30d, runs 30c, 24c and 30e, two at a time; stops when 30e is in (or Mikey's usage runs low) | Opus 5.5, high | B-par2 | every row to 30e | yes, 2026-11-22 (30d, 30c, 24c, 30e merged, v192 to v195; next 30f) |
+| B-par3 | `brain-parallel-3.md` | Brain: resumes 30d, runs 30c, 24c and 30e, two at a time; stops when 30e is in (or Mikey's usage runs low) | Opus 5.5, high | B-par2 | every row to 30e | yes, 2026-11-23 (30d, 30c, 24c, 30e, then 30f merged, v192 to v200; 30g's fix #458 heard clean; next B-par4) |
+| B-par4 | `brain-parallel-4.md` | Brain: Mikey's remaining changes as sessions, two at a time; closes 30g (Mikey, 2026-11-23) | Opus 5.5, high | B-par3 | 30g and its own sessions | |
 | | | **Long pieces** | | | | |
 | 17 | `17-long-jump.md` | 106a: the core's jump and the piece map for the page | Opus 5.5, high | B2 | 20, 21, 22, 24, 26 | yes, 2026-11-18 (#414 twang soft only, #417) |
 | 18 | `18-long-screens.md` | 106b: long pieces on screen | Sonnet 5.5, high | 17 | 20, 21, 22, 24, 26, 27, 28, 29 | yes, 2026-11-18 (#419) |

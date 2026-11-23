@@ -1,5 +1,7 @@
 # Session 30: the known issues and the polish
 
+**Changed by brain B-parallel 3 (2026-11-23):** it also waits for B-parallel 4's sessions (Mikey's remaining changes).
+
 **Changed by brain B-parallel 3 (2026-11-22):** it waits for session 30g
 (item 115, the crackles, a 1.0 blocker) and doesn't take that Known issue.
 
@@ -10,7 +12,7 @@
 **Changed by brain B1 (2026-11-11):** the Painter's test kit's broken imports, found in B1's check of item 97.
 
 - **Model:** Sonnet 5.5. **Effort:** high.
-- **Start after:** sessions 18, 21, 24, 29, 30f and 30g (30a to 30g all in), and brain session B4. Nothing runs alongside it.
+- **Start after:** sessions 18, 21, 24, 29, 30f and 30g (30a to 30g all in), brain session B4, and the sessions brain B-parallel 4 writes for Mikey's remaining changes. Nothing runs alongside it.
 - **Queue item:** the "Known issues" section and the road's "the known issues, the polish".
 
 Paste everything in the block as the session's first message.

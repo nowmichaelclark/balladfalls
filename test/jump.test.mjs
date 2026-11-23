@@ -36,14 +36,14 @@ function check(label, condition, detail = '') {
 const LOOPS = [176315227, 2679763182, 694704631];
 
 // A core with the player on it, playing `seed` as a piece of `bars`
-// (Infinity: Endless), lite or full; the blocks rendered as the worklet
-// renders them, each one's time kept.
+// (Infinity: Endless; null: the loop's own, a short loop), lite or full; the
+// blocks rendered as the worklet renders them, each one's time kept.
 function playing(seed, bars, full) {
   const x = new WebAssembly.Instance(module, {}).exports;
   x.dl_init(RATE);
   x.dl_quality(full ? 1 : 0);
   x.dl_play_attach(full ? 1 : 0);
-  x.dl_play_length(bars);
+  if (bars != null) x.dl_play_length(bars);
   x.dl_play_load(seed >>> 0, 0);
   let block = 0;
   const events = new Float64Array(x.memory.buffer, x.dl_play_event_at(), 4 * 256);
@@ -109,6 +109,50 @@ for (const seed of LOOPS) {
       check(`${label}: where it is, three hours in (bar ${Math.round(bar)} of ${piece}, ${Math.round(played)} s played, ${Math.round(left)} s left, section ${section})`,
         Math.abs(played - 3 * 3600) < 60 && (bars === Infinity ? piece === -1 && left === -1 : piece === 32768 && left > 0));
     }
+  }
+}
+
+// Session 30h (queue item 116): a short loop's rail asks for a step
+// (`JUMP.step`), playing or paused; it lands on that step, heard within the
+// jump's 0.06 s (of the ask, or of Play after a pause), nothing late, its
+// busiest block room for the slow case as a long piece's is.
+console.log("A short loop's rail: a step, playing and paused");
+for (const seed of LOOPS) {
+  for (const full of [false, true]) {
+    const label = `${seed} ${full ? 'full' : 'lite'}`;
+    const p = playing(seed, null, full);
+    for (let i = 0; i < 2000; i++) p.render();
+    // Back to a step no phrase line is on: 2 bars, 1 beat and a step in.
+    const target = 2 * 16 + 5;
+    const asked = p.now();
+    check(`${label}: the step asked is taken`, p.x.dl_play_jump(JUMP.step, target) === 1);
+    let jump = null;
+    let worst = 0;
+    for (let i = 0; i < 400 && !jump; i++) {
+      const { us, out } = p.render();
+      worst = Math.max(worst, us);
+      jump = out.find((e) => e.kind === KIND.jump) || null;
+    }
+    const heard = jump ? jump.time - asked : Infinity;
+    check(`${label}: playing, it lands on step ${target} (${jump && jump.step}), heard within 0.06 s (${heard.toFixed(4)} s)`, jump && jump.step === target && heard < 0.06);
+    for (let i = 0; i < 1000; i++) worst = Math.max(worst, p.render().us);
+    check(`${label}: no late note, none missed; its busiest block ${Math.round(worst)} us, room for the slow case`, p.x.dl_late() === 0 && p.x.dl_missed() === 0 && worst + BURN_US < DEADLINE_US, `late ${p.x.dl_late()} missed ${p.x.dl_missed()}`);
+    // Paused: held, the place says it, nothing lands until Play.
+    p.x.dl_play_stop();
+    for (let i = 0; i < 100; i++) p.render();
+    const held = 5 * 16 + 3;
+    check(`${label}: paused, the step asked is taken`, p.x.dl_play_jump(JUMP.step, held) === 1);
+    const placed = p.x.dl_play_place() === 1;
+    const [bar] = new Float64Array(p.x.memory.buffer, p.x.dl_play_place_at(), 5);
+    let early = false;
+    for (let i = 0; i < 200; i++) early = early || p.render().out.some((e) => e.kind === KIND.jump);
+    const resumed = p.now();
+    p.x.dl_play_resume(0);
+    jump = null;
+    for (let i = 0; i < 400 && !jump; i++) jump = p.render().out.find((e) => e.kind === KIND.jump) || null;
+    const after = jump ? jump.time - resumed : Infinity;
+    check(`${label}: paused, the place says where Play goes on from (bar ${bar.toFixed(2)}), nothing lands before Play`, placed && bar > 0 && !early);
+    check(`${label}: Play goes on from step ${held} (${jump && jump.step}), heard within 0.06 s (${after.toFixed(4)} s)`, jump && jump.step === held && after < 0.06);
   }
 }
 

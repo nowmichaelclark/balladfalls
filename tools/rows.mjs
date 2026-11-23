@@ -131,6 +131,17 @@
 //                       hands over again; an album of one; after a track was
 //                       deleted it goes to the track before that one; after
 //                       leaving the album it is as the history says
+//   timeline            (session 30h, queue item 116; `--only timeline`) a
+//                       tab of its own: a long piece's line pressed while
+//                       paused moves the playhead and its words, nothing
+//                       lands until Play, and Play starts there; a short
+//                       loop's rail pressed playing and paused lands on the
+//                       step asked (the core's Jump event), with no Track
+//                       length (the rail the loop's round) and with one (the
+//                       rail the track: its clock moved, so it ends as long
+//                       after the step); its keys; the album's way back gone
+//                       after Next and after the core's own next loop, and
+//                       back once another album is left
 //   pickers             (session 30j, queue item 118; `--only pickers`) the
 //                       tempo, key, style and voices views from the Vibe
 //                       panel: a pick, a range or a set, any, the pages,
@@ -171,7 +182,7 @@ const LONG = argv.includes('--long');
 const PORT = Number(flag('--port', 8771));
 const APP = argv.includes('--app');
 const CDP = flag('--cdp', '');
-// `--only previous` (or `track`, `pickers`): just that group's rows, for working on one.
+// `--only previous` (or `track`, `timeline`, `pickers`): just that group's rows, for working on one.
 const ONLY = flag('--only', '');
 
 function loadPlaywright() {
@@ -514,9 +525,11 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   const count = () => ev(() => window.__rows.exports.length);
   const lateLine = async () => (await diag()).split('\n').find((l) => l.startsWith('engine:')) || '';
   const nothingLate = (line) => /late: 0\s+missed: 0\s+dropped: 0/.test(line);
+  // Three seconds of listening (session 30h: 1.5 s fell in a quiet start once
+  // in forty runs, a new loop opening after the track's end).
   const playing = async () => {
     const p = await probe();
-    return p && p.player.state === 3 && (await level(1500)) > 1e-4;
+    return p && p.player.state === 3 && (await level(3000)) > 1e-4;
   };
   const setLite = async (on) => {
     const now = await ev(() => document.getElementById('liteMode').getAttribute('aria-checked') === 'true');
@@ -574,7 +587,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     row(`export audio (${pace}): a minute to the file chosen, written as it went, a FLAC of the loop playing that ends where the core says, the music on and nothing late`,
       done && done.type === 'done' && start.pace === pace && start.sink === 'handle' && file.size === done.bytes && si && si.rate === 44100 && si.bits === 16 && si.total === done.frames
       && done.seconds >= 60 && done.seconds < 60 + 30 && moved >= 2 && !done.counts.late && !done.counts.missed && !done.counts.dropped && s.done && meanwhile && nothingLate(line),
-      `${done && done.type} ${done && done.why || ''}, ${file.size} bytes, ${si && si.total} frames, ${done && done.seconds && done.seconds.toFixed(1)} s in ${done && done.took && done.took.toFixed(1)} s (${speeds[pace].toFixed(1)}x), ${moved} progress reports; ${s.saved}; ${line}`);
+      `${done && done.type} ${done && done.why || ''}, ${file.size} of ${done && done.bytes} bytes, ${si && si.total} frames, ${done && done.seconds && done.seconds.toFixed(1)} s in ${done && done.took && done.took.toFixed(1)} s (${speeds[pace].toFixed(1)}x), ${moved} progress reports; ${start.pace} to ${start.sink}; ${s.done ? 'done shown' : 'no done'}; ${meanwhile ? 'playing' : 'not playing'}; ${s.saved}; ${line}`);
     await clickId('exportDoneBtn');
   }
   row('export audio: gentle ("lighter on processor" on) is slower than fast, and both faster than real time', speeds.fast > speeds.gentle && speeds.gentle > 1, `fast ${speeds.fast.toFixed(1)}x, gentle ${speeds.gentle.toFixed(1)}x real time`);
@@ -1243,6 +1256,11 @@ async function main() {
       report();
       return;
     }
+    if (ONLY === 'timeline') {
+      await timelineRows(browser);
+      report();
+      return;
+    }
     if (ONLY === 'pickers') {
       await pickerRows(browser);
       report();
@@ -1621,6 +1639,7 @@ async function main() {
     if (!APP) await previousRows(browser);
     if (!APP) await artRows(browser);
     if (!APP) await trackRows(browser);
+    if (!APP) await timelineRows(browser);
     if (!APP) await pickerRows(browser);
     if (!APP) await sidewaysRows(browser);
     if (!APP) await keyboardRows(browser);
@@ -2657,6 +2676,286 @@ function covered(id = 'viewTrack') {
     if (/auto|scroll/.test(getComputedStyle(el).overflowY)) out.push(`${el.id || el.className} scrolls`);
   }
   return out;
+}
+
+// The timeline (session 30h, queue item 116; Mikey, 2026-11-23): "click on
+// the timeline ... and skip around on the track", any length, paused or
+// playing; and the album's way back gone once a new track is made.
+async function timelineRows(browser) {
+  console.log('\n  The timeline moves the playhead (session 30h)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const open = async (prefs) => {
+    const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+    tab.on('pageerror', (e) => bad.push(e.message));
+    await tab.addInitScript(HOOK);
+    if (prefs) {
+      await tab.addInitScript((p) => {
+        try { if (!localStorage.getItem('driftloom.prefs.v1')) localStorage.setItem('driftloom.prefs.v1', p); } catch (e) { /* no storage */ }
+      }, JSON.stringify(prefs));
+    }
+    await tab.goto(`${ORIGIN}/`);
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1500);
+    return tab;
+  };
+  // What a tab's page and core say.
+  const kit = (tab) => {
+    const tev = (fn, arg) => tab.evaluate(fn, arg);
+    return {
+      tev,
+      probe: async () => {
+        const m = await tev(() => window.__rows.probe());
+        return m ? { ...m, d: about(m.about) } : null;
+      },
+      clock: () => tev(() => (window.__rows.ctx ? window.__rows.ctx.currentTime : 0)),
+      playing: () => tev(() => document.getElementById('playBtn').getAttribute('aria-label') === 'Pause'),
+      // The last jump the page asked (the record's own `at` is the clock's;
+      // the jump's is the message's).
+      lastJump: () => tev(() => {
+        const m = window.__rows.posts.filter((x) => x.type === 'playJump').pop();
+        return m ? { kind: m.msg.kind, at: m.msg.at } : null;
+      }),
+      jumpCount: () => tev(() => window.__rows.posts.filter((m) => m.type === 'playJump').length),
+      // The core's Jump events whose batch came at or after `t` (the audio
+      // clock): the step each landed on, and its time.
+      landed: (t) => tev((since) => {
+        const out = [];
+        for (const b of window.__rows.events) {
+          if (b.at < since) continue;
+          for (let k = 0; k < b.events.length; k += 4) if (b.events[k + 1] === 8) out.push({ step: b.events[k + 2], time: b.events[k] });
+        }
+        return out;
+      }, t),
+      rail: () => tev(() => {
+        const r = document.getElementById('nowRail');
+        const m = /scaleX\(([\d.]+)\)/.exec(document.getElementById('nowFill').style.transform);
+        return { hidden: r.hidden, role: r.getAttribute('role'), off: r.getAttribute('aria-disabled') === 'true', frac: m ? Number(m[1]) : NaN,
+          text: document.getElementById('nowBig').textContent, said: r.getAttribute('aria-valuetext') || '', now: Number(r.getAttribute('aria-valuenow')), max: Number(r.getAttribute('aria-valuemax')) };
+      }),
+      press: async (id, f) => {
+        const box = await tab.locator(`#${id}`).boundingBox();
+        await tab.mouse.click(box.x + f * box.width, box.y + box.height / 2);
+      },
+      toNow: () => tev(() => { if (document.getElementById('viewNow').hidden) document.getElementById('nowBtn').click(); }),
+      pause: () => tev(() => { if (document.getElementById('playBtn').getAttribute('aria-label') === 'Pause') document.getElementById('playBtn').click(); }),
+      play: () => tev(() => { if (document.getElementById('playBtn').getAttribute('aria-label') === 'Play') document.getElementById('playBtn').click(); }),
+    };
+  };
+  // The first Jump event at or after `t`, waited for up to `ms`.
+  const waitLanded = async (k, t, ms = 3000) => {
+    for (let w = 0; w < ms; w += 100) {
+      const got = await k.landed(t);
+      if (got.length) return got[0];
+      await sleep(100);
+    }
+    return null;
+  };
+  // "−2:48" or "1:02": seconds.
+  const secsOf = (text) => { const m = /([\d:]+)$/.exec(text); return m ? m[1].split(':').reduce((a, v) => a * 60 + Number(v), 0) : NaN; };
+
+  // A long piece, paused: the line moves the playhead; Play starts there.
+  {
+    const tab = await open({ view: 'now', picks: { length: 3072, journey: 'arc' } });
+    const k = kit(tab);
+    await tab.click('#playBtn');
+    await sleep(4000);
+    await k.pause();
+    await sleep(800);
+    const before = await k.jumpCount();
+    const box = await tab.locator('#pieceLine').boundingBox();
+    const ask = Math.floor(3072 * 0.4);
+    await tab.mouse.click(box.x + 0.4 * box.width, box.y + box.height / 2);
+    const asked = await k.clock();
+    await sleep(800);
+    const sent = await k.lastJump();
+    const words = await k.tev(() => ({ bars: document.getElementById('pieceBars').textContent, head: document.getElementById('pieceHead').style.transform, playing: document.getElementById('playBtn').getAttribute('aria-label') }));
+    const headX = Number((/translateX\(([\d.]+)px\)/.exec(words.head) || [])[1]);
+    const shownBar = Number(((/^bar ([\d,]+)/.exec(words.bars) || [])[1] || '').replace(/,/g, ''));
+    const early = await k.landed(asked);
+    const pixel = 3072 / box.width;
+    row('timeline: a long piece paused, a press on its line asks the core there (a bar) and the playhead and "bar N/M" go there, still paused, nothing landing',
+      (await k.jumpCount()) === before + 1 && sent && sent.kind === 1 && Math.abs(sent.at - ask) <= pixel + 1 && words.playing === 'Play'
+        && Math.abs(headX - 0.4 * box.width) < 3 && Math.abs(shownBar - ask) <= 4 + pixel + 1 && /\/3,072/.test(words.bars) && early.length === 0,
+      `asked bar ${sent && sent.at} of ${ask}; ${words.bars}; head ${headX.toFixed(1)} of ${(0.4 * box.width).toFixed(1)} px; ${early.length} landed`);
+    const t0 = await k.clock();
+    await k.play();
+    const hit = await waitLanded(k, t0);
+    await sleep(1500);
+    const p = await k.probe();
+    const spb = Number(p.d.steps_per_bar);
+    const at = hit ? hit.step / spb : NaN;
+    row('timeline: then Play starts there: the core lands on the phrase line at or before the bar asked, playing',
+      hit && at <= sent.at && at > sent.at - Number(p.d.bars) - 0.01 && p.player.state === 3 && hit.time - t0 < 1, `landed at bar ${at}, asked ${sent && sent.at}, ${hit ? (hit.time - t0).toFixed(3) : '-'} s after Play`);
+    await k.pause();
+    await tab.close();
+  }
+
+  // A short loop, playing and paused, with no Track length: the rail is the
+  // loop's round.
+  const tab = await open({ view: 'now' });
+  const k = kit(tab);
+  await k.tev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
+  await k.tev(() => document.getElementById('pasteCode').click());
+  await sleep(3500);
+  await k.toNow();
+  await sleep(300);
+  let p = await k.probe();
+  const spb = Number(p.d.steps_per_bar);
+  const round = Number(p.d.bars) * spb;
+  let r = await k.rail();
+  row('timeline: a short loop\'s rail is a slider (its value said: bar of the round), the long piece\'s line hidden', !r.hidden && r.role === 'slider' && !r.off && /^bar \d+ of \d+$/.test(r.said) && r.max === Number(p.d.bars),
+    `${r.role}, ${r.said}, max ${r.max} of ${p.d.bars} bars`);
+  let t0 = await k.clock();
+  await k.press('nowRail', 0.5);
+  let sent = await k.lastJump();
+  let hit = await waitLanded(k, t0);
+  await sleep(300);
+  r = await k.rail();
+  row('timeline: a short loop playing, a press halfway along its rail lands on the step asked (the core\'s Jump event), halfway through its round, heard within a second',
+    sent && sent.kind === 3 && hit && hit.step === sent.at && Math.abs((sent.at % round) / round - 0.5) < 2 / round + 0.01 && hit.time - t0 < 1 && Math.abs(r.frac - 0.5) < 0.2,
+    `asked step ${sent && sent.at} (${sent && ((sent.at % round) / round).toFixed(3)} of the round), landed ${hit && hit.step}, ${hit ? (hit.time - t0).toFixed(3) : '-'} s; rail ${r.frac}`);
+  // Paused: the rail moves now, nothing lands, Play starts there.
+  await k.pause();
+  await sleep(600);
+  t0 = await k.clock();
+  await k.press('nowRail', 0.25);
+  await sleep(600);
+  sent = await k.lastJump();
+  r = await k.rail();
+  const early = await k.landed(t0);
+  row('timeline: a short loop paused, a press a quarter along moves the rail and says it, nothing landing, still paused',
+    sent && sent.kind === 3 && Math.abs((sent.at % round) / round - 0.25) < 2 / round + 0.01 && Math.abs(r.frac - 0.25) < 0.02 && early.length === 0 && !(await k.playing()) && r.now === Math.floor((sent.at % round) / spb) + 1,
+    `asked ${sent && sent.at}, rail ${r.frac}, said ${r.said}, ${early.length} landed`);
+  t0 = await k.clock();
+  await k.play();
+  hit = await waitLanded(k, t0);
+  row('timeline: and Play starts on that step', hit && hit.step === sent.at && hit.time - t0 < 1, `landed ${hit && hit.step} for ${sent && sent.at}`);
+  // The keys: a bar on with the right arrow, from where it is.
+  await sleep(1500);
+  const n0 = await k.jumpCount();
+  await tab.focus('#nowRail');
+  await tab.keyboard.press('ArrowRight');
+  await sleep(200);
+  const keyed = await k.lastJump();
+  await tab.keyboard.press('Home');
+  await sleep(200);
+  const home = await k.lastJump();
+  row('timeline: the rail\'s keys: the right arrow a bar on, Home its round\'s first step', (await k.jumpCount()) === n0 + 2 && keyed.kind === 3 && home.kind === 3 && home.at % round === 0 && keyed.at > home.at,
+    `${keyed && keyed.at}, ${home && home.at}`);
+
+  // With a Track length: the rail is the track; a move takes the track's
+  // clock with it.
+  await trackTo(k.tev, 60, { fadeIn: false, fadeOut: true });
+  await sleep(300);
+  await k.toNow();
+  await sleep(2500);
+  p = await k.probe();
+  r = await k.rail();
+  const sd = 60 / Number(p.d.bpm) / 4;
+  const endStep = p.trackEnd;
+  row('timeline: with a Track length the rail is the track, its value said as time of its length', /^\d+:\d\d of (0:59|1:00|1:01)$/.test(r.said) && r.max >= 59 && r.max <= 61 && endStep > 0, `${r.said}, end step ${endStep}`);
+  t0 = await k.clock();
+  await k.press('nowRail', 0.75);
+  sent = await k.lastJump();
+  hit = await waitLanded(k, t0);
+  await sleep(400);
+  p = await k.probe();
+  r = await k.rail();
+  // The track's second moved: it ends as long after the step as the step
+  // was from its end.
+  const leftThen = (endStep - sent.at) * sd;
+  const leftNow = hit ? p.trackAt - hit.time : NaN;
+  row('timeline: a short loop with a Track length, playing, a press three quarters along lands on the step asked, and the track ends as long after it as that step was from its end (its clock moved)',
+    hit && hit.step === sent.at && Math.abs(leftNow - leftThen) < sd + 0.01 && Math.abs(r.frac - 0.75) < 0.05 && secsOf(r.text) <= 16 && secsOf(r.text) >= 13 && Math.abs(p.trackEnd - endStep) <= 1,
+    `asked ${sent && sent.at} of ${endStep}; left ${leftNow.toFixed(2)} s for ${leftThen.toFixed(2)}; rail ${r.frac}, ${r.text}; end step ${p.trackEnd}`);
+  await k.pause();
+  await sleep(500);
+  t0 = await k.clock();
+  await k.press('nowRail', 0.1);
+  await sleep(600);
+  sent = await k.lastJump();
+  r = await k.rail();
+  const quiet = await k.landed(t0);
+  row('timeline: and paused, a press at a tenth moves the rail and the time left, nothing landing', Math.abs(r.frac - 0.1) < 0.03 && secsOf(r.text) >= 53 && secsOf(r.text) <= 55 && quiet.length === 0 && sent.kind === 3,
+    `rail ${r.frac}, ${r.text}`);
+  t0 = await k.clock();
+  await k.play();
+  hit = await waitLanded(k, t0);
+  await sleep(400);
+  p = await k.probe();
+  row('timeline: then Play starts on that step, the track ending as long after it as it was from its end',
+    hit && hit.step === sent.at && Math.abs((p.trackAt - hit.time) - (endStep - sent.at) * sd) < 2 * sd + 0.01, `landed ${hit && hit.step} for ${sent && sent.at}; left ${hit ? (p.trackAt - hit.time).toFixed(2) : '-'} s`);
+  await trackTo(k.tev, null);
+  await sleep(300);
+  await k.pause();
+  await tab.close();
+
+  // The album's way back: gone once a new track is made (Next, or the
+  // core's own at a track's end), back when another album is left.
+  {
+    const tab2 = await open(null);
+    const k2 = kit(tab2);
+    const specs = [newSpec(4801, 'bars=2,bpm=160'), newSpec(4802, 'bars=2,bpm=150')];
+    await k2.tev(async (all) => {
+      const store = await import('/js/storage.js');
+      const a = store.createAlbum('Back');
+      store.setAlbumIds(a.id, all.map((s) => store.save(s).id));
+    }, specs);
+    await tab2.reload();
+    await tab2.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1500);
+    const action = () => k2.tev(() => { const a = document.getElementById('nowAction'); return a.hidden ? null : (a.getAttribute('aria-label') || a.textContent); });
+    const playBack = async () => {
+      await k2.tev(() => {
+        if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click();
+        document.querySelector('[data-tab="albums"]').click();
+      });
+      await sleep(300);
+      await k2.tev(() => {
+        const row2 = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.replace(/, now playing$/, '').trim() === 'Back');
+        if (row2) row2.querySelector('.lrow-main').click();
+      });
+      await sleep(300);
+      await k2.tev(() => { const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'play'); if (b) b.click(); });
+      await sleep(800);
+      await k2.toNow();
+      await sleep(300);
+    };
+    const leave = async () => {
+      await k2.toNow();
+      await k2.tev(() => { const a = document.getElementById('nowAction'); if (!a.hidden && a.textContent === 'leave') a.click(); });
+      await sleep(500);
+    };
+    await playBack();
+    await leave();
+    const offered = await action();
+    await k2.tev(() => document.getElementById('nextBtn').click());
+    await sleep(3000);
+    const afterNext = await action();
+    row('timeline: the album\'s way back, offered on leaving it, goes once Next makes a new track', offered === 'Back to Back' && afterNext === null, `${offered} then ${afterNext}`);
+    await playBack();
+    await leave();
+    const again = await action();
+    // The core's own next loop at a track's end: nothing of the page's armed.
+    await trackTo(k2.tev, 3, { fadeIn: false, fadeOut: false });
+    await sleep(300);
+    await k2.toNow();
+    let gone;
+    for (let w = 0; w < 9000; w += 300) {
+      gone = await action();
+      if (gone === null) break;
+      await sleep(300);
+    }
+    const kept = [];
+    for (let w = 0; w < 3; w++) { kept.push(await action()); await sleep(1000); }
+    row('timeline: back after another album is left, and gone once the core makes its own next loop at the track\'s end, staying gone',
+      again === 'Back to Back' && gone === null && kept.every((x) => x === null), `${again}; then ${gone}; ${kept.join(',')}`);
+    await trackTo(k2.tev, null);
+    await k2.pause();
+    await tab2.close();
+  }
+  row('timeline: no page errors', !bad.length, bad.join('; '));
 }
 
 async function trackRows(browser) {

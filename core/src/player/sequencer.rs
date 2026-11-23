@@ -853,25 +853,15 @@ impl Sequencer {
             Synth::low_bell_off(host, start, fade);
         }
         self.bell_until = 0.0;
-        self.bell_pc = 0;
-        self.bell_drop = 0.0;
-        // The floor has played once the lateFloor let it in; whether it was
-        // out in the bar before, and so whether a drop is under way (its
-        // first strike rang before the jump: the drop goes on without it).
-        self.bell_floor = s.late.is_none_or(|l| abs >= js::max(l.drums, l.bass));
-        self.bell_was_out = step >= spb && Self::floor_out_from(lp, step - spb, abs - spb) > 0.0;
-        if s.spotlight && self.bell_floor && self.bell_was_out {
-            let more = Self::floor_out_from(lp, step, abs);
-            if more > 0.0 {
-                self.bell_drop = abs + more;
-            }
-        }
         if self.twang_until > start {
             Synth::twang_let_go(host, start, start, fade);
         }
         self.twang_until = 0.0;
-        self.twang_pc = 0;
-        self.twang_next = 0;
+        // What the bell and twang decided before it, from the pass's first
+        // step (session 30h: a jump lands on any step): the roots struck
+        // last, twang's picks still to come, a floor drop under way (its
+        // first strike rang before the jump: the drop goes on without it).
+        self.walk_to(lp, start);
         // The six strings start fresh, as on a new core: their saws' phases
         // run on from every pick before (`twang::string_phases`), which a
         // jump does not walk, so what it plays is the same wherever it came
@@ -883,7 +873,11 @@ impl Sequencer {
         // As a load counts it: from the block the loop began in, `START`
         // before its first step.
         self.twang_zero = start - age - super::START;
-        let quiet = step >= spb && Self::is_silent_bar(lp, abs - spb, rel - spb);
+        // The tails as the bar line before it left them: the bar it lands
+        // in's own, or at a bar line the bar before's (the step's own check
+        // comes as it plays).
+        let into = step % spb;
+        let quiet = if into > 0.0 { Self::is_silent_bar(lp, abs - into, rel - into) } else { step >= spb && Self::is_silent_bar(lp, abs - spb, rel - spb) };
         if quiet {
             Synth::fade_tails(host, start);
         } else {
@@ -1167,30 +1161,14 @@ impl Sequencer {
         // this step is its first) or the floor comes back (the bell damped).
         let mut spot_first = false;
         if s.spotlight && abs % spb == 0.0 {
-            let more = Self::floor_out_from(lp, stepf, abs);
-            self.bell_floor |= more == 0.0;
-            if self.bell_drop > 0.0 && abs >= self.bell_drop {
-                if more > 0.0 {
-                    // Still out across a pass's end: the drop goes on.
-                    self.bell_drop = abs + more;
-                } else {
-                    if self.bell_until > t {
-                        Synth::low_bell_off(host, t, SPOT_DAMP);
-                    }
-                    self.bell_until = 0.0;
-                    self.bell_pc = 0;
-                    self.bell_drop = 0.0;
+            let (first, back) = self.spot_line(lp, stepf, abs, sd);
+            spot_first = first;
+            if back {
+                if self.bell_until > t {
+                    Synth::low_bell_off(host, t, SPOT_DAMP);
                 }
-            } else if self.bell_drop == 0.0
-                && self.bell_floor
-                && !self.bell_was_out
-                && more * sd >= data::LOWBELL.spotlight_least - 0.001
-                && !late.is_some_and(|l| abs < js::max(l.drums, l.bass))
-            {
-                self.bell_drop = abs + more;
-                spot_first = true;
+                self.bell_until = 0.0;
             }
-            self.bell_was_out = more > 0.0;
         }
         let in_drop = self.bell_drop > 0.0 && abs < self.bell_drop;
         if !mutes[Layer::Chords as usize] {
@@ -1518,33 +1496,132 @@ impl Sequencer {
     /// chords play it (`low_bell::ALONE` where they don't).
     #[allow(clippy::too_many_arguments)] // the step's own place and times
     fn low_bell<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, s: f64, t: f64, kind: Bell, key: Key) {
+        let Some((midi, parts)) = self.bell_decides(lp, s, t, kind) else { return };
+        synth.low_bell(host, key, midi, t, parts);
+        self.bell_until = js::max(self.bell_until, t + LOW_BELL_RING);
+    }
+
+    /// What the low bell strikes at chords step `s` at `t` (`low_bell`'s
+    /// rules), and the root it struck last kept: its note and its parts, or
+    /// none. Nothing sounds: a jump walks it (`walk_to`).
+    fn bell_decides(&mut self, lp: &Loop, s: f64, t: f64, kind: Bell) -> Option<(f64, u32)> {
         let h = &lp.base.harmony;
         let slot = if kind.first { Some(h.slot_at(s)) } else { h.slots.iter().find(|x| x.start_step == s) };
-        let Some(slot) = slot else { return };
+        let slot = slot?;
         let end = slot.start_step + slot.length_steps;
         let plays = lp.base.chords.iter().enumerate().any(|(i, e)| e.step >= slot.start_step && e.step < end && truthy(lp.chord(i, e).0));
         // A drop's first strike is the bell alone in it, whatever the chords
         // do there (as the Ears 13b sketch's rang over a chord gone quiet).
         if !plays && !kind.first {
-            return;
+            return None;
         }
         let root = slot.root_midi + lp.moved(Layer::Chords, slot.root_midi);
         let pc = (((root - BELL_LOW) % 12.0) + 12.0) % 12.0;
         if !pc.is_finite() {
-            return;
+            return None;
         }
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // 0 to 11
         let mark = js::round(pc) as u8 % 12 + 1;
         // A millisecond's grace, so a chord exactly `regap` on is struck
         // however the times round.
         if !kind.first && mark == self.bell_pc && t - self.bell_at < data::LOWBELL.regap - 0.001 {
-            return;
+            return None;
         }
         self.bell_pc = mark;
         self.bell_at = t;
         let parts = (if kind.swell { low_bell::SWELL } else { 0 }) | (if kind.spot { low_bell::SPOT } else { 0 }) | (if plays { 0 } else { low_bell::ALONE });
-        synth.low_bell(host, key, BELL_LOW + pc, t, parts);
-        self.bell_until = js::max(self.bell_until, t + LOW_BELL_RING);
+        Some((BELL_LOW + pc, parts))
+    }
+
+    /// dropSpotlight at a bar line (`schedule_step`'s, at loop step `step`,
+    /// `abs` from the load): whether a floor drop starts here (this step its
+    /// first), and whether one ends (the floor back: the bell damped, the
+    /// caller's to send). Nothing sounds: a jump walks it (`walk_to`).
+    fn spot_line(&mut self, lp: &Loop, step: f64, abs: f64, sd: f64) -> (bool, bool) {
+        let late = lp.settings.late;
+        let more = Self::floor_out_from(lp, step, abs);
+        self.bell_floor |= more == 0.0;
+        let mut first = false;
+        let mut back = false;
+        if self.bell_drop > 0.0 && abs >= self.bell_drop {
+            if more > 0.0 {
+                // Still out across a pass's end: the drop goes on.
+                self.bell_drop = abs + more;
+            } else {
+                back = true;
+                self.bell_pc = 0;
+                self.bell_drop = 0.0;
+            }
+        } else if self.bell_drop == 0.0
+            && self.bell_floor
+            && !self.bell_was_out
+            && more * sd >= data::LOWBELL.spotlight_least - 0.001
+            && !late.is_some_and(|l| abs < js::max(l.drums, l.bass))
+        {
+            self.bell_drop = abs + more;
+            first = true;
+        }
+        self.bell_was_out = more > 0.0;
+        (first, back)
+    }
+
+    /// A jump's landing (`jumped`, session 30h): what the low bell and twang
+    /// decided across the steps of the pass before the step it lands on, as
+    /// playing the pass from its first step at the tempo playing would have
+    /// left them (the root each struck last and when, twang's picks still
+    /// to come, a floor drop under way), so the step lands as playing
+    /// reaches it, on a phrase line or not; nothing sounds. The step heard
+    /// first falls at `start`. As the organ's (`organ_reached`), the pass
+    /// before is not walked: its last bar's floor is read from this one.
+    #[allow(clippy::cast_precision_loss)] // steps, far below 2^53
+    fn walk_to(&mut self, lp: &Loop, start: f64) {
+        let s = lp.settings;
+        let spb = lp.spec.steps_per_bar;
+        let sd = self.step_dur();
+        let total = lp.total();
+        let len = lp.cycle(Layer::Chords);
+        let first = self.abs_step - self.step;
+        self.bell_pc = 0;
+        self.bell_drop = 0.0;
+        self.twang_pc = 0;
+        self.twang_next = 0;
+        let f = first as f64;
+        self.bell_floor = s.late.is_none_or(|l| f >= js::max(l.drums, l.bass));
+        // Out in the bar before the pass (the last of the pass before, as
+        // this one plays it): a drop under way goes on across the line.
+        self.bell_was_out = s.spotlight && f - self.origin as f64 >= spb && Self::floor_out_from(lp, total - spb, f - spb) > 0.0;
+        if self.bell_was_out && self.bell_floor {
+            self.bell_drop = f;
+        }
+        let chords = !self.mutes[Layer::Chords as usize] && !lp.rests(Layer::Chords);
+        for k in 0..self.step {
+            let abs = (first + k) as f64;
+            let rel = (first + k - self.origin) as f64;
+            let step = k as f64;
+            let swing = if k % 2 == 1 { lp.spec.swing * sd } else { 0.0 };
+            let t = start - (self.step - k) as f64 * sd + swing;
+            let quiet = Self::is_silent_bar(lp, abs, rel);
+            if abs % spb == 0.0 && quiet {
+                self.bell_pc = 0;
+                self.twang_pc = 0;
+                self.twang_next = 0;
+            }
+            let mut spot_first = false;
+            if s.spotlight && abs % spb == 0.0 {
+                spot_first = self.spot_line(lp, step, abs, sd).0;
+            }
+            if !chords || quiet {
+                continue;
+            }
+            let at = if len == total { step } else { ((abs % len) + len) % len };
+            let in_drop = self.bell_drop > 0.0 && abs < self.bell_drop;
+            if s.low_bell != 0 && (!s.spotlight || in_drop) {
+                self.bell_decides(lp, at, t, Bell { swell: s.low_bell == 2, spot: s.spotlight, first: spot_first });
+            }
+            if s.twang != 0 {
+                self.twang_decides(lp, [at, abs], t);
+            }
+        }
     }
 
     /// dropSpotlight (queue item 101g): how many steps from loop step `from`
@@ -1604,6 +1681,19 @@ impl Sequencer {
     /// A new root's chord takes the place of picks still to come. `at[1]`
     /// is the step from the load.
     fn twang<H: Host>(&mut self, host: &mut H, synth: &mut Synth, lp: &Loop, at: [f64; 2], t: f64, key: Key) {
+        let (picks, n) = self.twang_decides(lp, at, t);
+        for (i, &midi) in picks[..n].iter().enumerate() {
+            #[allow(clippy::cast_possible_truncation)] // three at most
+            let ord = key.ord + i as u32;
+            self.pick(host, synth, lp, midi, t, Key { ord, ..key });
+        }
+    }
+
+    /// What twang picks at step `at` at `t` (`twang`'s rules), in order, and
+    /// how many; its picks to come and the root it picked last kept.
+    /// Nothing sounds: a jump walks it (`walk_to`).
+    fn twang_decides(&mut self, lp: &Loop, at: [f64; 2], t: f64) -> ([f64; 3], usize) {
+        let mut picks = [f64::NAN; 3];
         let [s, abs] = at;
         let h = &lp.base.harmony;
         // How far apart the picks come, in steps (four a beat).
@@ -1654,26 +1744,26 @@ impl Sequencer {
                     self.twang_at = t;
                     self.twang_low = TWANG_LOW + pc;
                     self.twang_end = abs + (end - s);
-                    self.pick(host, synth, lp, self.twang_low, t, key);
+                    picks[0] = self.twang_low;
                     if gap > 0.0 {
                         self.twang_next = 1;
                         self.twang_due = abs + gap;
-                    } else {
-                        // Together (`spread` 0), as the approved clips
-                        // played them.
-                        let tenth = self.twang_low + 12.0 + self.twang_third;
-                        self.pick(host, synth, lp, self.twang_low + 7.0, t, Key { ord: key.ord + 1, ..key });
-                        self.pick(host, synth, lp, tenth, t, Key { ord: key.ord + 2, ..key });
-                        self.twang_next = 0;
+                        return (picks, 1);
                     }
-                    return;
+                    // Together (`spread` 0), as the approved clips
+                    // played them.
+                    picks[1] = self.twang_low + 7.0;
+                    picks[2] = self.twang_low + 12.0 + self.twang_third;
+                    self.twang_next = 0;
+                    return (picks, 3);
                 }
             }
         }
+        let mut n = 0;
         if self.twang_next != 0 && abs >= self.twang_due {
             if abs < self.twang_end {
-                let midi = if self.twang_next == 1 { self.twang_low + 7.0 } else { self.twang_low + 12.0 + self.twang_third };
-                self.pick(host, synth, lp, midi, t, key);
+                picks[0] = if self.twang_next == 1 { self.twang_low + 7.0 } else { self.twang_low + 12.0 + self.twang_third };
+                n = 1;
                 self.twang_next += 1;
                 self.twang_due += gap;
             }
@@ -1681,6 +1771,7 @@ impl Sequencer {
                 self.twang_next = 0;
             }
         }
+        (picks, n)
     }
 
     /// One of twang's picks: `midi` at `time`; if six strings already ring,

@@ -1245,18 +1245,12 @@ mod player {
 
     /// Go on from somewhere else in the loop playing (session 17,
     /// `Player::jump`): `kind` 0 a section (`at`, a whole number), 1 a bar,
-    /// 2 a time in seconds, from the piece's start. 1 if it was asked; 0 with
-    /// nothing playing, for no such kind, or a place that is not a number.
+    /// 2 a time in seconds, from the piece's start, 3 a step from the load
+    /// (`Jump::of`). 1 if it was asked; 0 with nothing playing or stopped,
+    /// for no such kind, or a place that is not a number.
     #[unsafe(no_mangle)]
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a whole section number, saturating
     pub extern "C" fn dl_play_jump(kind: u32, at: f64) -> u32 {
-        let to = match kind {
-            0 if at.is_finite() && at >= 0.0 => crate::player::Jump::Section(at as u64),
-            1 => crate::player::Jump::Bar(at),
-            2 => crate::player::Jump::Seconds(at),
-            _ => return 0,
-        };
-        u32::from(player().jump(to))
+        crate::player::Jump::of(kind, at).map_or(0, |to| u32::from(player().jump(to)))
     }
 
     /// Where the loop playing is (`dl_play_place`): bar, bars, played, left,

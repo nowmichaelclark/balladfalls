@@ -324,12 +324,14 @@ uint32_t dl_player_events_lost(dl_player *player);
    reached straight from the seed and the number, nothing before made): a
    section (DL_TO_SECTION, `at` a whole number), a bar (DL_TO_BAR) or a time
    in seconds (DL_TO_TIME), from the piece's start, landing on the phrase
-   line at or before it (a piece's last line at most). Made over a few
-   blocks, then heard START (0.05 s) on, what played before falling to
-   nothing over DL_JUMP_FADE; a DL_JUMPED event says where. What plays is
-   what playing would have reached there. 1 if asked; 0 with nothing
-   playing, or a place that is not a number. */
-enum { DL_TO_SECTION = 0, DL_TO_BAR = 1, DL_TO_TIME = 2 };
+   line at or before it (a piece's last line at most); or a step from the
+   load (DL_TO_STEP, a whole number), exactly, a time's track moving with
+   it. Made over a few blocks, then heard START (0.05 s) on, what played
+   before falling to nothing over DL_JUMP_FADE; a DL_JUMPED event says
+   where. What plays is what playing would have reached there. Paused, it
+   is held, and lands as dl_player_resume goes on. 1 if asked; 0 with
+   nothing playing or paused, or a place that is not a number. */
+enum { DL_TO_SECTION = 0, DL_TO_BAR = 1, DL_TO_TIME = 2, DL_TO_STEP = 3 };
 #define DL_JUMP_FADE 0.25
 int dl_player_jump(dl_player *player, uint32_t kind, double at);
 

@@ -108,7 +108,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 30e | `30e-fewer-words.md` | 113: fewer words: keys, icons and switches; the share screen as keys | Opus 5.5, high | 21, 24, 28, 30a to 30d | 24c, 29 | yes, 2026-11-22 (#449) |
 | 30f | `30f-painter-final.md` | 114: the Painter's final touches, and accessibility | Opus 5.5, high | 29, 30e | none | yes, 2026-11-22 (#452, #453, #454, #455, #457) |
 | | | **Mikey's last changes, two at a time** (2026-11-23; all hold 1.0) | | | | |
-| 30h | `30h-timeline.md` | 116: the timeline moves the playhead on any loop, paused or playing; the album's way back goes after a new track | Opus 5.5, high | 30g's #458 | 30i, 30j, 30l, 30m | |
+| 30h | `30h-timeline.md` | 116: the timeline moves the playhead on any loop, paused or playing; the album's way back goes after a new track | Opus 5.5, high | 30g's #458 | 30i, 30j, 30l, 30m | yes, 2026-11-24 (#461, v204) |
 | 30i | `30i-any-bars.md` | 117: "any bars" sometimes a long piece; what never comes unasked, measured | Opus 5.5, high | 30g's #458 | every row 30h to 30n, 30g's Left list | yes, 2026-11-23 (#462) |
 | 30j | `30j-pickers.md` | 118: the tempo, key, style and voices pickers | Opus 5.5, high | 30g's #458 | 30h, 30i, 30l, 30m, 30g's Left list | |
 | 30k | `30k-the-look.md` | 119: the card's art to the right, a new playhead (Mikey picks), solid knobs, the die, speakers, Chrome's scroll | Opus 5.5, high | 30h | 30i, 30l, 30m, 30g's Left list | |

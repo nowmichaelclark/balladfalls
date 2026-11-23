@@ -628,3 +628,15 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   theme). Listen to soath-wa `EKky18BHD` (corpus #27), an arc of 128 bars:
   theme B at 3:01, the peak at 6:02; and woth-rul `E3CZtsAI4` (#14), a
   wander of 128 bars: its one move at 2:19. No album loop beyond these two.
+- #461, the timeline moves the playhead on any loop, paused or playing, and
+  the album's way back goes once a new track is made (item 116, session 30h,
+  v204), preview URL:
+  <https://claude-s30h-timeline-d9cac7-driftloom.nowmichaelclark.workers.dev>
+  (the branch's): a short loop's rail is a slider (press, drag, the arrows a
+  bar), landing on the step asked within 0.06 s (`Jump::Step`), the track's
+  clock and fades moving with it where a Track length is set; a long piece's
+  line moves the playhead while paused, and Play starts there; a jump lands
+  as playing reaches it on any step (the bell's and twang's decisions walked
+  from the pass's first step). Listen for: a move lands where pressed, the
+  music going on from there (a chord struck before it waits for the next
+  one); paused, Play starts where the playhead was put. No album loop.

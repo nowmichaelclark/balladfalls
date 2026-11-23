@@ -36,7 +36,9 @@ for (const e of fixture.saves) {
   // A name travels composed (NFC): the same text to the eye.
   check(`  shared and opened (${code.length} characters): the same notes, name, mutes and salt`, hash(back) === was.notes && back.name === e.spec.name.normalize('NFC')
     && JSON.stringify(back.mutes) === JSON.stringify(e.spec.mutes) && (back.wanderSalt || 0) === (e.spec.wanderSalt || 0)
-    && back.length === e.spec.length && back.askJourney === e.spec.askJourney, `${code}: ${back.name}`);
+    // The length asked: one the seed draws with none asked (queue item 117)
+    // is drawn again, and no code carries it.
+    && (back.lengthDrawn ? undefined : back.length) === e.spec.length && back.askJourney === e.spec.askJourney, `${code}: ${back.name}`);
   check('  the code is the 64 characters', /^[A-Za-z0-9_-]+$/.test(code) && codeKind(code) === 'song');
 }
 check('a plain loop is nine characters', encodeSong(byId.get('fx0').spec).length === 9);

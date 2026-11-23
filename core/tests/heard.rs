@@ -126,6 +126,11 @@ fn a_loop_hears_nothing() {
         for seed in seeds(30) {
             for text in ["bars=24", "bars=32", "-"] {
                 generator.load_with(seed, &Request::parse(text).expect("a request"));
+                // With none asked, a loop is sometimes a long piece all the
+                // same (queue item 117): that one hears its plan.
+                if generator.spec().length_drawn {
+                    continue;
+                }
                 for n in [0u64, 3, 40] {
                     assert!(!generator.section(n, 1.0).heard.on, "seed {seed} {text}: section {n} hears a plan");
                 }

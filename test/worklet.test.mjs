@@ -212,9 +212,14 @@ console.log('\nThe core\'s player (queue item 94b)');
   const r = new Rng(94);
   let whole = true;
   let detail = '';
+  let pieces = 0;
   for (let i = 0; i < 8; i++) {
     const seed = r.seed32();
     const spec = newSpec(seed, i % 2 ? vibeSelection(['cozy', 'rainy'].slice(0, 1 + (i % 2))) : null);
+    // A long piece (here one drawn with nothing asked, queue item 117) never
+    // moves a tone edited, and the edits sent whole carry the tone: its
+    // sections are not the bare request's, as an asked length's aren't.
+    if (spec.length != null) { pieces++; continue; }
     const full = askOf(spec);
     const bare = { ...full, seeds: [], tone: null, bpm: null };
     const a = make();
@@ -230,7 +235,7 @@ console.log('\nThe core\'s player (queue item 94b)');
       detail += ` ${seed}${a.refused ? ` (refused ${a.refused})` : ''}`;
     }
   }
-  check('a loop\'s edits sent whole play the loop its seed and request make, sample for sample (8 loops)', whole, detail);
+  check(`a loop's edits sent whole play the loop its seed and request make, sample for sample (${8 - pieces} loops, ${pieces} long pieces left out)`, whole && pieces <= 3, detail);
   // An edited spec: a layer re-rolled, the tone, the tempo.
   const seed = r.seed32();
   let spec = newSpec(seed);

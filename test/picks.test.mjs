@@ -61,7 +61,9 @@ console.log('\nThe request (queue items 85 and 88)');
 {
   let ok = true, bad = '';
   for (let s = 0; s < 60; s++) {
-    const drawn = newSpec(9100 + s);
+    // With nothing asked a loop is sometimes a long piece of its own (queue
+    // item 117): its loop is the same, and that is what is compared.
+    const { length: _drawnLength, lengthDrawn: _drawnMark, ...drawn } = newSpec(9100 + s);
     const spec = newSpec(9100 + s, requestFor({ vibes: [], picks: { tempo: null, length: 4096 } }));
     const piece = pieceOf(spec);
     const { length, ...rest } = spec;

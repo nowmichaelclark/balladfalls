@@ -61,6 +61,18 @@ const SPREAD = (() => {
   return v[Math.floor(0.9 * (v.length - 1))] - v[Math.floor(0.1 * (v.length - 1))];
 })();
 
+/**
+ * The request that plays the loop of `seed` as itself (no plan): `rest`
+ * (the request but its length and journey) with the loop's own bars asked.
+ * With no length asked a loop is sometimes a long piece (queue item 117);
+ * a short length asked is the loop's own and moves no other draw, so this
+ * plays what no length asked played before, sample for sample.
+ */
+export function itself(seed, rest = '') {
+  const bars = newSpec(seed, rest || null).bars;
+  return [rest, `bars=${bars}`].filter(Boolean).join(',');
+}
+
 /** The release dlrender, built once. */
 // Whether a loop's progression planes (planingSevenths, queue item 101f):
 // every chord of its harmony a major seventh with a scale of its own. Its
@@ -432,10 +444,10 @@ export function soundChecks(seed, request, seconds, lines) {
   return { own, joins, lufs, jump: Math.max(0, ...jumps), range: Math.max(...lufs) - Math.min(...lufs), spread: SPREAD, stretch: per * sectionSeconds };
 }
 
-/** The loudness of the loop of `seed` as itself (no length asked: no plan), the same way: its own breathing's jumps. */
+/** The loudness of the loop of `seed` as itself (`itself`: no plan), the same way: its own breathing's jumps. */
 export function loopLoudness(seed, seconds, stretchSeconds) {
   const file = path.join(os.tmpdir(), `longform-own-${seed}-${process.pid}.wav`);
-  dlrender(['--seed', String(seed), '--seconds', String(seconds), '--rate', '44100', '--wander', '1', '--wav', file]);
+  dlrender(['--seed', String(seed), '--request', itself(seed), '--seconds', String(seconds), '--rate', '44100', '--wander', '1', '--wav', file]);
   const { rate, data } = readWav(file);
   fs.rmSync(file, { force: true });
   const [s, h] = kWeighting(rate);
@@ -582,10 +594,10 @@ export function arcChecks(seed, request, { extra = 20, rate = 44100, wander = 1 
       later += 1;
     }
   }
-  // The loop as itself (no length asked: no plan), at the same amount, on
+  // The loop as itself (its own bars asked: no plan), at the same amount, on
   // the same spans: its own unit-to-unit jumps, which the arc is held to.
   const rest = request.split(',').filter((x) => !/^(bars|journey)=/.test(x)).join(',');
-  dlrender(['--seed', String(seed), ...(rest ? ['--request', rest] : []), '--seconds', String(seconds), '--rate', String(rate), '--wander', String(wander), '--wav', wavFile]);
+  dlrender(['--seed', String(seed), '--request', itself(seed, rest), '--seconds', String(seconds), '--rate', String(rate), '--wander', String(wander), '--wav', wavFile]);
   const loop = readWav(wavFile).data;
   fs.rmSync(wavFile, { force: true });
   // Each join against the loop as itself there (session 16: never a hole).
@@ -757,7 +769,7 @@ export function arcJoins(seed, request, seconds) {
   };
   const piece = one(['--request', request]);
   const rest = request.split(',').filter((x) => !/^(bars|journey)=/.test(x)).join(',');
-  const loop = one(rest ? ['--request', rest] : []);
+  const loop = one(['--request', itself(seed, rest)]);
   const { form, units } = pieceMap(seed, request, 0, 2000);
   const bar = form.unitSeconds / form.unitBars;
   const start = 0.05;

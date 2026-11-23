@@ -298,8 +298,8 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   sessions 30h to 30n (`docs/sessions/README.md`), his four answers in
   `docs/DECISIONS.md`; the new name stays out of the repo (30l's icon is left
   open for 31). **Order:** 30h and 30i first, then 30j beside 30l, 30k beside
-  30m, then 30n beside 30g's Left list. **Running:** (filled in as they
-  start).
+  30m, then 30n beside 30g's Left list. **Running:** 30h (v202, branch
+  `s30h-timeline`) and 30i (v203, `s30i-any-bars`), started 2026-11-23.
 - **Brain B-parallel 3 (Opus 5.5, 2026-11-22 to 23, in Claude Code; ended
   at Mikey's word, the next brain to take his list: `brain-parallel-4.md`).**
   **Merged:** 30d (#446, v192), 30c (#448, v193), 24c (#450, v194), 30e

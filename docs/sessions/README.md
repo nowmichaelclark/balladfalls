@@ -107,13 +107,21 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 30d | `30d-info-card.md` | 112: the info card: clean lines, the rest a tap away, a round playhead | Sonnet 5.5, high | 23 | 21, 24, 24c, 28, 29, 30a, 30c | yes, 2026-11-22 (#446) |
 | 30e | `30e-fewer-words.md` | 113: fewer words: keys, icons and switches; the share screen as keys | Opus 5.5, high | 21, 24, 28, 30a to 30d | 24c, 29 | yes, 2026-11-22 (#449) |
 | 30f | `30f-painter-final.md` | 114: the Painter's final touches, and accessibility | Opus 5.5, high | 29, 30e | none | yes, 2026-11-22 (#452, #453, #454, #455, #457) |
+| | | **Mikey's last changes, two at a time** (2026-11-23; all hold 1.0) | | | | |
+| 30h | `30h-timeline.md` | 116: the timeline moves the playhead on any loop, paused or playing; the album's way back goes after a new track | Opus 5.5, high | 30g's #458 | 30i, 30j, 30l, 30m | |
+| 30i | `30i-any-bars.md` | 117: "any bars" sometimes a long piece; what never comes unasked, measured | Opus 5.5, high | 30g's #458 | every row 30h to 30n, 30g's Left list | |
+| 30j | `30j-pickers.md` | 118: the tempo, key, style and voices pickers | Opus 5.5, high | 30g's #458 | 30h, 30i, 30l, 30m, 30g's Left list | |
+| 30k | `30k-the-look.md` | 119: the card's art to the right, a new playhead (Mikey picks), solid knobs, the die, speakers, Chrome's scroll | Opus 5.5, high | 30h | 30i, 30l, 30m, 30g's Left list | |
+| 30l | `30l-icon.md` | 120: the new name's icon (Mikey picks); left open, merged with 31a by 31 | Opus 5.5, high | 30g's #458 | every row 30h to 30n, 30g's Left list | |
+| 30m | `30m-album-export.md` | 121: an album exported whole and tagged, a zip or a file a track; a seed album saved | Opus 5.5, high | 30g's #458 | 30h, 30i, 30j, 30k, 30l | |
+| 30n | `30n-keys.md` | 122: the keyboard as music players have it, letter keys with a switch to turn them off | Opus 5.5, high | 30h, 30j, 30k, 30m | 30i, 30l, 30g's Left list | |
 | | | **Then in order, one at a time** | | | | |
-| 30g | `30g-crackles.md` | 115: no crackles in the Android app (a 1.0 blocker, Mikey 2026-11-22) | Opus 5.5, high | 29 | 30f (the app's audio path only, merging after it) | yes, 2026-11-23 (#458, Mikey heard it clean; steps left in its file's Left list) |
-| 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | 18, 21, 24, 24c, 29, B4, 30f, 30g | none | |
+| 30g | `30g-crackles.md` | 115: no crackles in the Android app (a 1.0 blocker, Mikey 2026-11-22) | Opus 5.5, high | 29 | 30f (the app's audio path only, merging after it); its Left list beside 30i, 30j, 30k, 30l, 30n | yes, 2026-11-23 (#458, Mikey heard it clean; steps left in its file's Left list) |
+| 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | 18, 21, 24, 24c, 29, B4, 30f, 30g (and its Left list), 30h to 30n (30l open) | none | |
 | B5 | `brain-5-release.md` | Brain: the release check | Opus 5.5, high | 30 | none | |
 | | **you** | Your signing key (chosen 2026-11-22: your own; the steps are in `docs/notes/for-mikey.md`); buy the new name's domain and attach it to the Worker, if not done. **31a waits for this.** | | 29 | | |
 | 31a | `31a-new-name.md` | The new name, built and left open (you paste the name, the domain and the id) | Opus 5.5, high | B5, the row above | none | |
-| 31 | `31-one-point-oh.md` | 108: 1.0 (merges 31a first) | Sonnet 5.5, medium | B5, 31a open and green | none | |
+| 31 | `31-one-point-oh.md` | 108: 1.0 (merges 30l and 31a first) | Sonnet 5.5, medium | B5, 31a open and green | none | |
 | | **you** | Rename the repo; the F-Droid submission (its merge request is public, so after 1.0) | | 31 | | |
 
 **Mikey's seven** (2026-11-18, queue items 109 to 114): his list for 1.0,

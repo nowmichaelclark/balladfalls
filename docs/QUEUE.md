@@ -7,7 +7,7 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-23:** `main` is at v201 (v201 the Android app's stream on a music player's path, Mikey heard it clean with the screen off, item 115 closed, #458; v200 sideways as Mikey asked: swapped, centered, the browser's bar put away by a scroll, item 114 done, #457; v199 the loop's own cover as Now Playing art, #455; v198 the final pass, one app, #454; v197 accessibility to WCAG 2.2 AA and its check, `tools/a11y.mjs`, #453; v196 every screen fits: short phones and a phone on its side, #452, all item 114; v195 fewer words: Share as keys, Export a key a format (flac, opus, midi), one word or a symbol where it will do, a popup two words and said whole, item 113, #449; v194 the codes made ready to freeze: a removed member plays something close, every draw filtered by version, one version a release; twang's slow and bright taken out, item 105e, #450; v193 Track length, its own view, to the second, with a fade in and a fade out; the Sound view's Length slider and the export's How much gone, item 111, #448; v192 the info card: every detail line whole at any width or text size, what doesn't fit left off in a fixed order and a tap away, the playhead round, item 112, #446; v191 Previous works in an album, item 109, #442; v190 the layers show what is heard: each step's notes drawn as each layer sounded them, a long piece's quiet layers dimmer, item 110, #440; v189 an album's code carries how long each track plays, item 105d, #438; v188 the Android app with the screen off: a foreground service, the lock screen and notification with the loop's own cover, audio focus, saving through Android's picker, item 107d, #431; v187 links, an album from one seed and the plain lines, item 105c, #433; v186 share codes version 2 in the app, item 105b, #427, with a loop's own name in the code, #425; v185 the nightly green again, twang's seed renders and no join a hole on corpus piece #27, #430; v184 audio export, the small format (Opus in an Ogg file), item 104c, #424; v183 long pieces on screen, item 106b, #419; v182 the Android app on the native core, item 107c, #420; v181 audio export in the app, item 104b, #416; v180 the jump within a long piece, item 106a, #417; v179 twang soft only, #414; v178 codes version 2 in the core, item 105a, #412; v177 the chords nearer the tune, item 84b, #404; v176 the keepalive without its hiss, #403; session 01 done: v154 the tools
+**Status, 2026-11-23:** `main` is at v201; **next: items 116 to 122, Mikey's last changes, sessions 30h to 30n, then 30g's Left list and 30** (v201 the Android app's stream on a music player's path, Mikey heard it clean with the screen off, item 115 closed, #458; v200 sideways as Mikey asked: swapped, centered, the browser's bar put away by a scroll, item 114 done, #457; v199 the loop's own cover as Now Playing art, #455; v198 the final pass, one app, #454; v197 accessibility to WCAG 2.2 AA and its check, `tools/a11y.mjs`, #453; v196 every screen fits: short phones and a phone on its side, #452, all item 114; v195 fewer words: Share as keys, Export a key a format (flac, opus, midi), one word or a symbol where it will do, a popup two words and said whole, item 113, #449; v194 the codes made ready to freeze: a removed member plays something close, every draw filtered by version, one version a release; twang's slow and bright taken out, item 105e, #450; v193 Track length, its own view, to the second, with a fade in and a fade out; the Sound view's Length slider and the export's How much gone, item 111, #448; v192 the info card: every detail line whole at any width or text size, what doesn't fit left off in a fixed order and a tap away, the playhead round, item 112, #446; v191 Previous works in an album, item 109, #442; v190 the layers show what is heard: each step's notes drawn as each layer sounded them, a long piece's quiet layers dimmer, item 110, #440; v189 an album's code carries how long each track plays, item 105d, #438; v188 the Android app with the screen off: a foreground service, the lock screen and notification with the loop's own cover, audio focus, saving through Android's picker, item 107d, #431; v187 links, an album from one seed and the plain lines, item 105c, #433; v186 share codes version 2 in the app, item 105b, #427, with a loop's own name in the code, #425; v185 the nightly green again, twang's seed renders and no join a hole on corpus piece #27, #430; v184 audio export, the small format (Opus in an Ogg file), item 104c, #424; v183 long pieces on screen, item 106b, #419; v182 the Android app on the native core, item 107c, #420; v181 audio export in the app, item 104b, #416; v180 the jump within a long piece, item 106a, #417; v179 twang soft only, #414; v178 codes version 2 in the core, item 105a, #412; v177 the chords nearer the tune, item 84b, #404; v176 the keepalive without its hiss, #403; session 01 done: v154 the tools
 made steady, Diagnostics without the old scheduler's lines, Mikey's shorter
 plain lines; v155 the width ceiling's rest fix; session 02 done: v156, item
 101a, batch 6's far ends: deepDuck, wideSweep, slowOpening; session 03 done:
@@ -664,6 +664,33 @@ switch without a click, then a clean listen on that phone.
 Android's deep buffer, as Chrome opens it): "There are no more crackles"
 (Mikey, headphones, after hearing v195 crackle on them). Its other
 yardsticks are the Left list at the top of session 30g's file.
+
+## 116 to 122. Mikey's last changes, before the polish (2026-11-23)
+
+Mikey's list of 2026-11-23, his answers folded in (`docs/DECISIONS.md`, that
+day), as seven sessions run two at a time by brain B-parallel 4; the order
+and what may run together are `docs/sessions/README.md`, "Mikey's last
+changes". Each brief, in his words, is its session's file. All hold 1.0:
+session 30 waits for them.
+
+- **116** (30h): the timeline moves the playhead on a short loop too, and a
+  long piece's while paused; the album's way back goes once a new track is
+  made.
+- **117** (30i): with nothing picked, about 1 new loop in 10 a long piece
+  (64 to 512 bars, a journey drawn); what never comes unasked, measured.
+- **118** (30j): the tempo, key and scale, style and voices pickers.
+- **119** (30k): the card's art on the right, a new round playhead (Mikey
+  picks from a few), solid slider knobs, a die that looks like one,
+  speakers for the layers' on and off, Chrome's address bar scrolled from
+  anywhere.
+- **120** (30l): the new name's icon, an SVG (Mikey picks); left open and
+  merged with 31a's rename at 1.0, so the testers' surprise holds.
+- **121** (30m): a seed album saved to the Library; an album exported whole,
+  one zip or a file a track as the listener chooses, every file tagged
+  (title, album, track number, the code, the cover).
+- **122** (30n): the keyboard as music players have it: Space, the arrows,
+  a letter a view, ? for the list, and a switch in Advanced to turn the
+  letter keys off (a fourth setting, Mikey's exception).
 
 ## For phase 3 (from item 82; brain, Session 28)
 

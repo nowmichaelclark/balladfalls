@@ -64,6 +64,7 @@ const read = (t) => ({
   stream: (/^stream: (.*)$/m.exec(t) || [])[1] || '',
 });
 
+let opened = 0;
 // The page again at `burn`, the loop ready by its link, "lighter on
 // processor" the listener's (`yours`: false for full) or nobody's (null).
 async function open(burn, yours) {
@@ -75,8 +76,11 @@ async function open(burn, yours) {
     else p.lite = y;
     localStorage.setItem(key, JSON.stringify(p));
   }, yours);
+  // A new query each time: the same address with only a new hash would not
+  // load the page again.
+  opened++;
   try {
-    await ev(`location.href = location.origin + location.pathname + '?burn=${burn}#c=${CODE}'; true`);
+    await ev(`location.href = location.origin + location.pathname + '?burn=${burn}&n=${opened}#c=${CODE}'; true`);
   } catch { /* it went away loading */ }
   await sleep(2500);
   await page.connect();

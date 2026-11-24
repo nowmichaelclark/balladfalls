@@ -209,7 +209,7 @@ jobs:
           node-version: 22
       - name: Playwright's Chromium, and the reference decoder
         run: |
-          sudo apt-get update && sudo apt-get install -y flac ffmpeg unzip
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends flac ffmpeg unzip
           npm install --no-save --no-audit --no-fund playwright@1.56.1 && npx playwright install --with-deps chromium
       - name: A long export while the music plays
         run: node tools/export-long.mjs --length "${{ github.event.inputs.length || '10800' }}" --burn "${{ github.event.inputs.burn || '1700' }}" --format "${{ github.event.inputs.format || 'lossless' }}" --album "${{ github.event.inputs.album || '0' }}" --box "${{ github.event.inputs.box || 'zip' }}"

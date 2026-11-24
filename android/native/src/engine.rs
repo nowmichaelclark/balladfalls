@@ -1478,6 +1478,7 @@ mod tests {
         const AFTER: usize = 200;
         const RUNS: usize = 3;
         const LINE: f64 = 0.6;
+        let _alone = crate::samples::RENDERING.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let l = e9t();
         let made = || {
             let e = Engine::new(48_000.0, 2, true).unwrap();

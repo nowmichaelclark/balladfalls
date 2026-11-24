@@ -246,7 +246,7 @@ function serve(port) {
 // Before the page's scripts: the nodes, their messages, an analyser on the
 // output, the clipboard and the downloads.
 const HOOK = `(() => {
-  const R = window.__rows = { nodes: [], events: [], posts: [], probes: new Map(), id: 0, clip: null, blobs: [] };
+  const R = window.__rows = { nodes: [], events: [], posts: [], kills: [], probes: new Map(), id: 0, clip: null, blobs: [] };
   const Real = window.AudioWorkletNode;
   window.AudioWorkletNode = class extends Real {
     constructor(ctx, name, options) {
@@ -264,6 +264,7 @@ const HOOK = `(() => {
   const post = MessagePort.prototype.postMessage;
   MessagePort.prototype.postMessage = function (m, ...rest) {
     if (m && typeof m.type === 'string' && /^play|^layout/.test(m.type)) R.posts.push({ ...m, at: R.ctx ? R.ctx.currentTime : 0, msg: m });
+    if (m && (m.type === 'dispose' || (m.type === 'param' && m.id === 18))) R.kills.push({ ...m, wall: performance.now() });
     return post.call(this, m, ...rest);
   };
   const connect = AudioNode.prototype.connect;
@@ -351,7 +352,7 @@ const HOOK = `(() => {
 // every batch it posts back; any audio context the page makes (none should
 // be); and a way to hand the page's own listener a batch, as the core would.
 const HOOK_APP = `(() => {
-  const R = window.__rows = { nodes: [], events: [], posts: [], probes: new Map(), id: 0, clip: null, blobs: [], native: null, contexts: 0, listeners: [], app: true };
+  const R = window.__rows = { nodes: [], events: [], posts: [], kills: [], probes: new Map(), id: 0, clip: null, blobs: [], native: null, contexts: 0, listeners: [], app: true };
   for (const name of ['AudioContext', 'webkitAudioContext']) {
     const Real = window[name];
     if (typeof Real !== 'function') continue;
@@ -380,6 +381,7 @@ const HOOK_APP = `(() => {
         const m = JSON.parse(text);
         if (m && m.type === 'init') R.nodes.push({ quality: m.quality });
         if (m && typeof m.type === 'string' && /^play|^layout/.test(m.type)) R.posts.push({ ...m });
+        if (m && (m.type === 'dispose' || (m.type === 'param' && m.id === 18))) R.kills.push({ ...m, wall: performance.now() });
       } catch { /* not ours to read */ }
       return send(text);
     };
@@ -1706,6 +1708,7 @@ async function main() {
     const nodes = await ev(() => window.__rows.nodes.length);
     const lite = await ev(() => document.getElementById('liteMode').getAttribute('aria-checked'));
     const card = await name();
+    const kills = await ev(() => window.__rows.kills.length);
     await clickId('liteMode');
     await sleep(3500);
     const built = await ev(() => window.__rows.nodes.slice(-1)[0].quality);
@@ -1714,6 +1717,14 @@ async function main() {
       const loops = (await steps()).filter((e) => e[1] === kinds.loop);
       row('lighter on processor: a new core at the other quality plays the same loop from its top', (await ev(() => window.__rows.nodes.length)) === nodes + 1
         && built === (lite === 'true' ? 'full' : 'lite') && p.player.state === 3 && p.d.name === card && loops.length === 1, `${lite} -> ${built}`);
+      // Session 30g, step 4: the old core fades out before it is let go
+      // (letting it go at once cut the sound mid-note): a fade to silence
+      // asked well before the dispose, not only the transport's silence
+      // posted with it.
+      const k = (await ev(() => window.__rows.kills)).slice(kills);
+      const gone = k.find((m) => m.type === 'dispose');
+      const faded = gone && k.find((m) => m.type === 'param' && m.op === 1 && m.value === 0 && gone.wall - m.wall >= 150);
+      row('lighter on processor: the old core fades out before it is let go', !!faded, gone ? `fade asked ${faded ? Math.round(gone.wall - faded.wall) : '-'} ms before the dispose; ${k.length} kill and dispose messages` : 'no dispose');
     }
     await clickId('liteMode');
     await sleep(3000);

@@ -683,3 +683,11 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   slider, the card) scrolls the address bar away and back, a drag across
   moves a slider. The screens before and after: branch `s30k-shots`,
   `before-after/`. Listen for nothing. No album loop.
+- #472, the keyboard as music players have it (item 122, session 30n,
+  v211), preview URL:
+  <https://claude-project-thread-bdjftj-driftloom.nowmichaelclark.workers.dev>
+  (the branch's): Space and K play, → ← next and previous, Shift with them
+  a bar, ↑ ↓ the volume, M mute, R and 1 to 5 the dice, Shift with 1 to 5 a
+  layer on and off, a letter a view, Esc back, ? the list of keys; Advanced's
+  letter keys switch turns the single keys off. Listen for nothing (the
+  volume keys move the Sound view's slider). No album loop.

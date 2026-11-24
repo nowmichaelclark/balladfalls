@@ -754,7 +754,8 @@ async function tabOrder(page, where) {
     const top = document.createElement('i');
     top.id = 'a11y-top';
     top.tabIndex = -1;
-    document.body.prepend(top);
+    // (Inside a popup that is open: what is under it is inert.)
+    (document.querySelector('dialog:modal') || document.body).prepend(top);
     top.focus();
   });
   const count = await page.evaluate(() => window.A.reachable());

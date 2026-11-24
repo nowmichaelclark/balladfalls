@@ -2571,7 +2571,7 @@ async function previousRows(browser) {
     await sleep(300);
   };
   const click = () => tev(() => document.getElementById('prevBtn').click());
-  const keys = () => tev(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'MediaTrackPrevious', key: 'MediaTrackPrevious', bubbles: true, cancelable: true })));
+  const keys = () => tev(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'MediaTrackPrevious', key: 'MediaTrackPrevious', bubbles: true })));
   const lockScreen = () => tev(() => { const f = window.__media.previoustrack; if (f) f(); return !!f; });
   const pause = () => tev(() => { if (document.getElementById('playBtn').getAttribute('aria-label') === 'Pause') document.getElementById('playBtn').click(); });
   const seeds = specs.map((s) => s.seed);

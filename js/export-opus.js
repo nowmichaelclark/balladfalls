@@ -97,13 +97,15 @@ const join = (parts) => {
 const nothing = new Uint8Array(0);
 
 export class OpusMaker {
-  // `render`: an export-render.js Render in 'opus'. `title`: the loop's name,
-  // for the file's tags.
-  constructor(render, { title = '' } = {}) {
+  // `render`: an export-render.js Render in 'opus'. `comments`: the file's
+  // tags as OpusTags holds them (item 121, js/tags.js's opusComments), or
+  // null for the title alone (`title`, the loop's name).
+  constructor(render, { comments = null, title = '' } = {}) {
     if (OPUS_RATE !== GRANULE_RATE) throw new Error('the render and the Ogg writer count at different rates');
     this.render = render;
     this.lanes = render.lanes;
     this.title = title;
+    this.comments = comments;
     this.encoder = null;
     this.writer = null;
     this.ready = [];
@@ -140,7 +142,7 @@ export class OpusMaker {
   packet(chunk, meta) {
     if (!this.writer) {
       const given = preSkipOf(meta && meta.decoderConfig && meta.decoderConfig.description);
-      const comments = this.title ? [`TITLE=${this.title}`] : [];
+      const comments = this.comments || (this.title ? [`TITLE=${this.title}`] : []);
       this.writer = new OggOpus({ channels: this.lanes, preSkip: given == null ? PRE_SKIP : given, rate: OPUS_RATE, serial: crypto.getRandomValues(new Uint32Array(1))[0], comments });
       this.ready.push(this.writer.header());
     }

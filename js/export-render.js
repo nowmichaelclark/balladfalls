@@ -26,6 +26,13 @@
 // 48 kHz, the rate Opus works at, so nothing is resampled, and `pcm` gives
 // each chunk's samples for the browser's encoder, js/export-opus.js). The
 // track, its end and its tail are the same in both.
+//
+// Tags (item 121): `tag(blocks)` puts FLAC metadata blocks (js/tags.js:
+// the comments and the cover) after STREAMINFO, which is then no longer the
+// last block, in the first header and the finished one alike. The samples
+// and the frames are the same with or without them.
+
+import { notLast } from './tags.js';
 
 // The lossless file's format: CD's rate and depth, which every player reads.
 export const RATE = 44100;
@@ -309,10 +316,20 @@ export class Render {
     return this.bytes(this.x.dl_flac_finish());
   }
 
+  // FLAC metadata blocks to follow STREAMINFO (item 121), before the first
+  // step: `first` becomes the header with STREAMINFO not the last block, and
+  // `blocks` the bytes to write after it.
+  tag(blocks) {
+    if (this.format !== 'flac' || !blocks || !blocks.length) return;
+    this.first = notLast(this.first);
+    this.blocks = blocks;
+  }
+
   // The finished header (42 bytes: the length and the MD5), to write over
   // the file's first bytes.
   header() {
-    return new Uint8Array(this.x.memory.buffer, this.x.dl_flac_header(), 42);
+    const h = new Uint8Array(this.x.memory.buffer, this.x.dl_flac_header(), 42);
+    return this.blocks ? notLast(h) : h;
   }
 
   // The late, missed and dropped notes the core counted while rendering.

@@ -5,6 +5,12 @@
 //
 //   node tools/export-long.mjs [--length 10800] [--burn 1700] [--lite on|off]
 //                              [--format lossless|small] [--keep DIR] [--port 8772]
+//                              [--album N [--box zip|files]]
+//
+// `--album N` (item 121): an album of N tracks (corpus loops, each
+// `--length` / N seconds), playing, exported whole as one zip or a file a
+// track: the same watch over the whole run, then the zip tested by `unzip`
+// and every track checked as the single file is, against its own job.
 //
 // The app starts as the Moto ends up in autolite's slow case: "lighter on
 // processor" on (so the export goes gently), unless `--lite off`. There is no
@@ -41,6 +47,8 @@ import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { LOOPS } from './stalls.mjs';
+import { encodeAlbum, decodeSong } from '../js/share.js';
+import { setTrack } from '../js/tracklen.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -56,6 +64,8 @@ const RATE = SMALL ? 48000 : 44100;
 const PORT = Number(flag('--port', 8772));
 const KEEP = flag('--keep', null);
 const EVERY = 30000;
+const ALBUM = Number(flag('--album', 0));
+const BOX = flag('--box', 'zip') === 'files' ? 'files' : 'zip';
 
 function loadPlaywright() {
   const require = createRequire(import.meta.url);
@@ -114,7 +124,10 @@ const HOOK = `(() => {
       });
       const post = this.postMessage;
       this.postMessage = (m, t) => {
-        if (m && m.type === 'start') R.start = { job: m.job, sink: m.sink, pace: m.pace };
+        if (m && m.type === 'start') {
+          R.start = { job: m.job, sink: m.sink, pace: m.pace };
+          (R.starts = R.starts || []).push({ job: m.job, name: m.name, entry: m.entry });
+        }
         return t ? post.call(this, m, t) : post.call(this, m);
       };
     }
@@ -141,6 +154,42 @@ function chromiumRss() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const mb = (b) => (b / 1e6).toFixed(0);
+
+// An album's files (item 121): the zip downloaded at the end and tested by
+// unzip, or a download a track; each track checked against its own job by
+// tools/export.mjs --file.
+async function albumFiles({ page, end, out, downloads, check, each }) {
+  if (end.type !== 'zip-done' && end.type !== 'done') return;
+  const R = await page.evaluate(() => ({ starts: window.__long.starts || [], exports: window.__long.exports }));
+  const dones = R.exports.filter((x) => x.type === 'done');
+  const starts = R.starts.slice(-ALBUM);
+  for (let t = 0; t < 120 && downloads.length < (BOX === 'zip' ? 1 : ALBUM); t++) await sleep(500);
+  const dir = path.join(out, 'album');
+  fs.mkdirSync(dir, { recursive: true });
+  if (BOX === 'zip') {
+    const zip = path.join(out, 'album.zip');
+    await downloads[downloads.length - 1].saveAs(zip);
+    check('the zip downloaded is the one the Worker wrote', fs.statSync(zip).size === end.bytes, `${fs.statSync(zip).size} of ${end.bytes} bytes`);
+    const t = spawnSync('unzip', ['-t', zip], { encoding: 'utf8' });
+    check('the zip tests clean in unzip', t.status === 0 && /No errors detected/.test(t.stdout), t.stdout.trim().split('\n').pop());
+    spawnSync('unzip', ['-q', zip, '-d', dir]);
+  } else {
+    for (const d of downloads.slice(-ALBUM)) await d.saveAs(path.join(dir, d.suggestedFilename()));
+  }
+  let held = 0;
+  for (let i = 0; i < ALBUM; i++) {
+    const s = starts[i];
+    const d = dones[i];
+    const file = s && path.join(dir, s.name);
+    if (!s || !d || !fs.existsSync(file)) continue;
+    const job = path.join(out, `track${i + 1}.json`);
+    fs.writeFileSync(job, JSON.stringify({ job: s.job, stop: d.stop, fade: d.fade, frames: d.frames }));
+    const r = spawnSync('node', [path.join(ROOT, 'tools', 'export.mjs'), '--file', file, '--job', job], { encoding: 'utf8' });
+    if (r.status === 0) held++;
+    else console.log(r.stdout.trim().split('\n').slice(-3).join('\n'));
+  }
+  check(`every track (${ALBUM} of ${each} s) ${SMALL ? 'decodes clean, whole and aligned' : 'decodes and nulls against its straight render'} (tools/export.mjs --file)`, held === ALBUM, `${held} of ${ALBUM}`);
+}
 
 async function main() {
   const { chromium } = loadPlaywright();
@@ -176,6 +225,22 @@ async function main() {
     await ev((code) => { window.__long.clip = code; }, LOOPS.shatter.code);
     await ev(() => document.getElementById('pasteCode').click());
     await sleep(4000);
+    // An album of ALBUM corpus loops, each its share of the length, pasted
+    // and playing (item 121).
+    const each = ALBUM ? Math.max(1, Math.round(LENGTH / ALBUM)) : 0;
+    if (ALBUM) {
+      const pool = [LOOPS.shatter, LOOPS.cinder, LOOPS.hollow, LOOPS.undertow];
+      const specs = Array.from({ length: ALBUM }, (_, i) => setTrack(decodeSong(pool[i % pool.length].code), { secs: each, fadeIn: false, fadeOut: true }));
+      await ev((code) => { window.__long.clip = code; }, encodeAlbum('Long Album', specs));
+      await ev(() => document.getElementById('pasteCode').click());
+      await sleep(2500);
+      await ev(() => { if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click(); document.querySelector('[data-tab="albums"]').click(); });
+      await sleep(300);
+      await ev(() => { const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.trim() === 'Long Album'); if (r) r.querySelector('.lrow-main').click(); });
+      await sleep(400);
+      await ev(() => { const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'play'); if (b) b.click(); });
+      await sleep(3000);
+    }
     const diag = () => ev(() => { document.getElementById('diagRefresh').click(); return document.getElementById('diagOut').textContent; });
     const engine = async () => {
       const line = (await diag()).split('\n').find((l) => l.startsWith('engine:')) || '';
@@ -209,7 +274,17 @@ async function main() {
     const fills0 = await ev(() => window.__long.fills());
     const behind0 = await ev(() => window.__long.behind);
     const download = page.waitForEvent('download', { timeout: 0 });
-    console.log(`export-long: ${LENGTH / 3600} hours of ${LOOPS.shatter.name}, ${SMALL ? 'small (Opus)' : 'lossless'}, burn ${BURN} us, lighter on processor ${LITE ? 'on' : 'off'}`);
+    // Every download, in order (an album a file a track downloads each).
+    const downloads = [];
+    page.on('download', (d) => downloads.push(d));
+    if (ALBUM) {
+      await ev((box) => {
+        document.querySelector('[data-scope="album"]').click();
+        document.querySelector(`[data-box="${box}"]`).click();
+      }, BOX);
+      await sleep(500);
+    }
+    console.log(`export-long: ${LENGTH / 3600} hours of ${ALBUM ? `an album of ${ALBUM} (${BOX})` : LOOPS.shatter.name}, ${SMALL ? 'small (Opus)' : 'lossless'}, burn ${BURN} us, lighter on processor ${LITE ? 'on' : 'off'}`);
     await ev((f) => document.querySelector(`[data-format="${f}"]`).click(), SMALL ? 'small' : 'lossless');
     const t0 = Date.now();
     const samples = [];
@@ -219,10 +294,13 @@ async function main() {
       const s = await ev(() => ({ progress: window.__long.progress, exports: window.__long.exports, behind: window.__long.behind, busiest: window.__long.busiest, fills: window.__long.fills() }));
       const e = await engine();
       const rss = chromiumRss();
-      const minutes = s.progress ? s.progress.frames / RATE / 60 : 0;
+      const tracksDone = s.exports.filter((x) => x.type === 'done').length;
+      const minutes = (ALBUM ? tracksDone * each / 60 : 0) + (s.progress ? s.progress.frames / RATE / 60 : 0);
       samples.push({ at: (Date.now() - t0) / 1000, minutes, rss, late: e.late, fills: s.fills, behind: s.behind });
       console.log(`  ${((Date.now() - t0) / 60000).toFixed(1).padStart(6)} min: ${minutes.toFixed(1).padStart(6)} min exported, memory ${mb(rss)} MB, late ${e.late} missed ${e.missed} dropped ${e.dropped}, fill-ins ${s.fills ?? '-'}, behind ${s.behind - behind0}, busiest ${(100 * s.busiest).toFixed(0)}%`);
-      end = s.exports.find((x) => ['done', 'failed', 'cancelled'].includes(x.type)) || null;
+      end = ALBUM
+        ? s.exports.find((x) => ['failed', 'cancelled', 'zip-done', 'zip-gone'].includes(x.type)) || (BOX === 'files' && tracksDone >= ALBUM ? { type: 'done', all: true } : null)
+        : s.exports.find((x) => ['done', 'failed', 'cancelled'].includes(x.type)) || null;
       if (Date.now() - t0 > 6 * 3600 * 1000) throw new Error('six hours and not done');
     }
     const took = (Date.now() - t0) / 1000;
@@ -231,8 +309,11 @@ async function main() {
     const behind1 = await ev(() => window.__long.behind);
     const start = await ev(() => window.__long.start);
     const playing = await ev(() => document.getElementById('playBtn').getAttribute('aria-label'));
-    check('the export finished', end.type === 'done', `${end.type} ${end.why || ''} ${end.message || ''}`);
-    if (end.type === 'done') console.log(`  ${(end.seconds / 3600).toFixed(2)} hours, ${mb(end.bytes)} MB, in ${(took / 60).toFixed(0)} min: ${(end.seconds / end.took).toFixed(1)}x real time (${start.pace})`);
+    if (ALBUM) {
+      await albumFiles({ page, end, out, downloads, check, each });
+    }
+    check('the export finished', ALBUM ? end.type === 'zip-done' || end.type === 'done' : end.type === 'done', `${end.type} ${end.why || ''} ${end.message || ''}`);
+    if (end.type === 'done' && !ALBUM) console.log(`  ${(end.seconds / 3600).toFixed(2)} hours, ${mb(end.bytes)} MB, in ${(took / 60).toFixed(0)} min: ${(end.seconds / end.took).toFixed(1)}x real time (${start.pace})`);
     // Memory: the second quarter against the last.
     const q = Math.floor(samples.length / 4);
     const mean = (xs) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
@@ -244,7 +325,7 @@ async function main() {
     check('no fill-ins, the audio thread never behind', (fills0 == null || fills1 === fills0) && behind1 === behind0, `fill-ins ${fills0 ?? '-'} -> ${fills1 ?? '-'}, behind ${behind1 - behind0}`);
     check('the music still playing', playing === 'Pause', playing);
     check('no page errors', errors.length === 0, errors.join('; '));
-    if (end.type === 'done') {
+    if (end.type === 'done' && !ALBUM) {
       const d = await download;
       const file = path.join(out, SMALL ? 'export.opus' : 'export.flac');
       await d.saveAs(file);

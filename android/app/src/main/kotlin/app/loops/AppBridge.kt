@@ -36,8 +36,12 @@ import java.util.concurrent.Executors
  *  - `export` { on, name, percent }: a file is being made, for the
  *    notification and the wake lock;
  *  - `save` { id, name, mime, need, seek }: Android's own picker for a new
- *    file; then `save-write`, `save-header`, `save-close` and `save-abort`
- *    { id, data } (base64), `save-view` and `save-share` for the file saved.
+ *    file; then `save-write`, `save-header` (its `at`, 0 if none), `save-close`
+ *    and `save-abort` { id, data } (base64), `save-view` and `save-share` for
+ *    the file saved;
+ *  - `save-folder` { id }: Android's own folder picker (an album exported a
+ *    file a track, item 121); then `save-in` { id, name, mime, need, seek } a
+ *    new file in it, written as `save` writes one.
  *
  * To the page: `action` { action } (play, pause, next, previous: what a
  * button on the lock screen or the notification does) and `reply` { id, ok,
@@ -64,6 +68,8 @@ class AppBridge(
     private var pending: PendingSave? = null
     private var file: SaveFile? = null
     private var saved: Saved? = null
+    private var folder: Uri? = null
+    private var pendingFolder: Int? = null
     private var chooser: ValueCallback<Array<Uri>>? = null
     private var lastExportNote = 0L
 
@@ -83,7 +89,7 @@ class AppBridge(
                 // A megabyte of base64: read on the writer's thread, never the UI's.
                 io.execute {
                     val m = try { JSONObject(text) } catch (_: Exception) { return@execute }
-                    writeTo(m.optInt("id"), m.optString("type"), m.optString("data"))
+                    writeTo(m.optInt("id"), m.optString("type"), m.optString("data"), m.optLong("at"))
                 }
                 return@addWebMessageListener
             }
@@ -148,6 +154,8 @@ class AppBridge(
             }
             "theme" -> paintBars(m.optString("color"))
             "save" -> chooseNewFile(m)
+            "save-folder" -> chooseFolder(m.optInt("id"))
+            "save-in" -> newFileIn(m)
             "save-view" -> sendSaved(open = true, id = m.optInt("id"))
             "save-share" -> sendSaved(open = false, id = m.optInt("id"))
         }
@@ -188,34 +196,86 @@ class AppBridge(
             reply(p.id, false, "cancelled" to true)
             return
         }
+        io.execute { openSaved(p, uri) }
+    }
+
+    /** Android's own folder picker: an album's tracks go into the folder chosen, each a new file. */
+    private fun chooseFolder(id: Int) {
+        io.execute { file?.discard(); file = null }
+        pendingFolder = id
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
+            .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        try {
+            @Suppress("DEPRECATION")
+            activity.startActivityForResult(intent, REQ_FOLDER)
+        } catch (_: ActivityNotFoundException) {
+            pendingFolder = null
+            reply(id, false, "why" to "picker")
+        }
+    }
+
+    private fun folderPicked(resultCode: Int, data: Intent?) {
+        val id = pendingFolder ?: return
+        pendingFolder = null
+        val uri = data?.data
+        if (resultCode != Activity.RESULT_OK || uri == null) {
+            reply(id, false, "cancelled" to true)
+            return
+        }
+        folder = uri
+        reply(id, true)
+    }
+
+    /** A new file in the folder chosen, opened as a picked one is (its space checked against `need`). */
+    private fun newFileIn(m: JSONObject) {
+        val id = m.optInt("id")
+        val tree = folder
+        val mime = m.optString("mime").ifEmpty { "application/octet-stream" }
+        val p = PendingSave(id, mime, m.optLong("need"), m.optBoolean("seek"))
+        val name = m.optString("name", "track")
         io.execute {
-            val f = try {
-                SaveFile(activity.contentResolver, uri, p.mime)
-            } catch (e: Exception) {
-                SaveFile.remove(activity.contentResolver, uri)
-                reply(p.id, false, "why" to "open", "message" to (e.message ?: ""))
+            if (tree == null) {
+                reply(id, false, "why" to "none")
                 return@execute
             }
-            when {
-                p.need > 0 && f.free in 0 until p.need -> {
-                    f.discard()
-                    reply(p.id, false, "why" to "space", "free" to f.free)
-                }
-                p.seek && !f.seekable -> {
-                    f.discard()
-                    reply(p.id, false, "why" to "seek")
-                }
-                else -> {
-                    file = f
-                    saved = Saved(uri, p.mime)
-                    reply(p.id, true, "name" to f.name, "free" to f.free, "seekable" to f.seekable)
-                }
+            val uri = try {
+                SaveFile.createIn(activity.contentResolver, tree, name, mime)
+            } catch (e: Exception) {
+                reply(id, false, "why" to "open", "message" to (e.message ?: ""))
+                return@execute
+            }
+            openSaved(p, uri)
+        }
+    }
+
+    /** The file at [uri] opened for [p] (the I/O thread's), its space and its way of being written checked. */
+    private fun openSaved(p: PendingSave, uri: Uri) {
+        val f = try {
+            SaveFile(activity.contentResolver, uri, p.mime)
+        } catch (e: Exception) {
+            SaveFile.remove(activity.contentResolver, uri)
+            reply(p.id, false, "why" to "open", "message" to (e.message ?: ""))
+            return
+        }
+        when {
+            p.need > 0 && f.free in 0 until p.need -> {
+                f.discard()
+                reply(p.id, false, "why" to "space", "free" to f.free)
+            }
+            p.seek && !f.seekable -> {
+                f.discard()
+                reply(p.id, false, "why" to "seek")
+            }
+            else -> {
+                file = f
+                saved = Saved(uri, p.mime)
+                reply(p.id, true, "name" to f.name, "free" to f.free, "seekable" to f.seekable)
             }
         }
     }
 
     /** One call on the open file (the I/O thread's). */
-    private fun writeTo(id: Int, kind: String, data: String) {
+    private fun writeTo(id: Int, kind: String, data: String, at: Long) {
         val f = file
         if (f == null) {
             // An abort with nothing open is done already.
@@ -225,7 +285,7 @@ class AppBridge(
         try {
             when (kind) {
                 "save-write" -> f.write(Base64.decode(data, Base64.DEFAULT))
-                "save-header" -> f.header(Base64.decode(data, Base64.DEFAULT))
+                "save-header" -> f.header(Base64.decode(data, Base64.DEFAULT), at)
                 "save-close" -> {
                     f.finish()
                     file = null
@@ -314,6 +374,7 @@ class AppBridge(
     fun onResult(requestCode: Int, resultCode: Int, data: Intent?) {
         when (requestCode) {
             REQ_SAVE -> savePicked(resultCode, data)
+            REQ_FOLDER -> folderPicked(resultCode, data)
             REQ_OPEN -> {
                 val callback = chooser ?: return
                 chooser = null
@@ -331,6 +392,8 @@ class AppBridge(
     fun pageGone() {
         proxy = null
         pending = null
+        pendingFolder = null
+        folder = null
         Playback.reset()
         view.refreshVisibility()
         io.execute { file?.discard(); file = null; saved = null }
@@ -359,6 +422,7 @@ class AppBridge(
         const val REQ_SAVE = 41
         const val REQ_OPEN = 42
         const val REQ_NOTES = 43
+        const val REQ_FOLDER = 44
         private const val ASKED = "asked_notifications"
     }
 }

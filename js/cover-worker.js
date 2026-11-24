@@ -10,20 +10,22 @@
 // copied. The page only pastes it in.
 //
 // Messages: { id, spec, size } in; { id, bitmap } or { id, error } out. And
-// { id, image, size } in, a picture already drawn, for the PNG the lock
-// screen takes (session 30f): { id, blob } out, made here too, so the page
+// { id, image, size, type } in, a picture already drawn, for the PNG the
+// lock screen takes (session 30f) or an exported file's JPEG (item 121):
+// { id, blob } out, made here too, so the page
 // never reads a pixel back or waits for an encoder.
 
 import { drawCover } from './cover.js';
 
 self.onmessage = async (e) => {
-  const { id, spec, size, image } = e.data;
+  const { id, spec, size, image, type, quality } = e.data;
   if (image) {
     try {
       const canvas = new OffscreenCanvas(size, size);
       canvas.getContext('2d', { willReadFrequently: true }).drawImage(image, 0, 0, size, size);
       image.close();
-      const blob = await canvas.convertToBlob({ type: 'image/png' });
+      // A PNG, or (an exported file's picture, item 121) a JPEG.
+      const blob = await canvas.convertToBlob(type === 'image/jpeg' ? { type, quality: quality || 0.9 } : { type: 'image/png' });
       self.postMessage({ id, blob });
     } catch (err) {
       self.postMessage({ id, error: String((err && err.message) || err) });

@@ -63,9 +63,12 @@ class SaveFile(private val resolver: ContentResolver, val uri: Uri, val mime: St
         bytes += data.size
     }
 
-    /** The file's first bytes again (FLAC's header, once the length and the checksum are known). */
-    fun header(data: ByteArray) {
-        out.channel.write(ByteBuffer.wrap(data), 0)
+    /**
+     * Bytes written again at [at] (FLAC's header at 0, once the length and the checksum are known; an album's zip
+     * writes its tracks' headers again at their places, item 121). The file's own position stays at its end.
+     */
+    fun header(data: ByteArray, at: Long = 0) {
+        out.channel.write(ByteBuffer.wrap(data), at)
     }
 
     /** The file is complete: flushed to the disk and closed. */
@@ -84,6 +87,16 @@ class SaveFile(private val resolver: ContentResolver, val uri: Uri, val mime: St
     }
 
     companion object {
+        /**
+         * A new file named [name] in the folder [tree] the listener chose (Android's own folder picker, an album
+         * exported a file a track, item 121); the provider may change the name (`name (1)` where one is there).
+         */
+        fun createIn(resolver: ContentResolver, tree: Uri, name: String, mime: String): Uri {
+            val folder = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
+            return DocumentsContract.createDocument(resolver, folder, mime, name)
+                ?: throw IOException("the folder would not take a file")
+        }
+
         /** Remove a document, as far as its provider lets us. */
         fun remove(resolver: ContentResolver, uri: Uri) {
             try {

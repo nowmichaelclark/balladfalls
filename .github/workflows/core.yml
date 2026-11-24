@@ -23,7 +23,9 @@
 #             against the WAV of the same render, carries the right MD5, and
 #             the wasm and the C host write the same bytes; and the app's
 #             audio export (queue item 104b, tools/export.mjs): its files
-#             decode and null against straight renders, and its sizes
+#             decode and null against straight renders, and its sizes; and
+#             (item 121) an album of four as one zip and a file a track, its
+#             tags and covers read back by ffprobe, the zip by unzip
 #
 # Everything slower is in nightly.yml and never holds a merge: every target's
 # golden renders, Emscripten, Endless for 24 hours, rendering ahead's sweep
@@ -86,8 +88,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: The reference decoder
-        run: sudo apt-get update && sudo apt-get install -y flac
+      - name: The reference decoder, and ffmpeg and unzip for the album's tags (item 121)
+        run: sudo apt-get update && sudo apt-get install -y flac ffmpeg unzip
       - name: The FLAC writer against it
         run: tools/gate.sh flac
 

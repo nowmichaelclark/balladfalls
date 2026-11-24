@@ -13,6 +13,27 @@ list of changes. The rest of the road is cut into sessions, each with a prompt t
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## An album exported whole, tagged; a seed album saved (item 121, session 30m)
+
+- **The seed album's save (PR #466):** Share, seed album, save: name it,
+  and it is in the Library; play it there. Say if the name box should be
+  skipped (it then lands as Untitled, as a pasted album does).
+- **On the Moto (ten minutes), both ways:** play an album (or open one in
+  the Library), Share, export audio, press album. With zip pressed, press
+  flac: Android's picker asks where the zip goes; it saves as it is made.
+  Then press files and opus: Android's folder picker asks for a folder, and
+  each track lands there as "01 name.opus", "02 ...". A track that plays on
+  asks its length once, for every such track. Cancel one partway: no zip is
+  left (files already saved stay).
+- **The tags, in a music player** (the Moto's own, or VLC): the album shows
+  under its name with your cover art per track, the tracks numbered 1 of N
+  in order, the artist the app's name, the date today, and the loop's code
+  as the comment. Say if a player shows anything wrong or missing (Opus
+  covers are the one players differ on most).
+- **For your ears:** the cover is the loop's own (as the Library draws it),
+  a 600 px JPEG; an album's tracks are numbered "01" to sort. A track the
+  core can't make is skipped and said ("Track 3 failed; the rest saved").
+
 ## The timeline (item 116, v204, PR #461)
 
 - **On the Moto (two minutes), a short loop and a long piece:** playing, tap

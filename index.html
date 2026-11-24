@@ -289,6 +289,18 @@
         </div>
         <div class="ln-body" id="exportSheet">
           <div id="exportChoose">
+            <!-- Item 121: with an album playing or open, the loop or the whole
+                 album, and the album as one zip or a file a track. -->
+            <div id="exportScope" class="format-keys" role="group" aria-label="What to export" hidden>
+              <button type="button" class="vkey" data-scope="loop" aria-pressed="true" aria-label="the loop" aria-describedby="scopeLoopHint">loop</button>
+              <button type="button" class="vkey" data-scope="album" aria-pressed="false" aria-label="the whole album" aria-describedby="scopeAlbumHint">album</button>
+              <button type="button" class="vkey" data-box="zip" aria-pressed="true" aria-label="as one zip" aria-describedby="zipHint" hidden>zip</button>
+              <button type="button" class="vkey" data-box="files" aria-pressed="false" aria-label="a file a track" aria-describedby="filesHint" hidden>files</button>
+            </div>
+            <p id="scopeLoopHint" hidden>Exports the loop playing.</p>
+            <p id="scopeAlbumHint" hidden>Exports every track of the album, each tagged with its number.</p>
+            <p id="zipHint" hidden>The album's tracks in one zip file.</p>
+            <p id="filesHint" hidden>Each track its own file, saved as it is made.</p>
             <div class="format-keys" role="group" aria-label="Format">
               <button type="button" class="vkey" data-format="lossless" aria-label="export flac" aria-describedby="flacHint exportHint">flac</button>
               <!-- Opus (queue item 104c) shows only where the browser can encode it (js/export.js). -->

@@ -93,6 +93,12 @@ export function shownAlbum() {
   return isVisible() && lib.tab === 'albums' ? lib.albumId : null;
 }
 
+// The album open in the Library's albums, shown now or not (the Export
+// view offers it, item 121), or null.
+export function openedAlbum() {
+  return lib.tab === 'albums' ? lib.albumId : null;
+}
+
 export function setTab(tab) {
   // Tapping Albums while inside an album goes back up to the list; coming
   // to it from another tab returns to the album you were in. The same for

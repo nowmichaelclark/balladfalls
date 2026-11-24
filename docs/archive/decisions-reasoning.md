@@ -7,6 +7,10 @@ Each heading is what the short line links to.
 
 ## Engine candidates (brain, 2026-10-10)
 
+The line as it stood in `docs/DECISIONS.md` (moved 2026-11-24):
+
+- 2026-10-10 -- **Candidates for the engine (brain, unranked; not a decision).** A warm compressor start (done in 31b), smooth curve and parameter changes, better oversampling and a true-peak ceiling, a reverb designed for this music, an offline renderer for audio export (roadmap 17), a documented host API for native and game hosts, the generator in Rust when the words settle. The list with its reasons: [the full text](archive/decisions-reasoning.md#engine-candidates-brain-2026-10-10).
+
 - Candidates (brain, 2026-10-10, unranked): a warm compressor start (no
   first-note dip; done in 31b); smooth curve and parameter changes where Chromium
   switches abruptly (the saturator's curve swap); better oversampling
@@ -157,3 +161,11 @@ The brain's reading: the version filter on additions costs no characters and sta
 ## Batch 6 kept, the line as it stood (2026-11-17)
 
 - 2026-11-17 -- **Batch 6 kept, twang soft only (Mikey, the Batch 6 Album, 2026-11-17):** Keep on every batch 6 sound (deepDuck, wideSweep wide and fast, slowOpening, tuningOffset, padWow, widePad, tripletKit, dottedPulse's pulse and 3-3-2, colorTone, planingSevenths, lowBell, dropSpotlight), so the hands' conservative taste calls stand; twang Tune: "I only liked the soft version. The bright and slow sounded off to me." Its share: "right now 2% or more is okay", so every loop that draws twang plays the soft kind (the brain's pick: the fewest loops move). Later, each sound's share is tuned vibe by vibe: "some moods may lean more into the soft twang and some may lean away from it" (the queue, "Later, not queued").
+
+## Short codes over sounding the same, the line as it stood (2026-11-17)
+
+- 2026-11-17 -- **Short codes over sounding the same forever (Mikey, 2026-11-17, after #412):** "It's okay for the song attached to a code to change; especially when it's an improvement." Instruments and effects may be changed or removed later, so a 1.0 code may sound different in 2.0 ("it will likely still sound similar"). "We don't need to be overly protective of the users if it keeps us from generating cleaner, sleeker codes. I don't want code rot where we generate longer codes because we don't want to break what shorter codes made." The brain's reading: [the full text](archive/decisions-reasoning.md#short-codes-over-sounding-the-same-forever-mikey-2026-11-17).
+
+## New instruments welcome again (2026-10-09)
+
+- 2026-10-09 -- **New instruments are welcome again** (2026-10-09; the 2026-09-25 pause on new sounds was temporary). Mikey liked the ears' first five as clips (stereo, roundBass, glass, floorDrop, arc: "all the new stuff is sounding really great"); build the ones he approves, in the core, except stereo (dropped 2026-10-11: mono only). Inspiration only from wholesome, comforting music, not harsh or dark records. No new *profiles* still. Fiddle, accordion and drone may get more nuance later. [Stereo came back on 2026-10-15; see "The engine and stereo".]

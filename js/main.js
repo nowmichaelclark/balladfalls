@@ -16,7 +16,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v208';
+const BUILD = 'v212';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -97,7 +97,7 @@ function gpuReport() {
   } catch { /* not in this browser */ }
   return gpuInfo;
 }
-import { coverImage, paint } from './covers.js';
+import { coverImage, coverFile, paint } from './covers.js';
 import * as store from './storage.js';
 import * as ui from './ui.js';
 import * as library from './library.js';
@@ -749,9 +749,11 @@ function syncMediaMetadata() {
 // Track length (session 30c, queue item 111): its view, opened from the Vibe
 // panel's pace line (`from` 'vibe') or from the export when nothing would
 // end it ('export').
-function openTrackView(from) {
-  if (!state.spec) return;
-  tracklen.openTrack(state.spec, from);
+// From an album's export ('album', item 121) it opens on the first track
+// that plays on, and its time goes to the album's export, not to a loop.
+function openTrackView(from, spec = state.spec) {
+  if (!spec) return;
+  tracklen.openTrack(spec, from);
   setView('track');
 }
 
@@ -1888,7 +1890,9 @@ function sharedSpec() {
 
 function exportMidi(spec = state.spec) {
   if (!spec) return;
-  const blob = patternToMidi(render(spec), { repeats: 4 });
+  let code = '';
+  try { code = share.encodeSong(spec === state.spec ? sharedSpec() : spec); } catch { code = ''; }
+  const blob = patternToMidi(render(spec), { repeats: 4, code });
   ui.download(blob, `${spec.name}-${spec.bpm}bpm.mid`);
   // In the Android app its picker comes next, and says Saved itself.
   if (!appBridge()) ui.toast('Exported', 'MIDI exported');
@@ -2224,16 +2228,40 @@ function wire() {
     mono: () => state.mono,
     lite: () => state.lite,
     // Nothing would end the export: how long, first (session 30c).
-    openTrack: () => openTrackView('export'),
+    openTrack: (from = 'export', spec = state.spec) => openTrackView(from, spec),
+    // An album to export whole (item 121): the one playing, else the one
+    // open in the Library.
+    album: () => {
+      const id = (state.playlist && state.playlist.albumId) || library.openedAlbum();
+      const album = id ? store.loadAlbums().find((a) => a.id === id) : null;
+      return album ? { id: album.id, title: album.title, ids: album.ids } : null;
+    },
+    specs: (ids) => {
+      const byId = new Map(store.loadAll().map((e) => [e.id, e]));
+      return ids.map((i) => byId.get(i)).filter(Boolean).map((e) => e.spec);
+    },
+    // A file's tags: the loop's code, the app's one name.
+    code: (spec) => {
+      try { return share.encodeSong(spec === state.spec ? sharedSpec() : spec); } catch { return ''; }
+    },
+    cover: (spec, size) => coverFile(spec, size, 'image/jpeg'),
+    appName: APP_NAME,
   });
   tracklen.wireTrack({
     done: (track, from) => {
+      // An album's export (item 121): the time for its tracks that play on,
+      // the loops themselves left as they are.
+      if (from === 'album') {
+        setView('export');
+        if (track.secs != null && state.audioExport) state.audioExport.startAlbum(track);
+        return;
+      }
       setTrackLength(track);
       setView(from === 'export' ? 'export' : 'vibe');
       // From the export, it goes on once something ends it.
       if (from === 'export' && state.audioExport && state.spec && tracklen.ends(state.spec)) state.audioExport.start();
     },
-    cancel: (from) => setView(from === 'export' ? 'export' : 'vibe'),
+    cancel: (from) => setView(from === 'export' || from === 'album' ? 'export' : 'vibe'),
   });
   ui.el('prevBtn').addEventListener('click', goBack);
   ui.el('nextBtn').addEventListener('click', goForward);

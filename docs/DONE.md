@@ -651,3 +651,35 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   off (never all five off); long lists page; clear all on the panel. The
   screens: branch `s30j-shots`. Listen for: Next leaning on what you picked;
   the loop playing never changes. No album loop.
+- #466, a seed album saved to the Library (item 121a, session 30m, v206),
+  preview URL: <https://claude-s30m-seed-save-driftloom.nowmichaelclark.workers.dev>
+  (the branch's): the seed album's sheet has a save key beside copy code
+  and share link; it asks a name as New album does (Untitled in it) and the
+  album, drawn from a fresh seed with the picks now set, lands in the
+  Library, its tracks the ones its code plays. Listen for: the album played
+  from the Library is the album its code brings. No album loop.
+- #467, an album exported whole, every file tagged (item 121b, session 30m,
+  v207), preview URL:
+  <https://claude-s30m-album-export-driftloom.nowmichaelclark.workers.dev>
+  (the branch's): with an album playing or open, Export offers loop or
+  album, and for the album one zip (stored) or a file a track, in flac or
+  opus; each track as long as its track length (one Track length view for
+  the tracks that play on), named "NN name.ext", the space checked first,
+  one progress with Cancel, a failed track a kind line and the rest kept.
+  Every file, a single loop's too, carries its title, the album, track N of
+  N, the app's name, the day, the loop's code and its own cover (FLAC's
+  Vorbis comments and PICTURE, Opus's OpusTags; MIDI's track name in
+  UTF-8). Android: the zip through its picker, a file a track into a folder
+  it picks. Listen for: each track the same as its single export (the
+  samples untouched); see the tags and covers in a music player. No album
+  loop.
+- #468, the look (item 119, session 30k, v209), preview URL:
+  <https://claude-s30k-the-look-driftloom.nowmichaelclark.workers.dev>
+  (the branch's): the card's art on the right and its words on the left;
+  the playhead's lit dot a diffused LED, no sparkle (Mikey's pick, "B3
+  diffused"); the Sound view's knobs solid; the Layers' die drawn as a die
+  and on and off a speaker and a crossed-out speaker (a screen reader still
+  says on or off); in Chrome's tab a drag up or down from anywhere (a key, a
+  slider, the card) scrolls the address bar away and back, a drag across
+  moves a slider. The screens before and after: branch `s30k-shots`,
+  `before-after/`. Listen for nothing. No album loop.

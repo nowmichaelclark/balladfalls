@@ -23,7 +23,9 @@
 #             against the WAV of the same render, carries the right MD5, and
 #             the wasm and the C host write the same bytes; and the app's
 #             audio export (queue item 104b, tools/export.mjs): its files
-#             decode and null against straight renders, and its sizes
+#             decode and null against straight renders, and its sizes; and
+#             (item 121) an album of four as one zip and a file a track, its
+#             tags and covers read back by ffprobe, the zip by unzip
 #
 # Everything slower is in nightly.yml and never holds a merge: every target's
 # golden renders, Emscripten, Endless for 24 hours, rendering ahead's sweep
@@ -80,14 +82,41 @@ jobs:
 
   flac:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # The check takes about 8 minutes. The install is held to 12 of the 30:
+    # from a slow mirror, ffmpeg with its recommends (the video drivers,
+    # mesa, speech models: 100 packages, 105 MB) took 19 minutes and more
+    # (2026-11-24), so it comes without them, and its packages are kept in
+    # the cache for the next run.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: The reference decoder
-        run: sudo apt-get update && sudo apt-get install -y flac
+      - name: The packages the last run fetched
+        id: debs
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/apt-debs
+          key: flac-ffmpeg-unzip-debs-ubuntu-24.04-v1
+      - name: The reference decoder, and ffmpeg and unzip for the album's tags (item 121)
+        timeout-minutes: 12
+        run: |
+          mkdir -p ~/apt-debs/partial
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            -o Dir::Cache::Archives="$HOME/apt-debs" \
+            -o APT::Keep-Downloaded-Packages=true -o Acquire::Retries=3 \
+            flac ffmpeg unzip
+          sudo chown -R "$USER" ~/apt-debs
+          echo "$(ls ~/apt-debs/*.deb | wc -l) packages, $(du -sh ~/apt-debs | cut -f1)"
+          ffmpeg -hide_banner -encoders | grep -q libopus && ffprobe -version | head -1 && flac --version && unzip -v | head -1
+      - name: The packages kept for the next run
+        if: steps.debs.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/apt-debs
+          key: flac-ffmpeg-unzip-debs-ubuntu-24.04-v1
       - name: The FLAC writer against it
         run: tools/gate.sh flac
 

@@ -1,5 +1,8 @@
 # Session 30k: the look: the card, the playhead, the sliders, the die, the speakers, the scroll (119)
 
+**Done** (2026-11-24): #468, v209. The Left list that stood here was
+finished by the session that resumed it.
+
 Written by brain B-parallel 4 (2026-11-23) from Mikey's list that day
 (his items 10, 12, 13, 14, 16 and 17).
 

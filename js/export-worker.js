@@ -37,20 +37,37 @@
 // (js/export-opus.js), which also gets the Worker's say on whether this
 // browser can encode Opus at all.
 //
+// Tags (item 121): every file says what it is (js/tags.js): FLAC's comments
+// and cover as metadata blocks after STREAMINFO, Opus's in OpusTags. The
+// samples are untouched.
+//
+// An album as one zip (item 121, js/zip.js): `zip` opens it on a sink, each
+// `start` with an `entry` is a track inside it, `zip-end` writes its
+// directory (or `zip-abort` removes it). Its tracks go one at a time, so its
+// memory is one track's, as a single export's is. An album as a file a track
+// is a `start` a track, each its own file.
+//
 // Messages in: { type: 'hello' }; { type: 'start', bytes, job, sink, name,
-// title, pace, limit }; { type: 'pace', pace }; { type: 'cancel' }; { type:
-// 'ack', id, ok, why } (the app sink's answer).
+// title, pace, limit, tags, picture, entry, keep }; { type: 'zip', sink,
+// handle, name, limit, date }; { type: 'zip-end' }; { type: 'zip-abort' };
+// { type: 'pace', pace }; { type: 'cancel' }; { type: 'ack', id, ok, why }
+// (the app sink's answer). Taken in order, one at a time (pace, cancel and
+// ack at once).
 // Out: { type: 'hello', private, opus } (whether the private file system
 // works here, and whether Opus can be encoded); { type: 'progress', frames,
 // expected, bytes }; { type: 'done', file (private and memory), bytes,
 // frames, seconds, took, counts, format }; { type:
 // 'cancelled' }; { type: 'failed', why ('space', 'write', 'render',
-// 'memory'), message }; { type: 'relay', id, op ('write', 'header',
-// 'close', 'abort'), data } (the app sink's, for the page to pass on).
+// 'memory', 'large'), message }; { type: 'relay', id, op ('write', 'header',
+// 'close', 'abort'), data, at } (the app sink's, for the page to pass on);
+// { type: 'zip-open' }, { type: 'zip-done', file, bytes }, { type:
+// 'zip-gone' }.
 
 import { Render } from './export-render.js';
 import { OpusMaker, opusWorks } from './export-opus.js';
 import { toBase64 } from './app.js';
+import { flacBlocks, opusComments } from './tags.js';
+import { ZipWriter } from './zip.js';
 
 // One slice of rendering before a yield, in milliseconds.
 const SLICE = 25;
@@ -101,12 +118,20 @@ async function privateWorks() {
 // The sinks: open, write(bytes), header(bytes at 0), close() -> what the
 // page is given, remove().
 class PrivateSink {
+  // `keep`: an album's later track (a file a track, each downloaded as it is
+  // made): the tracks before it stay until they are taken.
+  constructor(keep = false) {
+    this.keep = keep;
+  }
+
   async open(name) {
     const dir = await privateDir();
     // Nothing older stays: a page closed mid-export, or the last export,
     // already offered.
-    for await (const key of dir.keys()) {
-      try { await dir.removeEntry(key); } catch { /* still open elsewhere */ }
+    if (!this.keep) {
+      for await (const key of dir.keys()) {
+        try { await dir.removeEntry(key); } catch { /* still open elsewhere */ }
+      }
     }
     this.dir = dir;
     this.name = name;
@@ -130,6 +155,11 @@ class PrivateSink {
     this.h.write(bytes, { at: 0 });
   }
 
+  // Bytes written again where they were (the zip's headers, item 121).
+  writeAt(at, bytes) {
+    this.h.write(bytes, { at });
+  }
+
   async close() {
     this.h.flush();
     this.h.close();
@@ -147,18 +177,28 @@ class PrivateSink {
 class HandleSink {
   constructor(handle) {
     this.handle = handle;
+    // A stream may hold what it is given past the call: it gets a copy.
+    this.keeps = true;
   }
 
   async open() {
     this.w = await this.handle.createWritable({ keepExistingData: false });
+    this.at = 0;
   }
 
   async write(bytes) {
     await this.w.write(bytes);
+    this.at += bytes.length;
   }
 
   async header(bytes) {
     await this.w.write({ type: 'write', position: 0, data: bytes });
+  }
+
+  // A write at a place moves the stream there: it goes back to the end.
+  async writeAt(at, bytes) {
+    await this.w.write({ type: 'write', position: at, data: bytes.slice() });
+    await this.w.seek(this.at);
   }
 
   async close() {
@@ -191,6 +231,10 @@ class RelaySink {
     return this.relay('header', bytes);
   }
 
+  writeAt(at, bytes) {
+    return this.relay('header', bytes, at);
+  }
+
   async close() {
     await this.relay('close');
     return null;
@@ -200,11 +244,11 @@ class RelaySink {
     try { await this.relay('abort'); } catch { /* nothing was open */ }
   }
 
-  relay(op, bytes) {
+  relay(op, bytes, at = 0) {
     const id = ++relayed;
     return new Promise((resolve, reject) => {
       acks.set(id, { resolve, reject });
-      self.postMessage({ type: 'relay', id, op, data: bytes ? toBase64(bytes) : '' });
+      self.postMessage({ type: 'relay', id, op, data: bytes ? toBase64(bytes) : '', at });
     });
   }
 }
@@ -217,6 +261,7 @@ class MemorySink {
 
   open() {
     this.parts = [];
+    this.starts = [];
     this.size = 0;
   }
 
@@ -227,6 +272,7 @@ class MemorySink {
       throw e;
     }
     this.parts.push(bytes.slice());
+    this.starts.push(this.size);
     this.size += bytes.length;
   }
 
@@ -234,6 +280,22 @@ class MemorySink {
     // The file's first part is its header alone (the first write), so the
     // finished one takes its place.
     this.parts[0] = bytes.slice();
+  }
+
+  // Bytes written again inside the one part that holds them (the zip's
+  // headers: each was written whole, by one write).
+  writeAt(at, bytes) {
+    let lo = 0;
+    let hi = this.starts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (this.starts[mid] <= at) lo = mid;
+      else hi = mid - 1;
+    }
+    const part = this.parts[lo];
+    const off = at - this.starts[lo];
+    if (!part || off + bytes.length > part.length) throw new Error('a write again across parts');
+    part.set(bytes, off);
   }
 
   close() {
@@ -271,15 +333,110 @@ class Gather {
     if (!this.n) return;
     // A copy for a stream that may keep it past the call; the private file
     // and memory copy or keep their own.
-    await this.sink.write(this.sink instanceof HandleSink ? this.buf.slice(0, this.n) : this.buf.subarray(0, this.n));
+    await this.sink.write(this.sink.keeps ? this.buf.slice(0, this.n) : this.buf.subarray(0, this.n));
     this.n = 0;
   }
+}
+
+// The sink a message names.
+function sinkOf(m, type) {
+  if (m.sink === 'handle') return new HandleSink(m.handle);
+  if (m.sink === 'app') return new RelaySink();
+  if (m.sink === 'private') return new PrivateSink(!!m.keep);
+  return new MemorySink(m.limit, type);
+}
+
+// The album's zip, while one is open: { zip, sink }.
+let album = null;
+
+// A track inside the album's zip, as a sink: its entry opened, its bytes
+// added, FLAC's finished header written again inside it, and the entry
+// listed when it closes (left out if it is removed).
+class EntrySink {
+  constructor(open, name) {
+    this.zip = open.zip;
+    this.keeps = open.sink.keeps;
+    this.name = name;
+    this.first = null;
+  }
+
+  async open() {
+    await this.zip.begin(this.name);
+  }
+
+  async write(bytes) {
+    // The first 42 bytes are the core's header, which comes again at the end.
+    if (!this.first) this.first = bytes.slice(0, 42);
+    await this.zip.add(bytes);
+  }
+
+  async header(bytes) {
+    await this.zip.patch(0, this.first, bytes);
+  }
+
+  async close() {
+    await this.zip.end();
+    return null;
+  }
+
+  remove() {
+    this.zip.drop();
+  }
+}
+
+// A failure, as the page is told it.
+function failure(err) {
+  if (isSpace(err)) return { type: 'failed', why: 'space', message: String(err.message || err) };
+  if (err && err.name === 'MemoryLimit') return { type: 'failed', why: 'memory', message: err.message };
+  if (err && err.name === 'ZipLimit') return { type: 'failed', why: 'large', message: err.message };
+  return { type: 'failed', why: 'write', message: String((err && err.message) || err) };
+}
+
+// The album's zip opened on its sink.
+async function openZip(m) {
+  const sink = sinkOf(m, 'application/zip');
+  try {
+    await sink.open(m.name);
+    album = { sink, zip: new ZipWriter(sink, { date: m.date ? new Date(m.date) : new Date() }) };
+    self.postMessage({ type: 'zip-open' });
+  } catch (err) {
+    try { await sink.remove(); } catch { /* never made */ }
+    album = null;
+    self.postMessage(failure(err));
+  }
+}
+
+// The album's last track is in: its directory, and the file whole.
+async function endZip() {
+  const a = album;
+  album = null;
+  if (!a) return;
+  try {
+    const bytes = await a.zip.finish();
+    const file = await a.sink.close();
+    self.postMessage({ type: 'zip-done', file, bytes });
+  } catch (err) {
+    try { await a.sink.remove(); } catch { /* gone */ }
+    self.postMessage(failure(err));
+  }
+}
+
+// Cancel, or a failure the album can't go on from: nothing of it is kept.
+async function abortZip() {
+  const a = album;
+  album = null;
+  if (a) {
+    try { await a.sink.remove(); } catch { /* gone */ }
+  }
+  self.postMessage({ type: 'zip-gone' });
 }
 
 async function run(m) {
   const started = performance.now();
   const opus = m.job.format === 'opus';
-  const sink = m.sink === 'handle' ? new HandleSink(m.handle) : m.sink === 'app' ? new RelaySink() : m.sink === 'private' ? new PrivateSink() : new MemorySink(m.limit, opus ? 'audio/ogg' : 'audio/flac');
+  const sink = m.entry != null && album ? new EntrySink(album, m.entry) : sinkOf(m, opus ? 'audio/ogg' : 'audio/flac');
+  const tags = m.tags || [];
+  const picture = m.picture || null;
   job = { cancelled: false, pace: m.pace, sink };
   let render;
   let maker = null;
@@ -288,8 +445,10 @@ async function run(m) {
     const x = (await WebAssembly.instantiate(module, {})).exports;
     render = new Render(x, m.job);
     if (opus) {
-      maker = new OpusMaker(render, { title: m.title || '' });
+      maker = new OpusMaker(render, { comments: tags.length ? opusComments(tags, picture) : null, title: m.title || '' });
       await maker.open();
+    } else if (tags.length) {
+      render.tag(flacBlocks(tags, picture));
     }
   } catch (err) {
     if (maker) maker.close();
@@ -307,6 +466,8 @@ async function run(m) {
       if (sink instanceof MemorySink) sink.write(render.first);
       if (!(sink instanceof MemorySink)) await out.add(render.first);
       else out.total = render.first.length;
+      // The tags and the cover, after STREAMINFO (item 121).
+      if (render.blocks) await out.add(render.blocks);
     }
     let posted = 0;
     let more = true;
@@ -350,9 +511,7 @@ async function run(m) {
     if (maker) maker.close();
     await sink.remove();
     if (err instanceof Cancelled) self.postMessage({ type: 'cancelled' });
-    else if (isSpace(err)) self.postMessage({ type: 'failed', why: 'space', message: String(err.message || err) });
-    else if (err && err.name === 'MemoryLimit') self.postMessage({ type: 'failed', why: 'memory', message: err.message });
-    else self.postMessage({ type: 'failed', why: 'write', message: String((err && err.message) || err) });
+    else self.postMessage(failure(err));
   } finally {
     if (maker) maker.close();
     job = null;
@@ -361,10 +520,18 @@ async function run(m) {
 
 class Cancelled extends Error {}
 
+// What is taken in order: one thing at a time, each after the last is done
+// (a track starts only once the zip is open, the zip ends after its last).
+let queue = Promise.resolve();
+const inOrder = (fn) => { queue = queue.then(fn, fn); };
+
 self.onmessage = async (e) => {
   const m = e.data || {};
-  if (m.type === 'hello') self.postMessage({ type: 'hello', private: await privateWorks(), opus: await opusWorks() });
-  else if (m.type === 'start' && !job) run(m);
+  if (m.type === 'hello') inOrder(async () => self.postMessage({ type: 'hello', private: await privateWorks(), opus: await opusWorks() }));
+  else if (m.type === 'start') inOrder(() => (job ? null : run(m)));
+  else if (m.type === 'zip') inOrder(() => openZip(m));
+  else if (m.type === 'zip-end') inOrder(() => endZip());
+  else if (m.type === 'zip-abort') inOrder(() => abortZip());
   else if (m.type === 'pace' && job) job.pace = m.pace;
   else if (m.type === 'cancel' && job) job.cancelled = true;
   else if (m.type === 'ack') {

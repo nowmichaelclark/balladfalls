@@ -13,10 +13,10 @@ list of changes. The rest of the road is cut into sessions, each with a prompt t
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
-## The new name's icon (item 120, v208, PR #465: a draft until 1.0)
+## The new name's icon (item 120, v212, PR #465: a draft until 1.0)
 
 - **Not final yet:** the build holds 3f as a placeholder while the drawing
-  is refined (round 5 in the PR); the final one replaces icons/icon.svg.
+  is refined (round 10 in the PR); the final one replaces icons/icon.svg.
 - **On the Moto, once it is final:** install the APK from PR #465's last
   android run (the run's artifact; the PR names its commit). Look at the icon on the home screen and in
   the app drawer, with themed icons on and off (Wallpaper and style, Themed
@@ -25,6 +25,46 @@ the points where the next step is yours.
   cut off by the launcher's shape, or hard to make out.
 - It stays a draft: session 31 merges it with 31a's rename, so the testers
   see nothing new before 1.0.
+
+## The look (item 119, v209, session 30k, #468)
+
+- **On your phone in Chrome (two minutes),** in a tab (not installed, not
+  the app): drag up from anywhere (the card, Play, a layer's row, a Sound
+  slider's line or its knob, the tempo picker's slider) and the address bar
+  goes; drag down and it comes back. A straight drag up or down never moves
+  a slider; a drag across does. The line under the time and a long piece's
+  line keep their drags (they move the playhead). Say if a place still
+  doesn't scroll, or a slider moves when you meant to scroll.
+- **Look at:** the card, art on the right; the playhead, your B3 LED (on
+  the light themes its middle stays a deep color so it reads on the pale
+  card); the Sound view's knobs, solid (the track no longer shows through;
+  on the dark themes the knob is the popup's dark color, so say if you
+  wanted it brighter); the Layers' die and its speakers (crossed out when
+  off). Before and after, at 360x640, 320x568, on its side and a tablet,
+  light and dark: the branch
+  [`s30k-shots`](https://github.com/nowmichaelclark/driftloom/tree/s30k-shots/before-after),
+  one `sheet_*.png` a size and theme.
+
+## An album exported whole, tagged; a seed album saved (item 121, session 30m)
+
+- **The seed album's save (PR #466):** Share, seed album, save: name it,
+  and it is in the Library; play it there. Say if the name box should be
+  skipped (it then lands as Untitled, as a pasted album does).
+- **On the Moto (ten minutes), both ways:** play an album (or open one in
+  the Library), Share, export audio, press album. With zip pressed, press
+  flac: Android's picker asks where the zip goes; it saves as it is made.
+  Then press files and opus: Android's folder picker asks for a folder, and
+  each track lands there as "01 name.opus", "02 ...". A track that plays on
+  asks its length once, for every such track. Cancel one partway: no zip is
+  left (files already saved stay).
+- **The tags, in a music player** (the Moto's own, or VLC): the album shows
+  under its name with your cover art per track, the tracks numbered 1 of N
+  in order, the artist the app's name, the date today, and the loop's code
+  as the comment. Say if a player shows anything wrong or missing (Opus
+  covers are the one players differ on most).
+- **For your ears:** the cover is the loop's own (as the Library draws it),
+  a 600 px JPEG; an album's tracks are numbered "01" to sort. A track the
+  core can't make is skipped and said ("Track 3 failed; the rest saved").
 
 ## The tempo, key, style and voices pickers (item 118, v205, session 30j, #463)
 

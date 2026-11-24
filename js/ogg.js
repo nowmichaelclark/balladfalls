@@ -7,8 +7,8 @@
 // bytes, so Node tests it (test/ogg.test.mjs) and the Worker writes each
 // page as it comes, straight to the file.
 //
-// The file is the OpusHead page, the OpusTags page, then audio pages, the
-// last marked end of stream. A page holds whole packets (up to a second of
+// The file is the OpusHead page, the OpusTags page (or pages: item 121's
+// cover), then audio pages, the last marked end of stream. A page holds whole packets (up to a second of
 // audio or 255 segments, whichever first). Its granule position is the
 // number of 48 kHz samples the decoder has made once it has decoded the
 // page's last packet, counted from the first packet, so the pre-skip (the
@@ -111,13 +111,43 @@ function tags(vendor, comments) {
 // the packets it holds, whole.
 export function page(flags, granule, serial, sequence, packets) {
   const segments = [];
-  let data = 0;
   for (const p of packets) {
     let n = p.length;
     for (; n >= 255; n -= 255) segments.push(255);
     segments.push(n);
-    data += p.length;
   }
+  return rawPage(flags, granule, serial, sequence, segments, packets);
+}
+
+// One packet over as many pages as it takes (item 121: OpusTags with the
+// cover in it is larger than a page holds, 255 segments of 255 bytes): each
+// page but the first marked continued, the packet's last lacing value (under
+// 255, perhaps 0) on its last. Every page has `granule` (RFC 7845: a header's
+// pages have 0).
+export function packetPages(flags, granule, serial, sequence, packet) {
+  const out = [];
+  let at = 0;
+  let seq = sequence;
+  let cont = 0;
+  for (;;) {
+    const left = packet.length - at;
+    const whole = Math.min(Math.floor(left / 255), SEGMENTS_MAX);
+    const segments = new Array(whole).fill(255);
+    let take = whole * 255;
+    const ends = whole < SEGMENTS_MAX;
+    if (ends) {
+      segments.push(left - take);
+      take = left;
+    }
+    out.push(rawPage(flags | cont, granule, serial, seq++, segments, [packet.subarray(at, at + take)]));
+    at += take;
+    cont = 1;
+    if (ends) return out;
+  }
+}
+
+function rawPage(flags, granule, serial, sequence, segments, packets) {
+  const data = packets.reduce((n, p) => n + p.length, 0);
   if (segments.length > SEGMENTS_MAX) throw new Error('too many segments for one page');
   const out = new Uint8Array(27 + segments.length + data);
   const v = new DataView(out.buffer);
@@ -163,18 +193,21 @@ export class OggOpus {
     this.ready = [];
     this.held = null;
     this.finished = false;
-    this.first = [
-      page(2, 0, this.serial, this.sequence++, [head({ channels, preSkip, rate })]),
-      page(0, 0, this.serial, this.sequence++, [tags(vendor, comments)]),
-    ];
+    // OpusTags may take several pages (a cover in it): it ends its last,
+    // and the audio starts on a page of its own.
+    const tagPages = packetPages(0, 0, this.serial, this.sequence + 1, tags(vendor, comments));
+    this.first = [page(2, 0, this.serial, this.sequence, [head({ channels, preSkip, rate })]), ...tagPages];
+    this.sequence += this.first.length;
   }
 
-  // The two header pages, as one run of bytes: write them first.
+  // The header pages, as one run of bytes: write them first.
   header() {
-    const [a, b] = this.first;
-    const out = new Uint8Array(a.length + b.length);
-    out.set(a, 0);
-    out.set(b, a.length);
+    const out = new Uint8Array(this.first.reduce((n, p) => n + p.length, 0));
+    let at = 0;
+    for (const p of this.first) {
+      out.set(p, at);
+      at += p.length;
+    }
     return out;
   }
 

@@ -527,7 +527,9 @@ export function buildLayers(handlers, steps = STEPS_PER_BAR) {
     mute.setAttribute('role', 'switch');
     mute.setAttribute('aria-checked', 'true');
     mute.setAttribute('aria-labelledby', name.id);
-    mute.innerHTML = '<span aria-hidden="true">on</span>';
+    // The state is the switch's own (a screen reader says on or off); the
+    // speaker shows it (session 30k).
+    setIcon(mute, 'speaker');
     mute.addEventListener('click', () => handlers.onMute(layer));
 
     row.append(name, grid, reroll, mute);
@@ -609,7 +611,7 @@ export function renderRows(cells, rows, mutes) {
     const want = off ? 'false' : 'true';
     if (sw.getAttribute('aria-checked') !== want) {
       sw.setAttribute('aria-checked', want);
-      sw.firstChild.textContent = off ? 'off' : 'on';
+      setIcon(sw, off ? 'muted' : 'speaker');
     }
     const pat = row.querySelector('.pattern');
     const label = `${LAYER_LABELS[layer]} pattern: ${notes} ${notes === 1 ? 'note' : 'notes'} in ${dots.length} steps`;
@@ -752,9 +754,18 @@ const ICONS = {
   sounds: '<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>'
     + '<circle class="solid" cx="9" cy="6" r="2"/><circle class="solid" cx="15" cy="12" r="2"/><circle class="solid" cx="7" cy="18" r="2"/>',
   layers: '<path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="m3 12.5 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/>',
-  // A die showing five: roll again.
-  dice: '<rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/>'
-    + [[8, 8], [16, 8], [12, 12], [8, 16], [16, 16]].map(([x, y]) => `<circle class="solid" cx="${x}" cy="${y}" r="1.2"/>`).join(''),
+  // A die (session 30k, item 119: Mikey, "a die that is 3d like a dice
+  // emoji"): a cube seen from a corner, three faces and their pips, one,
+  // two and three, the shaded face a little darker for depth. Roll again.
+  dice: '<path d="M12 11.6 21 6.8v10.4L12 22z" fill="currentColor" fill-opacity="0.22"/>'
+    + '<path d="M12 2 21 6.8 12 11.6 3 6.8z"/><path d="M3 6.8v10.4L12 22V11.6"/><path d="M21 6.8v10.4L12 22"/>'
+    + '<ellipse class="solid" stroke="none" cx="12" cy="6.8" rx="1.7" ry="1"/>'
+    + [[5.7, 11.4], [9.3, 17.4]].map(([x, y]) => `<circle class="solid" stroke="none" cx="${x}" cy="${y}" r="1.15"/>`).join('')
+    + [[14.25, 13], [16.5, 14.4], [18.75, 15.8]].map(([x, y]) => `<circle class="solid" stroke="none" cx="${x}" cy="${y}" r="1"/>`).join(''),
+  // A layer on and off (session 30k, item 119): a speaker, its sound
+  // waves when on and a cross when off, so the state is a shape too.
+  speaker: '<path d="M3.5 9.5h3.2L11.5 5v14l-4.8-4.5H3.5z"/><path d="M15 9.2a4 4 0 0 1 0 5.6"/><path d="M17.9 6.3a8.2 8.2 0 0 1 0 11.4"/>',
+  muted: '<path d="M3.5 9.5h3.2L11.5 5v14l-4.8-4.5H3.5z"/><path d="m15.5 9.5 5 5"/><path d="m20.5 9.5-5 5"/>',
   arrowLeft: '<path d="M19 12H5"/><path d="m11 6-6 6 6 6"/>',
   arrowRight: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
   left: '<path d="m14.5 6-6 6 6 6"/>',

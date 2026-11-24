@@ -199,7 +199,7 @@ const LONG = argv.includes('--long');
 const PORT = Number(flag('--port', 8771));
 const APP = argv.includes('--app');
 const CDP = flag('--cdp', '');
-// `--only previous` (or `track`, `timeline`, `pickers`): just that group's rows, for working on one.
+// `--only previous` (or `track`, `timeline`, `pickers`, `scroll`): just that group's rows, for working on one.
 const ONLY = flag('--only', '');
 
 function loadPlaywright() {
@@ -1392,6 +1392,11 @@ async function main() {
       report();
       return;
     }
+    if (ONLY === 'scroll') {
+      await scrollRows(browser);
+      report();
+      return;
+    }
     const page = APP ? await openApp() : await browser.newPage({ viewport: { width: 412, height: 915 } });
     page.on('pageerror', (e) => errors.push(e.message));
     const ready = async () => {
@@ -1771,6 +1776,7 @@ async function main() {
     if (!APP) await timelineRows(browser);
     if (!APP) await pickerRows(browser);
     if (!APP) await sidewaysRows(browser);
+    if (!APP) await scrollRows(browser);
     if (!APP) await keyboardRows(browser);
   } finally {
     if (browser) await browser.close();
@@ -2954,8 +2960,12 @@ async function sidewaysRows(browser) {
       row(`the bar, ${at}: a finger on the piece's line doesn't move the page`, line.y === 0 && line.moves > 0, JSON.stringify(line));
       await home();
       for (let i = 0; i < 3 && await tab.evaluate(() => document.getElementById('viewSounds').hidden); i++) await press('#viewBtn');
-      const slider = await swipe('#warmth', 0, -100);
-      row(`the bar, ${at}: a finger on a slider doesn't move the page`, slider.y === 0 && slider.moves > 0, JSON.stringify(slider));
+      // (Since session 30k a drag up a slider scrolls the page and leaves the
+      // slider as it was: the scroll rows.)
+      const held = await tab.evaluate(() => document.getElementById('warmth').value);
+      const slider = await swipe('#warmth', 0, -100, 0.05);
+      const kept = await tab.evaluate(() => document.getElementById('warmth').value);
+      row(`the bar, ${at}: a finger dragged up a slider moves the page, not the slider`, slider.y > 0 && slider.moves > 0 && kept === held, `${JSON.stringify(slider)}; ${held} to ${kept}`);
       const was = await tab.evaluate(() => document.getElementById('warmth').value);
       await swipe('#warmth', was > 0.5 ? -60 : 60, 0, Number(was));
       const now = await tab.evaluate(() => document.getElementById('warmth').value);
@@ -3022,6 +3032,159 @@ async function sidewaysRows(browser) {
     }
   }
   row('sideways and the bar: no page errors', !bad.length, bad.join('; '));
+}
+
+// Chrome's bar scrolled from anywhere (session 30k, queue item 119; Mikey:
+// "I can only scroll up and down by touching specific places on the
+// screen"; `--only scroll` runs just these), in a touch tab of its own,
+// upright and on its side: a finger dragged up from each kind of place (the
+// card, a key, Now Playing, a layer's dots and keys, a Sound slider's track,
+// its knob and its name, a picker's slider, Bars' slider) scrolls the
+// document, read from the document's own scrollY, and the element really
+// had the finger (its own touchmoves counted: a check that never touched it
+// passed once, in 30f); nothing it started on was pressed or changed (a key
+// not clicked, a slider's value and what the app shows of it as they were);
+// dragged down it comes back (the bar shown again); a drag across still
+// moves a slider; the piece's line and the rail under the time keep their
+// drags.
+async function scrollRows(browser) {
+  console.log('\n  Chrome\'s bar scrolled from anywhere (session 30k)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  for (const [width, height, sw, sh] of [[360, 640, 360, 760], [804, 303, 895, 393]]) {
+    const at = `${width}x${height}`;
+    const ctx = await browser.newContext({ viewport: { width, height }, screen: { width: sw, height: sh }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+    try {
+      const tab = await ctx.newPage();
+      tab.on('pageerror', (e) => bad.push(e.message));
+      const cdp = await ctx.newCDPSession(tab);
+      await tab.goto(linkOf(`${ORIGIN}/`, encodeSong(newSpec(7))));
+      await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+      await sleep(1200);
+      row(`the scroll, ${at}: a touch tab scrolls the bar away`, await tab.evaluate(() => document.documentElement.classList.contains('bar-scroll')));
+      const to = async (y) => {
+        await tab.evaluate((v) => scrollTo(0, v), y);
+        await sleep(250);
+        return tab.evaluate(() => scrollY);
+      };
+      const end = await to(1e5);
+      await to(0);
+      // A finger, move by move, from `selector` at `along` of its width; what
+      // the element itself was given is counted.
+      const swipe = async (selector, dx, dy, along = 0.5) => {
+        const p = await tab.evaluate(([s, part]) => {
+          window.fingerMoves = 0;
+          window.fingerClicks = 0;
+          if (!window.fingerHeard) {
+            window.fingerHeard = true;
+            document.addEventListener('touchmove', (e) => { if (e.target.closest && e.target.closest(window.fingerOn)) window.fingerMoves++; }, { capture: true, passive: true });
+            document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest(window.fingerOn)) window.fingerClicks++; }, true);
+          }
+          window.fingerOn = s;
+          const r = document.querySelector(s).getBoundingClientRect();
+          return { x: Math.round(r.left + 12 + (r.width - 24) * part), y: Math.round(r.top + r.height / 2) };
+        }, [selector, along]);
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [p] });
+        for (let i = 1; i <= 12; i++) {
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x + (dx * i) / 12, y: p.y + (dy * i) / 12 }] });
+          await sleep(16);
+        }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await sleep(450);
+        return tab.evaluate(() => ({ y: scrollY, moves: window.fingerMoves, clicks: window.fingerClicks }));
+      };
+      const view = async (id) => {
+        await to(0);
+        for (let i = 0; i < 4 && await tab.evaluate((v) => document.getElementById(v).hidden, id); i++) {
+          await tab.evaluate(() => document.getElementById('viewBtn').click());
+          await sleep(300);
+        }
+      };
+      // What the app shows: the view, playing or not, and the sliders.
+      const state = () => tab.evaluate(() => ({
+        view: [...document.querySelectorAll('.view')].filter((v) => !v.hidden).map((v) => v.id).join(),
+        playing: document.getElementById('app').classList.contains('playing'),
+        sliders: [...document.querySelectorAll('input[type="range"]')].map((i) => i.value).join(),
+        shown: document.getElementById('bpmVal').textContent,
+      }));
+      const up = async (name, selector, along) => {
+        await to(0);
+        const was = await state();
+        const got = await swipe(selector, 0, -Math.min(120, height * 0.35), along);
+        const now = await state();
+        const same = JSON.stringify(was) === JSON.stringify(now);
+        row(`the scroll, ${at}: a finger dragged up from ${name} scrolls the document, and changes nothing`,
+          got.y >= Math.min(30, end) && got.moves > 0 && got.clicks === 0 && same,
+          `${JSON.stringify(got)}${same ? '' : `; ${JSON.stringify(was)} became ${JSON.stringify(now)}`}`);
+      };
+      const down = async (name, selector, along) => {
+        await to(1e5);
+        const got = await swipe(selector, 0, Math.min(120, height * 0.35), along);
+        row(`the scroll, ${at}: dragged down from ${name}, it comes back (the bar shown)`, got.y === 0 && got.moves > 0, `from ${end}: ${JSON.stringify(got)}`);
+      };
+      await view('viewNow');
+      for (const [name, sel] of [['the card\'s art', '.zone-info .cover'], ['the name', '#loopName'], ['the details', '#metaWrap'],
+        ['the playhead', '#playhead'], ['the time', '#nowBig'], ['the vibe key', '#vibesBtn'], ['Play', '#playBtn'], ['Library', '#libraryBtn'], ['the view key', '#viewBtn']]) await up(name, sel);
+      await down('the card', '#metaWrap');
+      await down('Play', '#playBtn');
+      const rail = await swipe('#nowRail', 0, -100);
+      row(`the scroll, ${at}: a finger on the rail under the time doesn't move the page`, rail.y === 0 && rail.moves > 0, JSON.stringify(rail));
+      await view('viewLayers');
+      for (const [name, sel] of [['a layer\'s dots', '.layer[data-layer="melody"] .pattern'], ['a layer\'s die', '.layer[data-layer="melody"] .btn-roll'],
+        ['a layer\'s speaker', '.layer[data-layer="melody"] .btn-on'], ['a layer\'s name', '.layer[data-layer="melody"] .lbl']]) await up(name, sel);
+      await view('viewSounds');
+      const knob = await tab.evaluate(() => { const i = document.getElementById('warmth'); return (i.value - i.min) / (i.max - i.min); });
+      await up('a slider\'s track', '#warmth', knob > 0.5 ? 0.05 : 0.95);
+      await up('a slider\'s knob', '#warmth', knob);
+      await up('a slider\'s name', '#viewSounds .srow span');
+      await up('the tempo slider', '#bpm', 0.95);
+      await down('a slider\'s track', '#warmth', knob > 0.5 ? 0.05 : 0.95);
+      await to(0);
+      const before = await state();
+      await swipe('#bpm', (before.sliders.split(',')[0] > 110 ? -1 : 1) * Math.min(160, width * 0.4), 0, 0.5);
+      const after = await state();
+      row(`the scroll, ${at}: a drag across still moves a slider, and the app hears it`, before.sliders !== after.sliders && before.shown !== after.shown,
+        `${before.shown} to ${after.shown}`);
+      await to(0);
+      await tab.evaluate(() => { document.getElementById('viewBtn').click(); });
+      await view('viewNow');
+      await tab.evaluate(() => document.getElementById('vibesBtn').click());
+      await sleep(300);
+      await tab.evaluate(() => document.querySelector('#picksList .pk-go-tempo').click());
+      await sleep(300);
+      await up('a picker\'s slider', '#tmpLo', 0.95);
+      await tab.evaluate(() => document.getElementById('tmpCancel')?.click());
+      await sleep(300);
+      await tab.evaluate(() => document.querySelector('#picksList .pk-go-bars').click());
+      await sleep(300);
+      await up('Bars\' slider', '#lenSlide', 0.95);
+    } catch (e) {
+      row(`the scroll, ${at}: measured`, false, e.message.split('\n')[0]);
+    }
+    await ctx.close();
+  }
+  const long = await browser.newContext({ viewport: { width: 360, height: 640 }, screen: { width: 360, height: 760 }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+  try {
+    const tab = await long.newPage();
+    tab.on('pageerror', (e) => bad.push(e.message));
+    const cdp = await long.newCDPSession(tab);
+    await tab.goto(linkOf(`${ORIGIN}/`, encodeSong(newSpec(11, { length: 1024 }))));
+    await sleep(1500);
+    const p = await tab.evaluate(() => { const r = document.getElementById('pieceLine').getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [p] });
+    for (let i = 1; i <= 12; i++) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x, y: p.y - (100 * i) / 12 }] });
+      await sleep(16);
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await sleep(450);
+    const y = await tab.evaluate(() => scrollY);
+    row('the scroll, 360x640: a finger on the piece\'s line doesn\'t move the page', y === 0, `${y} px`);
+  } catch (e) {
+    row('the scroll: the piece\'s line measured', false, e.message.split('\n')[0]);
+  }
+  await long.close();
+  row('the scroll: no page errors', !bad.length, bad.join('; '));
 }
 
 // The plain lines, each in a tab of its own.

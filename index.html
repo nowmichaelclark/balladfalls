@@ -53,7 +53,6 @@
   <section class="zone-info" aria-label="Now playing">
     <div id="card" class="info-inner">
       <div class="info-row">
-        <div class="cover"><canvas id="cover" width="320" height="320" role="img" aria-label="Cover art"></canvas></div>
         <div class="info-text">
           <h1 id="loopName" class="name" tabindex="0" role="button" title="Rename" aria-describedby="nameHint">—</h1>
           <span id="nameHint" hidden>Press to rename</span>
@@ -70,6 +69,9 @@
             </button>
           </div>
         </div>
+        <!-- The art on the right (session 30k, item 119): the words at the
+             left, where a line starts, and the card balanced. -->
+        <div class="cover"><canvas id="cover" width="320" height="320" role="img" aria-label="Cover art"></canvas></div>
       </div>
       <div id="playhead" class="playhead" aria-hidden="true"></div>
       <!-- A plain line in the card's place (queue item 97): what a browser

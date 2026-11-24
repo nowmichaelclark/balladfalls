@@ -673,3 +673,13 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   it picks. Listen for: each track the same as its single export (the
   samples untouched); see the tags and covers in a music player. No album
   loop.
+- #468, the look (item 119, session 30k, v209), preview URL:
+  <https://claude-s30k-the-look-driftloom.nowmichaelclark.workers.dev>
+  (the branch's): the card's art on the right and its words on the left;
+  the playhead's lit dot a diffused LED, no sparkle (Mikey's pick, "B3
+  diffused"); the Sound view's knobs solid; the Layers' die drawn as a die
+  and on and off a speaker and a crossed-out speaker (a screen reader still
+  says on or off); in Chrome's tab a drag up or down from anywhere (a key, a
+  slider, the card) scrolls the address bar away and back, a drag across
+  moves a slider. The screens before and after: branch `s30k-shots`,
+  `before-after/`. Listen for nothing. No album loop.

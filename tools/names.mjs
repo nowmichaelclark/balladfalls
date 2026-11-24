@@ -7,6 +7,8 @@
 //                 screen is in the accessibility tree with a name that has a
 //                 word or a number in it (Chromium's own computed name, not
 //                 the markup's)
+//   switches      every switch and tick says whether it is on, a layer's as
+//                 its row shows it (session 30k: a speaker on the screen)
 //   descriptions  a control whose explainer left the screen still has it as
 //                 its computed description (DESCRIBED below)
 //   markup        every control in the page, shown or not, has something to
@@ -188,6 +190,8 @@ const SCREENS = [
     for (let i = 0; i < 3 && await p.evaluate(() => document.getElementById('viewSounds').hidden); i++) await click(p, '#viewBtn');
   }],
   ['layers', async (p) => { await click(p, '#viewBtn'); }],
+  ['layers, one off', async (p) => { await click(p, '.layer[data-layer="bass"] .btn-on'); }],
+  ['layers, on again', async (p) => { await click(p, '.layer[data-layer="bass"] .btn-on'); }],
   ['save', async (p) => { await toSave(p, 'albums'); }],
   ['save, about to delete', async (p) => { await click(p, '#savePane .lrow.in .lrow-main'); }],
   ['save, changed', async (p) => { await click(p, '.layer .btn-roll'); await sleep(300); await toSave(p, 'albums'); }],
@@ -238,6 +242,7 @@ const failures = new Set();
 const named = new Map();
 let looked = 0;
 let described = 0;
+let switches = 0;
 
 function fail(where, what) {
   const line = `${where}: ${what}`;
@@ -253,6 +258,8 @@ async function checkScreen(page, cdp, where) {
     return all.map((e) => ({
       what: e.id ? `#${e.id}` : `${e.tagName.toLowerCase()}.${e.className} "${e.textContent.trim().slice(0, 40)}"`,
       described: e.matches(desc),
+      // A layer's switch, as the screen shows it: dimmed is off.
+      checked: e.matches('.layer .btn-on') ? String(!e.closest('.layer').classList.contains('dim')) : null,
     }));
   }, [CONTROLS, DESCRIBED]);
   for (const [i, c] of list.entries()) {
@@ -274,6 +281,16 @@ async function checkScreen(page, cdp, where) {
     if (!/[\p{L}\p{N}]/u.test(name)) {
       fail(where, `${c.what} has no name (${JSON.stringify(name)})`);
       continue;
+    }
+    // A switch or a tick says whether it is on (session 30k: the layers' on
+    // and off are a speaker now, the word only a screen reader's).
+    const role = node.role && node.role.value;
+    if (role === 'switch' || role === 'checkbox') {
+      const checked = (node.properties || []).find((q) => q.name === 'checked');
+      const v = checked && String(checked.value.value);
+      if (v !== 'true' && v !== 'false') fail(where, `${c.what} "${name}" doesn't say whether it is on (${JSON.stringify(v)})`);
+      else if (c.checked !== null && v !== c.checked) fail(where, `${c.what} "${name}" says ${v === 'true' ? 'on' : 'off'}, shown ${c.checked === 'true' ? 'on' : 'off'}`);
+      else switches++;
     }
     named.set(`${c.what} ${name}`, where);
     if (c.described) {
@@ -438,7 +455,7 @@ async function main() {
     await browser.close();
     server.close();
   }
-  console.log(`\nnames: ${named.size} different named controls, ${looked} looks at a control, ${described} descriptions, on ${SCREENS.length + ALONE.length} screens; fit at ${SIZES.length} sizes and ${SCALES.length} text sizes; ${failures.size} failed`);
+  console.log(`\nnames: ${named.size} different named controls, ${looked} looks at a control, ${described} descriptions, ${switches} switches said on or off, on ${SCREENS.length + ALONE.length} screens; fit at ${SIZES.length} sizes and ${SCALES.length} text sizes; ${failures.size} failed`);
   process.exit(failures.size ? 1 : 0);
 }
 

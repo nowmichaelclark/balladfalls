@@ -3,7 +3,7 @@
 **Left** (2026-11-24, stopped by brain B-parallel 4 at Mikey's word, his
 usage low; the next session with this prompt starts here):
 
-- Draft #465 (head baa79d8, v208, main merged in) builds sketch 3f as a
+- Draft #465 (head 873ff0a, v208, main to #466 merged in) builds sketch 3f as a
   placeholder, from `icons/icon.svg` through `tools/icons.mjs` (its three
   safe-zone checks pass); Android's layers are vector drawables made from
   it. It stays a draft for session 31.

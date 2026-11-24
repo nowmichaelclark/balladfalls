@@ -6,6 +6,16 @@ one-line history of the early PRs, as they stood in `docs/BRAIN.md` before
 log. Nothing here is live; the live state is `docs/BRAIN.md`, "Start here".
 
 ## The log
+**Brain B-parallel 5, Mikey's last changes (Opus 5.5, a cloud thread of the
+project, 2026-11-24).** Wrote the opening messages for 30m, 30k, 30l, 30n
+and 30g's Left list; the hands ran as project threads, two at a time
+(30m and 30k, then 30l and 30n, then 30l and 30g). Traced #467's cancelled
+`flac` job to apt's slow mirror and #468's missing CI to its conflict with
+main; read each PR's checks, ten rows and body back from GitHub before
+merging #467, #468, #472 and taking #473 to #476 as 30g's session merged
+them; held the drawing's subject out of 30l's sketch files. Mikey's two
+words of the day are in `docs/DECISIONS.md`. Left open: 30l's draft #465.
+
 **Brain B-parallel 3, the seven's end (Opus 5.5, in Claude Code, 2026-11-18
 to 22).** Ran 30d and 30c, then 24c and 30e, checked and merged them (v192
 to v195). Held 30c for keys covered on short phones and a PR body reported

@@ -640,3 +640,14 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   from the pass's first step). Listen for: a move lands where pressed, the
   music going on from there (a chord struck before it waits for the next
   one); paused, Play starts where the playhead was put. No album loop.
+- #463, the tempo, key, style and voices pickers (item 118, session 30j,
+  v205), preview URL:
+  <https://claude-s30j-pickers-1d09e6-driftloom.nowmichaelclark.workers.dev>
+  (the branch's): every line of the Vibe panel opens its view, built as Bars
+  (cancel and done): keys lit are what is asked (one pinned, several a set,
+  none and any lit left to chance); Tempo a bpm or a range (two sliders, the
+  slow end over the fast end, 32 to 190); Key the twelve notes and nineteen
+  scales; Style the sixteen; Voices a layer at a time, its voices and on or
+  off (never all five off); long lists page; clear all on the panel. The
+  screens: branch `s30j-shots`. Listen for: Next leaning on what you picked;
+  the loop playing never changes. No album loop.

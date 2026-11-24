@@ -15,14 +15,39 @@ the points where the next step is yours.
 
 ## The new name's icon (item 120, v208, PR #465: a draft until 1.0)
 
-- **On the Moto:** install the APK from PR #465's last android run (the
-  run's artifact; the PR names its commit). Look at the icon on the home screen and in
+- **Not final yet:** the build holds 3f as a placeholder while the drawing
+  is refined (round 5 in the PR); the final one replaces icons/icon.svg.
+- **On the Moto, once it is final:** install the APK from PR #465's last
+  android run (the run's artifact; the PR names its commit). Look at the icon on the home screen and in
   the app drawer, with themed icons on and off (Wallpaper and style, Themed
   icons): the themed one is the sun, the falls and two ripples in one color.
   Play something and look at the status bar's small icon. Say if anything is
   cut off by the launcher's shape, or hard to make out.
 - It stays a draft: session 31 merges it with 31a's rename, so the testers
   see nothing new before 1.0.
+
+## The tempo, key, style and voices pickers (item 118, v205, session 30j, #463)
+
+- **Look at the four views:** the vibe key, then tap tempo, key, style or
+  voices on the panel (each line is a key now). Pick, pick another (a set),
+  turn the pages (‹ ›), press any, then cancel or done; then Next: the new
+  loop leans on what you picked. Screenshots (360x640, 320x568, on its
+  side, a tablet; light and dark): the branch
+  [`s30j-shots`](https://github.com/nowmichaelclark/driftloom/tree/s30j-shots).
+- **Choices for you to confirm** (plain, for 30k to restyle):
+  - The three states as lit keys everywhere: one lit pinned, several a set,
+    none (and any lit) left to chance. Tempo's range is two sliders, the slow
+    end over the fast end, each pushing the other.
+  - Long lists page rather than scroll (the scales and the melody voices
+    take 4 to 5 pages on a short phone, one on a tablet).
+  - Words: the key view's tabs "note" and "scale"; the voices view's layers
+    as Layers names them (keys, air) with "on" (always plays) and "off".
+  - **Clear all** (a "clear" key at the left of the Vibe panel's head)
+    clears the moods too; the Track length stays (it is the loop playing's).
+  - A layer turned off forgets the voices picked for it when you press done.
+- **On your phone (two minutes):** the voices view upright on the Moto: the
+  bottom row (on, off, ‹ ›, any) fits without anything cut; typing a tempo
+  range ("70-85") from the phone's number keyboard, if it has a dash.
 
 ## The timeline (item 116, v204, PR #461)
 

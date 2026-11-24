@@ -103,6 +103,7 @@ import * as ui from './ui.js';
 import * as library from './library.js';
 import { VIBE_IDS } from './vibes.js';
 import * as picks from './picks.js';
+import * as pickers from './pickers.js';
 import * as tracklen from './tracklen.js';
 import * as piece from './piece.js';
 
@@ -948,11 +949,18 @@ const BASE_VIEWS = ['now', 'sounds', 'layers'];
 
 // The focus follows the view (WCAG 2.4.3): a child view opens on its way
 // back out, and closed, the focus is on the key that opened it.
-const FOCUS_IN = { vibe: '#picksClose', vibes: '#vibesClose', length: '#lenCancel', track: '#trkCancel' };
+const FOCUS_IN = {
+  vibe: '#picksClose', vibes: '#vibesClose', length: '#lenCancel', track: '#trkCancel',
+  tempo: '#tmpCancel', key: '#keyCancel', style: '#styCancel', voices: '#voxCancel',
+};
 const FOCUS_BACK = {
   'vibe>now': '#vibesBtn',
   'vibes>vibe': '#picksList .pk-line-mood .pk-val',
-  'length>vibe': '#picksList .pk-line-pace button.pk-val:not(.pk-track)',
+  'length>vibe': '#picksList .pk-go-bars',
+  'tempo>vibe': '#picksList .pk-go-tempo',
+  'key>vibe': '#picksList .pk-go-key',
+  'style>vibe': '#picksList .pk-go-style',
+  'voices>vibe': '#picksList .pk-go-voices',
   'track>vibe': '#picksList .pk-track',
   'track>export': '#viewExport .page-title',
 };
@@ -994,6 +1002,7 @@ function setView(view) {
   if (view === 'vibe') picks.renderPanel();
   if (view === 'length') picks.renderLength();
   if (view === 'track') tracklen.renderTrack();
+  if (pickers.PICKERS.includes(view)) pickers.renderPicker(view);
   refreshCard();
   if (view === 'sounds') saySliders();
   focusView(from, view, had);
@@ -1138,6 +1147,20 @@ function clearPickLine(line) {
   else if (line === 'key') setPicks({ key: null, scale: null });
   else if (line === 'style') setPicks({ style: null });
   else if (line === 'voices') setPicks({ voices: null, layers: null });
+}
+
+// Clear all (session 30j): every pick back to chance, the moods with them,
+// for loops still to come. The Track length is the loop playing's, not a
+// pick: it stays.
+function clearAllPicks() {
+  state.vibes = [];
+  state.picks = picks.cleanPicks(null);
+  store.setPrefs({ vibes: state.vibes, picks: state.picks });
+  sendPicks();
+  armNext();
+  updateVibesKey();
+  if (state.view === 'now') renderNow();
+  if (state.view === 'vibe') picks.renderPanel();
 }
 
 function toggleVibe(id) {
@@ -2097,7 +2120,11 @@ function wire() {
     openTrack: () => openTrackView('vibe'),
     setLength: (length, journey) => setPicks({ length, journey }),
     clearLine: clearPickLine,
+    clearAll: clearAllPicks,
+    openPicker: (kind) => { pickers.openPicker(kind); setView(kind); },
   });
+  // The tempo, key, style and voices pickers (session 30j, queue item 118).
+  pickers.wirePickers({ state, setView, setPicks });
   ui.el('vibesClear').addEventListener('click', () => {
     setVibes([]);
     // It goes dim with nothing picked: the focus to close beside it.
@@ -2504,6 +2531,7 @@ function wire() {
     if (state.view === 'length') picks.renderLength();
     else if (state.view === 'track') tracklen.renderTrack();
     else if (state.view === 'vibe') picks.fitPanel();
+    else if (pickers.PICKERS.includes(state.view)) pickers.refitPicker(state.view);
     else if (state.view === 'now') fitNow();
   };
   window.addEventListener('resize', refit);

@@ -70,8 +70,10 @@ used soon. The rest waits for its phase of the core work.
 
 **Designed (Mikey chose it, 2026-10-13):** `design/next-picks.md`, from
 Painter 5 -- the New loops panel, the picks on Now Playing and the
-Length picker. Still to design: the tempo, key and scale, style and
-voices pickers (with the range control), and the "can't do that" line.
+Length picker. **Built plain (session 30j, v205):** the tempo, key and
+scale, style and voices pickers, the range control (two sliders) and clear
+all, `design/next-picks.md`, "Tempo, key, style and voices"; the "can't do
+that" line is the core's words, under the pace line and in each picker.
 
 Today a listener can pick **vibes** (mood words such as merry, tender or
 floating) that each new loop leans toward. Soon they can also pin down

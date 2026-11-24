@@ -141,12 +141,15 @@
 
       <!-- Vibe: what new loops lean toward, five lines of picks, each with
            an any key. The vibe key and the pills on Now Playing open it.
-           Moods open the vibe words; bars open the Bars picker. No
+           Moods open the vibe words, bars the Bars picker, tempo, key,
+           style and voices their own (session 30j). No
            title on screen (Mikey, 2026-10-14: cleaner); screen readers get
            one. -->
       <div id="viewVibe" class="view v-picks" data-view="vibe" role="region" aria-label="Vibe" hidden>
         <div class="page-head pk-head">
           <h2 class="page-title vh" tabindex="-1">Vibe</h2>
+          <!-- Clear all (session 30j): every line back to chance. -->
+          <button id="picksClear" type="button" class="vkey" aria-label="clear all picks">clear</button>
           <button id="picksClose" type="button" class="vkey">close</button>
         </div>
         <div id="picksList" class="pk-list"></div>
@@ -227,6 +230,124 @@
               <button id="trkFadeIn" type="button" class="vkey word" aria-pressed="false">fade in</button>
               <button id="trkFadeOut" type="button" class="vkey word" aria-pressed="true">fade out</button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- The four pickers (session 30j, queue item 118; js/pickers.js),
+           each opened from its value on the Vibe panel and built as Bars
+           is: cancel keeps what was there, done keeps what is shown. Keys
+           lit are what is asked (one pinned, several a set), none lit and
+           the any key lit is left to chance. Tempo: a bpm, or a range
+           between the slow end and the fast end. -->
+      <div id="viewTempo" class="view v-length v-tempo" data-view="tempo" role="region" aria-label="Tempo" hidden>
+        <div class="ln-head">
+          <button id="tmpCancel" type="button" class="vkey pv-cancel">cancel</button>
+          <h2 class="page-title ln-title" tabindex="-1">Tempo</h2>
+          <button id="tmpDone" type="button" class="vkey ln-done">done</button>
+        </div>
+        <div class="ln-body">
+          <div class="ln-count">
+            <button id="tmpDown" type="button" class="vkey ln-step" aria-label="One bpm slower">−1</button>
+            <div class="ln-num">
+              <input id="tmpNum" class="ln-input" type="text" inputmode="numeric" autocomplete="off"
+                     spellcheck="false" aria-label="Tempo" aria-describedby="tmpWords">
+              <span id="tmpWords" class="ln-time"></span>
+            </div>
+            <button id="tmpUp" type="button" class="vkey ln-step" aria-label="One bpm faster">+1</button>
+          </div>
+          <p id="tmpCant" class="pv-cant" role="status" hidden></p>
+          <div class="ln-slide tp-slide">
+            <input id="tmpLo" type="range" min="32" max="190" step="1" value="80" aria-label="Slowest tempo">
+            <input id="tmpHi" type="range" min="32" max="190" step="1" value="80" aria-label="Fastest tempo">
+            <div class="ln-ticks tp-ticks" aria-hidden="true"><span data-bpm="40">40</span><span data-bpm="80">80</span><span data-bpm="120">120</span><span data-bpm="160">160</span></div>
+          </div>
+          <div class="ln-keys tp-keys">
+            <button id="tmpAny" type="button" class="vkey word pk-anykey" aria-pressed="false" aria-label="Any tempo">any</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Key: the home note and the scale, each one, a set or any; the
+           scales page rather than scroll. -->
+      <div id="viewKey" class="view v-length v-pick v-key" data-view="key" role="region" aria-label="Key" hidden>
+        <div class="ln-head">
+          <button id="keyCancel" type="button" class="vkey pv-cancel">cancel</button>
+          <h2 class="page-title ln-title" tabindex="-1">Key</h2>
+          <button id="keyDone" type="button" class="vkey ln-done">done</button>
+        </div>
+        <div class="pv-body">
+          <p id="keyValue" class="pv-value"></p>
+          <p id="keyCant" class="pv-cant" role="status" hidden></p>
+          <div class="pv-tabs" role="group" aria-label="Note or scale">
+            <button type="button" class="vkey word pv-tab" data-tab="note" aria-pressed="false">note</button>
+            <button type="button" class="vkey word pv-tab" data-tab="scale" aria-pressed="false">scale</button>
+          </div>
+          <div id="keyGrid" class="pv-grid" role="group" aria-label="Key"></div>
+          <div class="pv-foot">
+            <div id="keyPager" class="pv-pager" hidden>
+              <button id="keyPrev" type="button" class="vkey pv-turn" aria-label="Page before"><span class="pv-ico" data-ico="left" aria-hidden="true"></span></button>
+              <span id="keyPage" class="pv-page" aria-hidden="true"></span><span id="keyPageSpoken" class="vh"></span>
+              <button id="keyNext" type="button" class="vkey pv-turn" aria-label="Page after"><span class="pv-ico" data-ico="right" aria-hidden="true"></span></button>
+            </div>
+            <button id="keyAny" type="button" class="vkey word pk-anykey" aria-pressed="false">any</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Style: the profiles, one, a set or any. -->
+      <div id="viewStyle" class="view v-length v-pick v-style" data-view="style" role="region" aria-label="Style" hidden>
+        <div class="ln-head">
+          <button id="styCancel" type="button" class="vkey pv-cancel">cancel</button>
+          <h2 class="page-title ln-title" tabindex="-1">Style</h2>
+          <button id="styDone" type="button" class="vkey ln-done">done</button>
+        </div>
+        <div class="pv-body">
+          <p id="styValue" class="pv-value"></p>
+          <p id="styCant" class="pv-cant" role="status" hidden></p>
+          <div id="styGrid" class="pv-grid" role="group" aria-label="Style"></div>
+          <div class="pv-foot">
+            <div id="styPager" class="pv-pager" hidden>
+              <button id="styPrev" type="button" class="vkey pv-turn" aria-label="Page before"><span class="pv-ico" data-ico="left" aria-hidden="true"></span></button>
+              <span id="styPage" class="pv-page" aria-hidden="true"></span><span id="styPageSpoken" class="vh"></span>
+              <button id="styNext" type="button" class="vkey pv-turn" aria-label="Page after"><span class="pv-ico" data-ico="right" aria-hidden="true"></span></button>
+            </div>
+            <button id="styAny" type="button" class="vkey word pk-anykey" aria-pressed="false">any</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Voices: a layer at a time, its voices (one, a set or any) and
+           whether it plays (on, off, or left to chance; never all five
+           off, the one request the core can't meet). -->
+      <div id="viewVoices" class="view v-length v-pick v-voices" data-view="voices" role="region" aria-label="Voices" hidden>
+        <div class="ln-head">
+          <button id="voxCancel" type="button" class="vkey pv-cancel">cancel</button>
+          <h2 class="page-title ln-title" tabindex="-1">Voices</h2>
+          <button id="voxDone" type="button" class="vkey ln-done">done</button>
+        </div>
+        <div class="pv-body">
+          <p id="voxValue" class="pv-value"></p>
+          <p id="voxCant" class="pv-cant" role="status" hidden></p>
+          <div class="pv-tabs" role="group" aria-label="Layer">
+            <button type="button" class="vkey word pv-tab" data-tab="drums" aria-pressed="false">drums</button>
+            <button type="button" class="vkey word pv-tab" data-tab="bass" aria-pressed="false">bass</button>
+            <button type="button" class="vkey word pv-tab" data-tab="chords" aria-pressed="false">keys</button>
+            <button type="button" class="vkey word pv-tab" data-tab="melody" aria-pressed="false">melody</button>
+            <button type="button" class="vkey word pv-tab" data-tab="texture" aria-pressed="false">air</button>
+          </div>
+          <div id="voxGrid" class="pv-grid" role="group" aria-label="Voices"></div>
+          <div class="pv-foot">
+            <div class="pv-onoff" role="group" aria-label="Plays">
+              <button id="voxOn" type="button" class="vkey word" aria-pressed="false">on</button>
+              <button id="voxOff" type="button" class="vkey word" aria-pressed="false">off</button>
+            </div>
+            <div id="voxPager" class="pv-pager" hidden>
+              <button id="voxPrev" type="button" class="vkey pv-turn" aria-label="Page before"><span class="pv-ico" data-ico="left" aria-hidden="true"></span></button>
+              <span id="voxPage" class="pv-page" aria-hidden="true"></span><span id="voxPageSpoken" class="vh"></span>
+              <button id="voxNext" type="button" class="vkey pv-turn" aria-label="Page after"><span class="pv-ico" data-ico="right" aria-hidden="true"></span></button>
+            </div>
+            <button id="voxAny" type="button" class="vkey word pk-anykey" aria-pressed="false">any</button>
           </div>
         </div>
       </div>

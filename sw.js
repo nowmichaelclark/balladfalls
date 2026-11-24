@@ -47,6 +47,7 @@ const FILES = [
   './js/zip.js',
   './js/library.js',
   './js/picks.js',
+  './js/pickers.js',
   // Track length, its own view (session 30c).
   './js/tracklen.js',
   './js/piece.js',

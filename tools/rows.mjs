@@ -158,6 +158,14 @@
 //                       after the step); its keys; the album's way back gone
 //                       after Next and after the core's own next loop, and
 //                       back once another album is left
+//   pickers             (session 30j, queue item 118; `--only pickers`) the
+//                       tempo, key, style and voices views from the Vibe
+//                       panel: a pick, a range or a set, any, the pages,
+//                       cancel and done, the line each fills, sent and held;
+//                       the next loop drawn under them and read back from
+//                       the core and its code; kept across a reload; clear
+//                       all; never all five layers off; whole on short
+//                       phones and on its side
 //   length (--long)     a minute: the track ends on its line and the core's
 //                       own loop starts there, with the picks (queue item
 //                       95), the card following; Now Playing counts down
@@ -191,7 +199,7 @@ const LONG = argv.includes('--long');
 const PORT = Number(flag('--port', 8771));
 const APP = argv.includes('--app');
 const CDP = flag('--cdp', '');
-// `--only previous` (or `track`): just that group's rows, for working on one.
+// `--only previous` (or `track`, `timeline`, `pickers`): just that group's rows, for working on one.
 const ONLY = flag('--only', '');
 
 function loadPlaywright() {
@@ -622,10 +630,14 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   const lateLine = async () => (await diag()).split('\n').find((l) => l.startsWith('engine:')) || '';
   const nothingLate = (line) => /late: 0\s+missed: 0\s+dropped: 0/.test(line);
   // Three seconds of listening (session 30h: 1.5 s fell in a quiet start once
-  // in forty runs, a new loop opening after the track's end).
+  // in forty runs, a new loop opening after the track's end), on the fixed
+  // busy loop (below): what was heard is kept for the row's words.
+  let heard = '';
   const playing = async () => {
     const p = await probe();
-    return p && p.player.state === 3 && (await level(3000)) > 1e-4;
+    const lv = await level(3000);
+    heard = `state ${p && p.player.state}, level ${lv.toExponential(1)}`;
+    return p && p.player.state === 3 && lv > 1e-4;
   };
   const setLite = async (on) => {
     const now = await ev(() => document.getElementById('liteMode').getAttribute('aria-checked') === 'true');
@@ -636,6 +648,13 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   };
 
   console.log('\n  export audio (queue items 104b and 104c; its length the track\'s, session 30c)');
+  // The fixed busy loop the rows begin with, pasted again (session 30j):
+  // the loop the picks' Next drew is any loop, and a sparse one is silent
+  // for seconds at a time (neisk-nesk, run 45271085229: up to 6 s), which
+  // a "music on" row then reads as stopped.
+  await ev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
+  await clickId('pasteCode');
+  await sleep(3500);
   // On and on: the export asks how long first.
   await trackTo(ev, null);
   await share();
@@ -699,8 +718,10 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   let m = await said(['cancelled', 'done', 'failed'], from, 30000);
   s = await sheet();
   let files = await ev(() => window.__rows.opfs());
-  row('export audio: Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && s.why === 'Canceled.' && !files.includes('picked.flac') && (await playing()) && nothingLate(await lateLine()),
-    `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}`);
+  let on = await playing();
+  let late = await lateLine();
+  row('export audio: Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && s.why === 'Canceled.' && !files.includes('picked.flac') && on && nothingLate(late),
+    `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}; ${heard}; ${late}`);
   await clickId('exportOk');
 
   // The free space checked first.
@@ -766,8 +787,10 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   m = await said(['cancelled', 'done', 'failed'], from, 30000);
   s = await sheet();
   files = await ev(() => window.__rows.opfs());
-  row('export audio (small): Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && s.why === 'Canceled.' && !files.includes('picked.opus') && (await playing()) && nothingLate(await lateLine()),
-    `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}`);
+  on = await playing();
+  late = await lateLine();
+  row('export audio (small): Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && s.why === 'Canceled.' && !files.includes('picked.opus') && on && nothingLate(late),
+    `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}; ${heard}; ${late}`);
   await clickId('exportOk');
 
   // The format pressed is kept through the Track length view, and an export
@@ -1364,6 +1387,11 @@ async function main() {
       report();
       return;
     }
+    if (ONLY === 'pickers') {
+      await pickerRows(browser);
+      report();
+      return;
+    }
     const page = APP ? await openApp() : await browser.newPage({ viewport: { width: 412, height: 915 } });
     page.on('pageerror', (e) => errors.push(e.message));
     const ready = async () => {
@@ -1596,6 +1624,14 @@ async function main() {
       const own = (await owns()).pop();
       row('picks: the next new loop is the core\'s own and leans on them', (p.d.vibes || '').split('|').some((x) => x.startsWith(`${vibe}:`)) && p.d.name === (await name())
         && own && own.seed === Number(p.d.seed), `${vibe}: ${p.d.vibes}`);
+      // With nothing asked of the bars, about 1 new loop in 10 is a long
+      // piece the core drew (queue item 117), which ends: the rows after
+      // (the export's) want a loop that plays on, so Next again past one.
+      for (let i = 0; i < 6 && p.d.length != null; i++) {
+        await key('Alt+Shift+ArrowRight');
+        await sleep(3000);
+        p = await probe();
+      }
     }
     await ev(() => document.getElementById('vibesClear').click());
 
@@ -1733,6 +1769,7 @@ async function main() {
     if (!APP) await artRows(browser);
     if (!APP) await trackRows(browser);
     if (!APP) await timelineRows(browser);
+    if (!APP) await pickerRows(browser);
     if (!APP) await sidewaysRows(browser);
     if (!APP) await keyboardRows(browser);
   } finally {
@@ -3037,6 +3074,7 @@ function covered(id = 'viewTrack') {
   const box = view.getBoundingClientRect();
   const out = [];
   for (const el of view.querySelectorAll('button, input')) {
+    if (!el.checkVisibility()) continue;
     const r = el.getBoundingClientRect();
     if (r.width < 24 || r.height < 24) out.push(`${el.id} is ${Math.round(r.width)}x${Math.round(r.height)}`);
     if (r.top < box.top - 1 || r.bottom > box.bottom + 1 || r.left < box.left - 1 || r.right > box.right + 1) out.push(`${el.id} is outside the view`);
@@ -3045,7 +3083,7 @@ function covered(id = 'viewTrack') {
       if (!hit || !(hit === el || el.contains(hit))) out.push(`${el.id}'s ${at} is under ${hit ? hit.id || hit.className : 'nothing'}`);
     }
   }
-  for (const el of [view, view.querySelector('.ln-body')]) {
+  for (const el of [view, view.querySelector('.ln-body, .pv-body')].filter(Boolean)) {
     if (/auto|scroll/.test(getComputedStyle(el).overflowY)) out.push(`${el.id || el.className} scrolls`);
   }
   return out;
@@ -3560,7 +3598,7 @@ async function trackRows(browser) {
   await tev(() => document.getElementById('trkCancel').click());
   // Bars, the same way, upright and on its side (session 30f): any, a
   // number and Endless.
-  await tev(() => document.querySelector('#picksList .pk-line-pace button.pk-val:not(.pk-track)').click());
+  await tev(() => document.querySelector('#picksList .pk-go-bars').click());
   for (const [width, height] of [[360, 640], [320, 568], [360, 740], [360, 780], ...SIDEWAYS]) {
     await tab.setViewportSize({ width, height });
     await sleep(400);
@@ -3591,5 +3629,304 @@ async function trackRows(browser) {
   const layerKeys = await tev(() => [...document.querySelectorAll('.layer button')].map((k) => k.getBoundingClientRect().height));
   row('layers: at 360x640 each key is 44 px or more', layerKeys.length === 10 && layerKeys.every((h) => h >= 44), layerKeys.map(Math.round).join(', '));
   row('track length: no page errors', !bad.length, bad.join('; '));
+  await tab.close();
+}
+
+// The tempo, key, style and voices pickers (session 30j, queue item 118;
+// `--only pickers` runs just these), in a tab of their own: each opened from
+// its line on the Vibe panel, its keys pressed as a listener would (one pick,
+// a range or a set, any, the pages), cancel keeping what was there and done
+// what is shown; the line it fills and the picks sent to the core and held;
+// the loop playing left as it is, and the next new loop (the core's own)
+// drawn under the picks, read back from the core and from its share code;
+// the picks kept across a reload; clear all; never all five layers off; and
+// each view whole at 360x640, 320x568 and on its side, nothing to scroll.
+async function pickerRows(browser) {
+  console.log('\n  the tempo, key, style and voices pickers (session 30j)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(HOOK);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  await tab.goto(`${ORIGIN}/`);
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  // A fixed first loop that plays on (a fresh one may be a long piece the
+  // core drew, which ends), pasted as a listener would.
+  await tev((code) => { window.__rows.clip = code; document.getElementById('pasteCode').click(); }, LOOPS.shatter.code);
+  await sleep(3500);
+  const probe = async () => {
+    const m = await tev(() => window.__rows.probe());
+    return m ? { ...m, d: about(m.about) } : null;
+  };
+  const view = () => tev(() => [...document.querySelectorAll('.view')].find((v) => !v.hidden)?.dataset.view);
+  const sent = () => tev(() => window.__rows.posts.filter((m) => m.type === 'playPicks'));
+  const line = (id) => tev((i) => {
+    const b = document.querySelector(`#picksList .pk-go-${i}`);
+    return b ? { text: b.textContent.replace(/\u00a0/g, ' ').trim(), label: b.getAttribute('aria-label') } : null;
+  }, id);
+  // What a picker shows: its value line (or number), the keys lit on the
+  // page shown, the any key, the page, the tab.
+  const shown = (p) => tev((q) => {
+    const $ = (id) => document.getElementById(id);
+    const grid = $(`${q}Grid`);
+    return {
+      value: q === 'tmp' ? $('tmpNum').value : $(`${q}Value`).textContent,
+      lit: grid ? [...grid.children].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent) : [],
+      keys: grid ? [...grid.children].map((b) => b.textContent) : [],
+      any: $(`${q}Any`).getAttribute('aria-pressed') === 'true',
+      page: $(`${q}Pager`) && !$(`${q}Pager`).hidden ? $(`${q}Page`).textContent : '',
+      tab: document.querySelector(`#${$(`${q}Cancel`).closest('.view').id} .pv-tab[aria-pressed="true"]`)?.dataset.tab || null,
+    };
+  }, p);
+  // A key by its words, turning the pages until it shows.
+  const press = (p, text) => tev(([q, t]) => {
+    const $ = (id) => document.getElementById(id);
+    const find = () => [...$(`${q}Grid`).children].find((b) => b.textContent === t);
+    while (!$(`${q}Prev`).disabled && !$(`${q}Pager`).hidden) $(`${q}Prev`).click();
+    for (let i = 0; i < 30 && !find() && !$(`${q}Next`).disabled; i++) $(`${q}Next`).click();
+    const b = find();
+    if (!b) return false;
+    b.click();
+    return true;
+  }, [p, text]);
+  // The vibe key is Now Playing's: from anywhere else, there first.
+  const toVibe = async () => {
+    if ((await view()) === 'vibe') return;
+    if ((await view()) !== 'now') { await tab.click('#nowBtn'); await sleep(250); }
+    await tab.click('#vibesBtn');
+    await sleep(250);
+  };
+  const openLine = async (id) => {
+    await toVibe();
+    await tab.click(`#picksList .pk-go-${id}`);
+    await sleep(300);
+  };
+  const playing = (await probe()).d.seed;
+
+  // The panel: every line taps through, nothing picked.
+  await tab.click('#vibesBtn');
+  await sleep(300);
+  const lines = {};
+  for (const id of ['tempo', 'key', 'style', 'voices']) lines[id] = await line(id);
+  row('pickers: the Vibe panel\'s tempo, key, style and voices lines are keys, each saying "any"',
+    Object.values(lines).every((l) => l && /any/.test(l.text)) && lines.tempo.label === 'Tempo: any tempo' && lines.key.label === 'Key: any key',
+    Object.entries(lines).map(([k, l]) => `${k} ${l && l.label}`).join(' | '));
+  const clear0 = await tev(() => document.getElementById('picksClear').disabled);
+  row('pickers: clear all is there, dim with nothing to clear', clear0);
+
+  // Tempo: cancel keeps "any".
+  const sent0 = (await sent()).length;
+  await openLine('tempo');
+  let t = await shown('tmp');
+  row('tempo: opens from its line, any lit, the number "any"', (await view()) === 'tempo' && t.any && t.value === 'any', JSON.stringify(t));
+  const type = async (text) => {
+    await tab.click('#tmpNum');
+    await tab.fill('#tmpNum', text);
+    await tab.press('#tmpNum', 'Enter');
+    await sleep(150);
+    return shown('tmp');
+  };
+  const t77 = await type('77');
+  const slide = (id, v) => tev(([i, x]) => { const s = document.getElementById(i); s.value = String(x); s.dispatchEvent(new Event('input', { bubbles: true })); }, [id, v]);
+  await slide('tmpHi', 85);
+  const tr = await shown('tmp');
+  await tab.click('#tmpDown');
+  const td = await shown('tmp');
+  await slide('tmpLo', 100);
+  const pushed = await shown('tmp');
+  row('tempo: typed, pinned (77, any unlit); the fast end to 85, a range (77–85); −1 moves both ends (76–84); the slow end past the fast one takes it along (100)',
+    t77.value === '77' && !t77.any && tr.value === '77–85' && td.value === '76–84' && pushed.value === '100', [t77.value, tr.value, td.value, pushed.value].join(' | '));
+  await tab.click('#tmpAny');
+  const ta = await shown('tmp');
+  const lim = await tev(() => {
+    const s = document.getElementById('tmpLo');
+    return [Number(s.min), Number(s.max)];
+  });
+  row('tempo: any lit again, the number "any"; the sliders go from 32 to 190 bpm, all the core takes', ta.any && ta.value === 'any' && lim[0] === 32 && lim[1] === 190, `${ta.value} ${lim.join('-')}`);
+  await type('90');
+  await tab.click('#tmpCancel');
+  await sleep(300);
+  const afterCancel = await line('tempo');
+  row('tempo: cancel goes back to the panel, the line still "any tempo", nothing sent', (await view()) === 'vibe' && afterCancel.label === 'Tempo: any tempo' && (await sent()).length === sent0, afterCancel.label);
+  await openLine('tempo');
+  await type('70-85');
+  await tab.click('#tmpDone');
+  await sleep(500);
+  let s = (await sent()).pop();
+  let p = await probe();
+  const tl = await line('tempo');
+  row('tempo: done, "70–85 bpm" on its line, sent to the core and held, the loop playing left as it is',
+    tl.text === '70–85 bpm' && s && s.ask.tempo && s.ask.tempo.join('-') === '70-85' && p.picksTag === s.tag && p.d.seed === playing, `${tl.text}; ask ${s && JSON.stringify(s.ask.tempo)}, tag ${p.picksTag}/${s && s.tag}`);
+
+  // Key: a note, a set of notes, a scale, any for one of them.
+  await openLine('key');
+  let k = await shown('key');
+  row('key: opens on the notes, all twelve, any lit', (await view()) === 'key' && k.tab === 'note' && k.keys.length === 12 && k.any && k.value === 'any', `${k.keys.join(' ')} ${k.page}`);
+  await press('key', 'D');
+  const k1 = await shown('key');
+  await press('key', 'G');
+  const k2 = await shown('key');
+  row('key: D pinned, then D or G, a set', k1.value === 'D' && k1.lit.join() === 'D' && !k1.any && k2.value === 'D or G' && k2.lit.join() === 'D,G', `${k1.value} | ${k2.value}`);
+  await tab.click('#viewKey .pv-tab[data-tab="scale"]');
+  await sleep(150);
+  k = await shown('key');
+  const scales = [];
+  {
+    // Every scale, page by page.
+    const all = await tev(() => {
+      const $ = (id) => document.getElementById(id);
+      while (!$('keyPrev').disabled) $('keyPrev').click();
+      const out = [...$('keyGrid').children].map((b) => b.textContent);
+      for (let i = 0; i < 30 && !$('keyNext').disabled; i++) { $('keyNext').click(); out.push(...[...$('keyGrid').children].map((b) => b.textContent)); }
+      return out;
+    });
+    scales.push(...all);
+  }
+  row('key: the scales, all nineteen the core has, on pages (nothing scrolls)', k.tab === 'scale' && k.any && scales.length === 19 && new Set(scales).size === 19, `${k.page}: ${scales.join(', ')}`);
+  await press('key', 'dorian');
+  const k3 = await shown('key');
+  await press('key', 'aeolian');
+  await tab.click('#keyAny');
+  const k4 = await shown('key');
+  await press('key', 'dorian');
+  const k5 = await shown('key');
+  row('key: dorian with the notes ("D or G dorian"); aeolian too, then any for the scales alone (the notes kept); dorian again',
+    k3.value === 'D or G dorian' && k4.value === 'D or G' && k4.any && k5.value === 'D or G dorian', [k3.value, k4.value, k5.value].join(' | '));
+  await tab.click('#keyDone');
+  await sleep(500);
+  s = (await sent()).pop();
+  p = await probe();
+  const kl = await line('key');
+  row('key: done, "D or G dorian" on its line, sent (D and G, dorian) and held', kl.text === 'D or G dorian' && s.ask.keys === ((1 << 2) | (1 << 7)) && s.ask.scales === 1 && p.picksTag === s.tag, `${kl.text}; keys ${s.ask.keys}, scales ${s.ask.scales}`);
+
+  // Style: a set, then one.
+  await openLine('style');
+  let st = await shown('sty');
+  await press('sty', 'tide');
+  await press('sty', 'shrine');
+  const st2 = await shown('sty');
+  await press('sty', 'shrine');
+  const st3 = await shown('sty');
+  row('style: any lit, then tide or shrine, a set; shrine again, tide alone', st.any && st2.value === 'shrine or tide' && st3.value === 'tide' && !st3.any, `${st.value} | ${st2.value} | ${st3.value} ${st.page}`);
+  await tab.click('#styDone');
+  await sleep(500);
+  s = (await sent()).pop();
+  const sl = await line('style');
+  row('style: done, "tide" on its line, sent', sl.text === 'tide' && s.ask.styles === 1 << 13, `${sl.text} ${s.ask.styles}`);
+
+  // Voices: a voice and the layer on; another layer off; never all five off.
+  await openLine('voices');
+  await tab.click('#viewVoices .pv-tab[data-tab="melody"]');
+  await sleep(150);
+  await press('vox', 'kalimba');
+  await tab.click('#voxOn');
+  const v1 = await shown('vox');
+  const layerKey = (l) => tab.click(`#viewVoices .pv-tab[data-tab="${l}"]`);
+  for (const l of ['drums', 'bass', 'chords', 'texture']) { await layerKey(l); await tab.click('#voxOff'); }
+  await layerKey('melody');
+  const lastOn = await tev(() => document.getElementById('voxOff').disabled);
+  for (const l of ['bass', 'chords', 'texture']) { await layerKey(l); await tab.click('#voxOff'); }
+  await layerKey('drums');
+  const v2 = await shown('vox');
+  const dot = await tev(() => [...document.querySelectorAll('#viewVoices .pv-tab.asks')].map((b) => b.dataset.tab).join(','));
+  row('voices: kalimba with the melody on ("kalimba · on"); the drums off; with the other four off the melody\'s off rests (all five off is the one thing the core can\'t do); the layers asking something marked',
+    v1.value === 'kalimba · on' && v1.lit.join() === 'kalimba' && lastOn && v2.value === 'off' && dot === 'drums,melody', `${v1.value} | ${lastOn} | ${v2.value} | ${dot}`);
+  await tab.click('#voxDone');
+  await sleep(500);
+  s = (await sent()).pop();
+  p = await probe();
+  const vl = await line('voices');
+  row('voices: done, "kalimba, no drums, melody always" on its line, sent and held',
+    vl.text === 'kalimba, no drums, melody always' && s.ask.layers.join() === '2,0,0,1,0' && s.ask.voices[3] !== 0 && p.picksTag === s.tag && p.d.seed === playing, `${vl.text}; layers ${s.ask.layers}, voices ${s.ask.voices}`);
+  const cant = await tev(() => document.querySelector('#picksList .pk-cant')?.textContent || '');
+  row('pickers: every pick together can be met (no "can\'t do that")', !cant, cant);
+
+  // Now Playing shows them; Next draws the core's own loop under them.
+  await tab.click('#nowBtn');
+  await sleep(300);
+  const pills = await tev(() => document.getElementById('nowPicks').getAttribute('aria-label'));
+  row('pickers: Now Playing\'s picks say them', /70 to 85 bpm/.test(pills) && /D or G dorian/.test(pills) && /tide/.test(pills) && /kalimba/.test(pills), pills);
+  await tab.click('#nextBtn');
+  await sleep(3500);
+  p = await probe();
+  const d = p.d;
+  const bpm = Number(d.bpm);
+  const mix = (d.mix || '').split('|').map((x) => x.split(':'));
+  const plays = (d.layers || '').split('|');
+  // A layer off is the loop's own mute (core/src/generator/asked.rs): drawn,
+  // and silent; the Layers view shows it off.
+  for (let i = 0; i < 3 && await tev(() => document.getElementById('viewLayers').hidden); i++) await tab.click('#viewBtn');
+  await sleep(400);
+  const drums = await tev(() => document.querySelector('.layer[data-layer="drums"] .btn-on').getAttribute('aria-checked'));
+  row('pickers: the next loop, the core\'s own, is drawn under them: 70 to 85 bpm, D or G dorian, tide, the drums off, the melody playing',
+    d.seed !== playing && bpm >= 70 && bpm <= 85 && ['2', '7'].includes(d.root) && d.scale === 'dorian' && mix.length === 1 && mix[0][0] === 'tide' && drums === 'false' && plays[3] === '1',
+    `${d.bpm} bpm, root ${d.root} ${d.scale}, mix ${d.mix}, drums on ${drums}, layers drawn ${d.layers}`);
+  await tev(() => {
+    window.__rows.clip = '';
+    if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+    document.querySelector('[data-stab="share"]').click();
+    document.getElementById('copySong').click();
+  });
+  await sleep(600);
+  let back = null;
+  try { back = decodeSong(await tev(() => window.__rows.clip)); } catch (err) { back = { error: err.message }; }
+  row('pickers: its spec, read back from its share code, carries what was asked: the tempo, the notes and the scale, the style, the voice and the layers',
+    back && back.seed >>> 0 === Number(d.seed) && back.mutes && back.mutes.drums === true && JSON.stringify(back.tempo) === '[70,85]' && JSON.stringify(back.askKey) === '[2,7]' && JSON.stringify(back.askScale) === '["dorian"]'
+      && JSON.stringify(back.askStyle) === '["tide"]' && JSON.stringify(back.askVoices) === '{"melody":["kalimba"]}' && JSON.stringify(back.askLayers) === '{"drums":"off","melody":"on"}',
+    back && JSON.stringify({ tempo: back.tempo, key: back.askKey, scale: back.askScale, style: back.askStyle, voices: back.askVoices, layers: back.askLayers, error: back.error }));
+
+  // Kept with the panel's state: a reload.
+  await tab.reload();
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  // (It opens where it was left: the Layers view.)
+  await toVibe();
+  const kept = [];
+  for (const id of ['tempo', 'key', 'style', 'voices']) kept.push((await line(id)).text);
+  row('pickers: the picks kept across a reload', kept.join(' | ') === '70–85 bpm | D or G dorian | tide | kalimba, no drums, melody always', kept.join(' | '));
+  // Playing again, so there is a core to send the picks to.
+  await tab.click('#playBtn');
+  await sleep(3000);
+
+  // A picker opens on what is picked: the scale's page, the lit keys.
+  await openLine('style');
+  st = await shown('sty');
+  row('style: opened again, on the page with tide lit', st.lit.join() === 'tide', `${st.page} ${st.lit}`);
+  await tab.click('#styCancel');
+  await sleep(250);
+
+  // Clear all.
+  const before = (await sent()).length;
+  await tab.click('#picksClear');
+  await sleep(500);
+  const cleared = [];
+  for (const id of ['tempo', 'key', 'style', 'voices']) cleared.push((await line(id)).label);
+  const after = await tev(() => ({ dim: document.getElementById('picksClear').disabled, focus: document.activeElement && document.activeElement.id, anys: [...document.querySelectorAll('#picksList .pk-anykey')].every((b) => b.getAttribute('aria-pressed') === 'true') }));
+  s = (await sent()).pop();
+  row('pickers: clear all puts every line back to any, sends picks of nothing, goes dim and leaves the focus on close',
+    cleared.every((l) => /any/.test(l)) && after.dim && after.anys && after.focus === 'picksClose' && (await sent()).length === before + 1
+      && !s.ask.tempo && !s.ask.keys && !s.ask.scales && !s.ask.styles && s.ask.layers.every((x) => x === 0) && s.ask.voices.every((x) => x === 0) && !s.ask.vibes.length,
+    `${cleared.join(' | ')}; ${JSON.stringify(after)}`);
+
+  // Whole on short phones and on a phone on its side: every key reachable,
+  // nothing to scroll, on every tab and page.
+  for (const [width, height] of [[360, 640], [320, 568], [640, 360], [568, 320]]) {
+    await tab.setViewportSize({ width, height });
+    await sleep(400);
+    const out = [];
+    for (const [id, viewId, tabs] of [['tempo', 'viewTempo', [null]], ['key', 'viewKey', ['note', 'scale']], ['style', 'viewStyle', [null]], ['voices', 'viewVoices', ['drums', 'melody', 'texture']]]) {
+      await openLine(id);
+      for (const tb of tabs) {
+        if (tb) { await tev((x) => document.querySelector(`.view:not([hidden]) .pv-tab[data-tab="${x}"]`).click(), tb); await sleep(150); }
+        out.push(...(await tev(covered, viewId)).map((x) => `${id}${tb ? `/${tb}` : ''}: ${x}`));
+      }
+      await tev(() => document.querySelector('.view:not([hidden]) .pv-cancel').click());
+      await sleep(200);
+    }
+    row(`pickers: at ${width}x${height} each view whole, every key reachable, nothing to scroll`, !out.length, out.join('; ') || 'all reached');
+  }
+  row('pickers: no page errors', !bad.length, bad.join('; '));
   await tab.close();
 }

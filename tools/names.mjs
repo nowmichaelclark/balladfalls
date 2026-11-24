@@ -153,7 +153,7 @@ const SCREENS = [
   ['vibes, none', async (p) => { await click(p, '#picksList .pk-line-mood .pk-val'); }],
   ['vibes, picked', async (p) => { await click(p, '#vibesList button:nth-child(2)'); await click(p, '#vibesList button:nth-child(5)'); }],
   ['vibe, picked', async (p) => { await click(p, '#vibesClose'); }],
-  ['bars', async (p) => { await click(p, '#picksList .pk-line-pace button.pk-val:not(.pk-track)'); }],
+  ['bars', async (p) => { await click(p, '#picksList .pk-go-bars'); }],
   ['bars, endless', async (p) => { await click(p, '#lenEndless'); }],
   ['track length, on and on', async (p) => { await click(p, '#lenCancel'); await click(p, '#picksList .pk-track'); }],
   ['track length, set', async (p) => {
@@ -164,6 +164,26 @@ const SCREENS = [
     });
   }],
   ['vibe, track set', async (p) => { await click(p, '#trkDone'); }],
+  ['tempo', async (p) => { await click(p, '#picksList .pk-go-tempo'); }],
+  ['tempo, a range', async (p) => {
+    await p.evaluate(() => {
+      for (const [id, v] of [['tmpLo', 70], ['tmpHi', 85]]) {
+        const s = document.getElementById(id);
+        s.value = String(v);
+        s.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
+  }],
+  ['key', async (p) => { await click(p, '#tmpDone'); await click(p, '#picksList .pk-go-key'); await click(p, '#keyGrid button:nth-child(4)'); }],
+  ['key, scales', async (p) => { await click(p, '#viewKey .pv-tab[data-tab="scale"]'); await click(p, '#keyNext'); }],
+  ['style', async (p) => { await click(p, '#keyDone'); await click(p, '#picksList .pk-go-style'); await click(p, '#styGrid button:nth-child(1)'); }],
+  ['voices', async (p) => {
+    await click(p, '#styDone');
+    await click(p, '#picksList .pk-go-voices');
+    await click(p, '#voxGrid button:nth-child(1)');
+    await click(p, '#voxOff');
+  }],
+  ['vibe, every line picked', async (p) => { await click(p, '#voxDone'); }],
   ['sound', async (p) => {
     for (let i = 0; i < 3 && await p.evaluate(() => document.getElementById('viewSounds').hidden); i++) await click(p, '#viewBtn');
   }],

@@ -292,21 +292,28 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 
 ### Start here (for the next brain)
 
-- **Brain B-parallel 4 (Opus 5.5, 2026-11-23, in Claude Code; running).**
-  Found #458 (30g, v201) and #459 merged, main green, the nightly green on
-  v201 (45095215111). Mikey's list of 2026-11-23 is items 116 to 122,
-  sessions 30h to 30n (`docs/sessions/README.md`), his four answers in
-  `docs/DECISIONS.md`; the new name stays out of the repo (30l's icon is left
-  open for 31). **Order:** 30h and 30i first, then 30j beside 30l, 30k beside
-  30m, then 30n beside 30g's Left list. **Merged:** #462 (30i, v203: any
-  bars sometimes a long piece, 10.25% of 10,000, `tools/unasked.mjs`; the
-  longform references now the loop's own bars, checked sample for sample),
-  #461 (30h, v204: the timeline a slider, a jump held while paused, the way
-  back gone; ten rows 10 of 10 on 565a050, the export row's one failure in
-  forty unexplained). v202 unused. **Running:** 30j (#463, v205). **Cards
-  for Mikey** (the app starts no session on an automated turn): 30l, 30m.
-  **Learned:** two export dispatches on one ref a second apart cancel the
-  first while pending (its concurrency group): dispatch ten rows alone.
+- **Brain B-parallel 4 (Opus 5.5, 2026-11-23 to 24, in Claude Code; the
+  next brain is B-parallel 5, `brain-parallel-5.md`, in a cloud session on
+  Mikey's other account).** Found #458 and #459 merged, main and the nightly
+  green on v201. Mikey's list of 2026-11-23 became items 116 to 122,
+  sessions 30h to 30n, his answers in `docs/DECISIONS.md`. **Merged:** #462
+  (30i, v203: any bars sometimes a long piece, 10.25% of 10,000,
+  `tools/unasked.mjs`; the longform references now the loop's own bars,
+  checked sample for sample), #461 (30h, v204: the timeline a slider, a jump
+  held while paused, the way back gone; ten rows 10 of 10), #463 (30j, v205:
+  the four pickers; ten rows 10 of 10 on 2d0b00f, merged on the gate after
+  docs-only commits). v202 unused. Nightly green on v204 (45262224098).
+  **Open when this was written:** 30m's #466 (v206, the seed album saved)
+  and #467 (v207, the album exported whole and tagged), each waiting on ten
+  rows; 30k's draft #468 (the look), waiting on Mikey's playhead pick among
+  four (A ring, B bead, C trail, D beat pulse); 30l's draft #465 (v208, the
+  new name's icon, Mikey picking in its session; left open for 31). **Not
+  started:** 30n (after 30k and 30m), 30g's Left list. **Learned:** two
+  export dispatches on one ref a second apart cancel the first while
+  pending; ask for a failing row's cause before it listens longer (a random
+  loop silent for 6 s; pinned to a busy loop); the app starts no session on
+  an automated turn, so a session the brain wants next waits as a card for
+  Mikey.
 - **Brain B-parallel 3 (Opus 5.5, 2026-11-22 to 23, in Claude Code; ended
   at Mikey's word, the next brain to take his list: `brain-parallel-4.md`).**
   **Merged:** 30d (#446, v192), 30c (#448, v193), 24c (#450, v194), 30e

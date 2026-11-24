@@ -176,33 +176,34 @@ async function pickerSave() {
 // "Use this folder" and Allow.
 async function pickerFolder() {
   await until('the folder picker', () => nodes().xml.includes('com.android.documentsui'), 45000, 1500);
-  let last = null;
+  // What a screen shows, short: each labeled node, its id's tail, and
+  // whether it can be pressed (a step's trace, and the last screen's).
+  const said = (list) => list.filter((n) => n.text || n.desc).map((n) => `${n.text || `[${n.desc}]`}${n.id ? `#${n.id.split('/').pop()}` : ''}${n.enabled ? '' : ' (off)'}`).join(' | ').slice(0, 1500);
+  let last = [];
+  // The device's own storage first, once (the drawer's Documents or Audio are
+  // views across folders, which the picker won't give as a folder), then a
+  // folder in it.
+  let wentDevice = false;
   for (let i = 0; i < 25; i++) {
-    const { xml, list } = nodes();
-    last = xml;
+    const { list } = nodes();
+    last = list;
     const allow = list.find((n) => /^allow$/i.test(n.text) && n.enabled);
+    const use = list.find((n) => /use this folder/i.test(n.text) && n.enabled);
+    const into = list.find((n) => /^(Music|Documents|Podcasts|Alarms|Movies)$/i.test(n.text));
+    const device = list.find((n) => /sdk|phone|internal storage|built for|gphone/i.test(n.text));
+    const menu = list.find((n) => /roots|navigate up|open navigation|show roots/i.test(n.desc));
+    const step = allow || use || (!wentDevice && device) || into || menu;
+    if (step && step === device) wentDevice = true;
+    log(`     folder picker, step ${i + 1}: ${step ? `tap "${step.text || step.desc}"` : 'nothing to tap'}; ${said(list)}`);
     if (allow) {
       tap(allow);
       return true;
     }
-    const use = list.find((n) => /use this folder/i.test(n.text) && n.enabled);
-    if (use) {
-      tap(use);
-      await sleep(1500);
-      continue;
-    }
-    const into = list.find((n) => /^(Music|Documents|Podcasts)$/.test(n.text));
-    if (into) tap(into);
-    else {
-      const device = list.find((n) => /sdk|phone|internal storage|built for/i.test(n.text));
-      const menu = list.find((n) => /roots|navigate up|open navigation|show roots/i.test(n.desc));
-      if (device) tap(device);
-      else if (menu) tap(menu);
-    }
+    if (step) tap(step);
     await sleep(1500);
   }
   log('the folder picker never offered a folder to use; its last screen:');
-  log((last || '').slice(0, 4000));
+  log(said(last));
   return false;
 }
 

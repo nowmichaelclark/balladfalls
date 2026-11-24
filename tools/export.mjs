@@ -527,10 +527,22 @@ function tagCheck(label, file, want) {
   return !bad.length;
 }
 
-// Decodes with no error and no warning.
+// The audio decodes with no error and no warning (the cover is a stream of
+// its own, held byte for byte by `pictureKept`: an older ffmpeg warns while
+// decoding a still JPEG as video, which says nothing of the file).
 function decodes(file) {
-  const d = spawnSync('ffmpeg', ['-v', 'warning', '-i', file, '-f', 'null', '-'], { encoding: 'utf8' });
+  const d = spawnSync('ffmpeg', ['-v', 'warning', '-i', file, '-map', '0:a', '-f', 'null', '-'], { encoding: 'utf8' });
   return d.status === 0 && !d.stderr.trim() ? '' : (d.stderr.trim() || `status ${d.status}`);
+}
+
+// The cover ffmpeg finds in the file is the picture given, byte for byte.
+function pictureKept(file, bytes) {
+  const out = path.join(tmp, 'kept.jpg');
+  const x = spawnSync('ffmpeg', ['-v', 'error', '-y', '-i', file, '-map', '0:v', '-c', 'copy', '-frames:v', '1', '-f', 'image2', out], { encoding: 'utf8' });
+  if (x.status !== 0 || !fs.existsSync(out)) return `ffmpeg would not take the picture out: ${x.stderr.trim()}`;
+  const got = fs.readFileSync(out);
+  fs.unlinkSync(out);
+  return Buffer.compare(got, Buffer.from(bytes)) === 0 ? '' : `the picture taken out is ${got.length} bytes, not the ${bytes.length} given`;
 }
 
 async function albums() {
@@ -548,7 +560,8 @@ async function albums() {
   const jpg = path.join(tmp, 'cover.jpg');
   spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=0x3d2348:s=600x600', '-frames:v', '1', jpg]);
   const picture = pictureOf(new Uint8Array(fs.readFileSync(jpg)));
-  if (!picture || picture.width !== 600) fail('the cover\'s stand-in is not a 600 px JPEG');
+  const b = picture ? picture.bytes : [];
+  if (!picture || picture.width !== 600 || b[b.length - 2] !== 0xff || b[b.length - 1] !== 0xd9) fail('the cover\'s stand-in is not a whole 600 px JPEG');
   const date = new Date(2026, 10, 24);
   const day = '2026-11-24';
   const artist = 'App';
@@ -605,7 +618,7 @@ async function albums() {
         const m = made[i];
         const file = path.join(where, m.name);
         if (!fs.existsSync(file)) continue;
-        const warn = decodes(file);
+        const warn = decodes(file) || pictureKept(file, picture.bytes);
         if (warn) fail(`${label}, ${m.name}: ffmpeg: ${warn}`);
         const tagged = tagCheck(`${label}, ${m.name}`, file, { title: specs[i].name, artist, date: day, code: encodeSong(specs[i]), album: title, track: i + 1, total: specs.length });
         let held = false;
@@ -634,7 +647,8 @@ async function albums() {
   const r = await flacTrack(job, tagsOf({ loop: { name: first.name, code: encodeSong(first) }, artist, date }), picture, {
     open: () => {}, write: (b) => f.write(b), header: (b) => f.writeAt(0, b), close: () => f.close(),
   });
-  const warn = decodes(one);
+  const warn = decodes(one) || pictureKept(one, picture.bytes);
+  if (warn) fail(`a single loop: ffmpeg: ${warn}`);
   const tagged = tagCheck('a single loop', one, { title: first.name, artist, date: day, code: encodeSong(first) });
   const n = nullCheck('a single loop', job, one, r.info);
   console.log(`  ${!warn && tagged && !n.differ ? 'pass' : 'FAIL'}  a single loop's FLAC: decodes, its name, the app, the day, its code and its cover, no album; nulls`);

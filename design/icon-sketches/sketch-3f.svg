@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2c1a4a"/><stop offset="0.43" stop-color="#5a3060"/><stop offset="0.79" stop-color="#e08a5a"/></linearGradient>
+    <linearGradient id="water" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff4dc"/><stop offset="1" stop-color="#ffd4a0"/></linearGradient>
+    <radialGradient id="glow"><stop offset="0.55" stop-color="#ffd890" stop-opacity="0.35"/><stop offset="1" stop-color="#ffd890" stop-opacity="0"/></radialGradient>
+    <clipPath id="wclip"><path d="M512 188 L384 190 C330 192 292 214 278 262 C268 300 262 350 256 404 H324 Q318 340 320 274 C322 236 334 208 356 206 H512 Z"/></clipPath>
+    <radialGradient id="mist"><stop offset="0" stop-color="#fff4dc" stop-opacity="0.5"/><stop offset="1" stop-color="#fff4dc" stop-opacity="0"/></radialGradient>
+    <linearGradient id="lake" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a2a58"/><stop offset="1" stop-color="#1c0e2c"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <circle cx="160" cy="272" r="105" fill="url(#glow)"/>
+  <circle cx="160" cy="272" r="70" fill="#ffd890"/>
+  <path d="M512 404 V206 Q446 200 384 206 L356 206 C334 206 322 226 318 256 L300 404 Z" fill="#1c0e2c"/>
+  <g stroke="#2e1a3c" stroke-width="5" stroke-linecap="round"><path d="M372 250 L440 246"/><path d="M412 300 L496 294"/><path d="M350 352 L420 348"/></g>
+  <rect x="0" y="404" width="512" height="108" fill="url(#lake)"/>
+  <rect x="0" y="403" width="300" height="3" fill="#f0a070" opacity="0.6"/>
+  <g fill="#ffd890">
+    <rect x="104" y="414" width="112" height="7" rx="3.5" fill="#ffd890"/>
+    <rect x="118" y="430" width="84" height="6" rx="3" fill="#f6bc7c"/>
+    <rect x="130" y="445" width="60" height="6" rx="3" fill="#e2a070"/>
+    <rect x="140" y="460" width="40" height="5" rx="2.5" fill="#bc7c6c"/>
+    <rect x="148" y="474" width="24" height="5" rx="2.5" fill="#94606a"/>
+  </g>
+  <path d="M512 188 L384 190 C330 192 292 214 278 262 C268 300 262 350 256 404 H324 Q318 340 320 274 C322 236 334 208 356 206 H512 Z" fill="url(#water)"/>
+  <g fill="none" stroke-linecap="round" clip-path="url(#wclip)">
+    <path d="M500 194 H382 C336 195 302 218 290 262 C282 300 278 340 274 386" stroke="#e8a060" stroke-width="5" opacity="0.5"/>
+    <path d="M470 198 H378 C342 199 314 224 304 268 C298 300 296 320 294 350" stroke="#fffaf0" stroke-width="6"/>
+    <path d="M440 202 H372 C348 203 326 230 318 274 C314 310 312 350 310 396" stroke="#e8a060" stroke-width="5" opacity="0.4"/>
+  </g>
+  <ellipse cx="290" cy="398" rx="96" ry="34" fill="url(#mist)"/>
+  <g fill="none" stroke-linecap="round">
+    <path d="M234 412 Q290 424 346 412" stroke="#fff0d4" stroke-width="6"/>
+    <path d="M220 428 Q290 443 360 428" stroke="#eab088" stroke-width="4.5"/>
+    <path d="M210 445 Q290 463 370 445" stroke="#c88070" stroke-width="3.5"/>
+  </g>
+</svg>

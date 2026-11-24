@@ -963,8 +963,10 @@ impl Engine {
             Command::Init { full, layout } => {
                 // A new page's player, as a new worklet's core: every voice
                 // let go, the mix built afresh at its quality, the player
-                // started on it. About a millisecond, once (the sung
-                // voices' references), with nothing sounding.
+                // started on it, with nothing sounding. A third of a
+                // callback's own render: the compressors' settling, which
+                // was most of a millisecond, is copied at the rate they were
+                // settled at (`every_command_in_a_callback_against_promise_1`).
                 core.clear();
                 core.quality(full);
                 core.set_layout(if layout == 2 { 2 } else { 1 });
@@ -1393,6 +1395,143 @@ mod tests {
         let w = engine.status.read();
         assert_eq!(w[at::WORST_AT + 3].to_bits(), 1024f64.to_bits(), "its frames");
         assert_eq!(w[at::WORST_AT + 4].to_bits(), f64::from(super::did::INIT | super::did::LOAD | super::did::MAKING).to_bits(), "what it did");
+    }
+
+    /// The loop Mikey's phone crackled on with the screen off (session 30g,
+    /// queue item 115), as its code says it.
+    fn e9t() -> dlcore::code::Loop {
+        dlcore::code::read_loop(b"E9T-ZxDxj").expect("a loop's code")
+    }
+
+    /// One of every command the page can send, by name; the match is
+    /// exhaustive, so a new command can't be left out of the timing below.
+    /// `Ready` is the offline render's alone (it makes a whole loop at once,
+    /// which no stream asks for).
+    fn every_command(request: &dlcore::player::Request, seed: u32) -> Vec<(&'static str, Command)> {
+        use dlcore::player::{Fades, Jump, Track};
+        let request = *request;
+        let arm = super::ArmEnd::Set(super::Arm { seed: 7, request, fade: 1.0, track: Some((Track::Seconds(30), Fades::NONE)) });
+        let all = vec![
+            ("load", Command::Load { seed: 7, request }),
+            ("play", Command::Play),
+            ("pause", Command::Pause),
+            ("next", Command::Next),
+            ("volume", Command::Volume(0.6)),
+            ("wander", Command::Wander(1.5)),
+            ("draws", Command::Draws(5)),
+            ("reset busiest", Command::ResetBusiest),
+            ("init full", Command::Init { full: true, layout: 2 }),
+            ("init lite", Command::Init { full: false, layout: 2 }),
+            ("dispose", Command::Dispose),
+            ("layout", Command::Layout(1)),
+            ("cancel", Command::Cancel(None)),
+            ("cancel from", Command::Cancel(Some(1.0))),
+            ("param", Command::Param { id: 18, op: 3, value: 0.0, time: 1.0, tau: 0.0 }),
+            ("load at", Command::LoadAt { seed, request, at: 0.0, resumed: true }),
+            ("change", Command::Change { seed: 7, request, moment: Moment::Now, handover: Handover::Crossfade(1.0) }),
+            ("revise", Command::Revise { seed: 99, request }),
+            ("track", Command::Track { track: Some((Track::Seconds(60), Fades::NONE)), arm }),
+            ("arm", Command::Arm(arm)),
+            ("picks", Command::Picks { request, tag: 1 }),
+            ("next at", Command::NextAt { moment: Some(Moment::Bar), handover: Handover::Crossfade(1.0) }),
+            ("jump", Command::Jump(Some(Jump::Bar(4.0)))),
+            ("tone", Command::Tone([0.3, 0.6, 0.2])),
+            ("probe", Command::Probe(1.0)),
+            ("stop", Command::Stop),
+            ("resume", Command::Resume(0.0)),
+            ("wander salted", Command::WanderSalted { amount: 2.2, salt: 9 }),
+            ("mute", Command::Mute { layer: dlcore::generator::Layer::Drums, muted: true }),
+            ("tempo", Command::Tempo(90.0)),
+            ("ping", Command::Ping(1.0)),
+        ];
+        for (_, c) in &all {
+            match c {
+                Command::Load { .. } | Command::Ready | Command::Play | Command::Pause | Command::Next | Command::Volume(_) | Command::Wander(_) | Command::Draws(_)
+                | Command::ResetBusiest | Command::Init { .. } | Command::Dispose | Command::Layout(_) | Command::Cancel(_) | Command::Param { .. }
+                | Command::LoadAt { .. } | Command::Change { .. } | Command::Revise { .. } | Command::Track { .. } | Command::Arm(_) | Command::Picks { .. }
+                | Command::NextAt { .. } | Command::Jump(_) | Command::Tone(_) | Command::Probe(_) | Command::Stop | Command::Resume(_)
+                | Command::WanderSalted { .. } | Command::Mute { .. } | Command::Tempo(_) | Command::Ping(_) => {}
+            }
+        }
+        all
+    }
+
+    /// Promise 1 on the audio thread (`docs/CORE.md`; session 30g, step 3):
+    /// no command makes a callback do much more than render. Every command,
+    /// taken by a callback of the app's stream (1,024 frames, 21.3 ms at 48
+    /// kHz) on E9T-ZxDxj playing, against an engine that played the same
+    /// and was sent nothing (or, for `Init`, a `Dispose`: both let every
+    /// voice go, so what is left is the mix built afresh, which sending
+    /// nothing would hide behind the voices gone): the extra time of that
+    /// callback and of the 200
+    /// after it (a load is made over the next blocks), callback by callback,
+    /// the least of three runs (so the machine's noise only lowers it), as
+    /// a share of a callback's own mean time. The promise's line is 25% of
+    /// a block's deadline on the slowest phone, and a callback's mean on
+    /// Mikey's phone at full is 15% of its deadline (v201,
+    /// `docs/notes/115-crackles.md`): so a command may add at most two
+    /// thirds of a mean callback; this holds it to 60%. `Init` took 140 to
+    /// 180% (the compressors settling on silence, `Master::warm`) until
+    /// they were kept.
+    #[test]
+    fn every_command_in_a_callback_against_promise_1() {
+        const AFTER: usize = 200;
+        const RUNS: usize = 3;
+        const LINE: f64 = 0.6;
+        let l = e9t();
+        let made = || {
+            let e = Engine::new(48_000.0, 2, true).unwrap();
+            e.stream_began(1024);
+            assert!(e.send_all(&[Command::Init { full: true, layout: 2 }, Command::Volume(1.0), Command::LoadAt { seed: l.seed, request: l.request, at: 0.0, resumed: false }]));
+            e
+        };
+        let timed = |e: &Engine, out: &mut [f32]| {
+            let t = std::time::Instant::now();
+            e.fill(out, 2);
+            let ns = t.elapsed().as_nanos();
+            e.take(|_, _, _| {});
+            u64::try_from(ns).unwrap()
+        };
+        let mut out = vec![0.0f32; 1024 * 2];
+        let mut table = Vec::new();
+        for (name, command) in every_command(&l.request, l.seed) {
+            let beside = matches!(command, Command::Init { .. }).then_some(Command::Dispose);
+            let mut extra = [u64::MAX; AFTER];
+            let mut mean = f64::MAX;
+            for _ in 0..RUNS {
+                let (a, b) = (made(), made());
+                // Four seconds in: the loop made and playing.
+                let mut plain = 0;
+                let warm = 4 * 48_000 / 1024;
+                for _ in 0..warm {
+                    timed(&a, &mut out);
+                    plain += timed(&b, &mut out);
+                }
+                #[allow(clippy::cast_precision_loss, reason = "nanoseconds, far under 2^53")]
+                {
+                    mean = mean.min(plain as f64 / f64::from(warm));
+                }
+                assert!(a.send(&command));
+                if let Some(c) = &beside {
+                    assert!(b.send(c));
+                }
+                for x in &mut extra {
+                    let ta = timed(&a, &mut out);
+                    let tb = timed(&b, &mut out);
+                    *x = (*x).min(ta.saturating_sub(tb));
+                }
+            }
+            let (at, worst) = extra.iter().enumerate().max_by_key(|x| *x.1).map(|(i, w)| (i, *w)).unwrap();
+            #[allow(clippy::cast_precision_loss, reason = "nanoseconds, far under 2^53")]
+            let share = worst as f64 / mean;
+            table.push((name, share, worst, at, mean));
+        }
+        table.sort_by(|x, y| y.1.total_cmp(&x.1));
+        for (name, share, worst, at, mean) in &table {
+            println!("{name:>14}: {:>4.0}% of a mean callback ({} us; the callback {at} after it; a mean one {:.0} us, {:.1}% of its deadline)", share * 100.0, worst / 1000, mean / 1000.0, mean / 1e9 * 48_000.0 / 1024.0 * 100.0);
+        }
+        let over: Vec<_> = table.iter().filter(|t| t.1 > LINE).map(|t| t.0).collect();
+        assert!(over.is_empty(), "past {:.0}% of a mean callback: {over:?}", LINE * 100.0);
     }
 
     /// A full queue refuses and says so; the audio thread empties it.

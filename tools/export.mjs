@@ -527,12 +527,15 @@ function tagCheck(label, file, want) {
   return !bad.length;
 }
 
-// The audio decodes with no error and no warning (the cover is a stream of
-// its own, held byte for byte by `pictureKept`: an older ffmpeg warns while
-// decoding a still JPEG as video, which says nothing of the file).
+// The audio decodes with no error and no warning. The cover is a stream of
+// its own, held byte for byte by `pictureKept`: CI's older ffmpeg (Ubuntu's)
+// says "EOI missing" of a whole JPEG as it probes the file (before any
+// `-map`), which says nothing of the file, so its JPEG decoder's lines are
+// set aside here; every other line fails it.
 function decodes(file) {
   const d = spawnSync('ffmpeg', ['-v', 'warning', '-i', file, '-map', '0:a', '-f', 'null', '-'], { encoding: 'utf8' });
-  return d.status === 0 && !d.stderr.trim() ? '' : (d.stderr.trim() || `status ${d.status}`);
+  const said = d.stderr.split('\n').map((l) => l.trim()).filter((l) => l && !/^\[mjpeg @ /.test(l)).join('; ');
+  return d.status === 0 && !said ? '' : (said || `status ${d.status}`);
 }
 
 // The cover ffmpeg finds in the file is the picture given, byte for byte.

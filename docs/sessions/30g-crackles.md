@@ -1,22 +1,13 @@
 # Session 30g: no crackles in the Android app (115)
 
-**Left** (2026-11-23, after Mikey heard v201 clean: `docs/notes/115-crackles.md`):
-
-- #458 (v201) is the fix, with its Done line, the queue's status (item 115
-  closed by that listen) and the row's tick. The rest is for a later session
-  with this prompt: 30f's row is ticked, so none of it waits any more.
-- Step 1 (E9T-ZxDxj and the album rendered natively, read for steps in the
-  samples), step 3 (every command timed natively, the worst against promise
-  1), step 4 (a switch by hand and by itself without a click): not done.
-- Step 6 (the Lite rule for the native buffer and thread; `js/quality.js`,
-  `js/main.js`). On v201 Mikey's phone read 22% over 20 s and 60 s at full,
-  under the 50% line.
-- Step 2's rest, in files 30f had: "reset counters" clearing the native
-  counts and why it moved to Lite (`js/main.js`), time played with the
-  screen off (Kotlin), the screen-off job reading the new counts
-  (`NativeCore.kt`, `android/background.mjs`).
-- Step 7 (Play after two minutes paused, `android/background.mjs`).
-- The nightly by hand on main after the last merge, and read.
+**Done** (2026-11-24, the Left list, after Mikey heard v201 clean): #473
+(v213, step 3: every command timed natively; Init's compressors kept
+between builds), #474 (v214, steps 1 and 4: the album and E9T-ZxDxj clean
+in the native samples; Lite by hand fades over instead of cutting), #475
+(v215, steps 2 and 7: reset counters clears the native counts, the time
+with the screen off; the lock screen's Play after a long pause plays again;
+step 6's sweep, which kept the 50% line). The findings are in
+`docs/notes/115-crackles.md`, "The Left list".
 
 Written by brain B-parallel 3 on 2026-11-22, after Mikey heard crackles in
 v195's Android app and made them a 1.0 blocker ("Yes, blocker").

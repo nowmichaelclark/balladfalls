@@ -83,6 +83,10 @@
 //   share               (queue item 113) keys and no explainer; export
 //                       audio and album from seed open their views and back
 //   share code          the code decodes to the loop the core plays
+//   seed album save     (item 121) the seed album's save: named in the Name
+//                       box, the album lands in the Library, its tracks the
+//                       ones its code plays, and plays from there; the box
+//                       closed saves nothing
 //   codes (session 23)  version 2 only, in a tab of its own: a version 1
 //                       code pasted gets the "older" line, a newer build's
 //                       the "newer" one; an album's code pasted lands in the
@@ -1899,6 +1903,65 @@ async function linkRows(browser) {
   const seedLink = await share.evaluate(() => window.__rows.clip);
   const linkCode = String(seedLink).slice(`${ORIGIN}/#c=`.length);
   row('links: its link is the address with the code after #c= (a fresh seed each press), and "Copied" says so', String(seedLink).startsWith(`${ORIGIN}/#c=`) && /^[A-Za-z0-9_-]{5,19}$/.test(linkCode) && /^Copied/.test(await share.evaluate(() => document.getElementById('toast').textContent)), seedLink);
+  // The album of one seed saved (item 121; Mikey, 2026-11-23: "Add 'save'"):
+  // named in the Name box as a new album is, it lands in the Library as an
+  // album of its own, its tracks the ones its code plays, and it plays from
+  // there. The seed is fixed for the press (the page draws it from
+  // Math.random, its first draw), so the code copied and the album saved
+  // are the same draw; every later draw is the page's own (the Library's
+  // ids are drawn from it too, and must differ).
+  const pressFixed = (id) => share.evaluate((i) => {
+    const random = Math.random;
+    let first = true;
+    Math.random = () => {
+      if (!first) return random();
+      first = false;
+      return 0.3125;
+    };
+    try { document.getElementById(i).click(); } finally { Math.random = random; }
+  }, id);
+  await pressFixed('seedAlbumCode');
+  await sleep(600);
+  const fixedCode = await share.evaluate(() => window.__rows.clip);
+  share.once('dialog', (d) => d.dismiss());
+  await pressFixed('seedAlbumSave');
+  await sleep(600);
+  await library(share);
+  const none = await share.evaluate(() => [...document.querySelectorAll('.lrow.album .lrow-title')].map((x) => x.textContent.trim()));
+  row('seed album: save, its Name box closed: nothing saved', !none.some((n) => /Untitled|Seed Sunday/.test(n)), none.join(' | '));
+  await share.evaluate(() => { document.getElementById('saveBtn').click(); document.querySelector('[data-stab="share"]').click(); document.getElementById('goSeedAlbum').click(); });
+  await sleep(300);
+  let asked = null;
+  share.once('dialog', (d) => { asked = { message: d.message(), value: d.defaultValue() }; d.accept('Seed Sunday'); });
+  await pressFixed('seedAlbumSave');
+  await sleep(800);
+  const saveToast = await share.evaluate(() => document.getElementById('toast').textContent);
+  await library(share);
+  const opened = await share.evaluate(() => {
+    const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.replace(/, now playing$/, '').trim() === 'Seed Sunday');
+    if (r) r.querySelector('.lrow-main').click();
+    return !!r;
+  });
+  await sleep(400);
+  await share.evaluate(() => { window.__rows.clip = ''; });
+  await share.evaluate(() => { const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'copy code'); if (b) b.click(); });
+  await sleep(600);
+  let saved = null;
+  let fromSeed = null;
+  try { saved = decodeAlbum(await share.evaluate(() => window.__rows.clip)); } catch (err) { saved = { error: err.message }; }
+  try { fromSeed = decodeAlbum(fixedCode); } catch (err) { fromSeed = { error: err.message }; }
+  const sameTracks = saved && saved.specs && fromSeed && fromSeed.specs && saved.specs.length === 12 && fromSeed.specs.length === 12
+    && saved.specs.every((t, i) => encodeSong(t) === encodeSong(fromSeed.specs[i]));
+  row('seed album: save asks a name as a new album does, and the album lands in the Library under it', asked && asked.message === 'Name' && asked.value === 'Untitled' && opened && /^Saved/.test(saveToast) && saved && saved.title === 'Seed Sunday', `${JSON.stringify(asked)} ${saveToast} ${saved && saved.title}`);
+  row('seed album: its 12 tracks are the ones its code plays, in order (the code copied and the album saved from one seed)', sameTracks, saved && saved.specs ? `${saved.specs.length} tracks; first ${saved.specs[0] && saved.specs[0].name}, the code's ${fromSeed.specs && fromSeed.specs[0] && fromSeed.specs[0].name}` : JSON.stringify(saved));
+  await share.evaluate(() => { const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'play'); if (b) b.click(); });
+  await sleep(3500);
+  const heard = about((await share.evaluate(() => window.__rows.probe()) || {}).about);
+  await share.evaluate(() => { if (!document.getElementById('viewLibrary').hidden) document.getElementById('saveBtn').click(); });
+  await sleep(300);
+  const playedName = await share.evaluate(() => document.getElementById('loopName').textContent);
+  const firstTrack = fromSeed && fromSeed.specs && fromSeed.specs[0];
+  row('seed album: played from the Library, the core plays its first track (the code\'s), the card its name', firstTrack && heard && Number(heard.seed) === firstTrack.seed && playedName === firstTrack.name, `${heard && heard.seed} ${playedName}`);
   await share.close();
   const want = decodeAlbum(linkCode);
   const second = await fresh(seedLink);

@@ -188,7 +188,9 @@ async function pickerFolder() {
     const { list } = nodes();
     last = list;
     const allow = list.find((n) => /^allow$/i.test(n.text) && n.enabled);
-    const use = list.find((n) => /use this folder/i.test(n.text) && n.enabled);
+    // The key itself ("USE THIS FOLDER", button1), not the line that says
+    // "Can't use this folder" over a folder it won't give.
+    const use = list.find((n) => /^use this folder$/i.test(n.text.trim()) && n.enabled);
     const into = list.find((n) => /^(Music|Documents|Podcasts|Alarms|Movies)$/i.test(n.text));
     const device = list.find((n) => /sdk|phone|internal storage|built for|gphone/i.test(n.text));
     const menu = list.find((n) => /roots|navigate up|open navigation|show roots/i.test(n.desc));

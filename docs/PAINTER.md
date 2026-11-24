@@ -194,9 +194,12 @@ Instruments are becoming small recipes anyone can make, including mods.
 
 ## 8. Platforms
 
-- **Android app.** An adaptive app icon (with the monochrome version
-  Android uses for themed icons), a splash screen, and the artwork shown
-  on the lock screen and in the media notification.
+- **The icon** is drawn (item 120, Mikey's pick): `icons/icon.svg` is the
+  one source, `node tools/icons.mjs` makes every size (the web app's, the
+  adaptive icon's three layers, the status icon, the listing's icon and
+  feature graphic) and checks the safe zones.
+- **Android app.** A splash screen, and the artwork shown on the lock
+  screen and in the media notification.
 - **F-Droid listing** (later Google Play too). Icon, feature graphic and
   screenshots.
 - **itch.io desktop release.** A cover image, a page banner,

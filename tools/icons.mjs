@@ -19,8 +19,8 @@
 // those XML files, read back, not from the SVG.
 //
 // The checks, each a failure (exit 1):
-//   - what icons/icon.svg marks with class="key" (the sun, the stream, its
-//     first ripple) lies inside the maskable icon's safe zone (the circle of
+//   - what icons/icon.svg marks with class="key" (the moon, the stream, its
+//     first ring) lies inside the maskable icon's safe zone (the circle of
 //     40% of its size, the W3C's) and inside Android's adaptive-icon safe
 //     zone (the 66 dp circle of the 108 dp layer);
 //   - the whole monochrome layer lies inside Android's safe zone;
@@ -51,7 +51,7 @@ const LISTING = 'fastlane/metadata/android/en-US/images';
 const ICON = [0, 0, 512, 512];
 const MASKABLE = [-32, -32, 576, 576]; // a little room past the icon
 const ADAPTIVE = [-128, -128, 768, 768]; // the 108 dp layer: its 72 dp is the icon
-const FEATURE = [-128, 115, 768, 375]; // 1024 x 500
+const FEATURE = [-128, 52, 768, 375]; // 1024 x 500, from the moon down to the pool
 const STATUS = [40, 38, 440, 440]; // the monochrome drawing, filling 24 dp
 
 // Android's drawables: the file, the group of the SVG it draws, the crop

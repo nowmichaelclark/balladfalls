@@ -1,5 +1,5 @@
 import { newSpec as drawSpec, render, unavailable as noGenerator } from './gen.js';
-import { RequestError, vibeSelection, rerollLayer, cloneSpec, LAYERS, STEPS_PER_BAR } from './request.js';
+import { RequestError, vibeSelection, rerollLayer, cloneSpec, LAYERS, LAYER_LABELS, STEPS_PER_BAR } from './request.js';
 import { Output } from './output.js';
 import { loadCore, fetchCore, coreUnsupported, newContext, DROP_CAUSES } from './core.js';
 import { nativeBridge, NativeContext } from './native.js';
@@ -10,13 +10,13 @@ import { AudioExport } from './export.js';
 import { MediaBridge } from './media.js';
 import { appBridge, appLink } from './app.js';
 import { watchViewport } from './viewport.js';
-import { shortcutOf, keyNames, onMac } from './shortcuts.js';
+import { shortcutOf, ownKeys, keeps, keyList, keyNames, onMac, REPEATS, VIEW_KEYS } from './shortcuts.js';
 import * as share from './share.js';
 
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v209';
+const BUILD = 'v211';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -158,6 +158,10 @@ const state = {
   // The Mono switch (queue item 66): the listener's, kept in the prefs and
   // never in a share code or a backup. Off plays the stereo render.
   mono: false,
+  // The letter keys switch (session 30n, item 122): kept as Mono is.
+  letterKeys: true,
+  // The volume M brings back.
+  unmuteTo: null,
   media: null,
   // The audio export's sheet and its Worker (queue item 104b, js/export.js).
   audioExport: null,
@@ -1008,6 +1012,7 @@ function setView(view) {
   refreshCard();
   if (view === 'sounds') saySliders();
   focusView(from, view, had);
+  sayKeys();
   store.setPrefs({ view: state.lastView, edit: state.lastEdit });
 }
 
@@ -1408,22 +1413,37 @@ function wireRail() {
   rail.addEventListener('pointerup', (ev) => finish(ev, true));
   rail.addEventListener('pointercancel', (ev) => finish(ev, false));
   rail.addEventListener('keydown', (ev) => {
-    const span = railSpan();
-    if (!span || ev.altKey || ev.ctrlKey || ev.metaKey) return;
-    const spb = state.spec.stepsPerBar || 16;
-    // Keys held or pressed quickly go on from the last one asked, not from
-    // what is heard yet (a jump is heard a few blocks on).
-    const asked = state.railAsked && performance.now() - state.railAsked.at < 600 ? state.railAsked.step : null;
-    const from = asked != null ? asked : Math.floor(state.nowSteps || 0);
-    const by = { ArrowRight: spb, ArrowUp: spb, ArrowLeft: -spb, ArrowDown: -spb, PageUp: 4 * spb, PageDown: -4 * spb }[ev.key];
-    let to = null;
-    if (by) to = from + by;
-    else if (ev.key === 'Home') to = span.from;
-    else if (ev.key === 'End') to = span.to - spb;
-    if (to == null) return;
-    ev.preventDefault();
-    railSeek(Math.max(span.from, Math.min(span.to - 1, to)));
+    if (ev.altKey || ev.ctrlKey || ev.metaKey) return;
+    const k = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 4, PageDown: -4, Home: 'home', End: 'end' }[ev.key];
+    if (k != null && railKey(k)) ev.preventDefault();
   });
+}
+
+// The rail's keys: `by` bars on (or back), or 'home' or 'end'. False with
+// nothing to move.
+function railKey(by) {
+  const span = railSpan();
+  if (!span) return false;
+  const spb = state.spec.stepsPerBar || 16;
+  // Keys held or pressed quickly go on from the last one asked, not from
+  // what is heard yet (a jump is heard a few blocks on).
+  const asked = state.railAsked && performance.now() - state.railAsked.at < 600 ? state.railAsked.step : null;
+  const from = asked != null ? asked : Math.floor(state.nowSteps || 0);
+  const to = by === 'home' ? span.from : by === 'end' ? span.to - spb : from + by * spb;
+  railSeek(Math.max(span.from, Math.min(span.to - 1, to)));
+  return true;
+}
+
+// The playhead a step on or back from anywhere (Shift with an arrow,
+// js/shortcuts.js): a long piece's section, as its line's keys do, else a
+// bar of the rail.
+function seekStep(dir) {
+  if (!state.spec || !state.engine || !state.engine.live) return;
+  if (piece.stepPiece(dir)) return;
+  // Away from Now Playing the rail's place isn't drawn: read it first.
+  const steps = state.engine.playing ? audibleSteps() : null;
+  if (steps != null) state.nowSteps = steps;
+  railKey(dir);
 }
 
 // A short screen: the piece's line and words take less room before Now
@@ -1821,6 +1841,7 @@ function setPlayButton(playing) {
   b.setAttribute('aria-label', playing ? 'Pause' : 'Play');
   b.title = playing ? 'Pause' : 'Play';
   ui.setIcon(b, playing ? 'pause' : 'play');
+  sayKeys();
 }
 
 function newLoop() {
@@ -1847,7 +1868,20 @@ function newLoop() {
 
 function reroll(layer) {
   if (!state.spec) return newLoop();
-  const next = rerollLayer(state.spec, layer);
+  revise(rerollLayer(state.spec, layer));
+  if (state.view === 'layers') ui.announce(`Re-rolled ${layer}`);
+  else ui.toast(`Rolled ${layer}`, `Re-rolled ${layer}`);
+}
+
+// Every layer's die at once (the keyboard's R, js/shortcuts.js).
+function rollAll() {
+  if (!state.spec) return newLoop();
+  revise(LAYERS.reduce((spec, layer) => rerollLayer(spec, layer), state.spec));
+  ui.toast('Rolled all', 'Re-rolled every layer');
+}
+
+// A loop's layers made again in place.
+function revise(next) {
   next.name = state.spec.name; // a re-roll is a revision, not a new piece
   // And because it is a revision it REPLACES the current history entry
   // instead of adding one. Otherwise Previous walks back through your own
@@ -1858,8 +1892,6 @@ function reroll(layer) {
   if (state.historyIndex >= 0 && state.history[state.historyIndex]) {
     state.history[state.historyIndex] = cloneSpec(next);
   }
-  if (state.view === 'layers') ui.announce(`Re-rolled ${layer}`);
-  else ui.toast(`Rolled ${layer}`, `Re-rolled ${layer}`);
 }
 
 function toggleMute(layer) {
@@ -2099,6 +2131,202 @@ function watchTextSize(changed) {
     was = now;
     changed();
   }).observe(probe);
+}
+
+// ------------------------------------------------------------ the keyboard
+
+// The keyboard as music players have it (session 30n, item 122): the map,
+// what each key follows and what a key never does are js/shortcuts.js's.
+
+// The volume a step (Up and Down, YouTube's 5%), and mute (M): the Sound
+// view's slider moves with it, kept as it keeps it.
+const VOLUME_STEP = 0.05;
+function setVolume(v) {
+  const r = ui.el('volume');
+  r.value = String(Math.round(Math.max(0, Math.min(1, v)) * 100) / 100);
+  r.dispatchEvent(new Event('input', { bubbles: true }));
+  return Math.round(parseFloat(r.value) * 100);
+}
+function nudgeVolume(by) {
+  const pct = setVolume(parseFloat(ui.el('volume').value) + by);
+  ui.toast(pct ? `Volume ${pct}%` : 'Muted');
+}
+function toggleVolumeMute() {
+  const now = parseFloat(ui.el('volume').value);
+  if (now > 0) {
+    state.unmuteTo = now;
+    setVolume(0);
+    ui.toast('Muted');
+  } else {
+    ui.toast(`Volume ${setVolume(state.unmuteTo || 0.85)}%`);
+  }
+}
+
+// A layer on or off (Shift with its number): said where its row isn't seen.
+function toggleLayer(i) {
+  const layer = LAYERS[i];
+  toggleMute(layer);
+  if (!state.spec || state.view === 'layers') return;
+  const label = LAYER_LABELS[layer];
+  const said = `${label[0].toUpperCase()}${label.slice(1)} ${state.spec.mutes[layer] ? 'off' : 'on'}`;
+  ui.toast(said);
+}
+
+// Where each view's letter goes: whether it is up, and how it opens (each
+// as its key on screen opens it, so the focus rules are theirs).
+function viewUp(name) {
+  if (name === 'share') return state.view === 'save' && !ui.el('saveShare').hidden;
+  if (name === 'advanced') return state.view === 'library' && !ui.el('libAdvanced').hidden;
+  return state.view === name;
+}
+function openView(name) {
+  if (name === 'length') picks.openLength();
+  if (pickers.PICKERS.includes(name)) pickers.openPicker(name);
+  if (name === 'track') openTrackView('vibe');
+  else if (name === 'share') { setView('save'); library.showShare(); }
+  else if (name === 'export') ui.el('goExport').click();
+  else if (name === 'advanced') {
+    if (state.view !== 'library') setView('library');
+    library.setTab('more');
+    ui.el('goAdvanced').click();
+  } else setView(name);
+}
+function letterView(name) {
+  // Its letter again goes back, as a lit key's press does; Now Playing,
+  // Sound and Layers are where you stay.
+  if (viewUp(name)) {
+    if (!BASE_VIEWS.includes(name)) closeView();
+    return;
+  }
+  openView(name);
+}
+
+// Esc: the view's own way out (close, cancel, back), or, for the Library
+// and Save, back to where you were, the focus on their key. False where
+// there is nothing to close.
+const WAY_OUT = '.back, #picksClose, #vibesClose, #lenCancel, #trkCancel, .pv-cancel';
+function closeView() {
+  const view = document.querySelector('.view:not([hidden])');
+  if (!view) return false;
+  const out = [...view.querySelectorAll(WAY_OUT)].find((b) => !b.disabled && b.checkVisibility());
+  if (out) {
+    out.click();
+    return true;
+  }
+  const key = { library: 'libraryBtn', save: 'saveBtn' }[state.view];
+  if (!key) return false;
+  const had = view.contains(document.activeElement);
+  setView(state.lastView);
+  if (had) ui.el(key).focus({ preventScroll: true });
+  return true;
+}
+
+// The list of keys (?), a popup that says them whole: those that work now.
+function showKeys() {
+  const pop = ui.el('keysPop');
+  if (pop.open) return;
+  const list = ui.el('keysList');
+  list.textContent = '';
+  for (const row of keyList(onMac())) {
+    if (row.letter && !state.letterKeys) continue;
+    const li = document.createElement('li');
+    if (row.view) li.className = 'kp-view';
+    const keys = document.createElement('kbd');
+    keys.textContent = row.keys;
+    keys.setAttribute('aria-hidden', 'true');
+    const said = document.createElement('span');
+    said.className = 'vh';
+    said.textContent = `${row.said}: `;
+    const what = document.createElement('span');
+    what.className = 'kp-what';
+    what.textContent = row.what;
+    li.append(keys, said, what);
+    list.appendChild(li);
+  }
+  ui.el('keysOff').hidden = state.letterKeys;
+  keysFrom = document.activeElement;
+  pop.showModal();
+}
+let keysFrom = null;
+
+// The letter keys switch (Advanced; WCAG 2.1.4), the fourth setting.
+function setLetterKeys(on, save = true) {
+  state.letterKeys = on;
+  setSwitch('letterKeys', on);
+  if (save) store.setPrefs({ letterKeys: on });
+  sayKeys();
+}
+
+// What each key on screen says it has (`aria-keyshortcuts`), and its
+// tooltip, as players show them ("Next (→)"): the letter ones while the
+// letter keys are on. [said, shown, a letter].
+function sayKeys() {
+  const on = state.letterKeys !== false;
+  const mac = onMac();
+  const lettered = ui.el('viewBtn').title === 'Sound' ? 'S' : 'L';
+  const KEYS = {
+    playBtn: [['Space', 'Space'], ['K']], prevBtn: [['ArrowLeft', '\u2190']], nextBtn: [['ArrowRight', '\u2192']],
+    saveBtn: [[mac ? 'Meta+S' : 'Control+S', mac ? 'Cmd+S' : 'Ctrl+S']],
+    libraryBtn: [null, ['I']], nowBtn: [null, ['N']], viewBtn: [null, [lettered]], vibesBtn: [null, ['V']],
+  };
+  for (const [id, [plain, letter]] of Object.entries(KEYS)) {
+    const b = ui.el(id);
+    const use = [plain, on ? letter : null].filter(Boolean);
+    if (use.length) b.setAttribute('aria-keyshortcuts', use.map((k) => k[0]).join(' '));
+    else b.removeAttribute('aria-keyshortcuts');
+    if (!b.title) continue;
+    const base = b.title.replace(/ \(.*\)$/, '');
+    b.title = use.length ? `${base} (${use[0][1] || use[0][0]})` : base;
+  }
+  ui.sayLayerKeys(on);
+}
+
+function wireKeys() {
+  const mac = onMac();
+  const DOES = {
+    play: togglePlay,
+    next: goForward,
+    previous: goBack,
+    seekAhead: () => seekStep(1),
+    seekBack: () => seekStep(-1),
+    louder: () => nudgeVolume(VOLUME_STEP),
+    quieter: () => nudgeVolume(-VOLUME_STEP),
+    mute: toggleVolumeMute,
+    rollAll,
+    keys: showKeys,
+    save: saveQuick,
+  };
+  LAYERS.forEach((layer, i) => {
+    DOES[`roll${i}`] = () => reroll(layer);
+    DOES[`layer${i}`] = () => toggleLayer(i);
+  });
+  for (const [, view] of VIEW_KEYS) DOES[`view:${view}`] = () => letterView(view);
+  // After the control with the focus: what it did itself is never done
+  // again, and what it keeps is its own (js/shortcuts.js).
+  const pop = ui.el('keysPop');
+  document.addEventListener('keydown', (e) => {
+    // The popup's keys are its own (Esc closes it), wherever the focus is.
+    if (e.defaultPrevented || pop.open) return;
+    const act = shortcutOf(e, mac, state.letterKeys);
+    if (!act || keeps(ownKeys(e.target, byKeys), e)) return;
+    if (act === 'close') {
+      if (!e.repeat && closeView()) e.preventDefault();
+      return;
+    }
+    e.preventDefault();
+    if (!e.repeat || REPEATS.has(act)) DOES[act]();
+  });
+  ui.el('keysClose').addEventListener('click', () => pop.close());
+  // A tap outside the list closes it too.
+  pop.addEventListener('click', (e) => { if (e.target === pop) pop.close(); });
+  pop.addEventListener('close', () => {
+    if (keysFrom && keysFrom.isConnected && keysFrom.focus) keysFrom.focus({ preventScroll: true });
+    keysFrom = null;
+  });
+  ui.el('keysBtn').addEventListener('click', showKeys);
+  const hint = ui.el('letterHint');
+  hint.textContent = keyNames(hint.textContent, mac);
+  ui.el('letterKeys').addEventListener('click', () => setLetterKeys(!state.letterKeys));
 }
 
 // ---------------------------------------------------------------- boot
@@ -2484,41 +2712,9 @@ function wire() {
   });
 
   document.addEventListener('pointerdown', () => { byKeys = false; }, true);
-  // (An arrow with Alt is a shortcut's: the focus hasn't moved by it.)
-  document.addEventListener('keydown', (e) => { if (e.key === 'Tab' || (e.key.startsWith('Arrow') && !e.altKey)) byKeys = true; }, true);
-  // The chords (js/shortcuts.js) come before what has the focus, whose own
-  // arrows take any modifier: never in a box to type in or on a slider.
-  const mac = onMac();
-  const CHORDS = { next: goForward, previous: goBack, save: saveQuick };
-  LAYERS.forEach((layer, i) => { CHORDS[`roll${i}`] = () => reroll(layer); });
-  document.addEventListener('keydown', (e) => {
-    if (e.target.matches('input, textarea')) return;
-    const does = CHORDS[shortcutOf(e, mac)];
-    if (!does) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if (!e.repeat) does();
-  }, true);
-  for (const id of ['keysLine', 'keysSaid']) ui.el(id).textContent = keyNames(ui.el(id).textContent, mac);
-  if (mac) ui.el('saveBtn').setAttribute('aria-keyshortcuts', 'Meta+S Alt+Shift+S');
-  document.addEventListener('keydown', (e) => {
-    if (e.target.matches('input, textarea')) return;
-    // Any other modifier's keys are the browser's and the system's.
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
-    // Space presses the key the keyboard is on; after a tap it is Play.
-    if (e.code === 'Space' && byKeys && e.target.matches('button, [role="button"], a[href]')) return;
-    if (e.code === 'Space' || e.code === 'MediaPlayPause') {
-      e.preventDefault();
-      if (!e.repeat) togglePlay();
-    } else if (e.code === 'MediaNextTrack') {
-      e.preventDefault();
-      if (!e.repeat) goForward();
-    } else if (e.code === 'MediaPreviousTrack') {
-      e.preventDefault();
-      if (!e.repeat) goBack();
-    }
-  });
-
+  // (An arrow a control keeps moves the focus there; one the app takes doesn't.)
+  document.addEventListener('keydown', (e) => { if (e.key === 'Tab' || (e.key.startsWith('Arrow') && keeps(ownKeys(e.target, true), e))) byKeys = true; }, true);
+  wireKeys();
   // Resume anything the system paused on the way out. (The core plays on
   // whatever the page does: nothing is planned for a hidden page.)
   document.addEventListener('visibilitychange', () => {
@@ -2555,6 +2751,7 @@ function wire() {
   showLiteSource();
   state.mono = prefs.mono === true;
   setSwitch('monoMode', state.mono);
+  setLetterKeys(prefs.letterKeys !== false, false);
   // Drift was a switch plus an amount; the amount was never kept, so an old
   // "on" comes back at the default distance.
   const wander = prefs.drift === false ? 0 : (prefs.driftAmount ?? 1);

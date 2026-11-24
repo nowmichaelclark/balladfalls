@@ -24,10 +24,10 @@ used soon. The rest waits for its phase of the core work.
   grows into the room. Not installed, not the Android app.
 - **Bottom buttons have no lights or LEDs;** they only change icon (for
   now only the bottom-right Sound / Layers switch does).
-- **Only three settings exist:** the theme, "lighter on processor" and
-  Mono. A fourth comes with item 122 (Mikey, 2026-11-23): the letter keys'
-  switch, in Advanced. Everything new below is a pick, a sheet or a message, not a
-  setting.
+- **Four settings exist:** the theme, "lighter on processor", Mono, and
+  the letter keys' switch in Advanced (item 122, v211; Mikey, 2026-11-23,
+  his exception to three). Everything new below is a pick, a sheet or a
+  message, not a setting.
 - **The music is stereo** (since v116), with a **Mono** switch in the
   settings for anyone who prefers it (Mikey, 2026-10-15). It sits in
   Advanced, under Sound, as a plain switch like Lighter on processor's:
@@ -48,10 +48,13 @@ used soon. The rest waits for its phase of the core work.
 - **The panel asks its own height** (the container `middle`: 340, 300,
   240 px): a view closes its gaps by it, and never scrolls to fit.
 - **Targets:** 44 px where there is room, never under 24.
-- **Keys:** superseded by item 122 (Mikey, 2026-11-23: intuitive over
-  accessible where they pull apart): letter keys as music players have
-  them, and a switch in Advanced to turn them off (WCAG 2.1.4);
-  `js/shortcuts.js` lists them.
+- **Keys** (item 122, v211; Mikey, 2026-11-23: intuitive over accessible
+  where they pull apart): as music players have them. Space and K play,
+  the arrows next and previous (Shift a bar), Up and Down the volume, M
+  mute, R and 1 to 5 the dice, a letter a view, Esc back, ? a popup that
+  lists them. The letter keys' switch in Advanced turns every lone letter,
+  digit and symbol off (WCAG 2.1.4). The map and its sources are at
+  `js/shortcuts.js`'s top; a key's tooltip shows its key.
 - **The bar is WCAG 2.2 AA** in every theme and in forced colors, held by
   `tools/a11y.mjs`: text 4.5:1 (3:1 large), marks and rings 3:1. A hue used
   for words has its own deeper token (`--mark-text`).

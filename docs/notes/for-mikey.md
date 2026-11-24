@@ -13,6 +13,23 @@ list of changes. The rest of the road is cut into sessions, each with a prompt t
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## The keyboard (item 122, v211, session 30n, #472)
+
+- **On a computer (five minutes),** DuckDuckGo or Chrome: Space plays;
+  → and ← next and previous; Shift with them a bar on and back; ↑ ↓ the
+  volume, M mute; 1 to 5 roll a layer, Shift with them a layer on or off,
+  R rolls all five; L Layers, S Sound, N back to Now playing; Esc closes
+  whatever is open; ? shows every key. Say any key that does something you
+  didn't expect, or nothing.
+- **Approve the letters,** or name others: N now playing, S sound,
+  L layers, V vibe, D moods, B bars, T track length, P tempo, E key,
+  Y style, O voices, I library, H share, X export, A advanced (K play, M
+  mute, R roll). Where a first letter was taken, the next free one of the
+  word.
+- **If your Windows has Thai and English,** the old Alt+Shift keys also
+  switched your keyboard's language; none of the new ones use Alt. Advanced
+  > Keyboard > Letter keys turns the single keys off.
+
 ## The look (item 119, v209, session 30k, #468)
 
 - **On your phone in Chrome (two minutes),** in a tab (not installed, not

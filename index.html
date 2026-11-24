@@ -550,10 +550,16 @@
                 <a href="./speed.html" class="vkey speed-link" aria-describedby="speedHint">speed test</a>
                 <p id="speedHint" hidden>How fast this device plays the busiest loops (a few minutes).</p>
               </section>
+              <!-- The letter keys (session 30n, item 122): a switch like Mono's
+                   (WCAG 2.1.4), and the list of keys, the ? key's popup. -->
               <section class="adv-sec">
                 <h3 class="sec">Keyboard</h3>
-                <p id="keysLine" class="colophon" aria-hidden="true">Space play · Ctrl+S save · Alt+Shift+Left/Right skip · Alt+Shift+1-5 roll</p>
-                <p id="keysSaid" class="vh">Space plays. Alt+Shift+Right arrow is Next, Alt+Shift+Left arrow Previous. Ctrl+S, or Alt+Shift+S, keeps it in Favorite Loops. Alt+Shift+1 to 5 re-roll a layer. Headset and lock-screen buttons work once it is playing. Everything is made in the browser and kept on this device.</p>
+                <div class="setrow"><div class="setrow-text"><span class="setrow-name" id="letterName">Letter keys</span>
+                  <p id="letterHint" hidden>Single keys: L for Layers, 1 to 5 to roll a layer, ? for the list. Off, only Space, the arrows, Esc and Ctrl+S work on their own.</p></div>
+                  <button id="letterKeys" type="button" class="vkey" role="switch" aria-checked="true" aria-labelledby="letterName" aria-describedby="letterHint"><span aria-hidden="true">on</span></button></div>
+                <div class="keys2 adv-keys">
+                  <button id="keysBtn" type="button" class="vkey" aria-label="list of keys">keys</button>
+                </div>
               </section>
             </div>
           </div>
@@ -567,19 +573,30 @@
        (play / pause) and the bottom-right switch (Sound / Layers). -->
   <nav class="zone-buttons" aria-label="Controls">
     <div class="row row-1">
-      <button id="prevBtn" type="button" class="btn" aria-label="Previous loop" aria-keyshortcuts="Alt+Shift+ArrowLeft" title="Previous"></button>
+      <button id="prevBtn" type="button" class="btn" aria-label="Previous loop" aria-keyshortcuts="ArrowLeft" title="Previous"></button>
       <button id="playBtn" type="button" class="btn btn-play" aria-label="Play" aria-keyshortcuts="Space" title="Play"></button>
-      <button id="nextBtn" type="button" class="btn" aria-label="Next loop" aria-keyshortcuts="Alt+Shift+ArrowRight" title="Next"></button>
+      <button id="nextBtn" type="button" class="btn" aria-label="Next loop" aria-keyshortcuts="ArrowRight" title="Next"></button>
     </div>
     <div class="row row-2">
       <button id="libraryBtn" type="button" class="btn" aria-label="Library" title="Library"></button>
-      <button id="saveBtn" type="button" class="btn" aria-label="Save or share" aria-keyshortcuts="Control+S Alt+Shift+S" title="Save / share"></button>
+      <button id="saveBtn" type="button" class="btn" aria-label="Save or share" aria-keyshortcuts="Control+S" title="Save / share"></button>
     </div>
     <div class="row row-3">
       <button id="nowBtn" type="button" class="btn" aria-label="Now playing" title="Now playing"></button>
       <button id="viewBtn" type="button" class="btn" aria-label="Show sound" title="Sound"></button>
     </div>
   </nav>
+
+  <!-- The list of keys (session 30n, item 122): ? opens it, and Advanced's
+       keys; Esc, close or a tap outside closes it (js/main.js, showKeys). -->
+  <dialog id="keysPop" class="keys-pop" aria-labelledby="keysTitle">
+    <div class="kp-head">
+      <h2 id="keysTitle" class="page-title">Keys</h2>
+      <button id="keysClose" type="button" class="vkey">close</button>
+    </div>
+    <ul id="keysList" class="kp-list"></ul>
+    <p id="keysOff" class="hint" hidden>Letter keys off</p>
+  </dialog>
 
   <!-- A popup is only seen, and only for what the screen doesn't show
        already; what is said, in whole words, is the status (js/ui.js). -->

@@ -518,7 +518,7 @@ export function buildLayers(handlers, steps = STEPS_PER_BAR) {
     reroll.innerHTML = icon('dice');
     reroll.title = 'Roll';
     reroll.setAttribute('aria-label', `Roll ${label}`);
-    reroll.setAttribute('aria-keyshortcuts', `Alt+Shift+${LAYERS.indexOf(layer) + 1}`);
+
     reroll.addEventListener('click', () => handlers.onReroll(layer));
 
     const mute = document.createElement('button');
@@ -536,7 +536,22 @@ export function buildLayers(handlers, steps = STEPS_PER_BAR) {
     host.appendChild(row);
   }
   lastCursor = -1;
+  sayLayerKeys(layerKeys);
   return cells;
+}
+
+// The layers' keys (js/shortcuts.js): 1 to 5 their dice, Shift with them
+// their speakers, said while the letter keys are on.
+let layerKeys = true;
+export function sayLayerKeys(on) {
+  layerKeys = on;
+  document.querySelectorAll('#layerList .layer').forEach((row, i) => {
+    for (const [sel, keys] of [['.btn-roll', `${i + 1}`], ['.btn-on', `Shift+${i + 1}`]]) {
+      const b = row.querySelector(sel);
+      if (on) b.setAttribute('aria-keyshortcuts', keys);
+      else b.removeAttribute('aria-keyshortcuts');
+    }
+  });
 }
 
 function stepsForBar(pattern, layer, bar) {

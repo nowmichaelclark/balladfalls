@@ -7,7 +7,8 @@
 //              graphics and the controls' icons 3:1
 //   focus      Tab reaches every control and comes round again; on each the
 //              ring is drawn, whole, at 3:1, and nothing covers the control;
-//              a view opened or closed keeps the focus
+//              a view opened or closed keeps the focus, closed by Esc too
+//              (session 30n), and so does the list of keys
 //   names      each control has a name, its role's state, and, a slider, its
 //              value in words; the words on a key are in its name
 //   targets    24 by 24 CSS px at the least (how many are under 44 is said)
@@ -221,6 +222,8 @@ const SCREENS = [
   ['advanced, the end', async (p) => {
     await p.evaluate(() => { document.querySelector('#libAdvanced .scroll').scrollTop = 1e6; });
   }],
+  // The list of keys (session 30n), a popup: Advanced's keys key opens it.
+  ['keys, the list', async (p) => { await click(p, '#keysBtn'); }],
 ];
 
 const ALBUM = () => linkOf(`${ORIGIN}/`, encodeAlbum('Rainy Day Mix', [newSpec(31337, ['rainy', 'mellow']), newSpec(4242), newSpec(777, 'bars=64,bpm=80')]));
@@ -236,7 +239,10 @@ const ALONE = [
 // Put in every page before its scripts: `window.A`.
 function pageSide() {
   const CONTROLS = 'button, a[href], input:not([type="hidden"]), [role="button"], [role="slider"]';
-  const SCROLLERS = '.scroll, .vb-list';
+  const SCROLLERS = '.scroll, .vb-list, .keys-pop';
+  // A popup open (the list of keys, session 30n): what is under it is
+  // inert, so only it is looked at.
+  const root = () => document.querySelector('dialog:modal') || document;
   // The graphics that mean something. `fill`: the middle of the shape;
   // `edge`: a ring or a stroke somewhere in it.
   const MARKS = [
@@ -288,7 +294,7 @@ function pageSide() {
   const off = (e) => !!e.closest(':disabled, [aria-disabled="true"], .ln-journey.off, #viewLength.endless .ln-slide');
   const textRuns = () => {
     const out = [];
-    const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const walk = document.createTreeWalker(document.querySelector('dialog:modal') || document.body, NodeFilter.SHOW_TEXT);
     for (let n = walk.nextNode(); n; n = walk.nextNode()) {
       const e = n.parentElement;
       if (!n.textContent.trim() || e.closest('script, style, svg') || !seen(e)) continue;
@@ -296,7 +302,7 @@ function pageSide() {
       range.selectNodeContents(n);
       for (const r of range.getClientRects()) if (r.width >= 1) out.push({ e, r, text: n.textContent.trim().slice(0, 30) });
     }
-    for (const e of document.querySelectorAll('input[type="text"]')) if (seen(e) && e.value) out.push({ e, r: e.getBoundingClientRect(), text: e.value, input: true });
+    for (const e of root().querySelectorAll('input[type="text"]')) if (seen(e) && e.value) out.push({ e, r: e.getBoundingClientRect(), text: e.value, input: true });
     return out;
   };
   let order = [];
@@ -321,7 +327,7 @@ function pageSide() {
       }
       const marks = [];
       for (const [sel, how] of MARKS) {
-        for (const e of document.querySelectorAll(sel)) {
+        for (const e of root().querySelectorAll(sel)) {
           if (!e.checkVisibility({ visibilityProperty: true, opacityProperty: true }) || off(e)) continue;
           let r = e.getBoundingClientRect();
           if (how === 'lit') r = { left: r.left + r.width / 2 - 4, right: r.left + r.width / 2 + 4, top: r.top + r.height / 2 - 4, bottom: r.top + r.height / 2 + 4 };
@@ -364,7 +370,7 @@ function pageSide() {
     },
     // What Tab should reach now.
     reachable() {
-      order = [...document.querySelectorAll(`${CONTROLS}, [tabindex="0"]`)].filter((e) => !e.disabled && e.tabIndex >= 0 && e.checkVisibility({ visibilityProperty: true }));
+      order = [...root().querySelectorAll(`${CONTROLS}, [tabindex="0"]`)].filter((e) => !e.disabled && e.tabIndex >= 0 && e.checkVisibility({ visibilityProperty: true }));
       return order.length;
     },
     focused() {
@@ -404,7 +410,7 @@ function pageSide() {
     },
     states() {
       const bad = [];
-      for (const e of document.querySelectorAll(CONTROLS)) {
+      for (const e of root().querySelectorAll(CONTROLS)) {
         if (!seen(e)) continue;
         const role = e.getAttribute('role') || '';
         if ((role === 'switch' || role === 'checkbox' || role === 'radio') && !e.hasAttribute('aria-checked')) bad.push(`${nameOf(e)} has no checked state`);
@@ -429,7 +435,7 @@ function pageSide() {
       const bad = [];
       let small = 0;
       let count = 0;
-      for (const e of document.querySelectorAll(CONTROLS)) {
+      for (const e of root().querySelectorAll(CONTROLS)) {
         if (!e.checkVisibility({ visibilityProperty: true })) continue;
         const sc = e.closest(SCROLLERS);
         if (sc) {
@@ -461,7 +467,7 @@ function pageSide() {
         }
       }
       // A key is as tall as its row lets it be, up to a finger's 44.
-      for (const e of document.querySelectorAll('.layer button, .pk-anykey')) {
+      for (const e of root().querySelectorAll('.layer button, .pk-anykey')) {
         if (!e.checkVisibility()) continue;
         const row = e.closest('.layer, .pk-line');
         if (!row) continue;
@@ -815,6 +821,28 @@ async function focusFollows(browser) {
   await page.keyboard.press(' ');
   await sleep(250);
   if (await isHidden(page, 'viewVibe')) fail('focus', 'vibe', 'Space does not press the key the keyboard is on');
+  // Esc (session 30n) goes back as the view's own key does, the focus on
+  // the key that opened it; and the list of keys, opened by ?, gives the
+  // focus back where it was.
+  const on = (sel) => page.evaluate((s) => document.activeElement === document.querySelector(s), sel);
+  for (const line of ['.pk-line-mood .pk-val', '.pk-go-bars', '.pk-go-tempo', '.pk-go-key', '.pk-go-style', '.pk-go-voices', '.pk-track']) {
+    const key = `#picksList ${line}`;
+    await page.focus(key);
+    await page.keyboard.press('Enter');
+    await sleep(250);
+    await page.keyboard.press('Escape');
+    await sleep(250);
+    if (!await on(key)) fail('focus', key, `Esc from the view ${key} opens doesn't leave the focus on it`);
+  }
+  await page.keyboard.press('Escape');
+  await sleep(250);
+  if (!await on('#vibesBtn')) fail('focus', 'vibe', 'Esc from the Vibe panel doesn\'t leave the focus on its key');
+  await page.keyboard.press('Shift+Slash');
+  await sleep(250);
+  if (!await on('#keysClose')) fail('focus', 'keys', '? doesn\'t put the focus in the list of keys');
+  await page.keyboard.press('Escape');
+  await sleep(250);
+  if (!await on('#vibesBtn')) fail('focus', 'keys', 'Esc from the list of keys doesn\'t give the focus back');
   await ctx.close();
 }
 

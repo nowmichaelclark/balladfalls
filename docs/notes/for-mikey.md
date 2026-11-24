@@ -340,6 +340,21 @@ with headphones, after hearing them on v195 first; `docs/notes/115-crackles.md`
 has your words and your Diagnostics. Item 115 closed with #458. Pause and
 Next are heard about 0.2 s later now; you didn't notice, so it stays.
 
+**The rest of 30g (v215, #473 to #475), on your phone.** Install the
+universal APK from the `driftloom-debug-apk` artifact of
+<https://github.com/nowmichaelclark/driftloom/actions/runs/45438442207>
+(it needs a GitHub sign-in). It was built from commit 96887bf, the same
+code as main's v215. Then:
+
+- Play E9T-ZxDxj, then the Batch 6 album: ten minutes with the screen off,
+  then a few minutes behind the home screen.
+- Switch to Lite and back once, by hand. Listen for no click at the switch:
+  the old sound now fades out quickly.
+- Pause, leave it two minutes with the screen off, then press Play on the
+  lock screen. It should play (on the emulator it didn't before #475).
+- Then Diagnostics, refreshed and copied. It now has "screen off: N s" and
+  "lite by itself", and "reset counters" clears them.
+
 ## The Android app, screen off (item 107d, v188, PR #431)
 
 Install the universal APK from the PR's `driftloom-debug-apk` artifact over

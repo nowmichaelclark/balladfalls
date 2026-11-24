@@ -13,6 +13,17 @@ list of changes. The rest of the road is cut into sessions, each with a prompt t
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## The new name's icon (item 120, v208, PR #465: a draft until 1.0)
+
+- **On the Moto:** install the APK from PR #465's android run on commit
+  b8626ea (the run's artifact). Look at the icon on the home screen and in
+  the app drawer, with themed icons on and off (Wallpaper and style, Themed
+  icons): the themed one is the sun, the falls and two ripples in one color.
+  Play something and look at the status bar's small icon. Say if anything is
+  cut off by the launcher's shape, or hard to make out.
+- It stays a draft: session 31 merges it with 31a's rename, so the testers
+  see nothing new before 1.0.
+
 ## The timeline (item 116, v204, PR #461)
 
 - **On the Moto (two minutes), a short loop and a long piece:** playing, tap

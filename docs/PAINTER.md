@@ -60,7 +60,10 @@ used soon. The rest waits for its phase of the core work.
   0.55, never doubled.
 - **Focus:** a 2 px ring on everything, whole; a view opened puts the focus
   on its way out, closed on the key that opened it.
-- **A popup is solid.** A screen that can do nothing shows no keys.
+- **A popup is solid,** and so is a slider's knob (item 119). A screen
+  that can do nothing shows no keys.
+- **The card** (item 119, Mikey, 2026-11-23 and 24): the art on the right,
+  the words on the left; the playhead's lit dot a diffused LED, no sparkle.
 - **Text size is the root size** (rem, the pixel caps holding), in the
   browser and in the Android app.
 - The baked spec (`design/driftloom_v20.html`) predates this: bake it again

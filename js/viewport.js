@@ -48,6 +48,45 @@ export function scrollsBarAway({ app, installed, touch, dvh }) {
   return !app && !installed && touch && dvh;
 }
 
+// A slider in a tab that scrolls the bar away (session 30k, item 119; Mikey:
+// "I can only scroll up and down by touching specific places"). A slider's
+// track lets a finger's drag up or down scroll the page (css/style.css,
+// `.bar-scroll`, pan-y), as anywhere else does; but the browser moves the
+// value to where the finger lands before it knows the drag is a scroll. So,
+// under a finger, what a slider says is held from the app until the drag
+// shows itself sideways (or is a tap) and then given to it; and put back,
+// unheard, if the browser took the drag for a scroll. A mouse, a pen and
+// the keys are never held.
+export function holdSliders(doc) {
+  let held = null;   // { input, from, x, y, id }
+  const give = () => {
+    const h = held;
+    held = null;
+    if (h && h.input.value !== h.from) h.input.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+  doc.addEventListener('pointerdown', (e) => {
+    const t = e.target;
+    if (e.pointerType !== 'touch' || !(t instanceof HTMLInputElement) || t.type !== 'range') return;
+    held = { input: t, from: t.value, x: e.clientX, y: e.clientY, id: e.pointerId };
+  }, true);
+  doc.addEventListener('input', (e) => {
+    if (held && e.target === held.input && e.isTrusted) e.stopImmediatePropagation();
+  }, true);
+  doc.addEventListener('pointermove', (e) => {
+    if (!held || e.pointerId !== held.id) return;
+    const dx = Math.abs(e.clientX - held.x);
+    if (dx > 4 && dx >= Math.abs(e.clientY - held.y)) give();
+  }, true);
+  doc.addEventListener('pointerup', (e) => {
+    if (held && e.pointerId === held.id) give();
+  }, true);
+  doc.addEventListener('pointercancel', (e) => {
+    if (!held || e.pointerId !== held.id) return;
+    held.input.value = held.from;
+    held = null;
+  }, true);
+}
+
 // The screen's size the way it is held: some report it always upright.
 function screenAsHeld() {
   const long = Math.max(screen.width, screen.height);
@@ -64,7 +103,10 @@ export function watchViewport({ app }) {
     installed: ['standalone', 'fullscreen', 'minimal-ui'].some((m) => matchMedia(`(display-mode: ${m})`).matches) || navigator.standalone === true,
     touch: matchMedia('(pointer: coarse)').matches,
     dvh: CSS.supports('height', '100dvh'),
-  })) root.classList.add('bar-scroll');
+  })) {
+    root.classList.add('bar-scroll');
+    holdSliders(document);
+  }
 
   const probe = document.createElement('i');
   probe.setAttribute('aria-hidden', 'true');

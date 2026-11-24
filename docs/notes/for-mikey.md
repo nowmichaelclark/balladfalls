@@ -13,6 +13,22 @@ list of changes. The rest of the road is cut into sessions, each with a prompt t
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
+## The look (item 119, v209, session 30k, #468)
+
+- **On your phone in Chrome (two minutes),** in a tab (not installed, not
+  the app): drag up from anywhere (the card, Play, a layer's row, a Sound
+  slider's line or its knob, the tempo picker's slider) and the address bar
+  goes; drag down and it comes back. A straight drag up or down never moves
+  a slider; a drag across does. The line under the time and a long piece's
+  line keep their drags (they move the playhead). Say if a place still
+  doesn't scroll, or a slider moves when you meant to scroll.
+- **Look at:** the card, art on the right; the playhead, your B3 LED (on
+  the light themes its middle stays a deep color so it reads on the pale
+  card); the Sound view's knobs, solid; the Layers' die and its speakers
+  (crossed out when off). Before and after, at 360x640, 320x568, on its side
+  and a tablet, light and dark: the branch
+  [`s30k-shots`](https://github.com/nowmichaelclark/driftloom/tree/s30k-shots).
+
 ## The tempo, key, style and voices pickers (item 118, v205, session 30j, #463)
 
 - **Look at the four views:** the vibe key, then tap tempo, key, style or

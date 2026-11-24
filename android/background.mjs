@@ -9,6 +9,10 @@
 //
 //   node android/background.mjs [--minutes 10] [--no-export] [--summary FILE] [--shots DIR]
 //
+// An album (item 121): pasted, played, and exported whole, as one zip
+// through the same picker and as a file a track into a folder chosen in
+// Android's own folder picker; each file found where it went.
+//
 // --shots (session 30f): the notification shade and the lock screen as they
 // are on the glass while it plays, and the loop's cover beside them
 // (cover-*.png), to see that the art is that cover.
@@ -20,7 +24,11 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { AppPage, appId, adb, until } from './cdp.mjs';
+import { encodeAlbum, decodeSong } from '../js/share.js';
+import { setTrack } from '../js/tracklen.js';
+import { LOOPS } from '../tools/stalls.mjs';
 
 const argv = process.argv.slice(2);
 const opt = (name, fallback) => {
@@ -159,6 +167,41 @@ async function pickerSave() {
     await sleep(1500);
   }
   log('the picker never offered Save; its last screen:');
+  log((last || '').slice(0, 4000));
+  return false;
+}
+
+// The system's folder picker (an album a file a track, item 121): into a
+// folder it lets an app use (not the storage's root, not Downloads), then
+// "Use this folder" and Allow.
+async function pickerFolder() {
+  await until('the folder picker', () => nodes().xml.includes('com.android.documentsui'), 45000, 1500);
+  let last = null;
+  for (let i = 0; i < 25; i++) {
+    const { xml, list } = nodes();
+    last = xml;
+    const allow = list.find((n) => /^allow$/i.test(n.text) && n.enabled);
+    if (allow) {
+      tap(allow);
+      return true;
+    }
+    const use = list.find((n) => /use this folder/i.test(n.text) && n.enabled);
+    if (use) {
+      tap(use);
+      await sleep(1500);
+      continue;
+    }
+    const into = list.find((n) => /^(Music|Documents|Podcasts)$/.test(n.text));
+    if (into) tap(into);
+    else {
+      const device = list.find((n) => /sdk|phone|internal storage|built for/i.test(n.text));
+      const menu = list.find((n) => /roots|navigate up|open navigation|show roots/i.test(n.desc));
+      if (device) tap(device);
+      else if (menu) tap(menu);
+    }
+    await sleep(1500);
+  }
+  log('the folder picker never offered a folder to use; its last screen:');
   log((last || '').slice(0, 4000));
   return false;
 }
@@ -503,6 +546,74 @@ try {
     };
     await exportOne('lossless', 1800);
     await exportOne('small', 600);
+
+    // An album exported whole (item 121): three tracks of 20 s, pasted and
+    // playing; one zip of FLACs through the picker, then a file a track
+    // into a folder from the folder picker.
+    const title = 'Moto Album';
+    const tracks = [LOOPS.shatter, LOOPS.cinder, LOOPS.hollow].map((l) => setTrack(decodeSong(l.code), { secs: 20, fadeIn: false, fadeOut: true }));
+    const code = encodeAlbum(title, tracks);
+    const exportAlbum = async (box, format) => {
+      log(`\n-- an album of three, ${box === 'zip' ? 'one zip through Android\'s picker' : 'a file a track into a folder from Android\'s folder picker'} (${format}) --`);
+      const ready = await ev(([c, t]) => new Promise((resolve) => {
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText: async () => c, writeText: async () => {} } });
+        if (![...document.querySelectorAll('.lrow.album .lrow-title')].some((x) => x.textContent.trim() === t)) document.getElementById('pasteCode').click();
+        setTimeout(() => {
+          if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click();
+          document.querySelector('[data-tab="albums"]').click();
+          setTimeout(() => {
+            const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.replace(/, now playing$/, '').trim() === t);
+            if (!r) return resolve('the album is not in the Library');
+            r.querySelector('.lrow-main').click();
+            setTimeout(() => {
+              const play = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'play');
+              if (play) play.click();
+              resolve('');
+            }, 600);
+          }, 600);
+        }, 2500);
+      }), [code, title], false, 30000);
+      await sleep(2500);
+      const missing = ready || await ev(([b, f]) => {
+        if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+        document.querySelector('[data-stab="share"]').click();
+        document.getElementById('goExport').click();
+        const scope = document.querySelector('[data-scope="album"]');
+        if (!scope || document.getElementById('exportScope').hidden) return 'no album key on the Export view';
+        scope.click();
+        document.querySelector(`[data-box="${b}"]`).click();
+        const go = document.querySelector(`[data-format="${f}"]`);
+        if (!go || go.hidden) return `no ${f} key`;
+        return go.dataset.asks ? `it asks how long: ${document.getElementById('exportHint').textContent}` : '';
+      }, [box, format]);
+      if (!check(`album ${box} (${format}): the album playing, the Export view offers it`, !missing, missing)) return;
+      await ev(`document.querySelector('[data-format="${format}"]').click()`, undefined, true);
+      const picked = box === 'zip' ? await pickerSave() : await pickerFolder();
+      if (!check(`album ${box} (${format}): ${box === 'zip' ? 'the picker took Save' : 'the folder picker gave a folder'}`, picked)) return;
+      await waitFor('the album to finish', () => ev("!document.getElementById('exportDone').hidden || !document.getElementById('exportFailed').hidden"), 10 * 60000);
+      const sheet = await ev(() => ({ done: !document.getElementById('exportDone').hidden, saved: document.getElementById('exportSaved').textContent, why: document.getElementById('exportWhy').textContent }));
+      check(`album ${box} (${format}): it finished`, sheet.done && (box === 'zip' ? /^Saved .+\.zip · / : /^Saved 3 files · /).test(sheet.saved), sheet.saved || sheet.why);
+      const ext = format === 'small' ? 'opus' : 'flac';
+      if (box === 'zip') {
+        const name = (/^Saved (.+?\.zip) · \d/.exec(sheet.saved) || [])[1];
+        const found = name ? sh('find', '/storage/emulated/0/', '-name', `'${name}'`, '-size', '+1k').split('\n').filter(Boolean)[0] : '';
+        let listed = '';
+        if (found) {
+          const local = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'dlalbum-')), 'album.zip');
+          adb('pull', found, local);
+          try { listed = execFileSync('unzip', ['-Z1', local], { encoding: 'utf8' }) + execFileSync('unzip', ['-tq', local], { encoding: 'utf8' }); } catch (e) { listed = `unzip: ${e.message}`; }
+        }
+        const want = tracks.map((t, i) => `${String(i + 1).padStart(2, '0')} ${t.name}.${ext}`);
+        check(`album zip (${format}): the zip is where the picker put it, its tracks "NN name.${ext}", and unzip tests it clean`, !!found && want.every((w) => listed.includes(w)) && /No errors detected/.test(listed), `${found}; ${listed.replace(/\n/g, ' | ').slice(0, 300)}`);
+      } else {
+        const files = tracks.map((t, i) => sh('find', '/storage/emulated/0/', '-name', `'${String(i + 1).padStart(2, '0')} ${t.name}.${ext}'`, '-size', '+1k').split('\n').filter(Boolean)[0] || '');
+        const heads = files.map((f) => (f ? sh('head', '-c', '4', `'${f}'`) : ''));
+        check(`album files (${format}): each track in the folder chosen, "NN name.${ext}", with its header`, files.every(Boolean) && heads.every((h) => h.startsWith(ext === 'opus' ? 'OggS' : 'fLaC')), files.join(' | '));
+      }
+      await ev("document.getElementById('exportDoneBtn').click()");
+    };
+    await exportAlbum('zip', 'lossless');
+    await exportAlbum('files', (await ev(() => !document.querySelector('[data-format="small"]').hidden)) ? 'small' : 'lossless');
   }
 } catch (e) {
   check('the run went to its end', false, e.message);

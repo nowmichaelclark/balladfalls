@@ -1,32 +1,7 @@
 # Session 30k: the look: the card, the playhead, the sliders, the die, the speakers, the scroll (119)
 
-**Left** (2026-11-24, stopped by brain B-parallel 4 at Mikey's word, his
-usage low; the next session with this prompt starts here):
-
-- Draft #468, branch `claude/s30k-the-look`, head ea26eb2, all pushed. It
-  has v209 set: re-check it against main and take the next after main's.
-- Mikey's picks: B, the bead, then its LED take "B3 diffused" (recorded in
-  the PR body; the sketches are on the branch `s30k-shots`).
-- Built and pushed:
-  - the B3 playhead in all nine themes
-  - the card mirrored
-  - solid knobs
-  - the die
-  - the speakers
-  - Chrome's scroll: the sliders are `pan-y`, and `holdSliders` is in
-    `js/viewport.js`
-  - `tools/rows.mjs`'s `--only scroll` group: 52 pass on the branch, and
-    12 fail on main's code, so the group catches the bug
-  - `tools/names.mjs`'s switch check (green)
-- Left:
-  - `tools/a11y.mjs`: its contrast run stopped unfinished, so the light
-    themes' LED middles and the knobs are unverified.
-  - `tools/views.mjs`.
-  - The before and after screenshots.
-  - The yardsticks in the PR body.
-  - CI and ten rows, dispatched alone.
-  - Then the merge, the Done line, the queue's status line and the row's
-    tick.
+**Done** (2026-11-24): #468, v209. The Left list that stood here was
+finished by the session that resumed it.
 
 Written by brain B-parallel 4 (2026-11-23) from Mikey's list that day
 (his items 10, 12, 13, 14, 16 and 17).

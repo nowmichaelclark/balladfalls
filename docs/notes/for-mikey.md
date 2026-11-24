@@ -24,10 +24,13 @@ the points where the next step is yours.
   doesn't scroll, or a slider moves when you meant to scroll.
 - **Look at:** the card, art on the right; the playhead, your B3 LED (on
   the light themes its middle stays a deep color so it reads on the pale
-  card); the Sound view's knobs, solid; the Layers' die and its speakers
-  (crossed out when off). Before and after, at 360x640, 320x568, on its side
-  and a tablet, light and dark: the branch
-  [`s30k-shots`](https://github.com/nowmichaelclark/driftloom/tree/s30k-shots).
+  card); the Sound view's knobs, solid (the track no longer shows through;
+  on the dark themes the knob is the popup's dark color, so say if you
+  wanted it brighter); the Layers' die and its speakers (crossed out when
+  off). Before and after, at 360x640, 320x568, on its side and a tablet,
+  light and dark: the branch
+  [`s30k-shots`](https://github.com/nowmichaelclark/driftloom/tree/s30k-shots/before-after),
+  one `sheet_*.png` a size and theme.
 
 ## The tempo, key, style and voices pickers (item 118, v205, session 30j, #463)
 

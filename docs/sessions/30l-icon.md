@@ -1,5 +1,31 @@
 # Session 30l: the new name's icon (120)
 
+**Left** (2026-11-24, stopped by brain B-parallel 4 at Mikey's word, his
+usage low; the next session with this prompt starts here):
+
+- Draft #465 (head baa79d8, v208, main merged in) builds sketch 3f as a
+  placeholder, from `icons/icon.svg` through `tools/icons.mjs` (its three
+  safe-zone checks pass); Android's layers are vector drawables made from
+  it. It stays a draft for session 31.
+- Mikey went on refining the drawing in rounds 1 to 9 (each recorded in
+  #465's body). Round 9 is waiting for his approval, and he wants more
+  changes. The sources and sheets are on the branch `s30l-shots` (head
+  7c55da2): round 9 is in `round9/` (`round9.svg`, the sheet `round9.png`,
+  `gen.py`: `python3 gen.py harvest out.svg v5`); rounds 5 to 8 are in
+  `round5/` to `round8/`.
+- Then port the approved drawing into `icons/icon.svg`:
+  - Keep its `#background`, `#foreground` and `#monochrome` groups and its
+    `key` classes.
+  - Use no group opacity, and put radial gradients on circles only.
+  - Map the sketch's 64 136 400 400 crop onto 0 0 512 512.
+  - Redraw `#monochrome`.
+- Run `node tools/icons.mjs` and fix the safe zones if its check fails.
+- Bump BUILD and CACHE to the next after main's, push, and read CI
+  (android, fdroid).
+- The rules hold: the name and the drawing's subject go into no file,
+  commit message or PR text.
+
+
 Written by brain B-parallel 4 (2026-11-23) from Mikey's list that day (his
 item 6) and his answer: an SVG in the app's colors and mood, not a
 painting.

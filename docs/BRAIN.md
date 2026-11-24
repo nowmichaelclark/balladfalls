@@ -303,12 +303,15 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   held while paused, the way back gone; ten rows 10 of 10), #463 (30j, v205:
   the four pickers; ten rows 10 of 10 on 2d0b00f, merged on the gate after
   docs-only commits). v202 unused. Nightly green on v204 (45262224098).
-  **Open when this was written:** 30m's #466 (v206, the seed album saved)
-  and #467 (v207, the album exported whole and tagged), each waiting on ten
-  rows; 30k's draft #468 (the look), waiting on Mikey's playhead pick among
-  four (A ring, B bead, C trail, D beat pulse); 30l's draft #465 (v208, the
-  new name's icon, Mikey picking in its session; left open for 31). **Not
-  started:** 30n (after 30k and 30m), 30g's Left list. **Learned:** two
+  #466 (30m, v206: a seed album saved; ten rows 10 of 10, 45307309847).
+  **Stopped at Mikey's word (his usage low), each with a "Left" list at the
+  top of its file:** 30m (#467, v207, the album exported whole and tagged:
+  ten rows done on 7117922, three checks to see green on 0fd6bc9); 30k
+  (draft #468, the look: Mikey picked B, the bead, and was choosing among
+  three LED takes on it; the list says what is built); 30l (draft #465, the
+  icon: 3f built as a placeholder, round 9 of the drawing on `s30l-shots`
+  waiting for him, more changes wanted; left open for 31). **Not started:**
+  30n (after 30k and 30m), 30g's Left list. **Learned:** two
   export dispatches on one ref a second apart cancel the first while
   pending; ask for a failing row's cause before it listens longer (a random
   loop silent for 6 s; pinned to a busy loop); the app starts no session on

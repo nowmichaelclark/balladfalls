@@ -44,8 +44,11 @@ object NativeCore {
     /** The seed the core draws its own loops from (Next's), new each start as the page's is. */
     @JvmStatic external fun draws(seed: Long): Boolean
 
-    /** Forget the busiest callback so far. */
+    /** Forget the busiest callback so far, the watch's figures and the time played with the screen off. */
     @JvmStatic external fun resetBusiest(): Boolean
+
+    /** The phone's screen went on or off (session 30g): the time played with it off is counted from here. */
+    @JvmStatic external fun screen(on: Boolean)
 
     /** The figures, in [Figures]'s order (android/native/src/lib.rs, COUNTS). */
     @JvmStatic external fun counts(): DoubleArray
@@ -117,6 +120,11 @@ class Figures(private val v: DoubleArray) {
     val refused get() = at(23).toLong()
     val collisions get() = at(24).toLong()
     val engine get() = at(25) != 0.0
+    /** Callbacks over their deadline, and times the speaker's playhead fell behind the clock (session 30g, watch.rs). */
+    val over get() = at(26).toLong()
+    val behind get() = at(27).toLong()
+    /** Seconds played with the screen off. */
+    val offSeconds get() = at(28)
 
     /** The scheduling policy in words. */
     val policyName get() = when (policy) {
@@ -133,5 +141,6 @@ class Figures(private val v: DoubleArray) {
             "busiest=${"%.3f".format(busiestMs)}ms (${"%.1f".format(busiestShare * 100)}% of its block's deadline, $busiestFrames frames asked) " +
             "mean=${"%.2f".format(meanShare * 100)}% callbacks=$callbacks frames=$frames " +
             "rate=$rate burst=$burst buffer=$buffer/$capacity channels=$channels performance=$performance sharing=$sharing " +
-            "thread=$policyName/$priority reopens=$reopens state=$state seed=$seed refused=$refused collisions=$collisions"
+            "thread=$policyName/$priority reopens=$reopens state=$state seed=$seed refused=$refused collisions=$collisions " +
+            "over=$over behind=$behind off=${"%.1f".format(offSeconds)}s"
 }

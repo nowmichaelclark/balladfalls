@@ -139,6 +139,19 @@ class PlaybackService : Service() {
             setSessionActivity(openApp())
         }
         main.postDelayed(heartbeat, HEARTBEAT_MS)
+        // The screen's state, for the time played with it off (session 30g, Diagnostics): as it is now, then as
+        // Android says it changes.
+        NativeCore.screen(power.isInteractive)
+        registerReceiver(screen, IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        })
+    }
+
+    private val screen = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            NativeCore.screen(intent?.action != Intent.ACTION_SCREEN_OFF)
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -160,6 +173,7 @@ class PlaybackService : Service() {
 
     override fun onDestroy() {
         main.removeCallbacksAndMessages(null)
+        runCatching { unregisterReceiver(screen) }
         release()
         if (this::session.isInitialized) {
             session.isActive = false

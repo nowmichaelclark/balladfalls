@@ -16,7 +16,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v214';
+const BUILD = 'v215';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -2599,6 +2599,12 @@ function wire() {
     const gpu = gpuReport();
     lines.push(`gpu: ${gpu.renderer}  accelerated: ${gpu.accelerated}`);
     lines.push(`cores: ${navigator.hardwareConcurrency || '?'}  lite: ${state.lite}, ${liteSource()}`);
+    // The app's own last move, kept after the listener's choice overrides
+    // it (session 30g: "yours" alone hid why it moved).
+    {
+      const auto = store.getPrefs().liteAuto;
+      lines.push(auto ? `lite by itself: last ${auto.lite ? 'on' : 'off'} at ${auto.at || '?'} (${auto.why})` : 'lite by itself: never');
+    }
     // "Let the loop wander" (queue item 92): unrepeatable across the
     // slider's upper range, with this play's salt.
     if (state.engine) {
@@ -2647,6 +2653,8 @@ function wire() {
   ui.el('goAdvanced').addEventListener('click', renderDiag);
   ui.el('diagReset').addEventListener('click', () => {
     if (state.engine) state.engine.clearMetrics();
+    // The Android app's native counts (session 30g): the stream's, too.
+    if (state.ctx && state.ctx.native) state.ctx.resetCounts();
     renderDiag();
     ui.toast('Reset', 'Counters cleared');
   });

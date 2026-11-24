@@ -154,6 +154,14 @@ impl Playhead {
         Playhead { behind: 0, lost: 0.0, last: 0, line: None, off: 0, began: 0, read: 0 }
     }
 
+    /// Forget the counts ("reset counters"); the line it reads against is
+    /// kept.
+    pub fn reset_counts(&mut self) {
+        self.behind = 0;
+        self.lost = 0.0;
+        self.last = 0;
+    }
+
     /// A stream began at `now`: its playhead is a new one, the counts go on.
     pub fn stream_began(&mut self, now: i64) {
         self.line = None;
@@ -260,5 +268,22 @@ mod tests {
         }
         assert_eq!(p.behind, 1);
         assert!((p.lost - 0.03).abs() < 0.008, "{}", p.lost);
+    }
+
+    #[test]
+    fn reset_counters_forgets_what_the_playhead_counted() {
+        let mut p = Playhead::new();
+        p.stream_began(0);
+        for i in 1..200_i32 {
+            let lost = if i >= 100 { 0.05 } else { 0.0 };
+            p.read(i64::from(i) * 250_000_000, f64::from(i) * 0.25 - lost);
+        }
+        assert_eq!(p.behind, 1);
+        p.reset_counts();
+        assert_eq!((p.behind, p.lost.to_bits(), p.last), (0, 0, 0));
+        for i in 200..260_i32 {
+            p.read(i64::from(i) * 250_000_000, f64::from(i) * 0.25 - 0.05);
+        }
+        assert_eq!(p.behind, 0, "nothing new lost since");
     }
 }

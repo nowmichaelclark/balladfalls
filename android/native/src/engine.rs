@@ -114,7 +114,14 @@ pub enum Command {
     Wander(f64),
     /// The seed the core's own loops are drawn from (`Player::set_draws`).
     Draws(u32),
-    /// Forget the busiest callback so far (the debug screen's reset).
+    /// A test's slower phone (the page's `?burn=`, as the worklet's: queue
+    /// item 87b): this many microseconds of the audio thread's time added
+    /// to every 128 frames, so the Lite rule can be measured on the native
+    /// stream (session 30g, step 6). 0 for none, as every listener's.
+    Burn(u32),
+    /// Forget the busiest callback so far, the watch's figures and the
+    /// time played with the screen off (the debug screen's reset, and
+    /// Diagnostics' "reset counters").
     ResetBusiest,
 
     // The page's (session 27): js/worklet.js's messages, one each, in its
@@ -385,7 +392,16 @@ pub struct Counts {
     /// Reports with no room for them in the queue back (never, unless the
     /// app's thread stopped reading).
     pub out_lost: AtomicU32,
+    /// Frames rendered while the screen was off (`SCREEN_OFF`), since the
+    /// start or "reset counters": the screen off is where Mikey's phone
+    /// crackled (session 30g, queue item 115), and Diagnostics says how long
+    /// a listen was there.
+    pub off_frames: AtomicU64,
 }
+
+/// Whether the phone's screen is off, as the app hears it
+/// (`NativeCore.screen`): the audio thread reads it once a callback.
+pub static SCREEN_OFF: AtomicBool = AtomicBool::new(false);
 
 /// The loop's name for the app: a sequence lock, so the reader never waits
 /// on the audio thread and never sees half a name.
@@ -475,6 +491,9 @@ struct Inner {
     /// Probes waiting for the probe slot.
     probes: [f64; PROBES],
     probes_waiting: usize,
+    /// A test's slower phone (`Command::Burn`): microseconds of waiting
+    /// added to every 128 frames rendered.
+    burn: u32,
 }
 
 /// A core as `Core::new` makes one and a player as `Player::new` does, built
@@ -563,6 +582,7 @@ impl Engine {
             (&raw mut (*inner).watch).write(Watch::new());
             (&raw mut (*inner).probes).write([0.0; PROBES]);
             (&raw mut (*inner).probes_waiting).write(0);
+            (&raw mut (*inner).burn).write(0);
             (&raw mut (*p).rendering).write(AtomicBool::new(false));
             (&raw mut (*p).commands).write(Ring::new());
             (&raw mut (*p).writer).write(Mutex::new(()));
@@ -738,18 +758,12 @@ impl Engine {
         out[frames * channels..].fill(0.0);
 
         // How loud it was: the callback's RMS, and whether anything sounded.
-        let mut sum = 0.0f64;
-        let mut peak = 0.0f32;
-        for &x in &*out {
-            sum += f64::from(x) * f64::from(x);
-            peak = peak.max(x.abs());
-        }
-        #[allow(clippy::cast_precision_loss, reason = "a callback's samples, far under 2^53")]
-        let rms = if out.is_empty() { 0.0 } else { (sum / out.len() as f64).sqrt() };
+        let (rms, peak) = level_of(out);
         self.counts.level.fetch_max(rms.to_bits(), Ordering::Relaxed);
         if peak > 1e-5 {
             inner.sounding += frames as u64;
         }
+        burn(inner.burn, began, frames);
 
         let c = &self.counts;
         c.late.store(inner.core.late(), Ordering::Relaxed);
@@ -758,6 +772,7 @@ impl Engine {
         c.state.store(state_number(inner.player.state()), Ordering::Relaxed);
         c.callbacks.fetch_add(1, Ordering::Relaxed);
         c.frames.fetch_add(frames as u64, Ordering::Relaxed);
+        c.off_frames.fetch_add(if SCREEN_OFF.load(Ordering::Relaxed) { frames as u64 } else { 0 }, Ordering::Relaxed);
 
         // The callback's time against its deadline: the frames it was asked
         // for, at the rate, are how long the device takes to play them (the
@@ -936,7 +951,7 @@ impl Engine {
     /// One command, on the audio thread.
     #[allow(clippy::too_many_lines, reason = "one arm a command, as the worklet's `receive`")]
     fn apply(&self, inner: &mut Inner, command: &Command) {
-        let Inner { core, player, watch, base, epoch, cost_ms, cost_seconds, window_ms, window_frames, probes, probes_waiting, .. } = &mut *inner;
+        let Inner { core, player, watch, base, epoch, cost_ms, cost_seconds, window_ms, window_frames, probes, probes_waiting, burn, .. } = &mut *inner;
         match *command {
             Command::Load { seed, ref request } => player.load(seed, request),
             Command::Ready => player.ready(core),
@@ -950,6 +965,7 @@ impl Engine {
                 player.next(Moment::Now, Handover::Crossfade(CROSSFADE));
             }
             Command::Volume(v) => player.set_volume(core, v),
+            Command::Burn(us) => *burn = us,
             Command::Wander(a) => player.set_wander(a),
             Command::Draws(seed) => player.set_draws(seed),
             Command::ResetBusiest => {
@@ -959,6 +975,7 @@ impl Engine {
                 self.counts.busiest_frames.store(0, Ordering::Relaxed);
                 self.counts.spent_ns.store(0, Ordering::Relaxed);
                 self.counts.deadline_ns.store(0, Ordering::Relaxed);
+                self.counts.off_frames.store(0, Ordering::Relaxed);
             }
             Command::Init { full, layout } => {
                 // A new page's player, as a new worklet's core: every voice
@@ -1077,6 +1094,33 @@ impl GridView<'_> {
     pub fn layer(&self, l: usize) -> &[f64] {
         let n = usize::from(self.0.lens.get(l).copied().unwrap_or(0)).min(GRID_MAX);
         self.0.steps.get(l).map_or(&[], |s| &s[..n])
+    }
+}
+
+/// A callback's RMS and its peak.
+fn level_of(out: &[f32]) -> (f64, f32) {
+    let mut sum = 0.0f64;
+    let mut peak = 0.0f32;
+    for &x in out {
+        sum += f64::from(x) * f64::from(x);
+        peak = peak.max(x.abs());
+    }
+    #[allow(clippy::cast_precision_loss, reason = "a callback's samples, far under 2^53")]
+    let rms = if out.is_empty() { 0.0 } else { (sum / out.len() as f64).sqrt() };
+    (rms, peak)
+}
+
+/// A test's slower phone: the callback that began at `began` waits, busy,
+/// until `us` microseconds a 128 frames have passed since its rendering
+/// (on top of the rendering's own time).
+fn burn(us: u32, began: Instant, frames: usize) {
+    if us == 0 {
+        return;
+    }
+    let rendered = began.elapsed();
+    let until = rendered + std::time::Duration::from_micros(u64::from(us) * frames as u64 / 128);
+    while began.elapsed() < until {
+        std::hint::spin_loop();
     }
 }
 
@@ -1443,6 +1487,7 @@ mod tests {
             ("mute", Command::Mute { layer: dlcore::generator::Layer::Drums, muted: true }),
             ("tempo", Command::Tempo(90.0)),
             ("ping", Command::Ping(1.0)),
+            ("burn", Command::Burn(0)),
         ];
         for (_, c) in &all {
             match c {
@@ -1450,7 +1495,7 @@ mod tests {
                 | Command::ResetBusiest | Command::Init { .. } | Command::Dispose | Command::Layout(_) | Command::Cancel(_) | Command::Param { .. }
                 | Command::LoadAt { .. } | Command::Change { .. } | Command::Revise { .. } | Command::Track { .. } | Command::Arm(_) | Command::Picks { .. }
                 | Command::NextAt { .. } | Command::Jump(_) | Command::Tone(_) | Command::Probe(_) | Command::Stop | Command::Resume(_)
-                | Command::WanderSalted { .. } | Command::Mute { .. } | Command::Tempo(_) | Command::Ping(_) => {}
+                | Command::WanderSalted { .. } | Command::Mute { .. } | Command::Tempo(_) | Command::Ping(_) | Command::Burn(_) => {}
             }
         }
         all
@@ -1533,6 +1578,51 @@ mod tests {
         }
         let over: Vec<_> = table.iter().filter(|t| t.1 > LINE).map(|t| t.0).collect();
         assert!(over.is_empty(), "past {:.0}% of a mean callback: {over:?}", LINE * 100.0);
+    }
+
+    /// Session 30g: the time played with the screen off counts the frames
+    /// rendered while the app says it is off, and "reset counters"
+    /// (`ResetBusiest`) forgets it with the watch's figures.
+    #[test]
+    fn the_screen_off_is_counted_and_reset_counters_forgets_it() {
+        use super::{Ordering, SCREEN_OFF, at};
+        let engine = Engine::new(48_000.0, 2, true).unwrap();
+        engine.stream_began(1024);
+        let l = e9t();
+        assert!(engine.send_all(&[Command::Init { full: true, layout: 2 }, Command::LoadAt { seed: l.seed, request: l.request, at: 0.0, resumed: false }]));
+        let mut out = vec![0.0f32; 2048];
+        for i in 0..300 {
+            SCREEN_OFF.store((100..250).contains(&i), Ordering::Relaxed);
+            engine.fill(&mut out, 2);
+        }
+        SCREEN_OFF.store(false, Ordering::Relaxed);
+        assert_eq!(engine.counts.off_frames.load(Ordering::Relaxed), 150 * 1024);
+        assert!(engine.status.read()[at::WORST_AT + 1] > 0.0, "a worst callback kept");
+        assert!(engine.send(&Command::ResetBusiest));
+        engine.fill(&mut out, 2);
+        assert_eq!(engine.counts.off_frames.load(Ordering::Relaxed), 0);
+        let w = engine.status.read();
+        assert_eq!(w[at::OVER].to_bits(), 0f64.to_bits());
+        assert_eq!(w[at::GAP].to_bits(), 0f64.to_bits());
+        assert_eq!(w[at::WORST_AT + at::WORST_WORDS + 1].to_bits(), 0f64.to_bits(), "one callback since: the second worst is none");
+    }
+
+    /// A test's slower phone (`Command::Burn`): each callback takes the
+    /// microseconds asked for a 128 frames on top of its rendering, and
+    /// the busy share says so.
+    #[test]
+    fn a_burn_makes_the_callbacks_that_much_longer() {
+        let engine = Engine::new(48_000.0, 2, true).unwrap();
+        engine.stream_began(1024);
+        assert!(engine.send_all(&[Command::Init { full: true, layout: 2 }, Command::Burn(1600)]));
+        let mut out = vec![0.0f32; 2048];
+        for _ in 0..50 {
+            engine.fill(&mut out, 2);
+        }
+        let ns = engine.counts.spent_ns.load(std::sync::atomic::Ordering::Relaxed);
+        assert!(ns >= 50 * 1600 * 8 * 1000, "{ns} ns in 50 callbacks of 1,024 frames");
+        let (busiest, _, windows) = engine.take_busy();
+        assert!(windows >= 4 && busiest > 0.6, "busiest {busiest} over {windows} quarter-seconds");
     }
 
     /// A full queue refuses and says so; the audio thread empties it.

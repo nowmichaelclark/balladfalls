@@ -58,7 +58,10 @@ listing, build recipe, release workflow and checks (the sections "F-Droid",
   `fstatvfs`), the restore file's picker, and the one notification question.
 - `background.mjs`, `emulator-background.sh`: the screen-off test (CI's
   `background` job), with the debug build's `CallSimulator` standing in for a
-  call.
+  call; it presses Play after two minutes paused with the screen off.
+- `burn.mjs`, `emulator-burn.sh` (session 30g): the "lighter on processor"
+  rule on the native core, a slower phone made with `?burn=` and swept
+  (CI's `burn` job, by hand only: `only=burn`).
 - `app/src/debug/`: the **Native audio test**, a second launcher icon in debug
   builds only (`NativeTestActivity.kt`): "Play the test" plays the golden loop
   natively and shows underruns, the busiest callback against its deadline, and

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2c1a4a"/><stop offset="0.35" stop-color="#5a3060"/><stop offset="0.6" stop-color="#d07a5a"/></linearGradient>
+    <linearGradient id="fall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff4dc"/><stop offset="1" stop-color="#ffd8a4"/></linearGradient>
+    <radialGradient id="mist"><stop offset="0" stop-color="#fff4dc" stop-opacity="0.55"/><stop offset="1" stop-color="#fff4dc" stop-opacity="0"/></radialGradient>
+    <linearGradient id="riv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd8a0"/><stop offset="1" stop-color="#b8607a"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <circle cx="150" cy="230" r="64" fill="#ffd890"/>
+  <path d="M0 290 Q90 252 180 272 Q250 250 330 266 V512 H0 Z" fill="#4a2a58"/>
+  <path d="M0 512 V360 Q120 340 280 356 H512 V512 Z" fill="#1c0e2c"/>
+  <path d="M512 372 V146 L346 158 Q308 164 302 204 L294 372 Z" fill="#1c0e2c"/>
+  <path d="M346 158 L512 146 V164 L356 176 Z" fill="#3a2246"/>
+  <path d="M362 164 Q440 154 512 152" fill="none" stroke="#ffe8c0" stroke-width="9" stroke-linecap="round"/>
+  <path d="M264 372 H344 Q372 412 330 440 Q284 470 362 512 H96 Q180 474 236 444 Q280 418 264 372 Z" fill="url(#riv)"/>
+  <path d="M302 186 Q322 160 366 158 Q344 214 342 366 H270 Q272 262 302 186 Z" fill="url(#fall)"/>
+  <path d="M304 184 Q324 164 362 162" fill="none" stroke="#fff6e4" stroke-width="9" stroke-linecap="round"/>
+  <path d="M312 206 Q296 280 296 352 M334 196 Q318 280 320 354" fill="none" stroke="#e8a060" stroke-width="6" stroke-linecap="round" opacity="0.6"/>
+  <path d="M324 192 Q308 270 308 350" fill="none" stroke="#fff6e4" stroke-width="5" stroke-linecap="round"/>
+  <ellipse cx="306" cy="366" rx="84" ry="30" fill="url(#mist)"/>
+  <g fill="#fff4dc"><circle cx="268" cy="370" r="10"/><circle cx="282" cy="362" r="15"/><circle cx="297" cy="354" r="19"/><circle cx="313" cy="352" r="20"/><circle cx="328" cy="360" r="16"/><circle cx="343" cy="369" r="11"/><circle cx="292" cy="370" r="14"/><circle cx="320" cy="370" r="15"/><rect x="268" y="366" width="76" height="16" rx="8"/><circle cx="274" cy="342" r="4" opacity="0.8"/><circle cx="340" cy="344" r="4" opacity="0.8"/><circle cx="308" cy="328" r="3" opacity="0.8"/><circle cx="290" cy="334" r="3" opacity="0.8"/></g>
+</svg>

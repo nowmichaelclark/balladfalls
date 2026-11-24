@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by tools/icons.mjs from icons/icon.svg (its #monochrome): edit that, run the script, never this file. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="440"
+    android:viewportHeight="440">
+    <group android:translateX="-40" android:translateY="-38">
+      <group android:translateX="-12" android:translateY="-62">
+        <path
+            android:pathData="M90,272 A70,70 0 1 0 230,272 A70,70 0 1 0 90,272 Z"
+            android:fillColor="#FFFFFFFF" />
+        <path
+            android:pathData="M105.5,416 H198.5 A5.5,5.5 0 0 1 204,421.5 V421.5 A5.5,5.5 0 0 1 198.5,427 H105.5 A5.5,5.5 0 0 1 100,421.5 V421.5 A5.5,5.5 0 0 1 105.5,416 Z"
+            android:fillColor="#FFFFFFFF" />
+        <path
+            android:pathData="M123,438 H181 A5,5 0 0 1 186,443 V443 A5,5 0 0 1 181,448 H123 A5,5 0 0 1 118,443 V443 A5,5 0 0 1 123,438 Z"
+            android:fillColor="#FFFFFFFF" />
+        <path
+            android:pathData="M436 189 L384 190 C330 192 292 214 278 262 C268 300 262 350 256 404 H324 Q318 340 320 274 C322 236 334 208 356 206 H436 A8.5 8.5 0 0 0 436 189 Z"
+            android:fillColor="#FFFFFFFF" />
+        <path
+            android:pathData="M232 414 Q290 427 348 414"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="13"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M216 438 Q290 453 364 438"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="10"
+            android:strokeLineCap="round" />
+      </group>
+    </group>
+</vector>

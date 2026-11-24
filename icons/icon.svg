@@ -10,7 +10,10 @@
      same scene. Three groups: #background (the sky and the lake, Android's
      background layer), #foreground (everything on them), and #monochrome
      (one color, hidden here: Android's themed icon and the status bar's
-     icon). The class "key" marks what must stay inside every safe zone (the
+     icon). Android's layers are vector drawables made from it, so it keeps
+     to what they can draw: shapes and absolute paths, flat fills, linear
+     gradients, a radial one only on a circle, a clip, a group's translate
+     and scale. The class "key" marks what must stay inside every safe zone (the
      sun, the falls, its first ripple); the script fails if it doesn't. -->
 <defs>
   <linearGradient id="sky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="512"><stop offset="0" stop-color="#2c1a4a"/><stop offset="0.43" stop-color="#5a3060"/><stop offset="0.79" stop-color="#e08a5a"/></linearGradient>
@@ -39,7 +42,7 @@
     <rect x="148" y="474" width="24" height="5" rx="2.5" fill="#94606a"/>
   </g>
   <path d="M640 404 V202 Q580 198 512 206 Q446 200 384 206 L356 206 C334 206 322 226 318 256 L300 404 Z" fill="#1c0e2c"/>
-  <g stroke="#2e1a3c" stroke-width="5" stroke-linecap="round"><path d="M372 250 L440 246"/><path d="M412 300 L496 294"/><path d="M350 352 L420 348"/><path d="M530 262 L600 258"/></g>
+  <g fill="none" stroke="#2e1a3c" stroke-width="5" stroke-linecap="round"><path d="M372 250 L440 246"/><path d="M412 300 L496 294"/><path d="M350 352 L420 348"/><path d="M530 262 L600 258"/></g>
   <path d="M640 186 L380 190 L380 206 H640 Z" fill="url(#water)"/>
   <path class="key" d="M392 189.8 L384 190 C330 192 292 214 278 262 C268 300 262 350 256 404 H324 Q318 340 320 274 C322 236 334 208 356 206 H392 Z" fill="url(#water)"/>
   <g fill="none" stroke-linecap="round" clip-path="url(#wclip)">
@@ -47,7 +50,7 @@
     <path d="M470 198 H378 C342 199 314 224 304 268 C298 300 296 320 294 350" stroke="#fffaf0" stroke-width="6"/>
     <path d="M440 202 H372 C348 203 326 230 318 274 C314 310 312 350 310 396" stroke="#e8a060" stroke-width="5" opacity="0.4"/>
   </g>
-  <ellipse cx="290" cy="398" rx="96" ry="34" fill="url(#mist)"/>
+  <g transform="translate(290 398) scale(1 0.3542) translate(-290 -398)"><circle cx="290" cy="398" r="96" fill="url(#mist)"/></g>
   <g fill="none" stroke-linecap="round">
     <path class="key" d="M234 412 Q290 424 346 412" stroke="#fff0d4" stroke-width="6"/>
     <path d="M220 428 Q290 443 360 428" stroke="#eab088" stroke-width="4.5"/>

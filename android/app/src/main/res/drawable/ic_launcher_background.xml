@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Made by tools/icons.mjs from icons/icon.svg (its #background): edit that, run the script, never this file. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="768"
+    android:viewportHeight="768">
+    <group android:translateX="128" android:translateY="128">
+      <path
+          android:pathData="M-128,-128 H640 V404 H-128 Z">
+        <aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="0" android:startY="0" android:endX="0" android:endY="512"><item android:offset="0" android:color="#FF2C1A4A"/><item android:offset="0.43" android:color="#FF5A3060"/><item android:offset="0.79" android:color="#FFE08A5A"/></gradient></aapt:attr>
+      </path>
+      <path
+          android:pathData="M-128,404 H640 V640 H-128 Z">
+        <aapt:attr name="android:fillColor"><gradient android:type="linear" android:startX="0" android:startY="404" android:endX="0" android:endY="512"><item android:offset="0" android:color="#FF4A2A58"/><item android:offset="1" android:color="#FF1C0E2C"/></gradient></aapt:attr>
+      </path>
+      <path
+          android:pathData="M-128,403 H300 V406 H-128 Z"
+          android:fillColor="#FFF0A070"
+          android:fillAlpha="0.6" />
+    </group>
+</vector>

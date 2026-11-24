@@ -210,11 +210,12 @@ The Kotlin package (`app.loops`, the `namespace`) is not the id and stays.
   plays or saves; the page then runs as in front, the emulator's CPU for the
   app being 0% with the screen off.
 - **The icon** (item 120): made from the one source, `icons/icon.svg`, by
-  `node tools/icons.mjs` (with the web app's icons and the listing's): the
-  adaptive icon's background, foreground and monochrome layers as PNGs at
-  every density (`mipmap-*dpi`, the 108 dp layer, the 72 dp middle the icon
-  itself), and the notification's small icon, the monochrome drawing at 24 dp
-  (`drawable-*dpi/ic_stat_driftloom.png`). The script checks the safe zones.
+  `node tools/icons.mjs` (with the web app's icons and the listing's), as
+  vector drawables (text, as android/ must be): the adaptive icon's
+  background, foreground and monochrome layers (the 108 dp layer, its 72 dp
+  middle the icon itself) and the notification's small icon, the monochrome
+  drawing at 24 dp (`drawable/ic_stat_driftloom.xml`). The script checks the
+  safe zones, and that each drawable draws what the SVG draws.
 - **Not yet:** the system bars' color following the page's theme (a Painter's
   choice).
 

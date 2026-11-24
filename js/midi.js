@@ -21,6 +21,14 @@ function str(s) {
   return Array.from(s, (c) => c.charCodeAt(0));
 }
 
+// A meta event's text (item 121: the loop's name as the track's name): its
+// UTF-8 bytes after their length, so a Thai or emoji name arrives whole.
+const utf8 = new TextEncoder();
+function metaText(type, text) {
+  const b = [...utf8.encode(String(text || ''))];
+  return [0xff, type, ...varLen(b.length), ...b];
+}
+
 function u32(n) {
   return [(n >> 24) & 255, (n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
@@ -55,7 +63,7 @@ const GM_DRUMS = {
 function buildTrack(name, notes, channel, extraHeadEvents = []) {
   // notes: [{tick, dur, midi, vel}]
   const evts = [...extraHeadEvents];
-  evts.push({ tick: 0, bytes: [0xff, 0x03, name.length, ...str(name)] });
+  evts.push({ tick: 0, bytes: metaText(0x03, name) });
   for (const n of notes) {
     const vel = Math.max(1, Math.min(127, Math.round(n.vel * 127)));
     evts.push({ tick: n.tick, bytes: [0x90 | channel, n.midi & 127, vel], order: 1 });
@@ -81,7 +89,9 @@ function timeSignature(stepsPerBar) {
   return [4, 2, 24, 8];                            // 4/4
 }
 
-export function patternToMidi(pattern, { repeats = 1 } = {}) {
+// `code`: the loop's code, written as a text event beside its name (the
+// audio files' COMMENT), so the file says how to play it again.
+export function patternToMidi(pattern, { repeats = 1, code = '' } = {}) {
   const spec = pattern.spec;
   const ticksPerStep = PPQ / 4;
   const loopTicks = pattern.totalSteps * ticksPerStep;
@@ -92,7 +102,8 @@ export function patternToMidi(pattern, { repeats = 1 } = {}) {
   const tempoTrack = chunk('MTrk', [
     ...varLen(0), 0xff, 0x51, 0x03, (tempoUs >> 16) & 255, (tempoUs >> 8) & 255, tempoUs & 255,
     ...varLen(0), 0xff, 0x58, 0x04, ...timeSignature(spec.stepsPerBar || 16),
-    ...varLen(0), 0xff, 0x03, spec.name.length, ...str(spec.name),
+    ...varLen(0), ...metaText(0x03, spec.name),
+    ...(code ? [...varLen(0), ...metaText(0x01, code)] : []),
     ...varLen(loopTicks * repeats), 0xff, 0x2f, 0x00,
   ]);
 

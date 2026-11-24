@@ -102,9 +102,16 @@ export function coverImage(spec, size = 320) {
 
 // The cover of `spec` as a PNG's Blob, for the phone's lock screen (session
 // 30f): the picture `coverImage` keeps, encoded on the covers' thread.
-export async function coverPng(spec, size = 320) {
+export function coverPng(spec, size = 320) {
+  return coverFile(spec, size, 'image/png');
+}
+
+// The cover of `spec` as an image file's Blob of `type` (PNG, or JPEG for an
+// exported file's picture, item 121: a tenth of the PNG's bytes for this
+// grain, which every player reads), drawn as the Library draws it.
+export async function coverFile(spec, size = 320, type = 'image/png', quality = 0.9) {
   const image = await coverImage(spec, size);
-  const here = () => pngHere(image, size);
+  const here = () => fileHere(image, size, type, quality);
   if (!startWorker()) return here();
   // A copy to send: the kept picture stays the page's.
   const copy = await createImageBitmap(image);
@@ -113,18 +120,18 @@ export async function coverPng(spec, size = 320) {
   return new Promise((resolve, reject) => {
     const id = ++nextId;
     waiting.set(id, { resolve, reject, fallback: () => here().then(resolve, reject) });
-    w.postMessage({ id, image: copy, size }, [copy]);
+    w.postMessage({ id, image: copy, size, type, quality }, [copy]);
   });
 }
 
 // With no worker, the browser's own encoder, which calls back when it's done.
-function pngHere(image, size) {
+function fileHere(image, size, type, quality) {
   return new Promise((resolve, reject) => {
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
     paint(canvas, image);
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('no PNG'))), 'image/png');
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('no picture'))), type, quality);
   });
 }
 

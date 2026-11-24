@@ -33,11 +33,46 @@ export function pages(bytes) {
         cur = 0;
       }
     }
+    // A packet that goes on to the next page (item 121: OpusTags with a
+    // cover): its part on this page, for `joined`.
+    const tail = open ? bytes.slice(p, p + cur) : null;
     out.push({
       flags: bytes[at + 5], version: bytes[at + 4], granule: v.getUint32(6, true) + v.getUint32(10, true) * 2 ** 32,
-      serial: v.getUint32(14, true), sequence: v.getUint32(18, true), packets, open, segments: n, size,
+      serial: v.getUint32(14, true), sequence: v.getUint32(18, true), packets, open, tail, segments: n, size,
     });
     at += size;
   }
+  return out;
+}
+
+// The stream's packets whole, joined across pages: [{ packet, page }], the
+// page each ends on. A page marked continued carries on the packet the page
+// before left open.
+export function joined(ps) {
+  const out = [];
+  let carry = null;
+  ps.forEach((pg, i) => {
+    const continued = (pg.flags & 1) === 1;
+    let list = pg.packets;
+    if (continued && carry) {
+      if (list.length) {
+        out.push({ packet: cat(carry, list[0]), page: i });
+        list = list.slice(1);
+        carry = null;
+      } else if (pg.tail) {
+        carry = cat(carry, pg.tail);
+        return;
+      }
+    }
+    for (const packet of list) out.push({ packet, page: i });
+    carry = pg.tail || null;
+  });
+  return out;
+}
+
+function cat(a, b) {
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a, 0);
+  out.set(b, a.length);
   return out;
 }

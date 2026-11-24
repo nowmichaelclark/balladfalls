@@ -1,28 +1,5 @@
 # Session 30m: an album exported whole and tagged; a seed album saved (121)
 
-**Left** (2026-11-24, stopped by brain B-parallel 4 at Mikey's word, his
-usage low; the next session with this prompt starts here):
-
-- #466 (the seed album saved, v206) is merged: its ten rows were run
-  45307309847, 10 of 10.
-- #467 (the album exported whole and tagged, v207), head 0fd6bc9, is all
-  pushed. Its ten rows are done: run 45307313599 (jobs=all, repeat=10,
-  album=4 long) succeeded on 7117922. Every commit after that is test-only
-  (`android/background.mjs`, `tools/export.mjs`): read the long job's memory
-  line in that run.
-- On 0fd6bc9 three checks are still to be seen green:
-  - `flac`: a fresh run. The album's Opus checks were fixed for CI's ffmpeg
-    "EOI missing" cover warning, and they pass locally.
-  - The `--app` rows: re-run 45322028243, for the known blocked-page flake.
-  - `background`: the folder picker's driver, fixed in 2d10773.
-- Then:
-  - Merge main in. #467 keeps v207 if it is still next.
-  - Fill in the PR body's RESULT lines as read back from GitHub.
-  - Add the Done lines for #466 and #467.
-  - Update the queue's status and tick 30m's row.
-  - Write a plain summary for Mikey. Its for-mikey section is already in
-    #467.
-
 Written by brain B-parallel 4 (2026-11-23) from Mikey's list that day (his
 items 7 and 11) and his answers: "let the user choose" (one zip or a file a
 track), and "Add 'save'" to the seed album.

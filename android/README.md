@@ -195,7 +195,11 @@ The Kotlin package (`app.loops`, the `namespace`) is not the id and stays.
   listener chose in Android's picker. FLAC's header is written again at the
   end, so a place that only streams (a cloud folder) is refused for Lossless
   with a plain line; Small is written front to back and goes anywhere. A MIDI
-  file and the backup go through the same picker (`ui.download`).
+  file and the backup go through the same picker (`ui.download`). An album
+  (item 121): one zip through the same picker (its headers written again at
+  their places, so it needs a place that seeks), or a file a track into a
+  folder chosen in Android's own folder picker (`save-folder`, then
+  `save-in` a track, each written as a picked file is).
 - **Workers** (session 28): a Worker's own requests (its imports, a `fetch`)
   are never served by `shouldInterceptRequest` (measured on the emulator,
   Chromium 124: the Worker's script loads, a Blob module Worker loads, one that

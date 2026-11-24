@@ -39,7 +39,22 @@
 // mono and stereo; the most of them is what js/export.js plans with
 // (BYTES_PER_SECOND), and the check fails if any loop takes more.
 //
-// Needs `flac` or `ffmpeg` (dev-only). Exits 1 on any failure.
+// The tags and the album (item 121): an album of four tracks exported both
+// ways (one zip, a file a track) in both formats, as the Worker writes them
+// (js/tags.js's blocks and comments, js/zip.js's zip), each file decoding
+// with ffmpeg, its tags read back by ffprobe (title, album, track N/4, the
+// app, the day, the code, the cover as an attached picture), the zip tested
+// and opened by `unzip` (its names "NN name.ext"), each FLAC track nulled
+// against its straight render and each Opus track held to it (its length to
+// the sample, 12 dB over the coding error; Node has no browser encoder: libopus through ffmpeg makes the
+// packets, the page's own Ogg writer and tags make the file); and a single
+// loop's file, tagged without an album. Node draws no cover: a plain 600 px
+// JPEG stands in for it (the cover the page draws is tools/rows.mjs's).
+// `--album` runs just these.
+//
+// Needs `flac` or `ffmpeg` (dev-only; the album's checks need ffmpeg with
+// libopus, ffprobe and unzip, and fail without them in CI). Exits 1 on any
+// failure.
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -48,7 +63,11 @@ import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { Render, ask, RATE, OPUS_RATE, BITS, TAIL_MAX, FADE } from '../js/export-render.js';
-import { decodeSong } from '../js/share.js';
+import { decodeSong, encodeSong } from '../js/share.js';
+import { tagsOf, flacBlocks, opusComments, pictureOf } from '../js/tags.js';
+import { ZipWriter } from '../js/zip.js';
+import { OggOpus } from '../js/ogg.js';
+import { pages, joined } from './ogg-read.mjs';
 import { askOf, LAYERS } from '../js/request.js';
 import { LOOPS } from './stalls.mjs';
 
@@ -62,6 +81,7 @@ const HOURS = Number(flag('--hours', 0));
 const SIZES = Number(flag('--sizes', 24));
 const FILE = flag('--file', null);
 const JOB = flag('--job', null);
+const ALBUM_ONLY = argv.includes('--album');
 // What js/export.js plans a second with, by lanes (BYTES_PER_SECOND).
 const planned = (name) => {
   const src = fs.readFileSync(path.join(ROOT, 'js', 'export.js'), 'utf8');
@@ -368,7 +388,8 @@ async function opusFileCheck(file, { job, stop, fade }) {
   const lags = [-1, 0, 1];
   const sig = [0, 0, 0];
   const err = [0, 0, 0];
-  const ff = spawn('ffmpeg', ['-v', 'warning', '-i', file, '-f', 'f32le', '-'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  // The audio alone (an exported file carries its cover too, item 121).
+  const ff = spawn('ffmpeg', ['-v', 'warning', '-i', file, '-map', '0:a', '-f', 'f32le', '-'], { stdio: ['ignore', 'pipe', 'pipe'] });
   let warnings = '';
   ff.stderr.on('data', (d) => { warnings += d; });
   let rest = Buffer.alloc(0);
@@ -393,7 +414,10 @@ async function opusFileCheck(file, { job, stop, fade }) {
     rest = rest.subarray(n * 4 * lanes);
   }
   await new Promise((resolve) => ff.on('close', resolve));
-  return { decoded, warnings: warnings.trim(), snr: { [-1]: 10 * Math.log10(sig[0] / err[0]), 0: 10 * Math.log10(sig[1] / err[1]), 1: 10 * Math.log10(sig[2] / err[2]) } };
+  // CI's ffmpeg's JPEG decoder's lines about the cover are set aside, as in
+  // `decodes`; any other warning stays.
+  warnings = warnings.split('\n').map((l) => l.trim()).filter((l) => l && !/^\[mjpeg @ /.test(l)).join('; ');
+  return { decoded, warnings, snr: { [-1]: 10 * Math.log10(sig[0] / err[0]), 0: 10 * Math.log10(sig[1] / err[1]), 1: 10 * Math.log10(sig[2] / err[2]) } };
 }
 
 async function smallFileCheck() {
@@ -406,6 +430,235 @@ async function smallFileCheck() {
   if (best[0] !== '0') fail(`the samples line up best at a lag of ${best[0]}, not 0 (${JSON.stringify(r.snr)})`);
   if (!(r.snr[0] >= 12)) fail(`the samples are ${r.snr[0].toFixed(1)} dB over the coding error, 12 dB is the least`);
   console.log(`  ${failures ? 'FAIL' : 'pass'}  ${r.decoded} frames (${(r.decoded / OPUS_RATE / 60).toFixed(1)} min): decodes with no warning, aligned to the sample, ${r.snr[0].toFixed(1)} dB over the coding error`);
+}
+
+// ------------------------------------------------------------ the album
+
+// A file of interleaved samples' bytes written as it comes, and again at a
+// place: the Worker's sinks, on a file.
+function fileSink(file) {
+  const fd = fs.openSync(file, 'w');
+  let at = 0;
+  return {
+    write(b) { fs.writeSync(fd, b, 0, b.length, at); at += b.length; },
+    writeAt(p, b) { fs.writeSync(fd, b, 0, b.length, p); },
+    close() { fs.closeSync(fd); },
+  };
+}
+
+// A track's FLAC through `out` ({ open, write, header, close }), as the
+// Worker writes one: the header (STREAMINFO not last), the tags' blocks,
+// each step's bytes, the last, the finished header again.
+async function flacTrack(job, tags, picture, out) {
+  const r = new Render(instance(), job);
+  r.tag(flacBlocks(tags, picture));
+  await out.open();
+  await out.write(Uint8Array.from(r.first));
+  await out.write(r.blocks);
+  let b;
+  while ((b = r.step())) if (b.length) await out.write(Uint8Array.from(b));
+  await out.write(Uint8Array.from(r.last()));
+  await out.header(Uint8Array.from(r.header()));
+  await out.close();
+  return { render: r, info: { stop: r.stopFrame == null ? null : { frame: r.stopFrame, time: r.endTime }, fade: r.fadeFrom } };
+}
+
+// A track's Opus: the render's 48 kHz samples encoded by libopus (ffmpeg),
+// its packets put in an Ogg file by js/ogg.js with the tags (the browser's
+// encoder makes the packets in the app; js/export-opus.js the rest).
+async function opusTrack(job, tags, picture, out) {
+  const r = new Render(instance(), { ...job, format: 'opus' });
+  const raw = path.join(tmp, 'track.f32');
+  const fd = fs.openSync(raw, 'w');
+  let p;
+  while ((p = r.pcm())) {
+    const f = new Float32Array(p.frames * r.lanes);
+    for (let i = 0; i < p.frames; i++) for (let c = 0; c < r.lanes; c++) f[i * r.lanes + c] = p.planes[c][i];
+    fs.writeSync(fd, Buffer.from(f.buffer));
+  }
+  fs.closeSync(fd);
+  const src = path.join(tmp, 'track-src.opus');
+  const made = spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'f32le', '-ar', String(OPUS_RATE), '-ac', String(r.lanes), '-i', raw, '-c:a', 'libopus', '-b:a', r.lanes === 2 ? '96k' : '64k', '-frame_duration', '20', src], { encoding: 'utf8' });
+  fs.unlinkSync(raw);
+  if (made.status !== 0) throw new Error(`ffmpeg would not encode: ${made.stderr}`);
+  const ps = pages(new Uint8Array(fs.readFileSync(src)));
+  const packets = joined(ps);
+  const head = packets[0].packet;
+  const preSkip = head[10] | (head[11] << 8);
+  const w = new OggOpus({ channels: r.lanes, preSkip, serial: 0x2e, comments: opusComments(tags, picture) });
+  await out.open();
+  await out.write(w.header());
+  for (const { packet } of packets.slice(2)) for (const pg of w.add(packet)) await out.write(pg);
+  for (const pg of w.finish(r.frames)) await out.write(pg);
+  await out.close();
+  return { render: r, info: { job: { ...job, format: 'opus' }, stop: r.stopFrame == null ? null : { frame: r.stopFrame, time: r.endTime }, fade: r.fadeFrom } };
+}
+
+// What ffprobe reads of a file: its tags (keys made lower case), its
+// streams, and any warning.
+function probe(file) {
+  const p = spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format_tags:stream=codec_name,codec_type,width,height:stream_disposition=attached_pic:stream_tags', '-of', 'json', file], { encoding: 'utf8' });
+  if (p.status !== 0) return { error: p.stderr.trim() };
+  const j = JSON.parse(p.stdout);
+  const tags = {};
+  for (const [k, v] of Object.entries((j.format && j.format.tags) || {})) tags[k.toLowerCase()] = v;
+  // Ogg keeps an audio stream's comments with the stream.
+  for (const st of j.streams || []) for (const [k, v] of Object.entries(st.tags || {})) if (st.codec_type === 'audio') tags[k.toLowerCase()] = v;
+  return { tags, streams: j.streams || [], warnings: p.stderr.trim() };
+}
+
+// The tags ffprobe read are the ones written; the cover an attached picture.
+function tagCheck(label, file, want) {
+  const p = probe(file);
+  if (p.error) return fail(`${label}: ffprobe: ${p.error}`);
+  const t = p.tags;
+  const track = String(t.track || t.tracknumber || '');
+  const total = String(t.tracktotal || t.totaltracks || (track.includes('/') ? track.split('/')[1] : ''));
+  const pic = p.streams.find((st) => st.codec_type === 'video' && st.disposition && st.disposition.attached_pic === 1);
+  const bad = [];
+  if (t.title !== want.title) bad.push(`title ${t.title}`);
+  if (t.artist !== want.artist) bad.push(`artist ${t.artist}`);
+  if (t.date !== want.date) bad.push(`date ${t.date}`);
+  if (t.comment !== want.code && t.description !== want.code) bad.push(`comment ${t.comment}`);
+  if (want.album) {
+    if (t.album !== want.album) bad.push(`album ${t.album}`);
+    if (parseInt(track, 10) !== want.track || Number(total) !== want.total) bad.push(`track ${track} of ${total}`);
+  } else if (t.album || track) {
+    bad.push(`an album (${t.album}) or a track (${track}) on a single loop`);
+  }
+  if (!pic || pic.width !== 600 || pic.height !== 600) bad.push(`picture ${pic ? `${pic.width}x${pic.height}` : 'none'}`);
+  if (bad.length) fail(`${label}: tags read back: ${bad.join(', ')}`);
+  return !bad.length;
+}
+
+// The audio decodes with no error and no warning. The cover is a stream of
+// its own, held byte for byte by `pictureKept`: CI's older ffmpeg (Ubuntu's)
+// says "EOI missing" of a whole JPEG as it probes the file (before any
+// `-map`), which says nothing of the file, so its JPEG decoder's lines are
+// set aside here; every other line fails it.
+function decodes(file) {
+  const d = spawnSync('ffmpeg', ['-v', 'warning', '-i', file, '-map', '0:a', '-f', 'null', '-'], { encoding: 'utf8' });
+  const said = d.stderr.split('\n').map((l) => l.trim()).filter((l) => l && !/^\[mjpeg @ /.test(l)).join('; ');
+  return d.status === 0 && !said ? '' : (said || `status ${d.status}`);
+}
+
+// The cover ffmpeg finds in the file is the picture given, byte for byte.
+function pictureKept(file, bytes) {
+  const out = path.join(tmp, 'kept.jpg');
+  const x = spawnSync('ffmpeg', ['-v', 'error', '-y', '-i', file, '-map', '0:v', '-c', 'copy', '-frames:v', '1', '-f', 'image2', out], { encoding: 'utf8' });
+  if (x.status !== 0 || !fs.existsSync(out)) return `ffmpeg would not take the picture out: ${x.stderr.trim()}`;
+  const got = fs.readFileSync(out);
+  fs.unlinkSync(out);
+  return Buffer.compare(got, Buffer.from(bytes)) === 0 ? '' : `the picture taken out is ${got.length} bytes, not the ${bytes.length} given`;
+}
+
+async function albums() {
+  console.log('\nexport: an album of four, tagged, one zip and a file a track, lossless and small (item 121)');
+  const need = ['ffmpeg', 'ffprobe', 'unzip'];
+  const missing = need.filter((c) => !has(c));
+  const libopus = !missing.includes('ffmpeg') && spawnSync('ffmpeg', ['-hide_banner', '-encoders'], { encoding: 'utf8' }).stdout.includes('libopus');
+  if (missing.length || !libopus) {
+    const why = `needs ${missing.length ? missing.join(', ') : 'ffmpeg with libopus'}`;
+    if (process.env.CI) fail(`the album's checks ${why}`);
+    else console.log(`  skipped: ${why}`);
+    return;
+  }
+  // The cover's stand-in: a 600 px JPEG.
+  const jpg = path.join(tmp, 'cover.jpg');
+  spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=0x3d2348:s=600x600', '-frames:v', '1', jpg]);
+  const picture = pictureOf(new Uint8Array(fs.readFileSync(jpg)));
+  const b = picture ? picture.bytes : [];
+  if (!picture || picture.width !== 600 || b[b.length - 2] !== 0xff || b[b.length - 1] !== 0xd9) fail('the cover\'s stand-in is not a whole 600 px JPEG');
+  const date = new Date(2026, 10, 24);
+  const day = '2026-11-24';
+  const artist = 'App';
+  const title = 'ฝนตก Sunday';
+  const first = { ...specOf(LOOPS.shatter.code), name: 'ฝนตก 🎧' };
+  const specs = [first, specOf(LOOPS.cinder.code), specOf(LOOPS.hollow.code), specOf(LOOPS.undertow.code)];
+  const jobs = specs.map((s, i) => jobOf(s, { track: [2, 4], layout: i === 3 ? 1 : 2, wander: 0 }));
+  for (const format of ['flac', 'opus']) {
+    for (const box of ['zip', 'files']) {
+      const label = `${format}, ${box === 'zip' ? 'one zip' : 'a file a track'}`;
+      const dir = fs.mkdtempSync(path.join(tmp, `${format}-${box}-`));
+      const zipFile = path.join(dir, `${title}.zip`);
+      const zsink = box === 'zip' ? fileSink(zipFile) : null;
+      const zip = zsink ? new ZipWriter(zsink, { date }) : null;
+      const made = [];
+      for (let i = 0; i < specs.length; i++) {
+        const name = `${String(i + 1).padStart(2, '0')} ${specs[i].name}.${format}`;
+        const tags = tagsOf({ loop: { name: specs[i].name, code: encodeSong(specs[i]) }, album: { title, track: i + 1, total: specs.length }, artist, date });
+        let out;
+        if (zip) {
+          let firstBytes = null;
+          out = {
+            open: () => zip.begin(name),
+            write: (b) => { if (!firstBytes) firstBytes = b.slice(0, 42); return zip.add(b); },
+            header: (b) => zip.patch(0, firstBytes, b),
+            close: () => zip.end(),
+          };
+        } else {
+          let f;
+          out = {
+            open: () => { f = fileSink(path.join(dir, name)); },
+            write: (b) => f.write(b),
+            header: (b) => f.writeAt(0, b),
+            close: () => f.close(),
+          };
+        }
+        const done = format === 'flac' ? await flacTrack(jobs[i], tags, picture, out) : await opusTrack(jobs[i], tags, picture, out);
+        made.push({ name, job: jobs[i], ...done });
+      }
+      let where = dir;
+      if (zip) {
+        await zip.finish();
+        zsink.close();
+        const t = spawnSync('unzip', ['-t', zipFile], { encoding: 'utf8' });
+        if (t.status !== 0 || !/No errors detected/.test(t.stdout)) fail(`${label}: unzip -t: ${t.stdout.split('\n').pop()} ${t.stderr}`);
+        where = path.join(dir, 'out');
+        const x = spawnSync('unzip', ['-q', zipFile, '-d', where], { encoding: 'utf8' });
+        if (x.status !== 0) fail(`${label}: unzip: ${x.stderr}`);
+      }
+      const names = fs.existsSync(where) ? fs.readdirSync(where).filter((n) => !n.endsWith('.zip')).sort() : [];
+      if (names.join('|') !== made.map((m) => m.name).join('|')) fail(`${label}: the files are ${names.join(' | ')}, not "NN name.ext"`);
+      let ok = 0;
+      for (let i = 0; i < made.length; i++) {
+        const m = made[i];
+        const file = path.join(where, m.name);
+        if (!fs.existsSync(file)) continue;
+        const warn = decodes(file) || pictureKept(file, picture.bytes);
+        if (warn) fail(`${label}, ${m.name}: ffmpeg: ${warn}`);
+        const tagged = tagCheck(`${label}, ${m.name}`, file, { title: specs[i].name, artist, date: day, code: encodeSong(specs[i]), album: title, track: i + 1, total: specs.length });
+        let held = false;
+        if (format === 'flac') {
+          const n = nullCheck(`${label}, ${m.name}`, m.job, file, m.info);
+          held = !n.differ;
+        } else {
+          // The length to the sample and the coding error, as an app's file
+          // is held; not its lag: these packets are libopus's through ffmpeg,
+          // whose alignment is not the app's (on a smooth, bass-heavy loop a
+          // sample either way is within its coding error). The browser's
+          // encoder is held to lag 0 by `--file F.opus --job J`.
+          const c = await opusFileCheck(file, m.info);
+          held = c.decoded === m.render.frames && !c.warnings && c.snr[0] >= 12;
+          if (!held) fail(`${label}, ${m.name}: ${c.decoded} of ${m.render.frames} frames decoded, ${c.snr[0].toFixed(1)} dB over the coding error ${c.warnings}`);
+        }
+        if (!warn && tagged && held) ok++;
+      }
+      console.log(`  ${ok === made.length ? 'pass' : 'FAIL'}  ${label}: ${ok} of ${made.length} tracks decode, carry their tags (title, album, track N/${made.length}, the app, the day, the code, the cover) and ${format === 'flac' ? 'null against their straight renders' : 'hold to their straight renders, every frame there'}${zip ? '; the zip tests clean in unzip' : ''}`);
+    }
+  }
+  // A single loop: tagged, no album.
+  const one = path.join(tmp, 'single.flac');
+  const f = fileSink(one);
+  const job = jobOf(first, { track: [2, 4], wander: 0 });
+  const r = await flacTrack(job, tagsOf({ loop: { name: first.name, code: encodeSong(first) }, artist, date }), picture, {
+    open: () => {}, write: (b) => f.write(b), header: (b) => f.writeAt(0, b), close: () => f.close(),
+  });
+  const warn = decodes(one) || pictureKept(one, picture.bytes);
+  if (warn) fail(`a single loop: ffmpeg: ${warn}`);
+  const tagged = tagCheck('a single loop', one, { title: first.name, artist, date: day, code: encodeSong(first) });
+  const n = nullCheck('a single loop', job, one, r.info);
+  console.log(`  ${!warn && tagged && !n.differ ? 'pass' : 'FAIL'}  a single loop's FLAC: decodes, its name, the app, the day, its code and its cover, no album; nulls`);
 }
 
 // The tempo of the loop of `seed`, as the core draws it.
@@ -499,9 +752,11 @@ try {
   if (!DECODER && !(FILE && FILE.endsWith('.opus'))) throw new Error('no reference decoder: install flac (or ffmpeg)');
   if (FILE && JOB && FILE.endsWith('.opus')) await smallFileCheck();
   else if (FILE && JOB) fileCheck();
+  else if (ALBUM_ONLY) await albums();
   else {
     nulls();
     smallNulls();
+    await albums();
     if (SIZES > 0) sizes();
     if (HOURS > 0) long();
   }

@@ -481,6 +481,8 @@ function oggFacts(bytes) {
     ordered: ps.every((p, i) => p.sequence === i && (i <= audioFrom || p.granule >= ps[i - 1].granule)),
     frames: last.granule - preSkip,
     packets: all.length - 2,
+    // The header pages' bytes (the tags and the cover in them, item 121).
+    headerBytes: ps.slice(0, audioFrom).reduce((n, p) => n + p.size, 0),
   };
 }
 
@@ -745,13 +747,15 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   s = await sheet();
   const smallMoved = (await ev(() => window.__rows.exportProgress)) - progress0;
   const smallLine = await lateLine();
-  const rate = small && small.seconds ? smallGot.size / small.seconds : 0;
+  // The audio's bytes a second: the file less its header pages (the tags
+  // and the cover, item 121), which the sheet's size allows for in its tail.
+  const rate = small && small.seconds && ogg ? (smallGot.size - ogg.headerBytes) / small.seconds : 0;
   row('export audio (small): a minute to the file chosen, written as it went, an Ogg Opus file whose end and length are the Worker\'s frames to the sample, the browser decodes it, the music on and nothing late',
     small && small.type === 'done' && small.format === 'opus' && smallStart.sink === 'handle' && smallStart.job.format === 'opus' && /\.opus$/.test(smallStart.name) && smallGot.name === 'picked.opus' && smallGot.size === small.bytes
     && ogg && ogg.beginning && ogg.tagged && ogg.end && ogg.ordered && ogg.channels === 2 && ogg.preSkip > 0 && ogg.frames === small.frames && smallGot.decoded === small.frames
     && small.seconds >= 60 && small.seconds < 60 + 30 && smallMoved >= 2 && !small.counts.late && !small.counts.missed && !small.counts.dropped && s.done && smallMeanwhile && nothingLate(smallLine),
     `${small && small.type} ${small && small.why || ''}, ${smallGot.size} bytes, ${ogg ? `${ogg.pages} pages, ${ogg.packets} packets, pre-skip ${ogg.preSkip}, ${ogg.frames} frames` : oggWhy}; the browser decoded ${smallGot.decoded} frames; ${small && small.seconds && small.seconds.toFixed(1)} s in ${small && small.took && small.took.toFixed(1)} s; ${smallMoved} progress reports; ${s.saved}; ${smallLine}`);
-  row('export audio (small): the size is the constant bit rate (96 kbit/s stereo, 12,000 bytes a second and the pages) and the sheet said about so', rate > 11500 && rate < 12700 && /opus ~\d+ MB$/.test(smallAbout), `${Math.round(rate)} bytes a second; ${smallAbout}`);
+  row('export audio (small): the size is the constant bit rate (96 kbit/s stereo, 12,000 bytes a second and the pages) and the sheet said about so', rate > 11500 && rate < 12700 && /opus ~\d+ MB$/.test(smallAbout), `${Math.round(rate)} bytes a second of audio, ${ogg ? ogg.headerBytes : '?'} bytes of headers; ${smallAbout}`);
   await clickId('exportDoneBtn');
   await trackTo(ev, 600);
   await share();
@@ -1618,7 +1622,9 @@ async function main() {
       const back = await ev(() => !document.getElementById('saveShare').hidden && !document.getElementById('viewSave').hidden);
       await clickId('goExport');
       await sleep(800);
-      const keys = await ev(() => [...document.querySelectorAll('#exportChoose button')].filter((b) => !b.hidden).map((b) => b.textContent.trim()).join());
+      // The format keys (item 121's loop or album keys above them are an
+      // album's: the album rows hold them).
+      const keys = await ev(() => [...document.querySelectorAll('#exportChoose button')].filter((b) => !b.hidden && !b.closest('#exportScope')).map((b) => b.textContent.trim()).join());
       row('share: album from seed and export audio open their views; Export is a key a format, export midi among them', seed && back && /^flac,(opus,)?midi$/.test(keys), `seed ${seed}, back ${back}, ${keys}`);
     }
     // Export MIDI and a share code.

@@ -85,7 +85,7 @@ const CONTROLS = 'button, a[href], input:not([type="hidden"]), select, textarea,
 const DESCRIBED = [
   '#loopName', '#trkNum', '#copySong', '#pasteCode', '#goExport', '#shareSong', '#goSeedAlbum',
   '[data-format]', '[data-scope]', '[data-box]', '#exportMidi', '#exportCancel', '#exportOk', '#seedCount', '#seedAlbumCode', '#seedAlbumLink', '#seedAlbumSave',
-  '#savePane [role="checkbox"]', '#goAdvanced', '#monoMode', '#liteMode',
+  '#savePane [role="checkbox"]', '#goAdvanced', '#monoMode', '#liteMode', '#letterKeys',
   '#exportJson', '#importBtn', '#copyBackup', '#pasteBackup', '#trimDown', '#trimUp', '#diagCopy',
   '.speed-link', '#go',
 ].join(', ');
@@ -226,6 +226,7 @@ const SCREENS = [
   }],
   ['advanced, files', async (p) => { await p.evaluate(() => document.getElementById('exportJson').scrollIntoView({ block: 'center' })); }],
   ['advanced, the end', async (p) => { await p.evaluate(() => { document.querySelector('#libAdvanced .scroll').scrollTop = 1e6; }); }],
+  ['keys, the list', async (p) => { await click(p, '#keysBtn'); }],
 ];
 
 // The screens that need a page of their own.
@@ -253,7 +254,8 @@ function fail(where, what) {
 
 async function checkScreen(page, cdp, where) {
   const list = await page.evaluate(([sel, desc]) => {
-    const all = [...document.querySelectorAll(sel)].filter((e) => e.checkVisibility({ visibilityProperty: true }));
+    // A popup open (the list of keys): what is under it is inert.
+    const all = [...(document.querySelector('dialog:modal') || document).querySelectorAll(sel)].filter((e) => e.checkVisibility({ visibilityProperty: true }));
     window.__controls = all;
     return all.map((e) => ({
       what: e.id ? `#${e.id}` : `${e.tagName.toLowerCase()}.${e.className} "${e.textContent.trim().slice(0, 40)}"`,

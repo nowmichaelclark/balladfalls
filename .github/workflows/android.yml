@@ -41,11 +41,14 @@ on:
         description: 'Smoke tests to run, each on an emulator of its own'
         default: '1'
       only:
-        description: 'Run only this emulator job (background, smoke, native, rows, screenshots); empty runs all'
+        description: 'Run only this emulator job (background, smoke, native, rows, screenshots; burn runs only by name); empty runs all'
         default: ''
       minutes:
         description: 'Minutes the background job keeps the screen off (10 in a PR)'
         default: '10'
+      burns:
+        description: 'With only=burn: the burns to sweep, microseconds a 128 frames (empty: burn.mjs''s own)'
+        default: ''
       commit_screenshots:
         description: 'With only=screenshots: commit the screenshots to the branch run on (fastlane/.../phoneScreenshots)'
         default: 'false'
@@ -367,6 +370,55 @@ jobs:
           name: now-playing-shots
           path: ${{ runner.temp }}/now-playing
           if-no-files-found: warn
+
+  # The "lighter on processor" rule on the native core (session 30g, step
+  # 6): a slower phone made with `?burn=`, swept, reading the busy share the
+  # page's rule sees and the glitches the native core counts, screen on and
+  # off, and whether the app moves to lite by itself (android/burn.mjs). By
+  # hand only (only=burn): a measurement, not a check. The emulator's figures
+  # are the emulator's.
+  burn:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.only == 'burn'
+    name: the lite rule on the native core, a slower phone swept, on an emulator
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: driftloom-debug-apk
+          path: apk
+
+      - name: KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: a sound server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pulseaudio >/dev/null
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=driftloom
+          pactl set-default-sink driftloom
+
+      - name: the sweep
+        env:
+          BURNS: ${{ github.event.inputs.burns }}
+        run: |
+          if [ -n "$BURNS" ]; then
+            sh android/emulator-burn.sh "$(ls apk/*-x86_64-debug.apk)" "$GITHUB_STEP_SUMMARY" --burns "$BURNS"
+          else
+            sh android/emulator-burn.sh "$(ls apk/*-x86_64-debug.apk)" "$GITHUB_STEP_SUMMARY"
+          fi
 
   # The F-Droid listing's phone screenshots (session 29, queue item 107e), taken
   # from the app on an emulator (android/screenshots.mjs). The artifact's files

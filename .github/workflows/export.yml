@@ -109,7 +109,9 @@ jobs:
   rows:
     if: github.event_name != 'workflow_dispatch' || inputs.jobs == 'all' || inputs.jobs == 'rows'
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    # Ten passes (repeat=10) took about 109 min at #468; the keyboard's rows
+    # (session 30n) add about a minute a pass.
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

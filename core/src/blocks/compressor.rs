@@ -165,6 +165,9 @@ fn flush(x: f32) -> f32 {
 }
 
 /// A `DynamicsCompressorNode` on `C` channels, as Chromium renders one.
+/// Cloned only by the master, which keeps its compressors at rest for the
+/// next build at the same rate (`Master::warm`).
+#[derive(Clone)]
 pub struct Compressor<const C: usize> {
     rate: f32,
     settings: Settings,

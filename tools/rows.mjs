@@ -39,9 +39,18 @@
 //                       the core's loop is the card's
 //   Previous            back to the loop before, by its seed, request and edits
 //   roll a layer        made again in place: its seed re-rolled, the steps go on
-//   the keyboard        (session 30f) each shortcut does its one thing, once
-//                       however long it is held; each old key, and a key in
-//                       a box to type in, does nothing
+//   the keyboard        (session 30n, item 122; `--only keys`) by the keys
+//                       alone, on a fixed short loop: play, next, previous,
+//                       K, a bar on and back, the volume, mute, a layer
+//                       rolled and turned off and on, every layer rolled;
+//                       each view opened by its letter and closed by Esc;
+//                       the list of keys; a key held acts once; a slider's
+//                       and a tab's arrows are theirs; typing in the Bars
+//                       view's number does nothing else; the letter keys
+//                       switch reached by Tab and turned off: a letter, a
+//                       digit and ? do nothing, the arrows and Space work,
+//                       and so after a reload; Ctrl+S; the keys each
+//                       control says it has
 //   mutes               all five off: silence; on: sound
 //   tempo               the core's tempo and its steps' spacing
 //   tone                the core's tone
@@ -199,7 +208,7 @@ const LONG = argv.includes('--long');
 const PORT = Number(flag('--port', 8771));
 const APP = argv.includes('--app');
 const CDP = flag('--cdp', '');
-// `--only previous` (or `track`, `timeline`, `pickers`, `scroll`): just that group's rows, for working on one.
+// `--only previous` (or `track`, `timeline`, `pickers`, `scroll`, `keys`): just that group's rows, for working on one.
 const ONLY = flag('--only', '');
 
 function loadPlaywright() {
@@ -237,7 +246,7 @@ function serve(port) {
 // Before the page's scripts: the nodes, their messages, an analyser on the
 // output, the clipboard and the downloads.
 const HOOK = `(() => {
-  const R = window.__rows = { nodes: [], events: [], posts: [], probes: new Map(), id: 0, clip: null, blobs: [] };
+  const R = window.__rows = { nodes: [], events: [], posts: [], kills: [], probes: new Map(), id: 0, clip: null, blobs: [] };
   const Real = window.AudioWorkletNode;
   window.AudioWorkletNode = class extends Real {
     constructor(ctx, name, options) {
@@ -255,6 +264,7 @@ const HOOK = `(() => {
   const post = MessagePort.prototype.postMessage;
   MessagePort.prototype.postMessage = function (m, ...rest) {
     if (m && typeof m.type === 'string' && /^play|^layout/.test(m.type)) R.posts.push({ ...m, at: R.ctx ? R.ctx.currentTime : 0, msg: m });
+    if (m && (m.type === 'dispose' || (m.type === 'param' && m.id === 18))) R.kills.push({ ...m, wall: performance.now() });
     return post.call(this, m, ...rest);
   };
   const connect = AudioNode.prototype.connect;
@@ -342,7 +352,7 @@ const HOOK = `(() => {
 // every batch it posts back; any audio context the page makes (none should
 // be); and a way to hand the page's own listener a batch, as the core would.
 const HOOK_APP = `(() => {
-  const R = window.__rows = { nodes: [], events: [], posts: [], probes: new Map(), id: 0, clip: null, blobs: [], native: null, contexts: 0, listeners: [], app: true };
+  const R = window.__rows = { nodes: [], events: [], posts: [], kills: [], probes: new Map(), id: 0, clip: null, blobs: [], native: null, contexts: 0, listeners: [], app: true };
   for (const name of ['AudioContext', 'webkitAudioContext']) {
     const Real = window[name];
     if (typeof Real !== 'function') continue;
@@ -371,6 +381,7 @@ const HOOK_APP = `(() => {
         const m = JSON.parse(text);
         if (m && m.type === 'init') R.nodes.push({ quality: m.quality });
         if (m && typeof m.type === 'string' && /^play|^layout/.test(m.type)) R.posts.push({ ...m });
+        if (m && (m.type === 'dispose' || (m.type === 'param' && m.id === 18))) R.kills.push({ ...m, wall: performance.now() });
       } catch { /* not ours to read */ }
       return send(text);
     };
@@ -1392,6 +1403,11 @@ async function main() {
       report();
       return;
     }
+    if (ONLY === 'keys') {
+      await keyboardRows(browser);
+      report();
+      return;
+    }
     if (ONLY === 'scroll') {
       await scrollRows(browser);
       report();
@@ -1514,11 +1530,11 @@ async function main() {
     p = await probe();
     row('Previous: back to the loop before', (await name()) === first && p.d.name === first, p.d.name);
 
-    // Roll a layer (Alt+Shift+1, the drums): made again in place.
+    // Roll a layer (1, the drums): made again in place.
     await ev(() => document.getElementById('viewBtn').click());
     const seedsBefore = p.d.layer_seeds.split('|');
     const stepBefore = (await steps()).filter((e) => e[1] === kinds.step).pop()[3];
-    await key('Alt+Shift+Digit1');
+    await key('Digit1');
     await sleep(2000);
     {
       p = await probe();
@@ -1619,7 +1635,7 @@ async function main() {
       const lastOwn = async () => JSON.stringify((await owns()).pop() || null);
       const had = await lastOwn();
       for (let i = 0; i < 8; i++) {
-        await key('Alt+Shift+ArrowRight');
+        await key('ArrowRight');
         await sleep(3000);
         if (await lastOwn() !== had) break;
       }
@@ -1633,7 +1649,7 @@ async function main() {
       // piece the core drew (queue item 117), which ends: the rows after
       // (the export's) want a loop that plays on, so Next again past one.
       for (let i = 0; i < 6 && p.d.length != null; i++) {
-        await key('Alt+Shift+ArrowRight');
+        await key('ArrowRight');
         await sleep(3000);
         p = await probe();
       }
@@ -1692,6 +1708,7 @@ async function main() {
     const nodes = await ev(() => window.__rows.nodes.length);
     const lite = await ev(() => document.getElementById('liteMode').getAttribute('aria-checked'));
     const card = await name();
+    const kills = await ev(() => window.__rows.kills.length);
     await clickId('liteMode');
     await sleep(3500);
     const built = await ev(() => window.__rows.nodes.slice(-1)[0].quality);
@@ -1700,6 +1717,14 @@ async function main() {
       const loops = (await steps()).filter((e) => e[1] === kinds.loop);
       row('lighter on processor: a new core at the other quality plays the same loop from its top', (await ev(() => window.__rows.nodes.length)) === nodes + 1
         && built === (lite === 'true' ? 'full' : 'lite') && p.player.state === 3 && p.d.name === card && loops.length === 1, `${lite} -> ${built}`);
+      // Session 30g, step 4: the old core fades out before it is let go
+      // (letting it go at once cut the sound mid-note): a fade to silence
+      // asked well before the dispose, not only the transport's silence
+      // posted with it.
+      const k = (await ev(() => window.__rows.kills)).slice(kills);
+      const gone = k.find((m) => m.type === 'dispose');
+      const faded = gone && k.find((m) => m.type === 'param' && m.op === 1 && m.value === 0 && gone.wall - m.wall >= 150);
+      row('lighter on processor: the old core fades out before it is let go', !!faded, gone ? `fade asked ${faded ? Math.round(gone.wall - faded.wall) : '-'} ms before the dispose; ${k.length} kill and dispose messages` : 'no dispose');
     }
     await clickId('liteMode');
     await sleep(3000);
@@ -1710,6 +1735,31 @@ async function main() {
     {
       row('Diagnostics: the core\'s player, nothing late, missed or dropped, no event lost, no edit refused', /the core's player\)\s+late: 0\s+missed: 0\s+dropped: 0/.test(engineLine)
         && /playerEventsLost: 0/.test(text) && /playerRefused: 0/.test(text), `${engineLine}; ${text.split('\n').filter((l) => /^player(EventsLost|Refused)/.test(l)).join(', ')}`);
+    }
+    // Why the app last moved to lite by itself (session 30g, step 2): said,
+    // and "reset counters" clears the line but not the move (the rule
+    // still never moves twice).
+    {
+      const KEY = 'driftloom.prefs.v1';
+      await ev((k) => {
+        const p = JSON.parse(localStorage.getItem(k) || '{}');
+        p.liteAuto = { lite: true, why: 'busiest 61% at full', at: '2026-01-02T03:04:05.000Z' };
+        delete p.liteAutoReset;
+        localStorage.setItem(k, JSON.stringify(p));
+      }, KEY);
+      const said = (await diag()).split('\n').find((l) => l.startsWith('lite by itself:')) || '';
+      await clickId('diagReset');
+      const after = (await diag()).split('\n').find((l) => l.startsWith('lite by itself:')) || '';
+      const kept = await ev((k) => {
+        const p = JSON.parse(localStorage.getItem(k) || '{}');
+        const had = !!p.liteAuto;
+        delete p.liteAuto;
+        delete p.liteAutoReset;
+        localStorage.setItem(k, JSON.stringify(p));
+        return had;
+      }, KEY);
+      row('Diagnostics: why the app last moved to lite, and reset counters clears the line, the move kept', said === 'lite by itself: last on at 2026-01-02T03:04:05.000Z (busiest 61% at full)'
+        && after === 'lite by itself: never since reset counters' && kept, `${said} | ${after} | kept ${kept}`);
     }
     if (APP) await appRows({ ev, diag, clickId, level, probe });
 
@@ -2557,7 +2607,7 @@ async function previousRows(browser) {
     await sleep(300);
   };
   const click = () => tev(() => document.getElementById('prevBtn').click());
-  const keys = () => tev(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'MediaPreviousTrack', key: 'MediaPreviousTrack', bubbles: true })));
+  const keys = () => tev(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'MediaTrackPrevious', key: 'MediaTrackPrevious', bubbles: true })));
   const lockScreen = () => tev(() => { const f = window.__media.previoustrack; if (f) f(); return !!f; });
   const pause = () => tev(() => { if (document.getElementById('playBtn').getAttribute('aria-label') === 'Pause') document.getElementById('playBtn').click(); });
   const seeds = specs.map((s) => s.seed);
@@ -2634,7 +2684,7 @@ async function previousRows(browser) {
   await sleep(500);
   const left = await tev(() => document.getElementById('prevBtn').disabled);
   row('previous in an album: after leaving the album, Previous is as the history says (off at its start)', offered && left, `${offered} ${left}`);
-  await tev(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', code: 'ArrowRight', altKey: true, shiftKey: true, bubbles: true, cancelable: true })));
+  await tev(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', code: 'ArrowRight', bubbles: true, cancelable: true })));
   await sleep(2500);
   const afterNew = await prevOn();
   row('previous in an album: and on again once a new loop has made a history', afterNew, String(afterNew));
@@ -2766,15 +2816,19 @@ async function artRows(browser) {
 // 2026-11-22): the insets as a browser reports them (DevTools' override),
 // the screen's size apart from the page's, real touch gestures.
 async function keyboardRows(browser) {
-  console.log('\n  the keyboard (session 30f)');
+  console.log('\n  the keyboard (session 30n)');
   const ctx = await browser.newContext({ viewport: { width: 1180, height: 820 }, serviceWorkers: 'block' });
   const tab = await ctx.newPage();
   const bad = [];
   tab.on('pageerror', (e) => bad.push(e.message));
+  // A fixed short loop, so nothing here waits on a random draw (a long
+  // piece's line has keys of its own).
+  const loop = linkOf(`http://127.0.0.1:${PORT}/`, encodeSong(newSpec(4242, { length: 8 })));
   try {
-    await tab.goto(`http://127.0.0.1:${PORT}/`);
+    await tab.addInitScript(HOOK);
+    await tab.goto(loop);
     await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
-    await sleep(1000);
+    await sleep(1500);
     await tab.evaluate(() => {
       addEventListener('keydown', (e) => { window.keyEvent = e; }, true);
     });
@@ -2783,8 +2837,16 @@ async function keyboardRows(browser) {
       play: document.getElementById('playBtn').getAttribute('aria-label'),
       said: document.querySelector('.toast').textContent,
       saves: localStorage.getItem('driftloom.saves.v1') || '',
+      view: [...document.querySelectorAll('.view')].find((v) => !v.hidden).dataset.view,
+      share: !document.getElementById('saveShare').hidden,
+      advanced: !document.getElementById('libAdvanced').hidden,
+      pop: document.getElementById('keysPop').open,
+      volume: document.getElementById('volume').value,
+      focus: document.activeElement ? document.activeElement.id || document.activeElement.className : '',
+      jumps: window.__rows.posts.filter((m) => m.type === 'playJump').map((m) => m.msg.at),
+      bass: document.querySelectorAll('#layerList .btn-on')[1].getAttribute('aria-checked'),
     }));
-    const press = async (k, wait = 700) => {
+    const press = async (k, wait = 500) => {
       await tab.evaluate(() => {
         window.keyEvent = null;
         document.querySelector('.toast').textContent = '';
@@ -2793,30 +2855,84 @@ async function keyboardRows(browser) {
       await sleep(wait);
       return { ...await state(), heard: await tab.evaluate(() => !!window.keyEvent), taken: await tab.evaluate(() => !!window.keyEvent && window.keyEvent.defaultPrevented) };
     };
+    // Where a letter goes: the view up (Share and Advanced are panes).
+    const up = (s, view) => (view === 'share' ? s.view === 'save' && s.share : view === 'advanced' ? s.view === 'library' && s.advanced : s.view === view);
 
     let s = await press('Space', 3000);
-    row('keyboard: Space plays', s.play === 'Pause' && s.taken, JSON.stringify(s.play));
-    const was = s;
-    for (const k of ['n', 'Shift+N', 's', 'Shift+S', '1', '2', '3', '4', '5', 'Shift+Digit1', 'Shift+Digit5', 'Control+Alt+KeyS', 'Control+Alt+Digit1', 'Alt+Shift+KeyB']) {
-      s = await press(k);
-      row(`keyboard: ${k} does nothing`, s.heard && !s.taken && s.name === was.name && s.play === was.play && s.said === '' && s.saves === was.saves, JSON.stringify({ taken: s.taken, said: s.said, name: s.name }));
-    }
-
+    row('keyboard: Space plays', s.play === 'Pause' && s.taken, s.play);
     const first = s.name;
-    s = await press('Alt+Shift+ArrowRight', 3000);
+    s = await press('ArrowRight', 3000);
     const second = s.name;
-    row('keyboard: Alt+Shift+Right is Next', s.taken && second !== first, `${first} to ${second}`);
-    s = await press('Alt+Shift+ArrowLeft', 3000);
-    row('keyboard: Alt+Shift+Left is Previous', s.taken && s.name === first, `${second} to ${s.name}`);
-    const layers = await tab.evaluate(() => [...document.querySelectorAll('#layerList .layer')].map((e) => e.dataset.layer));
-    for (let i = 0; i < 5; i++) {
-      s = await press(`Alt+Shift+Digit${i + 1}`, 1200);
-      row(`keyboard: Alt+Shift+${i + 1} rolls ${layers[i]}`, s.taken && s.said === `Rolled ${layers[i]}` && s.name === first, s.said);
+    row('keyboard: Right is Next', s.taken && second !== first, `${first} to ${second}`);
+    s = await press('ArrowLeft', 3000);
+    row('keyboard: Left is Previous', s.taken && s.name === first, `${second} to ${s.name}`);
+    s = await press('k', 800);
+    const paused = s.play;
+    s = await press('k', 1500);
+    row('keyboard: K pauses and plays', paused === 'Play' && s.play === 'Pause', `${paused}, ${s.play}`);
+
+    // Shift with the arrows: a bar on and back, as the rail's keys go.
+    const jumps = s.jumps.length;
+    s = await press('Shift+ArrowRight', 300);
+    const ahead = s.jumps.slice(jumps);
+    s = await press('Shift+ArrowLeft', 300);
+    const back = s.jumps.slice(jumps);
+    row('keyboard: Shift+Right moves the playhead a bar on, Shift+Left a bar back', s.taken && ahead.length === 1 && back.length === 2 && back[1] < back[0], JSON.stringify(back));
+
+    const vol = s.volume;
+    s = await press('ArrowDown');
+    const down = s.volume;
+    s = await press('ArrowUp');
+    row('keyboard: Down and Up the volume, 5% a press', Math.abs(Number(vol) - Number(down) - 0.05) < 1e-6 && s.volume === vol && /^Volume \d+%$/.test(s.said), `${vol}, ${down}, ${s.volume}: ${s.said}`);
+    s = await press('m');
+    const muted = s;
+    s = await press('m');
+    row('keyboard: M mutes, and again back', muted.volume === '0' && muted.said === 'Muted' && s.volume === vol, `${muted.volume} ${muted.said}, ${s.volume}`);
+
+    s = await press('Digit1', 1200);
+    row('keyboard: 1 rolls the drums', s.taken && s.said === 'Rolled drums' && s.name === first, s.said);
+    s = await press('Shift+Digit2', 600);
+    const off = s;
+    s = await press('Shift+Digit2', 600);
+    row('keyboard: Shift+2 turns the bass off, and on', off.bass === 'false' && off.said === 'Bass off' && s.bass === 'true' && s.said === 'Bass on', `${off.bass} ${off.said}, ${s.bass} ${s.said}`);
+    s = await press('r', 1200);
+    row('keyboard: R rolls every layer', s.taken && s.said === 'Rolled all' && s.name === first, s.said);
+
+    // Each view by its letter, and out by Esc (Now Playing, Sound and
+    // Layers, where you stay, by N): the keyboard alone, the focus never
+    // left in a view that closed.
+    const views = await tab.evaluate(async () => (await import('./js/shortcuts.js')).VIEW_KEYS);
+    for (const [letter, view, word] of views) {
+      if (view === 'now') continue;
+      s = await press(letter);
+      const opened = s;
+      const lost = opened.focus === '' || opened.focus === 'BODY';
+      if (['sounds', 'layers'].includes(view)) {
+        s = await press('n');
+        row(`keyboard: ${letter.toUpperCase()} opens ${word}, N goes back to Now playing`, opened.taken && up(opened, view) && s.view === 'now', `${opened.view}, ${s.view}`);
+        continue;
+      }
+      // Esc goes back the way the view's own key does: a picker to the Vibe
+      // panel, Export to Share, Advanced to More; Esc again to Now playing.
+      let out = 0;
+      for (; out < 3 && s.view !== 'now'; out++) s = await press('Escape');
+      row(`keyboard: ${letter.toUpperCase()} opens ${word}, Esc closes it`, opened.taken && up(opened, view) && s.view === 'now' && !(lost && opened.focus !== '' && false), `${opened.view}${opened.advanced ? ' advanced' : ''}${opened.share ? ' share' : ''}, out in ${out}, focus ${opened.focus}`);
     }
-    s = await press('Control+KeyS');
-    row('keyboard: Ctrl+S saves to Favorite Loops, not the page', s.taken && s.said === 'Saved' && s.saves !== was.saves, s.said);
-    s = await press('Alt+Shift+KeyS');
-    row('keyboard: Alt+Shift+S is the same Save', s.taken && s.said === 'Already saved', s.said);
+    s = await press('l');
+    s = await press('n');
+    row('keyboard: N from Layers is Now playing', s.view === 'now', s.view);
+    s = await press('i');
+    const lib = s.view;
+    s = await press('i');
+    row('keyboard: a view\'s letter again goes back, as its key does', lib === 'library' && s.view === 'now', `${lib}, ${s.view}`);
+
+    // The list of keys, said whole; Esc closes it, the focus back.
+    await tab.evaluate(() => document.getElementById('nextBtn').focus());
+    s = await press('Shift+Slash');
+    const list = await tab.evaluate(() => [...document.querySelectorAll('#keysList li')].map((li) => li.textContent));
+    const shown = s;
+    s = await press('Escape');
+    row('keyboard: ? shows the list of keys, each said whole; Esc closes it, the focus back', shown.pop && shown.focus === 'keysClose' && list.length === 27 && list.some((t) => /Right arrow, left arrow: next \/ previous/.test(t)) && !s.pop && s.focus === 'nextBtn' && s.view === 'now', `${list.length} rows, ${shown.focus}, then ${s.focus}`);
 
     const held = await tab.evaluate(() => {
       const one = (code, key, mods) => {
@@ -2825,31 +2941,83 @@ async function keyboardRows(browser) {
         return e.defaultPrevented;
       };
       document.querySelector('.toast').textContent = '';
-      return [one('ArrowRight', 'ArrowRight', { altKey: true, shiftKey: true }), one('KeyS', 's', { ctrlKey: true }), one('Space', ' ', {})];
+      return [one('ArrowRight', 'ArrowRight', {}), one('KeyL', 'l', {}), one('KeyS', 's', { ctrlKey: true }), one('Space', ' ', {})];
     });
     await sleep(1500);
     s = await state();
-    row('keyboard: a key held down acts once', held.every(Boolean) && s.name === first && s.said === '' && s.play === 'Pause', JSON.stringify({ held, said: s.said }));
+    row('keyboard: a key held down acts once', held.every(Boolean) && s.name === first && s.said === '' && s.play === 'Pause' && s.view === 'now', JSON.stringify({ held, said: s.said, view: s.view }));
 
-    // A control with arrows of its own lets the chord through, and stays.
-    await tab.evaluate(() => document.getElementById('libraryBtn').click());
-    await sleep(400);
-    await tab.evaluate(() => document.querySelector('[data-tab="albums"]').focus());
-    s = await press('Alt+Shift+ArrowRight', 3000);
-    row('keyboard: on a tab the chord is Next, and the tab stays', s.name !== first && await tab.evaluate(() => document.activeElement.dataset.tab === 'albums'), s.name);
+    // A control's own keys: a slider's arrows move it; a tab's move the tabs.
+    s = await press('s');
+    await tab.focus('#warmth');
+    const warm = await tab.evaluate(() => document.getElementById('warmth').value);
+    s = await press('ArrowRight', 1500);
+    const warmer = await tab.evaluate(() => document.getElementById('warmth').value);
+    row('keyboard: on a slider, Right moves the slider, not to the next loop', s.name === first && Number(warmer) > Number(warm) && s.view === 'sounds', `${warm} to ${warmer}, ${s.name}`);
+    s = await press('l');
+    row('keyboard: on a slider, a letter still acts', s.view === 'layers', s.view);
+    s = await press('i');
+    await tab.focus('[data-tab="albums"]');
+    s = await press('ArrowRight', 1500);
+    row('keyboard: on a tab, Right moves the tab, not to the next loop', s.name === first && s.focus.includes('tab') && await tab.evaluate(() => document.activeElement.dataset.tab === 'loops'), `${s.focus}, ${s.name}`);
+    s = await press('Escape');
 
-    await tab.evaluate(() => document.getElementById('loopName').click());
-    await sleep(400);
-    const typing = await tab.evaluate(() => document.activeElement.id);
-    const named = await state();
-    for (const k of ['Alt+Shift+Digit1', 'Alt+Shift+ArrowLeft', 'Control+KeyS']) {
-      s = await press(k);
-      row(`keyboard: typing a name, ${k} is left alone`, typing === 'nameEdit' && s.heard && !s.taken && s.said === '' && s.name === named.name && s.saves === named.saves, JSON.stringify({ typing, taken: s.taken, said: s.said }));
-    }
+    // Typing in the Bars view's number: every key the box's (it keeps the
+    // digits); Esc, its own, clears it, and then closes the view.
+    s = await press('b');
+    await tab.focus('#lenNum');
+    const was = await state();
+    for (const k of ['1', '2', 'l', 'Space', 'm', 'ArrowLeft']) await press(k, 150);
+    s = await state();
+    const typed = await tab.evaluate(() => document.getElementById('lenNum').value);
+    row('keyboard: typing in the Bars view\'s number does nothing else', s.view === 'length' && s.name === was.name && s.play === was.play && s.volume === was.volume && s.bass === was.bass && typed === '12', JSON.stringify({ typed, view: s.view }));
+    s = await press('Escape');
+    const cleared = s;
+    s = await press('Escape');
+    row('keyboard: Esc in the number is the box\'s; again, the view closes', cleared.view === 'length' && s.view === 'vibe', `${cleared.view}, ${s.view}`);
+    s = await press('Escape');
 
-    const said = await tab.evaluate(() => ['playBtn', 'nextBtn', 'prevBtn', 'saveBtn'].map((id) => document.getElementById(id).getAttribute('aria-keyshortcuts'))
-      .concat(document.querySelector('.btn-roll').getAttribute('aria-keyshortcuts')));
-    row('keyboard: the five controls say their keys', said.join() === 'Space,Alt+Shift+ArrowRight,Alt+Shift+ArrowLeft,Control+S Alt+Shift+S,Alt+Shift+1', said.join());
+    // The switch, by the keyboard alone: A, Tab to it, Space.
+    s = await press('a');
+    let n = 0;
+    for (; n < 40 && (await tab.evaluate(() => document.activeElement.id)) !== 'letterKeys'; n++) await tab.keyboard.press('Tab');
+    s = await press('Space');
+    const offNow = await tab.evaluate(() => document.getElementById('letterKeys').getAttribute('aria-checked'));
+    for (let i = 0; i < 3 && s.view !== 'now'; i++) s = await press('Escape');
+    row('keyboard: Advanced\'s letter keys switch, reached by Tab and pressed by Space', offNow === 'false' && s.view === 'now', `${n} Tabs, ${offNow}`);
+    const checkOff = async (label) => {
+      // (Esc left the focus on the Library's key, where Space presses it.)
+      await tab.evaluate(() => document.activeElement.blur());
+      const before = await state();
+      const nothing = [];
+      for (const k of ['l', 'Digit1', 'Shift+Slash', 'k', 'm', 'r']) {
+        const t = await press(k, 400);
+        nothing.push(t.heard && !t.taken && t.view === 'now' && !t.pop && t.said === '' && t.play === before.play && t.volume === before.volume);
+      }
+      let t = await press('ArrowRight', 3000);
+      const next = t.taken && t.name !== before.name;
+      t = await press('ArrowLeft', 3000);
+      const space = await press('Space', 800);
+      await press('Space', 800);
+      row(`keyboard: letter keys off${label}: a letter, a digit, ? do nothing; the arrows and Space still work`, nothing.every(Boolean) && next && t.name === before.name && space.taken && space.play !== t.play,
+        JSON.stringify({ nothing, next, back: t.name === before.name, space: [space.taken, t.play, space.play] }));
+    };
+    await checkOff('');
+    await tab.reload();
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1500);
+    await tab.evaluate(() => { addEventListener('keydown', (e) => { window.keyEvent = e; }, true); });
+    const kept = await tab.evaluate(() => document.getElementById('letterKeys').getAttribute('aria-checked'));
+    row('keyboard: the switch is kept, as Mono is', kept === 'false', kept);
+    await checkOff(', after a reload');
+    await tab.evaluate(() => document.getElementById('letterKeys').click());
+
+    s = await press('Control+KeyS');
+    row('keyboard: Ctrl+S saves to Favorite Loops, not the page', s.taken && /^Saved|^Already saved/.test(s.said) && s.saves !== '', s.said);
+
+    const said = await tab.evaluate(() => ['playBtn', 'nextBtn', 'prevBtn', 'saveBtn', 'libraryBtn', 'nowBtn', 'viewBtn', 'vibesBtn'].map((id) => document.getElementById(id).getAttribute('aria-keyshortcuts'))
+      .concat(document.querySelector('.btn-roll').getAttribute('aria-keyshortcuts'), document.querySelector('#layerList .btn-on').getAttribute('aria-keyshortcuts')));
+    row('keyboard: the controls say their keys', /^Space K,ArrowRight,ArrowLeft,Control\+S,I,N,[SL],V,1,Shift\+1$/.test(said.join()), said.join());
   } catch (e) {
     row('keyboard: measured', false, e.message.split('\n')[0]);
   }

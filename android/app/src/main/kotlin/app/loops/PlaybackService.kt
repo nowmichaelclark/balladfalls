@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.ServiceConnection
 import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
 import android.media.AudioAttributes
@@ -17,6 +18,7 @@ import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import android.os.Binder
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -51,6 +53,13 @@ import android.util.Log
  * does what its own button does, so the page, the notification and the
  * lock screen are never out of step. With no page there is nothing to play:
  * the service stops.
+ *
+ * Paused, it is a service in the background, which Android stops about a
+ * minute after the app left the screen; and with it went the session, so the
+ * lock screen's or a headset's Play, after a longer pause, reached nothing
+ * (session 30g, step 7: the screen-off job found it). The service binds to
+ * itself ([keep]) so it stays until it ends itself ([shutdown]): Android
+ * stops a started service it has idled only when nothing is bound to it.
  */
 class PlaybackService : Service() {
     private val main = Handler(Looper.getMainLooper())
@@ -109,6 +118,14 @@ class PlaybackService : Service() {
     }
 
     private val idleStop = Runnable { shutdown() }
+
+    // The service's own binding to itself, from its start to its end: what keeps it (and the session) while
+    // paused in the background. Nothing is asked of the binding itself.
+    private val keep = object : ServiceConnection {
+        override fun onServiceConnected(name: android.content.ComponentName?, service: IBinder?) = Unit
+        override fun onServiceDisconnected(name: android.content.ComponentName?) = Unit
+    }
+    private var kept = false
     private val heartbeat = object : Runnable {
         override fun run() {
             // A test build says once a minute what the audio thread is doing, so a run with the screen off can
@@ -139,9 +156,24 @@ class PlaybackService : Service() {
             setSessionActivity(openApp())
         }
         main.postDelayed(heartbeat, HEARTBEAT_MS)
+        kept = bindService(Intent(this, PlaybackService::class.java), keep, Context.BIND_AUTO_CREATE)
+        // The screen's state, for the time played with it off (session 30g, Diagnostics): as it is now, then as
+        // Android says it changes.
+        NativeCore.screen(power.isInteractive)
+        registerReceiver(screen, IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        })
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    private val screen = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            NativeCore.screen(intent?.action != Intent.ACTION_SCREEN_OFF)
+        }
+    }
+
+    // Only the service's own binding ([keep]) asks.
+    override fun onBind(intent: Intent?): IBinder = Binder()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action ?: ""
@@ -160,6 +192,8 @@ class PlaybackService : Service() {
 
     override fun onDestroy() {
         main.removeCallbacksAndMessages(null)
+        runCatching { unregisterReceiver(screen) }
+        letGo()
         release()
         if (this::session.isInitialized) {
             session.isActive = false
@@ -397,7 +431,15 @@ class PlaybackService : Service() {
         stopForeground(STOP_FOREGROUND_REMOVE)
         foreground = false
         notes.cancel(NOTE_ID)
+        letGo()
         stopSelf()
+    }
+
+    /** The service's binding to itself let go, so that stopping it ends it. */
+    private fun letGo() {
+        if (!kept) return
+        kept = false
+        runCatching { unbindService(keep) }
     }
 
     private fun release() {

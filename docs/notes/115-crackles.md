@@ -210,3 +210,61 @@ copied while playing, about eleven minutes in:
 
 Asked afterward whether Pause and Next felt slow in v201 (about 0.2 s later
 than before): "Didn't notice". The 222 ms is accepted; no follow-up.
+
+## The Left list (session 30g, 2026-11-24: #473, #474, #475)
+
+- **Step 1, the samples:** clean. E9T-ZxDxj rendered natively at 1024, 192
+  and 333 frames a callback, full and lite, and the Batch 6 album through
+  its 15 track changes (full at 1024, lite at 1024 and 192): no step,
+  nothing non-finite, nothing clipped (peak 0.90), the same samples at every
+  callback size. The step finder reads a lost, a doubled or a cut callback
+  at 8 to 105 times the music's sharpest turn; the music's own worst is
+  2.71 (`android/native/src/samples.rs`).
+- **Step 3, the commands:** `Init` (each quality switch in the app) took
+  1.4 to 1.8 times a callback's own render, nine tenths of it the four
+  compressors settling. They are now kept after the first build at a rate
+  and copied, bit for bit the same: Init is at 42% of a mean callback, and
+  every other command at most 43% (`every_command_in_a_callback_against_promise_1`).
+- **Step 4, a switch:** Lite by hand let the old core go at once, a step in
+  the samples at 12 of 12 points in a loop. It now fades over 0.1 s, 0.15 s
+  ahead; the app's own switch fades over 0.5 s at a pass, as before. Both
+  are clean.
+- **Step 2, Diagnostics:** "reset counters" clears the native counts (the
+  underruns from the reset, the playhead's, the callbacks over their
+  deadline, the gap) and the "lite by itself" line (not the move). It also
+  clears "screen off: N s played with the screen off".
+- **Step 7, Play after a long pause:** broken on the emulator, not seen on
+  Mikey's phone. Paused, the playback service was a background service.
+  Android stopped it about a minute after the app left the screen, and the
+  session went with it, so the lock screen's Play after two minutes reached
+  nothing. The service now binds to itself until it ends itself. A button
+  pressed while paused also shows the page as if in front for ten seconds,
+  so a hidden page takes it at once. The screen-off job checks both.
+- **Step 6, the Lite rule natively:** measured with a slower phone on the
+  emulator (`android/burn.mjs`, CI's `burn` job). The emulator's stream:
+  callbacks of 1024, a buffer of 4360 frames, a thread at normal priority.
+  Mikey's phone on v201: 1024, 3848, normal, so the emulator is a close
+  stand-in. Lite was pinned to full, with E9T-ZxDxj, 40 s a reading.
+  Underruns / playhead behind / callbacks over, screen on then off:
+
+  | busiest (20 s) | screen on | screen off |
+  |---|---|---|
+  | 13-16% (no burn) | 0 / 0 / 2 | 0 / 0 / 0 |
+  | 38-45% | 0 / 0 / 2 | 0 / 0 / 1 |
+  | 63-64% | 1 / 0 / 1 | 0 / 0 / 2 |
+  | 81-83% | 3 / 0 / 3 | 0 / 0 / 1 |
+  | 90% | 9 / 10 / 8 | 8 / 7 / 4 |
+  | 96-99% | 15 / 15 / 36 | 14 / 12 / 10 |
+  | 103-112% | 43 to 132 underruns | the same |
+
+  The first underrun came at a busiest of 63%; nothing at 45% or under. So
+  the browser's line, 50% over 20 s, also sits just under where the native
+  path starts to glitch, and it stays as it is for the app. A phone with
+  room to spare isn't moved (Mikey's: 22%), and one at 63% or more is moved.
+  Rejected: a higher native line (70 or 80%) for the app's larger buffer.
+  The emulator glitched from 63% with a buffer like the phone's, and a
+  needless move to Lite costs less than a crackle. `tools/autolite.mjs` and
+  the browser's rule are unchanged. The sweep's "by itself" reading started
+  on Lite every time (the emulator has 3 cores, so the first guess is Lite).
+  The move from full is the page's rule, the same in the app, and
+  `test/quality.test.mjs` covers it.

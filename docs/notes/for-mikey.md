@@ -13,18 +13,36 @@ list of changes. The rest of the road is cut into sessions, each with a prompt t
 `docs/sessions/README.md` has the order, the model and effort for each, and
 the points where the next step is yours.
 
-## The new name's icon (item 120, v212, PR #465: a draft until 1.0)
+## The new name's icon (item 120, v216, PR #465: a draft until 1.0)
 
-- **Not final yet:** the build holds 3f as a placeholder while the drawing
-  is refined (round 10 in the PR); the final one replaces icons/icon.svg.
-- **On the Moto, once it is final:** install the APK from PR #465's last
-  android run (the run's artifact; the PR names its commit). Look at the icon on the home screen and in
-  the app drawer, with themed icons on and off (Wallpaper and style, Themed
-  icons): the themed one is the sun, the stream and two ripples in one color.
-  Play something and look at the status bar's small icon. Say if anything is
-  cut off by the launcher's shape, or hard to make out.
+- **Your pick is built:** round 20's c (the PR's last round). icons/icon.svg
+  is now that drawing, and every size is made from it.
+- **On the Moto:** install the APK from PR #465's last android run (the
+  run's artifact; the PR names its commit). Look at the icon on the home
+  screen and in the app drawer, with themed icons on and off (Wallpaper and
+  style, Themed icons): the themed one is the moon, the stream and the
+  water's light in one color. Play something and look at the status bar's
+  small icon. Say if anything is cut off by the launcher's shape, or hard to
+  make out.
 - It stays a draft: session 31 merges it with 31a's rename, so the testers
   see nothing new before 1.0.
+
+## The keyboard (item 122, v211, session 30n, #472)
+
+- **On a computer (five minutes),** DuckDuckGo or Chrome: Space plays;
+  → and ← next and previous; Shift with them a bar on and back; ↑ ↓ the
+  volume, M mute; 1 to 5 roll a layer, Shift with them a layer on or off,
+  R rolls all five; L Layers, S Sound, N back to Now playing; Esc closes
+  whatever is open; ? shows every key. Say any key that does something you
+  didn't expect, or nothing.
+- **Approve the letters,** or name others: N now playing, S sound,
+  L layers, V vibe, D moods, B bars, T track length, P tempo, E key,
+  Y style, O voices, I library, H share, X export, A advanced (K play, M
+  mute, R roll). Where a first letter was taken, the next free one of the
+  word.
+- **If your Windows has Thai and English,** the old Alt+Shift keys also
+  switched your keyboard's language; none of the new ones use Alt. Advanced
+  > Keyboard > Letter keys turns the single keys off.
 
 ## The look (item 119, v209, session 30k, #468)
 
@@ -335,6 +353,21 @@ or off.
 with headphones, after hearing them on v195 first; `docs/notes/115-crackles.md`
 has your words and your Diagnostics. Item 115 closed with #458. Pause and
 Next are heard about 0.2 s later now; you didn't notice, so it stays.
+
+**The rest of 30g (v215, #473 to #475), on your phone.** Install the
+universal APK from the `driftloom-debug-apk` artifact of
+<https://github.com/nowmichaelclark/driftloom/actions/runs/45438442207>
+(it needs a GitHub sign-in). It was built from commit 96887bf, the same
+code as main's v215. Then:
+
+- Play E9T-ZxDxj, then the Batch 6 album: ten minutes with the screen off,
+  then a few minutes behind the home screen.
+- Switch to Lite and back once, by hand. Listen for no click at the switch:
+  the old sound now fades out quickly.
+- Pause, leave it two minutes with the screen off, then press Play on the
+  lock screen. It should play (on the emulator it didn't before #475).
+- Then Diagnostics, refreshed and copied. It now has "screen off: N s" and
+  "lite by itself", and "reset counters" clears them.
 
 ## The Android app, screen off (item 107d, v188, PR #431)
 

@@ -1,6 +1,7 @@
 package app.loops
 
 import android.content.Context
+import android.os.SystemClock
 import android.view.View
 import android.webkit.WebView
 
@@ -53,5 +54,7 @@ class AppWebView(context: Context) : WebView(context) {
     // A window whose activity has stopped is GONE to its views (Home, the screen off): measured, the page was
     // hidden and its timers stopped for minutes with the rule that left GONE alone. While there is work to
     // do, every state is shown.
-    private fun shown(visibility: Int): Int = if (Playback.busy) View.VISIBLE else visibility
+    // A button pressed while paused ([Playback.wakeUntil]) is shown too, for the moment it takes.
+    private fun shown(visibility: Int): Int =
+        if (Playback.busy || SystemClock.elapsedRealtime() < Playback.wakeUntil) View.VISIBLE else visibility
 }

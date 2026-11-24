@@ -293,20 +293,36 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 ### Start here (for the next brain)
 
 - **Brain B-parallel 5 (Opus 5.5, 2026-11-24, a cloud thread of the
-  claude.ai Driftloom project on Mikey's other account; running).** Reaches
-  GitHub through its MCP tools (read, CI logs, re-runs, dispatches, merges,
-  pushes; the `gh` CLI's token there is invalid, read-only `gh run list`
-  works). Hands sessions run as threads of the project (Mikey: "Start them as
-  threads here"), from the opening messages in its files (`brain/bpar5/`);
-  Mikey sees only the icon, the brain oversees the rest (`docs/DECISIONS.md`,
-  2026-11-24). Found main green on v206 (4b7330d's sketch job was
-  longform.rs's timing flake). **Nightly** green on v206 (45354665649).
-  **Merged:** #470 (docs), #467 (30m, v207: the album export; its `flac`
-  job had timed out twice while apt fetched ffmpeg's recommends from a slow
-  mirror, fixed with `--no-install-recommends` and a cache, 8 min). **Running:**
-  30k (#468, v209, main merged in; ten rows 45363700558 on a894806), 30l
-  (draft #465, v208, Mikey's rounds; merges with 31a). **Next:** 30n (v211)
-  after 30k; 30g's Left list (v210) when a slot frees.
+  claude.ai Driftloom project on Mikey's other account; the next is session
+  30, then B5).** Hands sessions ran as threads of the project (Mikey: "Start
+  them as threads here"), from opening messages in its files
+  (`brain/bpar5/`); Mikey saw only the icon, the brain the rest
+  (`docs/DECISIONS.md`, 2026-11-24). GitHub through its MCP tools (read,
+  logs, re-runs, dispatches, merges); the `gh` CLI's token there is invalid
+  (read-only `gh run list` works), and CI's artifact host
+  (`*.blob.core.windows.net`) is blocked, so an APK goes to Mikey as the
+  run's artifact link. **Merged:** #467 (30m, v207, the album export; its
+  `flac` job had timed out twice while apt fetched ffmpeg's recommends,
+  fixed with `--no-install-recommends` and a cache), #468 (30k, v209, the
+  look; ten rows 45363700558, 10 of 10), #472 (30n, v211, the keys; ten
+  passes 45388776278; the switch kept out of the backup like Mono, the
+  brain's call: the backup holds loops and albums only), #473 to #476 (30g's
+  Left list, v213 to v215: every command timed natively, Init's compressors
+  kept, 178% to 42% of a callback; the native renders clean; Lite by hand
+  fades over; the lock screen's Play after two minutes paused fixed; Lite's
+  50% line kept on the emulator's burn sweep; ten rows 45457406778), and
+  the docs #470, #471. **Nightlies** green on v206 (45354665649), v211
+  (45410614887) and v215 (45464909251). **Open:** 30l, draft #465 (v212, a
+  placeholder; the drawing with Mikey, round 16's ten styles on
+  `s30l-shots`), its thread still running; its Left list is current.
+  **Waits on Mikey (not holding 30):** the icon's pick; the phone checks in
+  `docs/notes/for-mikey.md` (Chrome's scroll, the keys, the album export,
+  item 115's v215 test). **Learned:** GitHub runs no pull_request workflow
+  while a PR conflicts with main (30k's CI never started until main was
+  merged in); a job's timeout can be its install, not its check (read the
+  log's last lines before re-running); export dispatches and PR runs are
+  separate concurrency groups, but a by-hand nightly is cancelled by a
+  scheduled one on the same commit.
 - **Brain B-parallel 4 (Opus 5.5, 2026-11-23 to 24, in Claude Code; the
   next brain is B-parallel 5, `brain-parallel-5.md`, in a cloud session on
   Mikey's other account).** Found #458 and #459 merged, main and the nightly

@@ -150,6 +150,13 @@ export class NativeContext extends EventTarget {
     if (this._alarms.length) this._ring();
   }
 
+  // Diagnostics' "reset counters" (session 30g): the stream's underruns,
+  // the watch's figures, the busiest callback and the time played with the
+  // screen off start again from nothing.
+  resetCounts() {
+    this.bridge.postMessage(JSON.stringify({ type: 'resetCounts' }));
+  }
+
   // For Diagnostics: the stream, as the core's side says it.
   streamReport() {
     const s = this.stream;
@@ -161,7 +168,8 @@ export class NativeContext extends EventTarget {
   }
 
   // What a crackle leaves (session 30g, android/native/src/watch.rs), since
-  // the app started: lines of their own under the stream's.
+  // the app started or "reset counters": lines of their own under the
+  // stream's.
   _watchReport() {
     const s = this.stream;
     const w = s.watch;
@@ -172,6 +180,7 @@ export class NativeContext extends EventTarget {
     const lines = [
       `glitches: ${s.underruns} underruns, ${w.behind} times playback fell behind${behind}`,
       `callbacks: ${w.over} over their deadline, longest gap ${gap}`,
+      `screen off: ${Math.round(w.offSeconds || 0)} s played with the screen off`,
       ...(w.worst || []).map((c, i) => `callback, worst ${i + 1}: ${(c.share * 100).toFixed(0)}% (${c.ms.toFixed(1)} ms, ${c.frames} frames, ${c.did}), ${ago(c.ago)}`),
     ];
     return `\n${lines.join('\n')}`;

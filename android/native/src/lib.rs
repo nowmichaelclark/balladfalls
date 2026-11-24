@@ -26,6 +26,8 @@ mod engine;
 mod json;
 mod jni;
 mod ring;
+#[cfg(test)]
+mod samples;
 #[cfg_attr(not(target_os = "android"), allow(dead_code, reason = "the playhead is the stream's"))]
 mod watch;
 
@@ -75,6 +77,7 @@ mod output {
     pub fn reopen() -> Result<(), String> {
         Err("no audio device on this machine".into())
     }
+    pub fn reset_counts() {}
     pub fn stream() -> Stream {
         Stream { running: false, underruns: 0, reopens: 0, info: Info::default(), policy: -1, priority: -1, latency: 0.0, behind: 0, behind_lost: 0.0, behind_ago: 0.0 }
     }
@@ -93,7 +96,7 @@ use crate::jni::{Boolean, Double, Env, Int, Long, Object};
 
 /// The counts' order in `NativeCore.counts()`'s array; `NativeCore.kt`
 /// reads them by these places.
-pub const COUNTS: [&str; 26] = [
+pub const COUNTS: [&str; 29] = [
     "late",
     "missed",
     "dropped",
@@ -120,6 +123,9 @@ pub const COUNTS: [&str; 26] = [
     "refused",
     "collisions",
     "engine",
+    "over",
+    "behind",
+    "offSeconds",
 ];
 
 /// Every figure the debug screen and the tests read, in `COUNTS`'s order.
@@ -145,11 +151,14 @@ fn counts() -> [f64; COUNTS.len()] {
         out[23] = f64::from(c.refused.load(Ordering::Relaxed));
         out[24] = f64::from(c.collisions.load(Ordering::Relaxed));
         out[25] = 1.0;
+        out[26] = e.status.read()[engine::at::OVER];
+        out[28] = load(&c.off_frames) / e.rate();
     }
     #[allow(clippy::cast_precision_loss, reason = "counts far under 2^53")]
     {
         out[3] = s.underruns as f64;
     }
+    out[27] = f64::from(s.behind);
     out[9] = f64::from(s.info.rate);
     out[10] = f64::from(s.info.burst);
     out[11] = f64::from(s.info.buffer);
@@ -284,6 +293,14 @@ pub extern "system" fn Java_app_loops_NativeCore_resetBusiest(_env: Env, _class:
     send(&Command::ResetBusiest)
 }
 
+/// `NativeCore.screen(on)`: the phone's screen went on or off (the app's
+/// receiver of Android's screen broadcasts): the time played with it off is
+/// counted from here.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_app_loops_NativeCore_screen(_env: Env, _class: Object, on: Boolean) {
+    engine::SCREEN_OFF.store(on == 0, Ordering::Relaxed);
+}
+
 /// `NativeCore.counts()`: the figures, in `COUNTS`'s order.
 ///
 /// # Safety
@@ -345,6 +362,8 @@ fn figures(e: &Engine) -> Figures {
     };
     #[allow(clippy::cast_precision_loss, reason = "millionths, far under 2^53")]
     let busiest = c.busiest_ppm.load(Ordering::Relaxed) as f64 / 1e6;
+    #[allow(clippy::cast_precision_loss, reason = "frames of a session, far under 2^53")]
+    let off_seconds = c.off_frames.load(Ordering::Relaxed) as f64 / e.rate();
     Figures {
         running: s.running,
         rate: e.rate(),
@@ -368,6 +387,7 @@ fn figures(e: &Engine) -> Figures {
         behind: s.behind,
         behind_lost: s.behind_lost,
         behind_ago: s.behind_ago,
+        off_seconds,
     }
 }
 
@@ -388,7 +408,15 @@ pub unsafe extern "system" fn Java_app_loops_NativeCore_send(env: Env, _class: O
         Err(why) => Some(bridge::failed(&format!("the page's message: {why}"))),
         Ok(m) => {
             let mut b = BRIDGE.lock().unwrap_or_else(PoisonError::into_inner);
-            if m.get("type").str() == Some("init") {
+            if m.get("type").str() == Some("resetCounts") {
+                // Diagnostics' "reset counters" (session 30g): the engine's
+                // figures by its command, the stream's here.
+                if let Some(e) = output::engine() {
+                    e.send(&Command::ResetBusiest);
+                }
+                output::reset_counts();
+                None
+            } else if m.get("type").str() == Some("init") {
                 let (full, layout) = bridge::init_of(&m);
                 match output::start(full) {
                     Err(why) => Some(bridge::failed(&why)),
@@ -396,7 +424,9 @@ pub unsafe extern "system" fn Java_app_loops_NativeCore_send(env: Env, _class: O
                         None => Some(bridge::failed("no engine")),
                         Some(e) => {
                             b.begin();
-                            if e.send(&Command::Init { full, layout }) { None } else { Some(bridge::failed("the command queue is full")) }
+                            // A test's slower phone (`?burn=`), or none.
+                            let burn = Command::Burn(m.get("burn").u32());
+                            if e.send(&Command::Init { full, layout }) && e.send(&burn) { None } else { Some(bridge::failed("the command queue is full")) }
                         }
                     },
                 }

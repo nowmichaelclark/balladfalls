@@ -50,6 +50,13 @@ export const WARM = 5;
 export const FADE = 0.5;
 // The least time from the decision to the start of the fade, in seconds.
 export const PREP = 0.5;
+// The listener's own switch (session 30g, queue item 115, step 4): heard
+// at once, so a short fade from a little ahead (for Mikey's ears). Ahead
+// by more than the Android app's core renders between two of the page's
+// readings of its clock (its callbacks come in runs of about 40 ms), so
+// the fade starts where the core has not yet been.
+export const HAND_PREP = 0.15;
+export const HAND_FADE = 0.1;
 // Too slow even on lite: over this many seconds of playing, this many
 // quarter-seconds behind real time, or this many of the device's fill-ins.
 export const STUCK_FOR = 20;

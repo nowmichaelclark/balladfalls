@@ -683,3 +683,30 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   slider, the card) scrolls the address bar away and back, a drag across
   moves a slider. The screens before and after: branch `s30k-shots`,
   `before-after/`. Listen for nothing. No album loop.
+- #472, the keyboard as music players have it (item 122, session 30n,
+  v211), preview URL:
+  <https://claude-project-thread-bdjftj-driftloom.nowmichaelclark.workers.dev>
+  (the branch's): Space and K play, → ← next and previous, Shift with them
+  a bar, ↑ ↓ the volume, M mute, R and 1 to 5 the dice, Shift with 1 to 5 a
+  layer on and off, a letter a view, Esc back, ? the list of keys; Advanced's
+  letter keys switch turns the single keys off. Listen for nothing (the
+  volume keys move the Sound view's slider). No album loop.
+- #473, every command timed on the audio thread (item 115, session 30g's
+  Left list, step 3, v213), preview URL: the branch's preview (no hash
+  kept): the master keeps its four compressors after the first build at a
+  rate, so a quality switch's Init no longer costs 1.4 to 1.8 callbacks
+  natively (now 42%). Bit for bit the same sound. Listen for nothing. No
+  album loop.
+- #474, the samples read for steps and Lite by hand without a click (item
+  115, session 30g, steps 1 and 4, v214), preview URL: the branch's preview
+  (no hash kept): E9T-ZxDxj and the Batch 6 album are clean in the native
+  samples at every callback size; Lite switched by hand now fades the old
+  sound out over 0.1 s instead of cutting it mid-note. Listen for: no click
+  when you switch Lite on or off. No album loop.
+- #475, what the phone says, and Play after a long pause (item 115, session
+  30g, steps 2, 6 and 7, v215), preview URL: the branch's preview (no hash
+  kept): "reset counters" clears the native counts and the "lite by itself"
+  line; Diagnostics says the time played with the screen off; the lock
+  screen's Play after two minutes paused plays again (Android had stopped
+  the paused service and its session); a slower phone swept on the emulator
+  kept Lite's 50% line for the app. Listen for nothing new. No album loop.

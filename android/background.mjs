@@ -7,7 +7,7 @@
 // (`dumpsys`, `cmd media_session`, `input`, `uiautomator`). What CI's
 // `background` job runs (android/emulator-background.sh boots the emulator).
 //
-//   node android/background.mjs [--minutes 10] [--no-export] [--summary FILE] [--shots DIR]
+//   node android/background.mjs [--minutes 10] [--paused 120] [--no-export] [--summary FILE] [--shots DIR]
 //
 // An album (item 121): pasted, played, and exported whole, as one zip
 // through the same picker and as a file a track into a folder chosen in
@@ -39,6 +39,9 @@ const MINUTES = Number(opt('--minutes', '10'));
 const EXPORT = !argv.includes('--no-export');
 const SUMMARY = opt('--summary', '');
 const SHOTS = opt('--shots', '');
+// How long the lock screen's Play waits, paused with the screen off: two
+// minutes (session 30g, step 7).
+const PAUSED_MS = Number(opt('--paused', '120')) * 1000;
 const pkg = appId();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const log = (...a) => console.log(...a);
@@ -110,6 +113,12 @@ const heartbeats = () => logcat('DriftloomService').filter((l) => l.includes('he
   dropped: Number((/dropped=(\d+)/.exec(l) || [])[1]),
   frames: Number((/frames=(\d+)/.exec(l) || [])[1]),
   rate: Number((/rate=(\d+)/.exec(l) || [])[1]),
+  // Session 30g's counts (android/native/src/watch.rs): callbacks over
+  // their deadline, times the speaker's playhead fell behind the clock, and
+  // the seconds played with the screen off.
+  over: Number((/ over=(\d+)/.exec(l) || [])[1]),
+  behind: Number((/ behind=(\d+)/.exec(l) || [])[1]),
+  off: Number((/ off=([\d.]+)s/.exec(l) || [])[1]),
   line: l,
 }));
 
@@ -359,6 +368,9 @@ try {
     const span = (mine.length - 1) * 60;
     check('the audio thread kept real time: its frames over the minutes are those minutes', Math.abs(secs - span) <= 3, `${secs.toFixed(1)} s of sound in ${span} s`);
     check('no underrun with the screen off', z.under === a.under, `underruns ${a.under} -> ${z.under}`);
+    check('no glitch by the playhead with the screen off: it never fell behind the clock', z.behind === a.behind, `behind ${a.behind} -> ${z.behind}`);
+    check('the time played with the screen off is counted: those minutes', Math.abs((z.off - a.off) - span) <= 3, `${(z.off - a.off).toFixed(1)} s off of ${span} s`);
+    fact('callbacks over their deadline with the screen off (a figure, not a glitch: the buffer holds them)', `${z.over - a.over}`);
     check('nothing late, missed or dropped', mine.every((b) => b.late === 0 && b.missed === 0 && b.dropped === 0), z.line.replace(/^.*heartbeat /, ''));
     fact('the callback', z.line.replace(/^.*heartbeat /, ''));
   }
@@ -394,14 +406,32 @@ try {
   if (!check('Pause pauses the page', !(await playingNow()))) evidence('Pause');
   await waitFor('the session to say paused', () => sessionState() === 2, 15000).catch(() => null);
   check('the session says paused', sessionState() === 2, `state ${sessionState()}`);
+  // Two minutes paused with the screen off (session 30g, step 7): past the
+  // minute after which the system freezes a hidden page's timers, so the
+  // lock screen's Play below is pressed on a frozen page, as a listener's
+  // after a long pause is.
   await sleep(11000);
   check('paused: no wake lock, no audio focus', !wakeLockHeld() && !focusHeld(), `wake ${wakeLocks().join(' | ').trim()}, focus ${focusHeld()}`);
   check('paused: the service is not foreground; the notification stays (Play)', !service().foreground && /Play/.test(notification()), JSON.stringify(service()));
   check('paused: the stream is stopped (nothing runs)', logcat('DriftloomStream').some((l) => l.includes('stream stopped')), logcat('DriftloomStream').slice(-3).join('\n'));
 
+  await sleep(PAUSED_MS - 11000);
+  fact('the page after two minutes paused', JSON.stringify(await hiddenPage()));
+  // What the lock screen's Play needs: the service and its session, still
+  // there (Android stops a background service a minute after the app left
+  // the screen, and the session went with it, until the service kept itself).
+  check('paused two minutes: the service and its session are still there', service().running && session().length > 0, JSON.stringify(service()));
+  const playAt = Date.now();
   dispatch('play');
   await waitFor('Play to play', () => playingNow(), 20000).catch(() => null);
-  check('Play plays the page again', await playingNow());
+  check('Play, after two minutes paused with the screen off, plays the page again', await playingNow(), `${Date.now() - playAt} ms`);
+  {
+    // And it sounds: the stream started again and its frames move.
+    const before = heartbeats().length;
+    await waitFor('a heartbeat while playing', () => heartbeats().length > before, 70000).catch(() => null);
+    const b = heartbeats().slice(before);
+    check('after the long pause the audio thread plays again (a heartbeat while playing)', b.length > 0, b.map((x) => x.line.replace(/^.*heartbeat /, '')).join(' | ').slice(0, 300));
+  }
   await sleep(3000);
   check('playing again: the stream is back, and the lock is held', logcat('DriftloomStream').some((l) => l.includes('stream started')) && wakeLockHeld() && service().foreground, JSON.stringify(service()));
 

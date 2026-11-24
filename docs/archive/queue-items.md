@@ -4267,3 +4267,26 @@ nothing broken.
   screen as keys (copy code, paste code, export audio), export audio a view
   of a key a format (flac, midi, the small one). Screen readers keep full
   names. **Yardsticks:** a before and after table for Mikey.
+
+## 115. No crackles in the Android app (done, hands, 2026-11-23 to 24)
+
+**Hands:** session 30g (`docs/sessions/30g-crackles.md`), beside 30f on
+the audio path and before 30; then Mikey's ears, which alone close it. He heard a few crackles
+in v195's app on the moto g stylus 5G (2022), and it moved to Lite by
+itself; "Yes, blocker". His second test: only with the screen off, on full
+and Lite alike (none heard in Chrome). The evidence, the suspects apart from what is known:
+`docs/notes/115-crackles.md`. **Yardsticks:** the album's native renders
+free of discontinuities, no command on the audio thread past promise 1, a
+switch without a click, then a clean listen on that phone.
+
+**Closed, 2026-11-23,** by that listen, with #458 (v201: the stream on
+Android's deep buffer, as Chrome opens it): "There are no more crackles"
+(Mikey, headphones, after hearing v195 crackle on them). Its other
+yardsticks, met 2026-11-24 by #473, #474 and #475 (v213 to v215): the
+native samples clean, every command timed against promise 1, a switch
+without a click, Lite's line measured natively (kept at 50%), and the lock
+screen's Play after a long pause (it was broken: fixed). One check on
+Mikey's phone is in `docs/notes/for-mikey.md`.
+
+**Its Left list done, 2026-11-24** (#473 to #476, v213 to v215; session
+30g's file).

@@ -39,6 +39,13 @@ object Playback {
     /** The listener paused while a call had the music paused: it is not to start again when the call ends. */
     @Volatile var cancelResume = false
 
+    /**
+     * Until when (the clock's, in ms) the page is shown as if in front though nothing plays: a button pressed
+     * while paused in the background, so the page, its timers slowed or stopped, takes it at once
+     * ([AppWebView], session 30g, step 7).
+     */
+    @Volatile var wakeUntil = 0L
+
     /** Whether the service has anything to hold on for. */
     val busy get() = playing || exporting
 

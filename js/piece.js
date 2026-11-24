@@ -357,6 +357,14 @@ function askedPlace(model, bar) {
   };
 }
 
+// The playhead a section on or back (the keyboard's Shift with an arrow,
+// js/shortcuts.js), from any view: true where the loop is a long piece.
+export function stepPiece(dir) {
+  if (!updatePiece()) return false;
+  toSection(dir);
+  return true;
+}
+
 function toSection(dir) {
   if (!view || !view.model) return;
   const place = host.place() || view.place;

@@ -215,6 +215,20 @@ pub struct Master {
     /// What reaches the bus compressor, and what leaves the ceiling.
     before_comp: [Signal; OUT],
     out: [Signal; OUT],
+    /// The four compressors as `settle` left them, and the rate they were
+    /// settled at (0 before the first): see `warm`.
+    settled: Settled,
+    settled_at: f64,
+}
+
+/// The compressors at rest after `settle`, kept for the next build at the
+/// same rate.
+#[derive(Clone)]
+struct Settled {
+    comp: Compressor<1>,
+    comp2: Compressor<2>,
+    ceiling: Compressor<1>,
+    ceiling2: Compressor<2>,
 }
 
 impl Master {
@@ -248,7 +262,43 @@ impl Master {
             bypass: false,
             before_comp: [[0.0; QUANTUM]; OUT],
             out: [[0.0; QUANTUM]; OUT],
+            settled: Settled { comp: Compressor::new(), comp2: Compressor::new(), ceiling: Compressor::new(), ceiling2: Compressor::new() },
+            settled_at: 0.0,
         }
+    }
+
+    /// Both compressors and both ceilings built at `rate` and started warm
+    /// (`Compressor::settle`): the first notes after a Play, a rebuild or
+    /// the core's arrival are not dipped. Settling plays four seconds of
+    /// silence through each, nine tenths of a rebuild's time (about a
+    /// millisecond on a desktop, natively), and where they come to rest
+    /// depends on the rate and the settings alone (`Compressor::init` starts
+    /// each from nothing). So the first build at a rate settles them and
+    /// keeps them, and each later one at that rate copies them, bit for bit
+    /// the same: the Android app rebuilds on its audio thread at a quality
+    /// switch, where that millisecond was the one command heavier than a
+    /// block's own render (session 30g, queue item 115; `docs/CORE.md`,
+    /// promise 1).
+    fn warm(&mut self, rate: f64) {
+        #[allow(clippy::float_cmp, reason = "the very rate they were settled at, or not")]
+        let kept = self.settled_at == rate;
+        if !kept {
+            self.comp.init(rate, COMP);
+            self.comp.settle();
+            self.comp2.init(rate, COMP);
+            self.comp2.settle();
+            self.ceiling.init(rate, CEILING);
+            self.ceiling.settle();
+            self.ceiling2.init(rate, CEILING);
+            self.ceiling2.settle();
+            self.settled = Settled { comp: self.comp.clone(), comp2: self.comp2.clone(), ceiling: self.ceiling.clone(), ceiling2: self.ceiling2.clone() };
+            self.settled_at = rate;
+            return;
+        }
+        self.comp.clone_from(&self.settled.comp);
+        self.comp2.clone_from(&self.settled.comp2);
+        self.ceiling.clone_from(&self.settled.ceiling);
+        self.ceiling2.clone_from(&self.settled.ceiling2);
     }
 
     /// Build the chain at `rate`, oversampling the saturator on full
@@ -281,19 +331,10 @@ impl Master {
         for aim in &mut self.arc_aim {
             aim.configure(0.0, 0.0, 1.0);
         }
-        // Both compressors start warm (`Compressor::settle`): the first
-        // notes after a Play, a rebuild or the core's arrival are not dipped.
-        self.comp.init(rate, COMP);
-        self.comp.settle();
-        self.comp2.init(rate, COMP);
-        self.comp2.settle();
+        self.warm(rate);
         self.volume.configure(f(MASTER), any.0, any.1);
         self.kill.configure(1.0, any.0, any.1);
         self.track.configure(1.0, 0.0, 1.0);
-        self.ceiling.init(rate, CEILING);
-        self.ceiling.settle();
-        self.ceiling2.init(rate, CEILING);
-        self.ceiling2.settle();
         self.width.ready(&width::REST, rate);
         // The layout is the host's (`set_layout`), kept across a rebuild.
         self.layout = self.layout.clamp(1, OUT);
@@ -836,6 +877,56 @@ mod tests {
         };
         assert!(dip(true) < -3.0, "cold {}", dip(true));
         assert!(dip(false) > -1.0, "warm {}", dip(false));
+    }
+
+    /// A rebuild at the rate the compressors were settled at copies them
+    /// (`warm`): after a loud tone has pressed them, the rebuilt chain plays
+    /// a tone bit for bit as a chain built fresh does; and one at another
+    /// rate settles anew, as a fresh one there.
+    #[test]
+    fn a_rebuild_at_the_same_rate_starts_as_a_fresh_one() {
+        // A master is built on the stack before it is boxed: a thread with
+        // room for it, as `built`.
+        std::thread::Builder::new().stack_size(1 << 26).spawn(rebuild_as_fresh).expect("thread").join().expect("passed");
+    }
+
+    fn rebuild_as_fresh() {
+        let tone = |b: u64, amp: f64, rate: f64| -> Signal {
+            core::array::from_fn(|i| {
+                let n = (b as usize * QUANTUM + i) as f64;
+                (amp * (2.0 * core::f64::consts::PI * 220.0 * n / rate).sin()) as f32
+            })
+        };
+        let (mut used, waves) = built(true);
+        // Mono and stereo each have their own pair of compressors: both
+        // pressed hard first.
+        for lanes in [1, 2] {
+            used.set_layout(lanes);
+            for b in 0..400u64 {
+                used.process(b * QUANTUM as u64, &[tone(b, 0.9, RATE), tone(b, 0.9, RATE)], &waves);
+            }
+            assert!(used.reduction(0) < -1.0 && used.reduction(1) < 0.0, "pressed: {} and {}", used.reduction(0), used.reduction(1));
+        }
+        for (rate, full) in [(RATE, true), (RATE, false), (48_000.0, true)] {
+            let mut w = Box::new(Waves::new());
+            w.build(rate as f32, &mut Fft::new());
+            for lanes in [1, 2] {
+                assert!(used.init(rate, full));
+                assert_eq!(used.settled_at.to_bits(), rate.to_bits());
+                used.set_layout(lanes);
+                let mut fresh = Box::new(Master::new());
+                assert!(fresh.init(rate, full));
+                fresh.set_layout(lanes);
+                for b in 0..300u64 {
+                    let input = [tone(b, 0.7, rate), tone(b, 0.7, rate)];
+                    let a = *used.process(b * QUANTUM as u64, &input, &w);
+                    let f = *fresh.process(b * QUANTUM as u64, &input, &w);
+                    for lane in 0..lanes {
+                        assert!(a[lane].iter().zip(f[lane].iter()).all(|(x, y)| x.to_bits() == y.to_bits()), "rate {rate}, full {full}, lanes {lanes}, block {b}");
+                    }
+                }
+            }
+        }
     }
 
     #[test]

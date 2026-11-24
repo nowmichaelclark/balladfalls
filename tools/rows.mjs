@@ -1736,6 +1736,31 @@ async function main() {
       row('Diagnostics: the core\'s player, nothing late, missed or dropped, no event lost, no edit refused', /the core's player\)\s+late: 0\s+missed: 0\s+dropped: 0/.test(engineLine)
         && /playerEventsLost: 0/.test(text) && /playerRefused: 0/.test(text), `${engineLine}; ${text.split('\n').filter((l) => /^player(EventsLost|Refused)/.test(l)).join(', ')}`);
     }
+    // Why the app last moved to lite by itself (session 30g, step 2): said,
+    // and "reset counters" clears the line but not the move (the rule
+    // still never moves twice).
+    {
+      const KEY = 'driftloom.prefs.v1';
+      await ev((k) => {
+        const p = JSON.parse(localStorage.getItem(k) || '{}');
+        p.liteAuto = { lite: true, why: 'busiest 61% at full', at: '2026-01-02T03:04:05.000Z' };
+        delete p.liteAutoReset;
+        localStorage.setItem(k, JSON.stringify(p));
+      }, KEY);
+      const said = (await diag()).split('\n').find((l) => l.startsWith('lite by itself:')) || '';
+      await clickId('diagReset');
+      const after = (await diag()).split('\n').find((l) => l.startsWith('lite by itself:')) || '';
+      const kept = await ev((k) => {
+        const p = JSON.parse(localStorage.getItem(k) || '{}');
+        const had = !!p.liteAuto;
+        delete p.liteAuto;
+        delete p.liteAutoReset;
+        localStorage.setItem(k, JSON.stringify(p));
+        return had;
+      }, KEY);
+      row('Diagnostics: why the app last moved to lite, and reset counters clears the line, the move kept', said === 'lite by itself: last on at 2026-01-02T03:04:05.000Z (busiest 61% at full)'
+        && after === 'lite by itself: never since reset counters' && kept, `${said} | ${after} | kept ${kept}`);
+    }
     if (APP) await appRows({ ev, diag, clickId, level, probe });
 
     // The track length (the Track length view, session 30c): a minute.

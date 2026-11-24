@@ -2600,10 +2600,12 @@ function wire() {
     lines.push(`gpu: ${gpu.renderer}  accelerated: ${gpu.accelerated}`);
     lines.push(`cores: ${navigator.hardwareConcurrency || '?'}  lite: ${state.lite}, ${liteSource()}`);
     // The app's own last move, kept after the listener's choice overrides
-    // it (session 30g: "yours" alone hid why it moved).
+    // it (session 30g: "yours" alone hid why it moved). "reset counters"
+    // clears the line, not the move: the rule still never moves twice.
     {
-      const auto = store.getPrefs().liteAuto;
-      lines.push(auto ? `lite by itself: last ${auto.lite ? 'on' : 'off'} at ${auto.at || '?'} (${auto.why})` : 'lite by itself: never');
+      const { liteAuto: auto, liteAutoReset: reset } = store.getPrefs();
+      const since = auto && !(reset && (!auto.at || auto.at <= reset));
+      lines.push(since ? `lite by itself: last ${auto.lite ? 'on' : 'off'} at ${auto.at || '?'} (${auto.why})` : `lite by itself: never${reset ? ' since reset counters' : ''}`);
     }
     // "Let the loop wander" (queue item 92): unrepeatable across the
     // slider's upper range, with this play's salt.
@@ -2655,6 +2657,7 @@ function wire() {
     if (state.engine) state.engine.clearMetrics();
     // The Android app's native counts (session 30g): the stream's, too.
     if (state.ctx && state.ctx.native) state.ctx.resetCounts();
+    store.setPrefs({ liteAutoReset: new Date().toISOString() });
     renderDiag();
     ui.toast('Reset', 'Counters cleared');
   });

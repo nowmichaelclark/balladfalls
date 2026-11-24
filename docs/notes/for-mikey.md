@@ -20,7 +20,7 @@ the points where the next step is yours.
 - **On the Moto, once it is final:** install the APK from PR #465's last
   android run (the run's artifact; the PR names its commit). Look at the icon on the home screen and in
   the app drawer, with themed icons on and off (Wallpaper and style, Themed
-  icons): the themed one is the sun, the falls and two ripples in one color.
+  icons): the themed one is the sun, the stream and two ripples in one color.
   Play something and look at the status bar's small icon. Say if anything is
   cut off by the launcher's shape, or hard to make out.
 - It stays a draft: session 31 merges it with 31a's rename, so the testers

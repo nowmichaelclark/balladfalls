@@ -14,7 +14,7 @@
      to what they can draw: shapes and absolute paths, flat fills, linear
      gradients, a radial one only on a circle, a clip, a group's translate
      and scale. The class "key" marks what must stay inside every safe zone (the
-     sun, the falls, its first ripple); the script fails if it doesn't. -->
+     sun, the stream, its first ripple); the script fails if it doesn't. -->
 <defs>
   <linearGradient id="sky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="512"><stop offset="0" stop-color="#2c1a4a"/><stop offset="0.43" stop-color="#5a3060"/><stop offset="0.79" stop-color="#e08a5a"/></linearGradient>
   <linearGradient id="lake" gradientUnits="userSpaceOnUse" x1="0" y1="404" x2="0" y2="512"><stop offset="0" stop-color="#4a2a58"/><stop offset="1" stop-color="#1c0e2c"/></linearGradient>

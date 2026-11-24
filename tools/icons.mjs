@@ -19,7 +19,7 @@
 // those XML files, read back, not from the SVG.
 //
 // The checks, each a failure (exit 1):
-//   - what icons/icon.svg marks with class="key" (the sun, the falls, its
+//   - what icons/icon.svg marks with class="key" (the sun, the stream, its
 //     first ripple) lies inside the maskable icon's safe zone (the circle of
 //     40% of its size, the W3C's) and inside Android's adaptive-icon safe
 //     zone (the 66 dp circle of the 108 dp layer);

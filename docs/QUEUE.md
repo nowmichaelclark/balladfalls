@@ -649,30 +649,10 @@ changelog, codes frozen (105), the nightly's checks back as merge gates
   with a measured aim; for Broken Friends' web build, the header's line is
   enough.
 
-## 115. No crackles in the Android app (a 1.0 blocker; 2026-11-22)
-
-**Hands:** session 30g (`docs/sessions/30g-crackles.md`), beside 30f on
-the audio path and before 30; then Mikey's ears, which alone close it. He heard a few crackles
-in v195's app on the moto g stylus 5G (2022), and it moved to Lite by
-itself; "Yes, blocker". His second test: only with the screen off, on full
-and Lite alike (none heard in Chrome). The evidence, the suspects apart from what is known:
-`docs/notes/115-crackles.md`. **Yardsticks:** the album's native renders
-free of discontinuities, no command on the audio thread past promise 1, a
-switch without a click, then a clean listen on that phone.
-
-**Closed, 2026-11-23,** by that listen, with #458 (v201: the stream on
-Android's deep buffer, as Chrome opens it): "There are no more crackles"
-(Mikey, headphones, after hearing v195 crackle on them). Its other
-yardsticks, met 2026-11-24 by #473, #474 and #475 (v213 to v215): the
-native samples clean, every command timed against promise 1, a switch
-without a click, Lite's line measured natively (kept at 50%), and the lock
-screen's Play after a long pause (it was broken: fixed). One check on
-Mikey's phone is in `docs/notes/for-mikey.md`.
-
 ## 116 to 122. Mikey's last changes, before the polish (2026-11-23)
 
 Mikey's list of 2026-11-23, his answers folded in (`docs/DECISIONS.md`, that
-day), as seven sessions run two at a time by brain B-parallel 4; the order
+day), as seven sessions run two at a time by brains B-parallel 4 and 5 (all merged by 2026-11-24 but 120, a draft until 31); the order
 and what may run together are `docs/sessions/README.md`, "Mikey's last
 changes". Each brief, in his words, is its session's file. All hold 1.0:
 session 30 waits for them.
@@ -840,6 +820,12 @@ stay channel sources until an ears session needs a voice's note-by-note play
   runs it on Endless; `tools/export-long.mjs`'s "no fill-ins" passes with no
   count; `tools/track-fades.mjs`'s "first 5 ms silence" passes with the fade
   in off.
+- **CI's slow parts, 2026-11-24 (brain B-parallel 5); for session 30:** the
+  ten rows (export, repeat=10) take about 130 minutes now, and #472 raised
+  the rows job's timeout from 120 to 180 minutes for them; apt's mirror can
+  take 19 minutes for ffmpeg with its recommends (the `flac` job installs
+  without them and caches the packages since #467; export's long job
+  installs without them too).
 - **The export rows' "music on" on a sparse loop; for session 30** (hands
   30j, 2026-11-24, #463): it failed twice in about twenty passes after v204
   (30h's branch once; run 45271085229, pass 9, the small export's Cancel

@@ -294,18 +294,19 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 
 - **Brain B-parallel 5 (Opus 5.5, 2026-11-24, a cloud thread of the
   claude.ai Driftloom project on Mikey's other account; running).** Reaches
-  GitHub through its MCP tools (read, CI logs, re-runs, dispatches, pushes;
-  the `gh` CLI's token there is invalid, read-only `gh run list` works).
-  Found main green on v206 (f074f57; 4b7330d's sketch job was longform.rs's
-  timing flake); the nightly last on v204, started by hand on main. The
-  opening messages for 30m, 30k, 30l, 30n and 30g's Left list are in the
-  project's files (`brain/bpar5/`). **#467 (30m, v207):** its Android run is
-  green on 0fd6bc9 (`--app` rows, background); `flac` was cancelled by its
-  20-minute timeout while apt installed ffmpeg (19 min), re-run. **#468
-  (30k, v209):** conflicts with main on BUILD and CACHE only, which is why
-  CI never ran on ea26eb2. **#465 (30l):** v208, a placeholder, a draft
-  until 31. **Next:** 30m and 30k side by side; 30g's Left list (v210) after
-  30m; 30n (v211) after 30k and 30m; 30l when Mikey wants to draw.
+  GitHub through its MCP tools (read, CI logs, re-runs, dispatches, merges,
+  pushes; the `gh` CLI's token there is invalid, read-only `gh run list`
+  works). Hands sessions run as threads of the project (Mikey: "Start them as
+  threads here"), from the opening messages in its files (`brain/bpar5/`);
+  Mikey sees only the icon, the brain oversees the rest (`docs/DECISIONS.md`,
+  2026-11-24). Found main green on v206 (4b7330d's sketch job was
+  longform.rs's timing flake). **Nightly** green on v206 (45354665649).
+  **Merged:** #470 (docs), #467 (30m, v207: the album export; its `flac`
+  job had timed out twice while apt fetched ffmpeg's recommends from a slow
+  mirror, fixed with `--no-install-recommends` and a cache, 8 min). **Running:**
+  30k (#468, v209, main merged in; ten rows 45363700558 on a894806), 30l
+  (draft #465, v208, Mikey's rounds; merges with 31a). **Next:** 30n (v211)
+  after 30k; 30g's Left list (v210) when a slot frees.
 - **Brain B-parallel 4 (Opus 5.5, 2026-11-23 to 24, in Claude Code; the
   next brain is B-parallel 5, `brain-parallel-5.md`, in a cloud session on
   Mikey's other account).** Found #458 and #459 merged, main and the nightly

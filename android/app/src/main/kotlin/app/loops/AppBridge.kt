@@ -101,6 +101,13 @@ class AppBridge(
                 false
             } else {
                 main.post {
+                    // Paused in the background, the page's timers are slowed or stopped: it is shown as if in
+                    // front for a moment, so it takes the action now (session 30g, step 7), then as it is.
+                    if (!Playback.busy) {
+                        Playback.wakeUntil = SystemClock.elapsedRealtime() + WAKE_MS
+                        view.refreshVisibility()
+                        main.postDelayed({ view.refreshVisibility() }, WAKE_MS + 100)
+                    }
                     Log.i(PlaybackService.TAG, "action $action: posted to the page")
                     proxy?.postMessage("""{"type":"action","action":"$action"}""")
                 }
@@ -418,6 +425,8 @@ class AppBridge(
     companion object {
         /** The object's name in the page (js/app.js reads it). */
         const val NAME = "DriftloomApp"
+        /** How long a button pressed while paused shows the page as if in front ([Playback.wakeUntil]). */
+        private const val WAKE_MS = 10_000L
 
         const val REQ_SAVE = 41
         const val REQ_OPEN = 42

@@ -417,6 +417,10 @@ try {
 
   await sleep(PAUSED_MS - 11000);
   fact('the page after two minutes paused', JSON.stringify(await hiddenPage()));
+  // What the lock screen's Play needs: the service and its session, still
+  // there (Android stops a background service a minute after the app left
+  // the screen, and the session went with it, until the service kept itself).
+  check('paused two minutes: the service and its session are still there', service().running && session().length > 0, JSON.stringify(service()));
   const playAt = Date.now();
   dispatch('play');
   await waitFor('Play to play', () => playingNow(), 20000).catch(() => null);

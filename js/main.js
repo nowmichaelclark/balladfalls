@@ -16,7 +16,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v213';
+const BUILD = 'v214';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -370,22 +370,42 @@ function autoQuality({ lite, why, at }) {
   setLiteSwitch(lite);
   showLiteSource();
   awayEvent(`lighter on processor: ${lite ? 'on' : 'off'} by itself (${why})`);
+  switchQuality(at);
+}
+
+// The output rebuilt at the quality now chosen (`state.lite`), the loop
+// playing handed over without a cut: the old one fades out and is let go
+// once it is silent, and the new one takes the loop from its top. The app's
+// own switch waits for the next pass (or bar, `at`); the listener's ('now',
+// session 30g, step 4) fades at once, briefly: letting the old output go
+// at once cut the sound mid-note (a step in the samples; android/native's
+// `a_switch_by_hand_or_by_itself_goes_over_without_a_step`). A switch
+// already under way builds at the quality chosen when it ends.
+function switchQuality(at) {
   const engine = state.engine;
   if (!engine || !engine.playing || !state.spec) {
     // Nothing playing: the next output is simply built at the new quality.
     if (state.output) buildAudio();
     return;
   }
+  if (state.switching) return;
   const now = state.ctx.currentTime;
-  const base = engine.live || engine.base;
-  const unit = at === 'bar' ? (state.spec.stepsPerBar || 16) : base.totalSteps;
-  const when = quality.boundary(engine, unit, now + quality.PREP + quality.FADE);
+  let when;
+  let fade = quality.FADE;
+  if (at === 'now') {
+    fade = quality.HAND_FADE;
+    when = now + quality.HAND_PREP + fade;
+  } else {
+    const base = engine.live || engine.base;
+    const unit = at === 'bar' ? (state.spec.stepsPerBar || 16) : base.totalSteps;
+    when = quality.boundary(engine, unit, now + quality.PREP + quality.FADE);
+  }
   if (when === null) {
     buildAudio();
     return;
   }
   const old = { output: state.output, media: state.media, engine };
-  quality.handOff(old, when);
+  quality.handOff(old, when, fade);
   const alarm = quality.alarm(state.ctx, when, () => {
     if (!state.switching || state.switching.old !== old) return;
     state.switching = null;
@@ -2547,7 +2567,7 @@ function wire() {
     // The listener's choice: kept as theirs, and never changed by the app.
     store.setPrefs({ lite: state.lite });
     showLiteSource();
-    if (state.output) buildAudio();
+    if (state.output) switchQuality('now');
     // An export running takes the new speed.
     if (state.audioExport) state.audioExport.setPace();
   });

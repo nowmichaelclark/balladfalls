@@ -26,6 +26,8 @@ mod engine;
 mod json;
 mod jni;
 mod ring;
+#[cfg(test)]
+mod samples;
 #[cfg_attr(not(target_os = "android"), allow(dead_code, reason = "the playhead is the stream's"))]
 mod watch;
 

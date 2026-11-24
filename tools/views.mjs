@@ -348,6 +348,32 @@ const PHASES = [
     await click(tab, '#trkCancel');
     await sleep(1000);
   } },
+  // The tempo, key, style and voices pickers (session 30j, queue item 118):
+  // each opened from its line, keys pressed and pages turned as a listener
+  // would, then done (the picks go to the core for loops still to come),
+  // and clear all.
+  { view: 'pickers', run: async (tab) => {
+    await go(tab, 'now');
+    await click(tab, '#vibesBtn');
+    for (const [line, keys, done] of [
+      ['tempo', ['#tmpUp', '#tmpUp', '#tmpDown'], '#tmpDone'],
+      ['key', ['#keyGrid button:nth-child(3)', '#viewKey .pv-tab[data-tab="scale"]', '#keyGrid button:nth-child(1)', '#keyNext', '#keyPrev'], '#keyDone'],
+      ['style', ['#styGrid button:nth-child(2)', '#styGrid button:nth-child(3)', '#styNext'], '#styDone'],
+      ['voices', ['#viewVoices .pv-tab[data-tab="melody"]', '#voxGrid button:nth-child(1)', '#voxOn', '#voxNext', '#viewVoices .pv-tab[data-tab="drums"]', '#voxOff'], '#voxDone'],
+    ]) {
+      await click(tab, `#picksList .pk-go-${line}`);
+      if (!(await view(tab, line))) throw new Error(`could not reach ${line}`);
+      await sleep(800);
+      for (const k of keys) {
+        if (await tab.evaluate(`!!document.querySelector('${k}:not([disabled])') && document.querySelector('${k}').checkVisibility()`)) await click(tab, k);
+        await sleep(400);
+      }
+      await click(tab, done);
+      await sleep(1200);
+    }
+    await click(tab, '#picksClear');
+    await sleep(2000);
+  } },
   { view: 'library: albums', run: async (tab) => {
     await go(tab, 'library');
     await click(tab, '[data-tab="albums"]');

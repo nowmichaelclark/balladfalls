@@ -2832,6 +2832,9 @@ button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
 .t-dawn, .t-ember, .t-tidal, .t-olive { --mark-text: color-mix(in srgb, var(--mark) 60%, var(--text-primary)); }
 /* The length color on the two mid-tone panels: 3:1 as a fill and a glyph. */
 .t-ember, .t-tidal { --pk-length: #5a38b8; }
+/* The tempo color on the three mid-tone panels (session 30j): 3:1 as the
+   tempo sliders' fill and ring. */
+.t-ember, .t-tidal, .t-olive { --pk-tempo: #0c5f58; }
 /* Play's glyph has a dark edge where the gloss under it is pale. */
 .t-dawn { --play-edge: #6e3d08; }
 .t-ember { --play-edge: #5c0c30; }
@@ -2994,4 +2997,157 @@ html.bar-scroll :is(.scroll, .vb-list)::after {
   (max-height: 279.98px) and (pointer: none) and (min-width: 480px) {
   .phone { height: 320px; }
   .zone-dynamic { padding-top: 8px; }
+}
+
+/* ============================================================
+   THE FOUR PICKERS (session 30j, queue item 118; js/pickers.js)
+   Tempo, Key, Style and Voices, built on the Bars view's parts: the
+   head (cancel, the title, done), then the body. Keys lit the app's
+   way (a ring in the primary text colour, the line's colour inside
+   it) are what is asked: one pinned, several a set; none lit and the
+   any key lit is left to chance. Long lists page, never scroll.
+   ============================================================ */
+.pk-head #picksClear { margin-right: auto; flex: 0 0 auto; font-size: min(0.75rem, 18px); }
+.ln-head .pv-cancel { justify-self: start; }
+.pv-body {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 6px 4px;
+}
+/* What is asked, in the panel's words; "any" in the quiet colour. */
+.pv-value {
+  flex: 0 0 auto; margin: 0; text-align: center;
+  font-family: 'Inter', sans-serif; font-size: min(0.9375rem, 22px); font-weight: 600; line-height: 1.25;
+  color: var(--text-primary); overflow-wrap: anywhere;
+}
+.pv-value.any { color: var(--text-secondary); font-weight: 500; }
+.pv-cant {
+  flex: 0 0 auto; margin: 0; text-align: center;
+  font-family: 'Inter', sans-serif; font-size: min(0.75rem, 18px); font-weight: 500; line-height: 1.25;
+  color: var(--text-secondary);
+}
+/* Note or scale; the five layers. The one shown is ringed; a dot after
+   a name says it asks something. */
+.pv-tabs { flex: 0 0 auto; display: flex; gap: 6px; }
+.pv-tabs .vkey.word {
+  position: relative; flex: 1 1 0; min-width: 0; min-height: 44px; padding: 2px 3px;
+  font-size: min(0.75rem, 18px); white-space: nowrap;
+}
+.pv-tabs .vkey.word.asks::after {
+  content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+}
+/* The tab shown is underlined, not ringed: a ring is a pick. */
+.pv-tab[aria-pressed="true"] {
+  color: var(--text-primary); font-weight: 700;
+  text-decoration: underline 2px; text-underline-offset: 0.3em;
+}
+:is(.pv-onoff .vkey, .pv-opt)[aria-pressed="true"] {
+  color: var(--text-primary); font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--text-primary), var(--btn-mini-shadow);
+}
+/* The options: as many columns as their words allow and as many rows of
+   44 px as the room holds (pickers.js sets --cols and --rows). */
+.pv-grid {
+  flex: 1 1 0; min-height: 0;
+  display: grid; gap: 6px; align-content: center;
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows, 1), minmax(0, 52px));
+}
+.vkey.word.pv-opt {
+  min-width: 0; min-height: 0; padding: 2px 6px;
+  font-size: min(0.75rem, 18px); line-height: 1.15; white-space: normal; text-align: center;
+}
+.v-key .pv-opt[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--text-primary), inset 0 0 0 4px color-mix(in srgb, var(--pk-key) 70%, transparent), var(--btn-mini-shadow); }
+.v-style .pv-opt[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--text-primary), inset 0 0 0 4px color-mix(in srgb, var(--pk-style) 70%, transparent), var(--btn-mini-shadow); }
+.v-voices .pv-opt[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--text-primary), inset 0 0 0 4px color-mix(in srgb, var(--pk-voices) 70%, transparent), var(--btn-mini-shadow); }
+/* The foot: on and off (voices), the pages, and the any key at the right. */
+.pv-foot { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; }
+.pv-pager { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.pv-pager[hidden] { display: none; }
+.vkey.pv-turn { min-width: 44px; min-height: 44px; padding: 2px 8px; }
+.pv-ico { display: inline-flex; width: 20px; height: 20px; }
+.pv-ico svg { width: 100%; height: 100%; }
+/* A narrow foot (voices beside a phone on its side): where you are is
+   still said, the keys close up. */
+.pv-foot { container: pvfoot / inline-size; }
+@container pvfoot (max-width: 319.98px) {
+  .v-voices .pv-page { display: none; }
+  .v-voices .pv-pager { gap: 4px; }
+  .v-voices .pv-foot .vkey.word.pk-anykey { min-width: 48px; }
+  .pv-onoff .vkey.word { min-width: 44px; padding-inline: 4px; }
+}
+@container pvfoot (max-width: 219.98px) {
+  .pv-page { display: none; }
+}
+.pv-page {
+  font-family: 'Inter', sans-serif; font-size: min(0.75rem, 18px); font-weight: 600;
+  color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.pv-onoff { flex: 0 0 auto; display: flex; gap: 6px; }
+.pv-onoff .vkey.word { min-width: 48px; min-height: 44px; padding: 2px 8px; font-size: min(0.75rem, 18px); }
+.pv-foot .vkey.word.pk-anykey { margin-left: auto; min-width: 64px; min-height: 44px; font-size: min(0.75rem, 18px); }
+
+/* Tempo: the number as Bars' is, underlined in the tempo colour; the
+   slow end over the fast end, both filled between them. */
+.v-tempo .ln-input { text-decoration-color: var(--pk-tempo); caret-color: var(--pk-tempo); }
+.v-tempo.any .ln-input { color: var(--text-secondary); text-decoration: none; font-weight: 500; }
+.v-tempo .ln-body { gap: 12px; }
+.tp-slide input[type="range"] { height: 36px; }
+.tp-slide input[type="range"]::-webkit-slider-runnable-track {
+  background:
+    linear-gradient(var(--pk-tempo), var(--pk-tempo)) var(--from, 0px) 0 / max(4px, calc(var(--to, 0px) - var(--from, 0px))) 100% no-repeat,
+    color-mix(in srgb, var(--text-primary) 14%, transparent);
+}
+.tp-slide input[type="range"]::-moz-range-progress { background: transparent; }
+.tp-slide input[type="range"]::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--pk-tempo), 0 1px 4px rgba(0,0,0,0.35); }
+.tp-slide input[type="range"]::-moz-range-thumb { box-shadow: 0 0 0 3px var(--pk-tempo), 0 1px 4px rgba(0,0,0,0.35); }
+.t-dawn .tp-slide input[type="range"]::-webkit-slider-thumb,
+.t-ember .tp-slide input[type="range"]::-webkit-slider-thumb,
+.t-tidal .tp-slide input[type="range"]::-webkit-slider-thumb,
+.t-olive .tp-slide input[type="range"]::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--pk-tempo), 0 0 0 4px var(--pk-edge), 0 1px 4px rgba(0,0,0,0.3);
+}
+.v-tempo.any .tp-slide input[type="range"]::-webkit-slider-runnable-track { background: color-mix(in srgb, var(--text-primary) 14%, transparent); }
+.v-tempo.any .tp-slide input[type="range"]::-webkit-slider-thumb { background: transparent; box-shadow: inset 0 0 0 2px var(--text-secondary); }
+.v-tempo.any .tp-slide input[type="range"]::-moz-range-thumb { background: transparent; box-shadow: inset 0 0 0 2px var(--text-secondary); }
+.tp-ticks { margin-top: -8px; }
+.tp-ticks span[data-bpm="40"] { left: calc(12px + (100% - 24px) * 8 / 158); }
+.tp-ticks span[data-bpm="80"] { left: calc(12px + (100% - 24px) * 48 / 158); }
+.tp-ticks span[data-bpm="120"] { left: calc(12px + (100% - 24px) * 88 / 158); }
+.tp-ticks span[data-bpm="160"] { left: calc(12px + (100% - 24px) * 128 / 158); }
+.tp-keys { justify-content: flex-end; }
+
+/* Short panels: the gaps close first; under 300 px the keys are 40 px,
+   the number smaller, the tick labels gone (each slider still says its
+   value); under 240 px the value line takes the title's place. */
+@container middle (max-height: 339.98px) {
+  .pv-body { gap: 4px; padding-block: 2px; }
+  .v-tempo .ln-body { gap: 4px; }
+}
+@container middle (max-height: 299.98px) {
+  .pv-body { padding-block: 0; }
+  .v-tempo .ln-body { gap: 0; padding-block: 0; justify-content: space-evenly; }
+  .v-tempo .ln-input { font-size: min(1.875rem, 34px); min-height: 36px; }
+  .v-tempo :is(.ln-step, .ln-keys .vkey) { min-height: 40px; height: 40px; }
+  .tp-slide input[type="range"] { height: 28px; }
+  .tp-ticks { display: none; }
+  .pv-tabs .vkey.word, .pv-onoff .vkey.word, .vkey.pv-turn, .pv-foot .vkey.word.pk-anykey { min-height: 40px; height: 40px; }
+  .pv-value { font-size: min(0.8125rem, 19.5px); }
+}
+/* Under 280 px (360x640, 320x568, a phone on its side): what is asked
+   takes the title's place between cancel and done (the title is still
+   read out), and the tabs and the foot close up. */
+.v-pick { position: relative; }
+@container middle (max-height: 279.98px) {
+  .v-pick .ln-head { grid-template-columns: auto 1fr auto; }
+  .v-pick .ln-head .ln-done { grid-column: 3; }
+  .v-pick .ln-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .v-pick .pv-value {
+    position: absolute; top: 0; left: 84px; right: 84px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: min(0.75rem, 18px); line-height: 1.15;
+  }
+  .pv-body { gap: 4px; padding-top: 2px; }
+}
+@media (forced-colors: active) {
+  :is(.pv-onoff .vkey, .pv-opt)[aria-pressed="true"] { outline: 2px solid Highlight; }
+  .tp-slide input[type="range"]::-webkit-slider-thumb { background: Canvas; box-shadow: 0 0 0 3px Highlight; }
 }

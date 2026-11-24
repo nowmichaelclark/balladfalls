@@ -160,8 +160,10 @@ pub struct Info {
 /// reopening thread share (never the audio thread).
 struct Control {
     stream: *mut AAudioStream,
-    /// Underruns of the streams closed since the engine started.
+    /// Underruns of the streams closed since the engine started, and the
+    /// count at the last "reset counters", taken off what is reported.
     xruns_before: i64,
+    xruns_reset: i64,
     /// Streams reopened after the device went away (or `reopen` asked).
     reopens: u32,
     info: Info,
@@ -174,7 +176,7 @@ struct Control {
 // SAFETY: the stream pointer is only used under the mutex.
 unsafe impl Send for Control {}
 
-static CONTROL: Mutex<Control> = Mutex::new(Control { stream: ptr::null_mut(), xruns_before: 0, reopens: 0, info: Info { rate: 0, channels: 0, burst: 0, buffer: 0, capacity: 0, performance: 0, sharing: 0, callback: 0 }, playhead: Playhead::new(), wanted: false });
+static CONTROL: Mutex<Control> = Mutex::new(Control { stream: ptr::null_mut(), xruns_before: 0, xruns_reset: 0, reopens: 0, info: Info { rate: 0, channels: 0, burst: 0, buffer: 0, capacity: 0, performance: 0, sharing: 0, callback: 0 }, playhead: Playhead::new(), wanted: false });
 
 /// The process's one engine, made at the first start at the device's rate
 /// and kept (a stream stopped and started again plays on from it).
@@ -429,7 +431,7 @@ pub fn reopen() -> Result<(), String> {
 }
 
 /// The stream's figures: whether one plays, the underruns of every stream
-/// since the engine started, the reopens, what it is, and the callback
+/// since the engine started (or the last reset), the reopens, what it is, and the callback
 /// thread's scheduling.
 pub struct Stream {
     pub running: bool,
@@ -449,15 +451,28 @@ pub struct Stream {
     pub behind_ago: f64,
 }
 
-/// The stream's figures now.
-pub fn stream() -> Stream {
-    let mut c = control();
-    let now = if c.stream.is_null() {
+/// The open stream's underruns, 0 with none.
+fn xruns(c: &Control) -> i64 {
+    if c.stream.is_null() {
         0
     } else {
         // SAFETY: the open stream, under the mutex.
         i64::from(unsafe { AAudioStream_getXRunCount(c.stream) }.max(0))
-    };
+    }
+}
+
+/// "Reset counters" (Diagnostics): the underruns and the playhead's counts
+/// start again from nothing; the engine's are its own command's.
+pub fn reset_counts() {
+    let mut c = control();
+    c.xruns_reset = c.xruns_before + xruns(&c);
+    c.playhead.reset_counts();
+}
+
+/// The stream's figures now.
+pub fn stream() -> Stream {
+    let mut c = control();
+    let now = xruns(&c);
     let mut latency = 0.0;
     if !c.stream.is_null()
         && let Some(t) = timing_of(c.stream, c.info.rate)
@@ -469,7 +484,7 @@ pub fn stream() -> Stream {
     let behind_ago = monotonic().map_or(0.0, |now| now.saturating_sub(c.playhead.last) as f64 * 1e-9);
     Stream {
         running: !c.stream.is_null(),
-        underruns: c.xruns_before + now,
+        underruns: c.xruns_before + now - c.xruns_reset,
         reopens: c.reopens,
         info: c.info,
         policy: POLICY.load(Ordering::Relaxed),

@@ -73,6 +73,8 @@ pub struct Figures {
     pub behind: u32,
     pub behind_lost: f64,
     pub behind_ago: f64,
+    /// Seconds played with the screen off (`Counts::off_frames`).
+    pub off_seconds: f64,
 }
 
 /// What a message asks of the next loop, built as the worklet's `ask`
@@ -609,6 +611,8 @@ fn watch_of(s: &mut String, engine: &Engine, status: &[f64; at::WORDS], f: &Figu
     number(s, status[at::GAP] / 1e6);
     s.push_str(",\"gapAgo\":");
     number(s, ago(status[at::GAP_AT]));
+    s.push_str(",\"offSeconds\":");
+    number(s, f.off_seconds);
     s.push_str(",\"worst\":[");
     let kept = status[at::WORST_AT..].as_chunks::<{ at::WORST_WORDS }>().0.iter().filter(|c| c[2] > 0.0);
     for (i, c) in kept.enumerate() {

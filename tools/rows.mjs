@@ -1864,10 +1864,17 @@ async function linkRows(browser) {
   // named in the Name box as a new album is, it lands in the Library as an
   // album of its own, its tracks the ones its code plays, and it plays from
   // there. The seed is fixed for the press (the page draws it from
-  // Math.random), so the code copied and the album saved are the same draw.
+  // Math.random, its first draw), so the code copied and the album saved
+  // are the same draw; every later draw is the page's own (the Library's
+  // ids are drawn from it too, and must differ).
   const pressFixed = (id) => share.evaluate((i) => {
     const random = Math.random;
-    Math.random = () => 0.3125;
+    let first = true;
+    Math.random = () => {
+      if (!first) return random();
+      first = false;
+      return 0.3125;
+    };
     try { document.getElementById(i).click(); } finally { Math.random = random; }
   }, id);
   await pressFixed('seedAlbumCode');

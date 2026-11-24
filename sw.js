@@ -43,6 +43,8 @@ const FILES = [
   './js/export-render.js',
   './js/export-opus.js',
   './js/ogg.js',
+  './js/tags.js',
+  './js/zip.js',
   './js/library.js',
   './js/picks.js',
   './js/pickers.js',

@@ -152,6 +152,12 @@ an export must never crash or break anything, even on an old phone.
   stops it.
 - **Done and failed.** Open or share the file when done; a plain,
   kind message if it failed.
+- **An album whole** (item 121): with an album playing or open, keys
+  **loop** and **album**, and for the album **zip** and **files**. One calm
+  progress for the album ("2/4 · 37%"), its space checked first; a track
+  that plays on asks how long once, for all. Files are named "NN name.ext".
+- **Tagged** (item 121): every file says its name, the album's and its place
+  in it, the app, the day, its code, and its cover as the picture.
 
 ## 4. Share codes, version 2
 
@@ -164,7 +170,8 @@ album can fit in under 20 characters).
 - **Link preview image.** The picture Discord and other sites show
   when the link is posted.
 - **Album from one seed.** Making a whole album from a single seed:
-  how many tracks, and the picks they share.
+  how many tracks, and the picks they share; **save** puts it in the
+  Library (item 121).
 - **"Needs a newer version" / "needs an instrument" messages.** When a
   code needs a newer Driftloom, or an instrument someone made that this
   device doesn't have.

@@ -83,6 +83,18 @@
 //   share               (queue item 113) keys and no explainer; export
 //                       audio and album from seed open their views and back
 //   share code          the code decodes to the loop the core plays
+//   album export        (item 121; `--only album`) a tab of its own, an album
+//                       of four playing (three of 8 s, one that plays on):
+//                       loop or album offered; the album asks how long once
+//                       for the track that plays on; one zip of FLACs to the
+//                       file chosen (stored, every checksum good, "NN
+//                       name.flac", each tagged: title, album, track N/4, the
+//                       app, the day, its code, its cover a 600 px JPEG), the
+//                       music on and nothing late; a file a track of Opus
+//                       into a folder chosen, each tagged in OpusTags with its
+//                       cover; the space for the whole album checked first;
+//                       Cancel midway and a disk that fills midway leave no
+//                       zip; a single loop's file tagged too
 //   seed album save     (item 121) the seed album's save: named in the Name
 //                       box, the album lands in the Library, its tracks the
 //                       ones its code plays, and plays from there; the box
@@ -170,7 +182,8 @@ import { newSpec } from '../js/gen.js';
 import { passSeconds } from '../js/ui.js';
 import { setTrack, trackOfSpec } from '../js/tracklen.js';
 import { LOOPS } from './stalls.mjs';
-import { pages } from './ogg-read.mjs';
+import { pages, joined } from './ogg-read.mjs';
+import { crc32 as zipCrc } from '../js/zip.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -290,15 +303,26 @@ const HOOK = `(() => {
       });
       const post = this.postMessage;
       this.postMessage = (m, t) => {
-        if (m && m.type === 'start') R.exportStart = { job: m.job, sink: m.sink, pace: m.pace, name: m.name };
+        if (m && m.type === 'start') {
+          R.exportStart = { job: m.job, sink: m.sink, pace: m.pace, name: m.name };
+          (R.exportStarts = R.exportStarts || []).push({ sink: m.sink, name: m.name, entry: m.entry, tags: m.tags, picture: m.picture ? { mime: m.picture.mime, width: m.picture.width, height: m.picture.height, size: m.picture.bytes.length } : null, track: m.job.track });
+        }
         return t ? post.call(this, m, t) : post.call(this, m);
       };
     }
   };
   window.showSaveFilePicker = async (opts) => {
     const d = await navigator.storage.getDirectory();
-    R.picked = await d.getFileHandle(String(opts && opts.suggestedName).endsWith('.opus') ? 'picked.opus' : 'picked.flac', { create: true });
+    const asked = String(opts && opts.suggestedName);
+    R.picked = await d.getFileHandle(asked.endsWith('.opus') ? 'picked.opus' : asked.endsWith('.zip') ? 'picked.zip' : 'picked.flac', { create: true });
     return R.picked;
+  };
+  // A folder chosen (item 121: an album a file a track): a folder in the
+  // site's private file system.
+  window.showDirectoryPicker = async () => {
+    const d = await navigator.storage.getDirectory();
+    R.pickedDir = await d.getDirectoryHandle('picked-dir', { create: true });
+    return R.pickedDir;
   };
   R.opfs = async () => {
     const root = await navigator.storage.getDirectory();
@@ -442,25 +466,101 @@ function streaminfo(b) {
 // An exported Ogg Opus file's facts (queue item 104c): every page's checksum
 // is verified (the reader throws on one that fails); the headers, the end of
 // stream and the granule positions as RFC 7845 has them.
+// OpusTags may take several pages (item 121: the cover in it): the packets
+// are read joined, and the audio's pages are those after it.
 function oggFacts(bytes) {
   const ps = pages(bytes);
-  const head = ps[0] && ps[0].packets[0];
-  const tags = ps[1] && ps[1].packets[0];
+  const all = joined(ps);
+  const head = all[0] && all[0].packet;
+  const tags = all[1] && all[1].packet;
   const ascii = (b, n) => String.fromCharCode(...b.slice(0, n));
   if (!head || ascii(head, 8) !== 'OpusHead') return null;
   const preSkip = head[10] | (head[11] << 8);
   const last = ps[ps.length - 1];
+  const audioFrom = all[1] ? all[1].page + 1 : 2;
   return {
     pages: ps.length,
     channels: head[9],
     preSkip,
     beginning: ps[0].flags === 2,
-    tagged: !!tags && ascii(tags, 8) === 'OpusTags' && ps[1].flags === 0,
+    tagged: !!tags && ascii(tags, 8) === 'OpusTags' && (ps[1].flags & 1) === 0 && ps.slice(1, audioFrom).every((p) => p.granule === 0),
+    comments: tags ? vorbisList(tags, 8) : [],
     end: (last.flags & 4) === 4 && ps.slice(0, -1).every((p) => (p.flags & 4) === 0),
-    ordered: ps.every((p, i) => p.sequence === i && (i < 3 || p.granule >= ps[i - 1].granule)),
+    ordered: ps.every((p, i) => p.sequence === i && (i <= audioFrom || p.granule >= ps[i - 1].granule)),
     frames: last.granule - preSkip,
-    packets: ps.slice(2).reduce((n, p) => n + p.packets.length, 0),
+    packets: all.length - 2,
+    // The header pages' bytes (the tags and the cover in them, item 121).
+    headerBytes: ps.slice(0, audioFrom).reduce((n, p) => n + p.size, 0),
   };
+}
+
+// A Vorbis comment list (OpusTags after its magic, FLAC's VORBIS_COMMENT
+// block's body) as "KEY=value" strings.
+function vorbisList(b, at = 0) {
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const dec = new TextDecoder();
+  let p = at + 4 + v.getUint32(at, true);
+  const n = v.getUint32(p, true);
+  p += 4;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const l = v.getUint32(p, true);
+    out.push(dec.decode(b.subarray(p + 4, p + 4 + l)));
+    p += 4 + l;
+  }
+  return out;
+}
+
+// A FLAC file's metadata blocks after STREAMINFO (item 121): its comments,
+// and its picture's size and type.
+function flacTags(b) {
+  if (String.fromCharCode(...b.slice(0, 4)) !== 'fLaC') return null;
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  let p = 4;
+  const out = { comments: [], picture: null, blocks: [] };
+  for (;;) {
+    const h = b[p];
+    const len = (b[p + 1] << 16) | (b[p + 2] << 8) | b[p + 3];
+    const type = h & 0x7f;
+    out.blocks.push(type);
+    if (type === 4) out.comments = vorbisList(b.subarray(p + 4, p + 4 + len));
+    if (type === 6) {
+      const q = p + 4;
+      const ml = v.getUint32(q + 4);
+      const mime = String.fromCharCode(...b.subarray(q + 8, q + 8 + ml));
+      const dl = v.getUint32(q + 8 + ml);
+      const r = q + 12 + ml + dl;
+      out.picture = { kind: v.getUint32(q), mime, width: v.getUint32(r), height: v.getUint32(r + 4), bytes: v.getUint32(r + 16) };
+    }
+    p += 4 + len;
+    if (h & 0x80 || p >= b.length) break;
+  }
+  return out;
+}
+
+// The entries of a stored zip, from its central directory (item 121): name,
+// its bytes' place and size, and whether its checksum is good.
+function zipEntries(b) {
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const end = b.length - 22;
+  if (end < 0 || v.getUint32(end, true) !== 0x06054b50) return null;
+  const count = v.getUint16(end + 10, true);
+  let p = v.getUint32(end + 16, true);
+  const dec = new TextDecoder();
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    if (v.getUint32(p, true) !== 0x02014b50) return null;
+    const crc = v.getUint32(p + 16, true);
+    const size = v.getUint32(p + 20, true);
+    const nl = v.getUint16(p + 28, true);
+    const name = dec.decode(b.subarray(p + 46, p + 46 + nl));
+    const local = v.getUint32(p + 42, true);
+    const data = local + 30 + v.getUint16(local + 26, true) + v.getUint16(local + 28, true);
+    const bytes = b.subarray(data, data + size);
+    out.push({ name, method: v.getUint16(p + 10, true), size, bytes, good: zipCrc(bytes) === crc && v.getUint32(local + 14, true) === crc });
+    p += 46 + nl;
+  }
+  return out;
 }
 
 // The Track length view (session 30c) set to `secs` seconds (null: on and
@@ -668,13 +768,15 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   s = await sheet();
   const smallMoved = (await ev(() => window.__rows.exportProgress)) - progress0;
   const smallLine = await lateLine();
-  const rate = small && small.seconds ? smallGot.size / small.seconds : 0;
+  // The audio's bytes a second: the file less its header pages (the tags
+  // and the cover, item 121), which the sheet's size allows for in its tail.
+  const rate = small && small.seconds && ogg ? (smallGot.size - ogg.headerBytes) / small.seconds : 0;
   row('export audio (small): a minute to the file chosen, written as it went, an Ogg Opus file whose end and length are the Worker\'s frames to the sample, the browser decodes it, the music on and nothing late',
     small && small.type === 'done' && small.format === 'opus' && smallStart.sink === 'handle' && smallStart.job.format === 'opus' && /\.opus$/.test(smallStart.name) && smallGot.name === 'picked.opus' && smallGot.size === small.bytes
     && ogg && ogg.beginning && ogg.tagged && ogg.end && ogg.ordered && ogg.channels === 2 && ogg.preSkip > 0 && ogg.frames === small.frames && smallGot.decoded === small.frames
     && small.seconds >= 60 && small.seconds < 60 + 30 && smallMoved >= 2 && !small.counts.late && !small.counts.missed && !small.counts.dropped && s.done && smallMeanwhile && nothingLate(smallLine),
     `${small && small.type} ${small && small.why || ''}, ${smallGot.size} bytes, ${ogg ? `${ogg.pages} pages, ${ogg.packets} packets, pre-skip ${ogg.preSkip}, ${ogg.frames} frames` : oggWhy}; the browser decoded ${smallGot.decoded} frames; ${small && small.seconds && small.seconds.toFixed(1)} s in ${small && small.took && small.took.toFixed(1)} s; ${smallMoved} progress reports; ${s.saved}; ${smallLine}`);
-  row('export audio (small): the size is the constant bit rate (96 kbit/s stereo, 12,000 bytes a second and the pages) and the sheet said about so', rate > 11500 && rate < 12700 && /opus ~\d+ MB$/.test(smallAbout), `${Math.round(rate)} bytes a second; ${smallAbout}`);
+  row('export audio (small): the size is the constant bit rate (96 kbit/s stereo, 12,000 bytes a second and the pages) and the sheet said about so', rate > 11500 && rate < 12700 && /opus ~\d+ MB$/.test(smallAbout), `${Math.round(rate)} bytes a second of audio, ${ogg ? ogg.headerBytes : '?'} bytes of headers; ${smallAbout}`);
   await clickId('exportDoneBtn');
   await trackTo(ev, 600);
   await share();
@@ -1280,6 +1382,11 @@ async function main() {
       report();
       return;
     }
+    if (ONLY === 'album') {
+      await albumExportRows(browser);
+      report();
+      return;
+    }
     if (ONLY === 'pickers') {
       await pickerRows(browser);
       report();
@@ -1556,7 +1663,9 @@ async function main() {
       const back = await ev(() => !document.getElementById('saveShare').hidden && !document.getElementById('viewSave').hidden);
       await clickId('goExport');
       await sleep(800);
-      const keys = await ev(() => [...document.querySelectorAll('#exportChoose button')].filter((b) => !b.hidden).map((b) => b.textContent.trim()).join());
+      // The format keys (item 121's loop or album keys above them are an
+      // album's: the album rows hold them).
+      const keys = await ev(() => [...document.querySelectorAll('#exportChoose button')].filter((b) => !b.hidden && !b.closest('#exportScope')).map((b) => b.textContent.trim()).join());
       row('share: album from seed and export audio open their views; Export is a key a format, export midi among them', seed && back && /^flac,(opus,)?midi$/.test(keys), `seed ${seed}, back ${back}, ${keys}`);
     }
     // Export MIDI and a share code.
@@ -1659,6 +1768,7 @@ async function main() {
     if (!APP) await plainRows(browser);
     if (!APP) await codeRows(browser);
     if (!APP) await linkRows(browser);
+    if (!APP) await albumExportRows(browser);
     if (!APP) await paceRows(browser);
     if (!APP) await previousRows(browser);
     if (!APP) await artRows(browser);
@@ -1673,6 +1783,229 @@ async function main() {
     if (server) server.close();
   }
   report();
+}
+
+// An album exported whole (item 121), in a tab of its own.
+async function albumExportRows(browser) {
+  console.log('\n  album export (item 121)');
+  const origin = `http://127.0.0.1:${PORT}`;
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  const bad = [];
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(HOOK);
+  await tab.goto(`${origin}/`);
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  const cdp = await tab.context().newCDPSession(tab);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  const exportsNow = () => tev(() => window.__rows.exports.length);
+  const said = async (types, from, ms) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < ms) {
+      const m = await tev((n) => window.__rows.exports.slice(n), from);
+      const hit = m.find((x) => types.includes(x.type));
+      if (hit) return hit;
+      await sleep(250);
+    }
+    return null;
+  };
+  const doneCount = async (from) => (await tev((n) => window.__rows.exports.slice(n), from)).filter((x) => x.type === 'done').length;
+  const toExport = () => tev(() => {
+    if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+    document.querySelector('[data-stab="share"]').click();
+    document.getElementById('goExport').click();
+  });
+  const press = (sel) => tev((q) => { const b = document.querySelector(q); if (b && !b.hidden) b.click(); return !!b && !b.hidden; }, sel);
+  const sheet = () => tev(() => ({
+    scope: !document.getElementById('exportScope').hidden,
+    album: document.querySelector('[data-scope="album"]').getAttribute('aria-pressed') === 'true',
+    zipKey: !document.querySelector('[data-box="zip"]').hidden,
+    midi: !document.getElementById('exportMidi').hidden,
+    about: document.getElementById('exportAbout').textContent,
+    asks: document.querySelector('[data-format="lossless"]').dataset.asks || '',
+    run: !document.getElementById('exportRun').hidden,
+    done: !document.getElementById('exportDone').hidden,
+    failed: !document.getElementById('exportFailed').hidden,
+    why: document.getElementById('exportWhy').textContent,
+    saved: document.getElementById('exportSaved').textContent,
+    progress: document.getElementById('exportProgress').textContent,
+  }));
+  const playing = async () => {
+    const p = await tev(() => window.__rows.probe());
+    let w = 0;
+    for (let i = 0; i < 30; i++) { w = Math.max(w, await tev(() => window.__rows.level())); await sleep(100); }
+    return p && p.player.state === 3 && w > 1e-4;
+  };
+  const nothingLate = async () => {
+    const d = await tev(() => { document.getElementById('diagRefresh').click(); return document.getElementById('diagOut').textContent; });
+    return /late: 0\s+missed: 0\s+dropped: 0/.test(d.split('\n').find((l) => l.startsWith('engine:')) || '');
+  };
+  const opfs = () => tev(() => window.__rows.opfs());
+  // A file in the site's private file system as bytes.
+  const read = async (where) => new Uint8Array(Buffer.from(await tev(async (w) => {
+    let h = await navigator.storage.getDirectory();
+    const parts = w.split('/');
+    for (const d of parts.slice(0, -1)) h = await h.getDirectoryHandle(d);
+    const f = await (await h.getFileHandle(parts[parts.length - 1])).getFile();
+    const b = new Uint8Array(await f.arrayBuffer());
+    let bin = '';
+    for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode(...b.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }, where), 'base64'));
+
+  // The album: three tracks of 8 s, the fourth playing on.
+  const specs = [LOOPS.shatter, LOOPS.cinder, LOOPS.hollow, LOOPS.undertow].map((l) => decodeSong(l.code));
+  specs[0].name = 'ฝนตก 🎧';
+  for (const sp of specs.slice(0, 3)) setTrack(sp, { secs: 8, fadeIn: false, fadeOut: true });
+  const title = 'Rainy Export';
+  await tev((c) => { window.__rows.clip = c; }, encodeAlbum(title, specs));
+  await tev(() => document.getElementById('pasteCode').click());
+  await sleep(2500);
+  await tev(() => { if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click(); document.querySelector('[data-tab="albums"]').click(); });
+  await sleep(300);
+  await tev((t) => { const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.trim() === t); if (r) r.querySelector('.lrow-main').click(); }, title);
+  await sleep(400);
+  await tev(() => { const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'play'); if (b) b.click(); });
+  await sleep(3000);
+  await toExport();
+  await sleep(1200);
+  let s = await sheet();
+  const offered = s.scope && !s.album && !s.zipKey && s.midi;
+  await press('[data-scope="album"]');
+  await sleep(300);
+  s = await sheet();
+  row('album export: with an album playing, the Export view offers loop or album; the album hides midi and offers zip or files, and asks how long first (a track plays on)',
+    offered && s.album && s.zipKey && !s.midi && /^4 tracks$/.test(s.about) && s.asks === 'length', JSON.stringify(s));
+
+  // One zip of FLACs: the time asked once, for the track that plays on.
+  let from = await exportsNow();
+  const starts0 = await tev(() => (window.__rows.exportStarts || []).length);
+  await press('[data-format="lossless"]');
+  await sleep(500);
+  const asked = await tev(() => !document.getElementById('viewTrack').hidden);
+  await tev(() => {
+    const n = document.getElementById('trkNum');
+    n.value = '0:00:08';
+    n.dispatchEvent(new Event('blur'));
+    document.getElementById('trkDone').click();
+  });
+  const zipDone = await said(['zip-done', 'failed'], from, 180000);
+  await sleep(500);
+  s = await sheet();
+  const starts = (await tev(() => window.__rows.exportStarts || [])).slice(starts0);
+  let entries = null;
+  let why = '';
+  try { entries = zipEntries(await read('picked.zip')); } catch (e) { why = e.message; }
+  const meanwhile = await playing();
+  const late = await nothingLate();
+  const want = specs.map((sp, i) => `${String(i + 1).padStart(2, '0')} ${sp.name}.flac`);
+  const facts = (entries || []).map((e) => ({ name: e.name, good: e.good, method: e.method, si: streaminfo(e.bytes.slice(0, 42)), tags: flacTags(e.bytes) }));
+  const tagOk = (f, i) => {
+    const c = Object.fromEntries(f.tags.comments.map((x) => [x.slice(0, x.indexOf('=')), x.slice(x.indexOf('=') + 1)]));
+    let code = null;
+    try { code = decodeSong(c.COMMENT); } catch { code = null; }
+    return c.TITLE === specs[i].name && c.ALBUM === title && c.TRACKNUMBER === String(i + 1) && c.TRACKTOTAL === '4' && c.ARTIST && c.ALBUMARTIST === c.ARTIST
+      && /^\d{4}-\d{2}-\d{2}$/.test(c.DATE) && code && code.seed === specs[i].seed
+      && f.tags.picture && f.tags.picture.kind === 3 && f.tags.picture.mime === 'image/jpeg' && f.tags.picture.width === 600 && f.tags.picture.height === 600 && f.tags.picture.bytes > 1000;
+  };
+  row('album export: the track that plays on opens Track length once, for the album; then one zip to the file chosen, stored, every checksum good, its tracks "NN name.flac" in order',
+    asked && zipDone && zipDone.type === 'zip-done' && entries && entries.length === 4 && facts.every((f, i) => f.name === want[i] && f.good && f.method === 0) && starts.length === 4 && starts.every((x) => x.sink === 'handle' && x.entry) && /^Saved Rainy Export\.zip · /.test(s.saved),
+    `${zipDone && zipDone.type} ${zipDone && zipDone.why || ''}; ${facts.map((f) => `${f.name}${f.good ? '' : ' (bad)'}`).join(' | ')} ${why}; ${s.saved}`);
+  row('album export: each FLAC tagged (title, album, track N/4, the app, the day, its code) with its cover (a 600 px JPEG), STREAMINFO first and whole; the fourth as long as asked',
+    facts.length === 4 && facts.every((f, i) => tagOk(f, i) && f.si && f.si.total > 0 && f.tags.blocks[0] === 0) && facts.every((f) => f.si.total / 44100 >= 8 && f.si.total / 44100 < 8 + 13),
+    facts.map((f) => `${f.name}: ${f.tags && f.tags.comments.filter((c) => !c.startsWith('COMMENT')).join(',')} ${f.tags && f.tags.picture ? `${f.tags.picture.width}px` : 'no picture'} ${f.si ? (f.si.total / 44100).toFixed(1) : '?'} s`).join(' | '));
+  row('album export: while the album exported, the music played on and nothing was late', meanwhile && late, `${meanwhile} ${late}`);
+  await press('#exportDoneBtn');
+
+  // A file a track, Opus, into a folder chosen.
+  await press('[data-box="files"]');
+  await sleep(300);
+  s = await sheet();
+  from = await exportsNow();
+  await press('[data-format="small"]');
+  let t0 = Date.now();
+  while (Date.now() - t0 < 180000 && (await doneCount(from)) < 4 && !(await sheet()).failed) await sleep(500);
+  await sleep(800);
+  const s2 = await sheet();
+  const inDir = (await opfs()).filter((f) => f.startsWith('picked-dir/')).sort();
+  const wantOpus = specs.map((sp, i) => `picked-dir/${String(i + 1).padStart(2, '0')} ${sp.name}.opus`);
+  const oggs = [];
+  for (const f of wantOpus) {
+    try { oggs.push(oggFacts(await read(f))); } catch (e) { oggs.push({ error: e.message }); }
+  }
+  const opusTagged = (o, i) => {
+    const c = Object.fromEntries((o.comments || []).map((x) => [x.slice(0, x.indexOf('=')), x.slice(x.indexOf('=') + 1)]));
+    return o.tagged && o.end && o.ordered && c.TITLE === specs[i].name && c.ALBUM === title && c.TRACKNUMBER === String(i + 1) && c.TRACKTOTAL === '4' && (c.METADATA_BLOCK_PICTURE || '').length > 1000;
+  };
+  row('album export: a file a track, Opus, into the folder chosen: four files "NN name.opus", each tagged in OpusTags with its cover, and "Saved 4 files"',
+    s2.done && /^Saved 4 files · /.test(s2.saved) && wantOpus.every((f) => inDir.includes(f)) && oggs.every((o, i) => o && !o.error && opusTagged(o, i)),
+    `${s2.saved || s2.why}; ${inDir.join(' | ')}; ${oggs.map((o) => (o && o.error) || (o && `${o.pages}p ${o.comments.length}c`)).join(' | ')}`);
+  await press('#exportDoneBtn');
+
+  // Cancel midway: after the first track, no zip left.
+  await press('[data-box="zip"]');
+  from = await exportsNow();
+  await press('[data-format="lossless"]');
+  t0 = Date.now();
+  while (Date.now() - t0 < 60000 && (await doneCount(from)) < 1) await sleep(250);
+  await press('#exportCancel');
+  const gone = await said(['zip-gone'], from, 60000);
+  await sleep(500);
+  s = await sheet();
+  let files = await opfs();
+  row('album export: Cancel midway (a track made) leaves no zip, says Canceled., the music playing and nothing late',
+    gone && s.failed && s.why === 'Canceled.' && !files.includes('picked.zip') && (await playing()) && (await nothingLate()), `${gone && gone.type}; ${s.why}; ${files.join(',')}`);
+  await press('#exportOk');
+
+  // The space for the whole album checked first.
+  const usage = await tev(async () => (await navigator.storage.estimate()).usage);
+  await cdp.send('Storage.overrideQuotaForOrigin', { origin, quotaSize: usage + 2e6 });
+  from = await exportsNow();
+  const startsBefore = await tev(() => (window.__rows.exportStarts || []).length);
+  await press('[data-format="lossless"]');
+  await sleep(1500);
+  s = await sheet();
+  row('album export: the space for the whole album checked first: too little says so, and nothing starts',
+    s.failed && /^Not enough space: needs /.test(s.why) && (await tev(() => (window.__rows.exportStarts || []).length)) === startsBefore && (await exportsNow()) === from, s.why);
+  await cdp.send('Storage.overrideQuotaForOrigin', { origin });
+  await press('#exportOk');
+
+  // A disk that fills midway: after the first track, the quota made small.
+  from = await exportsNow();
+  await press('[data-format="lossless"]');
+  t0 = Date.now();
+  while (Date.now() - t0 < 60000 && (await doneCount(from)) < 1) await sleep(250);
+  const used = await tev(async () => (await navigator.storage.estimate()).usage);
+  await cdp.send('Storage.overrideQuotaForOrigin', { origin, quotaSize: used + 128 * 1024 });
+  const ended = await said(['zip-gone', 'zip-done'], from, 120000);
+  await cdp.send('Storage.overrideQuotaForOrigin', { origin });
+  await sleep(500);
+  s = await sheet();
+  files = await opfs();
+  row('album export: a disk that fills midway ends with the plain message, no zip left, the music playing',
+    ended && ended.type === 'zip-gone' && s.failed && /^Out of space/.test(s.why) && !files.includes('picked.zip') && (await playing()), `${ended && ended.type}; ${s.why}; ${files.join(',')}`);
+  await press('#exportOk');
+
+  // A single loop's file is tagged too: the loop, no album (a time set
+  // first: the album may be on its fourth track, which plays on).
+  await trackTo(tev, 8);
+  await toExport();
+  await sleep(600);
+  await press('[data-scope="loop"]');
+  from = await exportsNow();
+  const one = await tev(() => (window.__rows.exportStarts || []).length);
+  await press('[data-format="lossless"]');
+  const single = await said(['done', 'failed'], from, 120000);
+  const st = (await tev(() => window.__rows.exportStarts || []))[one];
+  let ft = null;
+  try { ft = flacTags(await read('picked.flac')); } catch { ft = null; }
+  const keys = ft ? ft.comments.map((c) => c.slice(0, c.indexOf('='))) : [];
+  row('album export: a single loop\'s file is tagged too: its name, the app, the day, its code and its cover; no album, no track',
+    single && single.type === 'done' && st && !st.entry && ft && ['TITLE', 'ARTIST', 'DATE', 'COMMENT'].every((k) => keys.includes(k)) && !keys.includes('ALBUM') && !keys.includes('TRACKNUMBER') && ft.picture && ft.picture.width === 600,
+    `${single && single.type}; ${keys.join(',')}`);
+  await press('#exportDoneBtn');
+  row('album export: no page errors in its tab', !bad.length, bad.join('; '));
+  await tab.close();
 }
 
 // Share codes, version 2 (session 23), in a tab of its own: what pastes,

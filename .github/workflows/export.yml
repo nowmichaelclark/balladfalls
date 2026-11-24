@@ -26,11 +26,15 @@
 #          tools/autolite.mjs's slow case (burn 1700 us, lighter on processor
 #          on) while the music plays: memory flat, nothing late or behind,
 #          and the file decodes and nulls against a straight render
-#          (lossless) or decodes clean, whole and aligned (small)
+#          (lossless) or decodes clean, whole and aligned (small); by hand,
+#          `album` N (item 121): an album of N tracks exported whole (`box`:
+#          zip or files), the same watch, the zip tested by unzip and every
+#          track checked against its own job
 #
 # By hand: `jobs` (rows, views, card, names, a11y, long or all), `repeat` (the rows, that many
 # times in a row, all must pass), `length` (seconds, the track length the
-# export takes, session 30c), `burn` and `format` (lossless or small) for the long job.
+# export takes, session 30c), `burn` and `format` (lossless or small) for the long job,
+# and `album` and `box` (item 121) to make it an album's.
 name: export
 
 on:
@@ -38,6 +42,9 @@ on:
     paths:
       - 'js/export*.js'
       - 'js/ogg.js'
+      - 'js/tags.js'
+      - 'js/zip.js'
+      - 'js/midi.js'
       - 'js/main.js'
       - 'js/media.js'
       - 'js/viewport.js'
@@ -84,6 +91,12 @@ on:
       format:
         description: 'The format of the long export: lossless or small'
         default: 'lossless'
+      album:
+        description: 'The long export as an album of this many tracks (0: one loop; item 121)'
+        default: '0'
+      box:
+        description: 'The album as one zip or a file a track: zip or files'
+        default: 'zip'
 
 permissions:
   contents: read
@@ -196,7 +209,7 @@ jobs:
           node-version: 22
       - name: Playwright's Chromium, and the reference decoder
         run: |
-          sudo apt-get update && sudo apt-get install -y flac ffmpeg
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends flac ffmpeg unzip
           npm install --no-save --no-audit --no-fund playwright@1.56.1 && npx playwright install --with-deps chromium
       - name: A long export while the music plays
-        run: node tools/export-long.mjs --length "${{ github.event.inputs.length || '10800' }}" --burn "${{ github.event.inputs.burn || '1700' }}" --format "${{ github.event.inputs.format || 'lossless' }}"
+        run: node tools/export-long.mjs --length "${{ github.event.inputs.length || '10800' }}" --burn "${{ github.event.inputs.burn || '1700' }}" --format "${{ github.event.inputs.format || 'lossless' }}" --album "${{ github.event.inputs.album || '0' }}" --box "${{ github.event.inputs.box || 'zip' }}"

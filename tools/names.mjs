@@ -84,7 +84,7 @@ const CONTROLS = 'button, a[href], input:not([type="hidden"]), select, textarea,
 // What lost its line on screen keeps it as a description.
 const DESCRIBED = [
   '#loopName', '#trkNum', '#copySong', '#pasteCode', '#goExport', '#shareSong', '#goSeedAlbum',
-  '[data-format]', '#exportMidi', '#exportCancel', '#exportOk', '#seedCount', '#seedAlbumCode', '#seedAlbumLink', '#seedAlbumSave',
+  '[data-format]', '[data-scope]', '[data-box]', '#exportMidi', '#exportCancel', '#exportOk', '#seedCount', '#seedAlbumCode', '#seedAlbumLink', '#seedAlbumSave',
   '#savePane [role="checkbox"]', '#goAdvanced', '#monoMode', '#liteMode',
   '#exportJson', '#importBtn', '#copyBackup', '#pasteBackup', '#trimDown', '#trimUp', '#diagCopy',
   '.speed-link', '#go',

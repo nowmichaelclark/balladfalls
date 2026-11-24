@@ -307,8 +307,8 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   **Stopped at Mikey's word (his usage low), each with a "Left" list at the
   top of its file:** 30m (#467, v207, the album exported whole and tagged:
   ten rows done on 7117922, three checks to see green on 0fd6bc9); 30k
-  (draft #468, the look: Mikey picked B, the bead, and was choosing among
-  three LED takes on it; the list says what is built); 30l (draft #465, the
+  (draft #468, the look: Mikey picked B, the bead, then
+  its LED take "B3 diffused"; the list says what is built); 30l (draft #465, the
   icon: 3f built as a placeholder, round 9 of the drawing on `s30l-shots`
   waiting for him, more changes wanted; left open for 31). **Not started:**
   30n (after 30k and 30m), 30g's Left list. **Learned:** two

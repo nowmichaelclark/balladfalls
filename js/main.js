@@ -1617,6 +1617,26 @@ async function seedAlbum(asLink) {
   }
 }
 
+// The album of one seed saved to the Library (item 121; Mikey, 2026-11-23:
+// "Add 'save'"): named as a new album is, its tracks drawn from a fresh seed
+// with the picks now set, and kept as its code plays them (the code made,
+// then read back as a pasted one is), so the album played from the Library
+// is the album its code would bring.
+function seedAlbumSave() {
+  const count = Number(ui.el('seedCount').value) || 12;
+  const name = library.askAlbumName();
+  if (!name) return;
+  try {
+    const { title, specs } = share.decodeAlbum(share.encodeSeedAlbum(name, count, picks.requestFor(state)));
+    const album = keepAlbum(title, specs);
+    if (album) ui.toast('Saved', `Saved ${title} to the Library, ${specs.length} loops`);
+    else if (album === null) ui.toast("Can't save", "Can't save the album");
+  } catch (err) {
+    console.warn('Could not save the album', err);
+    ui.toast(err instanceof RequestError ? err.message : "Can't make album");
+  }
+}
+
 function restoredToast({ added, rejected }) {
   ui.toast(`Restored ${added}${rejected ? `, skipped ${rejected}` : ''}`,
     `Restored ${added} loop${added === 1 ? '' : 's'}${rejected ? `, skipped ${rejected} unreadable` : ''}`);
@@ -1902,6 +1922,21 @@ function openLink() {
   openCode(code, { play: false, link: true });
 }
 
+// An album's tracks into the Library as an album of its own (a code pasted
+// or opened by its link, a seed album saved): the album, null if its list
+// could not be written, or false (said) if the loops could not be saved.
+function keepAlbum(title, specs) {
+  const ids = store.addSpecs(specs);
+  if (!ids) {
+    ui.toast("Can't save", "Can't save those loops");
+    return false;
+  }
+  const album = store.createAlbum(title);
+  if (album) store.setAlbumIds(album.id, ids);
+  savedChanged();
+  return album;
+}
+
 // Take a song or album code: from a paste (`play`: the loop starts) or a
 // link (ready, not playing).
 function openCode(text, { play, link = false }) {
@@ -1937,14 +1972,8 @@ function openCode(text, { play, link = false }) {
       if (play && !state.engine.playing) togglePlay();
     } else {
       const { title, specs } = share.decodeAlbum(text);
-      const ids = store.addSpecs(specs);
-      if (!ids) {
-        ui.toast("Can't save", "Can't save those loops");
-        return;
-      }
-      const album = store.createAlbum(title);
-      if (album) store.setAlbumIds(album.id, ids);
-      savedChanged();
+      const album = keepAlbum(title, specs);
+      if (album === false) return;
       // From a link the album is open at its first track, ready to play. (Its
       // place is said as it opens: the import is said after, so it is heard.)
       if (link && album) playAlbum(album.id, 0, false);
@@ -2380,6 +2409,7 @@ function wire() {
   ui.el('seedCount').addEventListener('input', () => { ui.el('seedCountVal').textContent = ui.el('seedCount').value; });
   ui.el('seedAlbumLink').addEventListener('click', () => seedAlbum(true));
   ui.el('seedAlbumCode').addEventListener('click', () => seedAlbum(false));
+  ui.el('seedAlbumSave').addEventListener('click', seedAlbumSave);
 
   ui.el('copyBackup').addEventListener('click', async () => {
     try {

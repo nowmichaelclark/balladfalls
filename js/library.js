@@ -428,12 +428,21 @@ function listedAlbums(alsoShow = null) {
   return store.loadAlbums().filter((a) => a.id !== store.IMPORTED || a.ids.length || a.id === alsoShow);
 }
 
-function newAlbumThen(after) {
+// A new album's name, asked as every new album's is (the Name box, Untitled
+// in it), or null: closed, empty, or nothing a code can carry. Also the
+// seed album's save (item 121).
+export function askAlbumName() {
   const title = prompt('Name', 'Untitled');
-  if (!title || !title.trim()) return;
+  if (!title || !title.trim()) return null;
   // An album's name travels with its code: only what a code can carry.
   const name = fitName(title, store.NAME_MAX);
-  if (!name) { ui.toast("Can't use name", "That name can't be shared; try another"); return; }
+  if (!name) { ui.toast("Can't use name", "That name can't be shared; try another"); return null; }
+  return name;
+}
+
+function newAlbumThen(after) {
+  const name = askAlbumName();
+  if (!name) return;
   const album = store.createAlbum(name);
   if (!album) { ui.toast("Can't make album"); return; }
   after(album);

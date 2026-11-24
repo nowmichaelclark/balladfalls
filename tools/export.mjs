@@ -388,7 +388,8 @@ async function opusFileCheck(file, { job, stop, fade }) {
   const lags = [-1, 0, 1];
   const sig = [0, 0, 0];
   const err = [0, 0, 0];
-  const ff = spawn('ffmpeg', ['-v', 'warning', '-i', file, '-f', 'f32le', '-'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  // The audio alone (an exported file carries its cover too, item 121).
+  const ff = spawn('ffmpeg', ['-v', 'warning', '-i', file, '-map', '0:a', '-f', 'f32le', '-'], { stdio: ['ignore', 'pipe', 'pipe'] });
   let warnings = '';
   ff.stderr.on('data', (d) => { warnings += d; });
   let rest = Buffer.alloc(0);
@@ -413,7 +414,10 @@ async function opusFileCheck(file, { job, stop, fade }) {
     rest = rest.subarray(n * 4 * lanes);
   }
   await new Promise((resolve) => ff.on('close', resolve));
-  return { decoded, warnings: warnings.trim(), snr: { [-1]: 10 * Math.log10(sig[0] / err[0]), 0: 10 * Math.log10(sig[1] / err[1]), 1: 10 * Math.log10(sig[2] / err[2]) } };
+  // CI's ffmpeg's JPEG decoder's lines about the cover are set aside, as in
+  // `decodes`; any other warning stays.
+  warnings = warnings.split('\n').map((l) => l.trim()).filter((l) => l && !/^\[mjpeg @ /.test(l)).join('; ');
+  return { decoded, warnings, snr: { [-1]: 10 * Math.log10(sig[0] / err[0]), 0: 10 * Math.log10(sig[1] / err[1]), 1: 10 * Math.log10(sig[2] / err[2]) } };
 }
 
 async function smallFileCheck() {

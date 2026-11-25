@@ -11,7 +11,8 @@
 // the `screenshots` job of .github/workflows/android.yml whenever the screens
 // or the app's name change (session 31a), and commit the artifact's files.
 // Each screen is taken in a theme of its own (Mikey, 2026-11-25: show off the
-// themes), so the listing shows seven of the nine.
+// themes), so the listing shows seven of the nine, and a loop of its own
+// (its name and cover), the next after the screen before it.
 
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -59,10 +60,20 @@ const theme = async (cls) => {
   await until(`the ${cls} theme`, () => ev(`document.getElementById('app').classList.contains('${cls}')`), 5000);
   await sleep(800);
 };
+// The next loop, so each screen shows a loop (and cover) of its own: Next,
+// then a wait for the new name and for it to be playing a few seconds in.
+const nextLoop = async () => {
+  const was = await ev("document.getElementById('loopName').textContent");
+  await click('nextBtn');
+  await until('a new loop', () => ev(`document.getElementById('loopName').textContent !== ${JSON.stringify(was)}`), 60000);
+  await until('the new loop to play', () => ev("document.getElementById('playBtn').getAttribute('aria-label') === 'Pause'"), 60000);
+  await sleep(4000);
+};
 let failed = 0;
 async function screen(n, name, cls, steps) {
   try {
     await theme(cls);
+    if (n > 1) await nextLoop();
     await steps();
     await sleep(1500);
     shot(n);
@@ -114,7 +125,7 @@ try {
     await shown('viewVibe');
   });
   // 6. The Library.
-  await screen(6, 'Library', 't-olive', async () => {
+  await screen(6, 'Library', 't-nightlight', async () => {
     await click('libraryBtn');
     await shown('viewLibrary');
   });

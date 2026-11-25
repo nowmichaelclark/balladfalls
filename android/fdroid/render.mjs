@@ -74,7 +74,9 @@ let text = readFileSync(join(here, 'recipe.yml.in'), 'utf8')
   .split('\n').filter((l) => !l.trim().startsWith('#')).join('\n');
 const values = {
   '@APP_NAME@': appName, '@REPO_URL@': repoUrl, '@REPO_GIT@': repoGit, '@COMMIT@': commit,
-  '@VERSION_NAME@': versionName, '@VERSION_CODE@': versionCode,
+  // A name YAML would read as a number (1.0, 1.2) is quoted, as `fdroid
+  // rewritemeta` writes it (it is a string: 1.0 is not 1); 1.0.1 needs none.
+  '@VERSION_NAME@': /^\d+(\.\d+)?$/.test(versionName) ? `'${versionName}'` : versionName, '@VERSION_CODE@': versionCode,
 };
 text = text.replace('@BINARIES@\n', `${binaries}\n`).replace('@ALLOWED@\n', allowed && `${allowed}\n`);
 for (const [k, v] of Object.entries(values)) text = text.split(k).join(v);

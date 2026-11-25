@@ -3147,3 +3147,6 @@ html.bar-scroll :is(.scroll, .vb-list)::after {
   :is(.pv-onoff .vkey, .pv-opt)[aria-pressed="true"] { outline: 2px solid Highlight; }
   .tp-slide input[type="range"]::-webkit-slider-thumb { background: Canvas; box-shadow: 0 0 0 3px Highlight; }
 }
+
+/* The version, Advanced's last line (1.0, session 31). */
+.app-version { text-align: center; margin: 16px 0 8px; }

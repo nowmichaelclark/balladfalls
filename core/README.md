@@ -498,7 +498,12 @@ read by `src/code.rs` (natively; `dl_code_*` and `dl_album_*` in the C header;
 `dl_code_*` in the tools' wasm and in `js/dlplayer.wasm`, which the app
 drives through `js/gen.js` and `js/share.js` since session 23;
 `node tools/codes.mjs` from the command line). **Frozen from 1.0:**
-`golden/share-codes.txt` holds it to its bytes, natively and on the web.
+`golden/share-codes.txt` holds it to its bytes, natively and on the web, and
+`golden/frozen-codes.txt` holds what 1.0's codes play: 561 loops and 11
+albums made on 1.0's build, each with what it decodes to (its seed, mutes,
+salt, name and request, and a hash of everything the generator draws from
+it), which `test/frozen-codes.test.mjs` reads back in the gate. That file is
+written once and never again.
 
 **Characters.** `A`-`Z` `a`-`z` `0`-`9` `-` `_` are the values 0 to 63, a
 *sextet* each. Spaces around a code are let be; anything else outside the
@@ -520,7 +525,8 @@ ten, zigzagged; zero is `0 0` and minus zero `0 1`. A *set* of ids is how many
 for each character before it becomes `(h * 64 + value + 1) mod 4093`. Any one
 character changed, or two side by side swapped, is caught.
 
-**Versions.** Codes start at 2. One version a release (`data/codes.txt`,
+**Versions.** Codes start at 2, and **version 2 is 1.0's** (session 31,
+2026-11-25: `released = newest = 2`). One version a release (`data/codes.txt`,
 `released` and `newest`): what joins after a release shares `released + 1`,
 so the head stays a character to version 15, and a code made between two
 releases may change as another addition joins. A version past the build's is

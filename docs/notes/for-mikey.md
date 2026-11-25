@@ -8,46 +8,17 @@ at 1.0 (queue item 108). Cleaned by session 30 (2026-11-24): what you had
 answered or replaced is gone, the rest shorter; the words table of item 113 is
 in `docs/archive/notes/113-words-table.md`.
 
-**Nothing here holds 1.0 but one look before session 31 merges: the new
-domain answers ("The new name", step 1).** The release key is made
-(2026-11-25); the icon is picked and seen on your phone, and waits as the new
-repository's draft #1 with the new name's PR until 31 merges both; the Moto's
-step 1 is after 1.0 (you, 2026-11-25). Everything else is a check that closes
-with your phone or your ears, and a revert follows if you find trouble.
+**Nothing here holds 1.0 now (session 31, 2026-11-25).** 1.0 is merged:
+the icon (#1), the new name (#2) and 1.0 itself. What is yours from here is
+"Launch day, in order", the last section; everything else is a check that
+closes with your phone or your ears, and a revert follows if you find trouble.
 
 ## Accounts
 
-- **The new name** (session 31a's #2, left open; session 31 merges it, with
-  the icon's #1, right before 1.0). The new repository and its Worker
-  `balladfalls`, with balladfalls.com attached, are made (2026-11-25).
-  1. **Before 31 merges:** open <https://balladfalls.com/>: something answers
-     (Cloudflare's placeholder is fine; the app comes with 31's merge), not a
-     browser error. The PR's Cloudflare preview already plays the renamed app.
-  2. **After 31 merges (launch day):** <https://balladfalls.com/> plays, its
-     title Ballad Falls. Workers Builds deploys `main` there by itself.
-  3. **The old address's Worker:** in Cloudflare, Workers & Pages, `driftloom`,
-     Settings, Build: disconnect the driftloom repository and connect
-     `nowmichaelclark/balladfalls`, branch `main`, root directory
-     `old-address`, deploy command `npx wrangler deploy`, no build command
-     (build watch paths: `old-address/*`, so only its own changes rebuild it);
-     then Retry the latest build, or push. Or by hand on your computer, in a
-     checkout of this repository: `cd old-address && npx wrangler login &&
-     npx wrangler deploy`. Either way the Worker keeps its name and address.
-  4. **Check the old address:** open
-     <https://driftloom.nowmichaelclark.workers.dev/#c=ELAAAAAF_DHAbt>: it
-     lands on balladfalls.com with that loop. `curl -sI
-     https://driftloom.nowmichaelclark.workers.dev/any/path?x=1` says `301`
-     and `location: https://balladfalls.com/any/path?x=1`. Then open the app
-     you installed from the old address on your phone: it says "Driftloom is
-     Ballad Falls now" and offers your Library; Bring it, and your loops and
-     albums are at balladfalls.com (install the app again from there, then
-     remove the old one). If a tester ever wants the offer again,
-     <https://driftloom.nowmichaelclark.workers.dev/library> makes it.
-  5. **Archive driftloom on GitHub:** its Settings, General, Danger Zone,
-     Archive this repository. It stays online, read-only, with its PRs.
-  6. **Then F-Droid,** below, with this repository's address. Testers with a
-     test APK (the working id) keep it apart: Ballad Falls from F-Droid is a new
-     app; a backup moves their Library.
+- **The new name** (session 31a's #2, merged by session 31 with the icon's #1
+  at 1.0). The new repository and its Worker `balladfalls`, with
+  balladfalls.com attached, are made (2026-11-25); the steps left are in
+  "Launch day, in order", at the end.
 - **Your release key** is made (2026-11-25; SHA-256 in `docs/DECISIONS.md`).
   Keep `release.jks` and its password safe for good: lose either and the app
   can never be updated.
@@ -308,3 +279,47 @@ Each is a few minutes. Say a step's number if something is wrong.
   time and both fades. Say if a single loop's code should carry it too.
 - **The words of item 113** are yours to approve; the rule you gave is in
   `docs/DECISIONS.md`.
+
+## Launch day, in order
+
+1. **The site:** open <https://balladfalls.com/>: it plays, its title Ballad
+   Falls, and Advanced ends with "Ballad Falls 1.0" (Diagnostics' first line is
+   `version: 1.0`). Workers Builds deploys `main` there by itself; this cloud
+   session couldn't reach the address to look (its proxy refuses it).
+2. **The tag** (a cloud session's tag push is refused by its proxy): on
+   GitHub, this repository's Releases, Draft a new release; Choose a tag,
+   type `v1.0`, "Create new tag: v1.0 on publish", target `main`; the title
+   "Ballad Falls 1.0", the text CHANGELOG.md's 1.0 entry; Publish. The tag
+   starts the release workflow (Actions, android-release), which checks the
+   tag against the version and builds the unsigned APKs.
+3. **Sign the APK:** the release workflow's run on the tag (Actions,
+   android-release) has the unsigned APKs as its artifact. Sign the universal
+   one with your key (the command is under "Your release key", above) and
+   upload `balladfalls-1.0.apk` to the v1.0 release page.
+4. **The old address and driftloom:**
+   - **The old address's Worker:** in Cloudflare, Workers & Pages, `driftloom`,
+     Settings, Build: disconnect the driftloom repository and connect
+     `nowmichaelclark/balladfalls`, branch `main`, root directory
+     `old-address`, deploy command `npx wrangler deploy`, no build command
+     (build watch paths: `old-address/*`, so only its own changes rebuild it);
+     then Retry the latest build, or push. Or by hand on your computer, in a
+     checkout of this repository: `cd old-address && npx wrangler login &&
+     npx wrangler deploy`. Either way the Worker keeps its name and address.
+   - **Check the old address:** open
+     <https://driftloom.nowmichaelclark.workers.dev/#c=ELAAAAAF_DHAbt>: it
+     lands on balladfalls.com with that loop. `curl -sI
+     https://driftloom.nowmichaelclark.workers.dev/any/path?x=1` says `301`
+     and `location: https://balladfalls.com/any/path?x=1`. Then open the app
+     you installed from the old address on your phone: it says "Driftloom is
+     Ballad Falls now" and offers your Library; Bring it, and your loops and
+     albums are at balladfalls.com (install the app again from there, then
+     remove the old one). If a tester ever wants the offer again,
+     <https://driftloom.nowmichaelclark.workers.dev/library> makes it.
+   - **Archive driftloom on GitHub:** its Settings, General, Danger Zone,
+     Archive this repository. It stays online, read-only, with its PRs.
+5. **F-Droid:** "Submit to F-Droid after 31", under Accounts, with this
+   repository's address and the `v1.0` tag. Testers with a test APK (the
+   working id) keep it apart: Ballad Falls from F-Droid is a new app; a backup
+   moves their Library.
+6. **Once the listing is up:** `APP_LINK` in `js/main.js` (step 5 of the
+   F-Droid steps).

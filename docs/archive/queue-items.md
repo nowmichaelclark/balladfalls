@@ -5047,3 +5047,12 @@ has its line in `docs/DONE.md`; the longer status paragraphs, as they stood,
 are in `docs/archive/queue-items.md`, "Old status notes"). Open: 120 (the
 icon), 108 (1.0), 75 (low priority), 37 (on hold) and the known issues
 below.
+
+## 120. The new name's icon (Mikey, 2026-11-23; merged at 1.0, balladfalls #1)
+
+Session 30l: an SVG icon for the new name, drawn with Mikey over rounds; he
+picked round 20 c on 2026-11-24. Built into draft #465
+(`icons/icon.svg` and `tools/icons.mjs`, v216 a placeholder for `BUILD` and
+`CACHE`), left open on purpose: it merges with 31a's rename at 1.0, so the
+testers' surprise holds. Nothing touches #465, `icons/` or anything that names
+the app until session 31.

@@ -733,3 +733,17 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   a newcomer reads it; `CHANGELOG.md` begun from this list, grouped for
   listeners; the v215 numbers against the v54 baseline in
   `docs/archive/perf-baseline.md`. Listen for nothing. No album loop.
+- balladfalls #1 (the new repository's numbers start again), the new name's
+  icon (item 120, session 30l, merged by session 31; v220 a placeholder):
+  `icons/icon.svg`, round 20's c, every size made from it by
+  `tools/icons.mjs`, the app, the favicon and the Android launcher. Look, no
+  listening. No album loop.
+- balladfalls #2, the new name (session 31a, merged by session 31, v221):
+  Ballad Falls at balladfalls.com, the release id `com.balladfalls.app`, the
+  old address's Worker in `old-address/` (deployed on launch day). Nothing
+  should sound different. No album loop.
+- balladfalls #3, 1.0 (item 108, session 31, v222): the version 1.0 in the app
+  (Advanced's last line, Diagnostics' first) and the APK (versionName 1.0,
+  code 10000), CHANGELOG.md dated, codes frozen (`core/golden/frozen-codes.txt`,
+  `test/frozen-codes.test.mjs`), the nightly kept nightly in the merge policy
+  (Mikey, 2026-11-25). Nothing should sound different. No album loop.

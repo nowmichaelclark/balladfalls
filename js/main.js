@@ -16,7 +16,12 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v221';
+const BUILD = 'v222';
+// The version the listener reads (1.0 since session 31, 2026-11-25): the last
+// line of Advanced and the first of Diagnostics. The APK's versionName
+// (android/gradle.properties) is the same, and android/fdroid/check-metadata.mjs
+// holds the two together; BUILD stays the cache's own counter.
+const VERSION = '1.0';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -2610,6 +2615,7 @@ function wire() {
   const renderDiag = () => {
     const lines = [];
     const push = (o) => { for (const [k, v] of Object.entries(o)) lines.push(`${k}: ${v}`); };
+    lines.push(`version: ${VERSION}`);
     lines.push(`build: ${BUILD}`);
     lines.push(`ua: ${navigator.userAgent}`);
     lines.push(`standalone: ${window.matchMedia('(display-mode: standalone)').matches}`);
@@ -2673,6 +2679,7 @@ function wire() {
 
   ui.el('diagRefresh').addEventListener('click', renderDiag);
   ui.el('goAdvanced').addEventListener('click', renderDiag);
+  ui.el('appVersion').textContent = `${APP_NAME} ${VERSION}`;
   ui.el('diagReset').addEventListener('click', () => {
     if (state.engine) state.engine.clearMetrics();
     // The core's late, missed and dropped notes read from here (the engine

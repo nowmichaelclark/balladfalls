@@ -22,12 +22,26 @@ closes with your phone or your ears, and a revert follows if you find trouble.
 - **Your release key** is made (2026-11-25; SHA-256 in `docs/DECISIONS.md`).
   Keep `release.jks` and its password safe for good: lose either and the app
   can never be updated.
-  - At each release (the tag workflow gives the unsigned APK as an artifact):
-    `apksigner sign --ks release.jks --out balladfalls-1.0.apk
-    balladfalls-universal-release-unsigned.apk` with `apksigner` from
-    build-tools 34 (not 35 or newer), and upload `balladfalls-1.0.apk` (the
-    version in its name, as the recipe's Binaries line asks) to the release
-    page as the file F-Droid compares with.
+  - **GitHub signs each release** (you, 2026-11-25: "I don't want to have to
+    sign releases via my linux machine"). The key is in this repository's
+    secrets, and the release workflow signs the APK with apksigner 34, checks
+    that the certificate's SHA-256 is the release key's, and attaches
+    `balladfalls-<version>.apk` to the tag's release, the file F-Droid
+    compares its own build with. Adding the secrets, once, on your Linux
+    machine and GitHub's website (no Android tools needed):
+    1. In a terminal: `base64 -w0 ~/release.jks > ~/release-b64.txt`, then
+       `xdg-open ~/release-b64.txt`; in the editor that opens, Ctrl+A, Ctrl+C.
+    2. Signed in to GitHub as the repository's owner, open
+       <https://github.com/nowmichaelclark/balladfalls/settings/secrets/actions>
+       and press **New repository secret**: name `RELEASE_KEYSTORE_BASE64`,
+       paste into Secret, **Add secret**.
+    3. Again: `RELEASE_KEYSTORE_PASSWORD`, the keystore's password.
+    4. Again: `RELEASE_KEY_ALIAS`, the word `release`.
+    5. Only if keytool asked you for a separate key password and you gave a
+       different one: `RELEASE_KEY_PASSWORD`, that one.
+    6. `rm ~/release-b64.txt`. Keep `release.jks` and its backup as they are.
+    Then a release signs itself; to sign one again (as v1.0, tagged before
+    this), Actions, android-release, **Run workflow** on `main` with its tag.
   - Rendering the recipe (below) takes `--signed-by <that SHA-256>`.
 - **Submit to F-Droid after 31** (the merge request is public and carries the
   new name):
@@ -286,16 +300,12 @@ Each is a few minutes. Say a step's number if something is wrong.
    Falls, and Advanced ends with "Ballad Falls 1.0" (Diagnostics' first line is
    `version: 1.0`). Workers Builds deploys `main` there by itself; this cloud
    session couldn't reach the address to look (its proxy refuses it).
-2. **The tag** (a cloud session's tag push is refused by its proxy): on
-   GitHub, this repository's Releases, Draft a new release; Choose a tag,
-   type `v1.0`, "Create new tag: v1.0 on publish", target `main`; the title
-   "Ballad Falls 1.0", the text CHANGELOG.md's 1.0 entry; Publish. The tag
-   starts the release workflow (Actions, android-release), which checks the
-   tag against the version and builds the unsigned APKs.
-3. **Sign the APK:** the release workflow's run on the tag (Actions,
-   android-release) has the unsigned APKs as its artifact. Sign the universal
-   one with your key (the command is under "Your release key", above) and
-   upload `balladfalls-1.0.apk` to the v1.0 release page.
+2. **The tag:** done (2026-11-25, on the Releases page: `v1.0` on d723b80;
+   its run built the unsigned APKs).
+3. **The signed APK:** add the secrets once ("Your release key", above).
+   Then the release workflow, run on `main` with the tag `v1.0`, signs the APK
+   and attaches `balladfalls-1.0.apk` to the v1.0 release; a later tag does it
+   by itself.
 4. **The old address and driftloom:**
    - **The old address's Worker:** in Cloudflare, Workers & Pages, `driftloom`,
      Settings, Build: disconnect the driftloom repository and connect

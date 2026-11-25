@@ -747,3 +747,8 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   code 10000), CHANGELOG.md dated, codes frozen (`core/golden/frozen-codes.txt`,
   `test/frozen-codes.test.mjs`), the nightly kept nightly in the merge policy
   (Mikey, 2026-11-25). Nothing should sound different. No album loop.
+- balladfalls #4, the release signed by GitHub (Mikey, 2026-11-25; no app
+  change): the release workflow signs the universal APK with the key in the
+  repository's secrets (apksigner 34), checks its certificate, and attaches
+  `balladfalls-<version>.apk` to the tag's release; by hand with a tag it signs
+  that release again. Nothing to hear.

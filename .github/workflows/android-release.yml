@@ -112,7 +112,9 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: release-unsigned-${{ github.ref_name }}
+          # The tag, or the commit (a branch name may hold a slash, which an
+          # artifact's name cannot).
+          name: release-unsigned-${{ env.TAG || github.sha }}
           path: dist
           if-no-files-found: error
           retention-days: 90

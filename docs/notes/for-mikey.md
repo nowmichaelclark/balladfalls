@@ -8,42 +8,65 @@ at 1.0 (queue item 108). Cleaned by session 30 (2026-11-24): what you had
 answered or replaced is gone, the rest shorter; the words table of item 113 is
 in `docs/archive/notes/113-words-table.md`.
 
-**Nothing here holds 1.0 but the new repository and the domain at 31a's
-start, and before 31 merges, your eyes on the icon and the Moto's step 1.**
-The release key is made (2026-11-25). The icon is picked (round 20c, 2026-11-24) and waits as draft #465
-until 31 merges it. Everything else is a check that closes with your phone or
-your ears, and a revert follows if you find trouble.
+**Nothing here holds 1.0 but one look before session 31 merges: the new
+domain answers ("The new name", step 1).** The release key is made
+(2026-11-25); the icon is picked and seen on your phone, and waits as the new
+repository's draft #1 with the new name's PR until 31 merges both; the Moto's
+step 1 is after 1.0 (you, 2026-11-25). Everything else is a check that closes
+with your phone or your ears, and a revert follows if you find trouble.
 
 ## Accounts
 
-- **The new repository, now** (`docs/DECISIONS.md`, 2026-11-18): this
-  repository is frozen at the release check's merge. Then, in order:
-  1. On GitHub, create the new repository, public and empty (no README), and
-     give the Claude GitHub app access to it; add it to the Claude project's
-     repositories. The brain then copies main, the tags and the icon's branch
-     into it, with full history.
-  2. In Cloudflare, create a Worker from the new repository (Workers Builds)
-     and attach the domain to it as a custom domain. The old `driftloom` Worker
-     stays as it is until launch day.
-  3. Start 31a there with its three lines (the name, the domain, the release
-     id the brain holds).
+- **The new name** (session 31a's PR, left open; session 31 merges it, with
+  the icon's #1, right before 1.0). The new repository and its Worker
+  `balladfalls`, with balladfalls.com attached, are made (2026-11-25).
+  1. **Before 31 merges:** open <https://balladfalls.com/>: something answers
+     (Cloudflare's placeholder is fine; the app comes with 31's merge), not a
+     browser error. The PR's Cloudflare preview already plays the renamed app.
+  2. **After 31 merges (launch day):** <https://balladfalls.com/> plays, its
+     title Ballad Falls. Workers Builds deploys `main` there by itself.
+  3. **The old address's Worker:** in Cloudflare, Workers & Pages, `driftloom`,
+     Settings, Build: disconnect the driftloom repository and connect
+     `nowmichaelclark/balladfalls`, branch `main`, root directory
+     `old-address`, deploy command `npx wrangler deploy`, no build command
+     (build watch paths: `old-address/*`, so only its own changes rebuild it);
+     then Retry the latest build, or push. Or by hand on your computer, in a
+     checkout of this repository: `cd old-address && npx wrangler login &&
+     npx wrangler deploy`. Either way the Worker keeps its name and address.
+  4. **Check the old address:** open
+     <https://driftloom.nowmichaelclark.workers.dev/#c=ELAAAAAF_DHAbt>: it
+     lands on balladfalls.com with that loop. `curl -sI
+     https://driftloom.nowmichaelclark.workers.dev/any/path?x=1` says `301`
+     and `location: https://balladfalls.com/any/path?x=1`. Then open the app
+     you installed from the old address on your phone: it says "Driftloom is
+     Ballad Falls now" and offers your Library; Bring it, and your loops and
+     albums are at balladfalls.com (install the app again from there, then
+     remove the old one). If a tester ever wants the offer again,
+     <https://driftloom.nowmichaelclark.workers.dev/library> makes it.
+  5. **Archive driftloom on GitHub:** its Settings, General, Danger Zone,
+     Archive this repository. It stays online, read-only, with its PRs.
+  6. **Then F-Droid,** below, with this repository's address. Testers with a
+     test APK (the working id) keep it apart: Ballad Falls from F-Droid is a new
+     app; a backup moves their Library.
 - **Your release key** is made (2026-11-25; SHA-256 in `docs/DECISIONS.md`).
   Keep `release.jks` and its password safe for good: lose either and the app
   can never be updated.
   - At each release (the tag workflow gives the unsigned APK as an artifact):
-    `apksigner sign --ks release.jks --out signed.apk
-    driftloom-universal-release-unsigned.apk` with `apksigner` from
-    build-tools 34 (not 35 or newer), and upload `signed.apk` to the release
+    `apksigner sign --ks release.jks --out balladfalls-1.0.apk
+    balladfalls-universal-release-unsigned.apk` with `apksigner` from
+    build-tools 34 (not 35 or newer), and upload `balladfalls-1.0.apk` (the
+    version in its name, as the recipe's Binaries line asks) to the release
     page as the file F-Droid compares with.
   - Rendering the recipe (below) takes `--signed-by <that SHA-256>`.
 - **Submit to F-Droid after 31** (the merge request is public and carries the
   new name):
   1. A free GitLab account; fork <https://gitlab.com/fdroid/fdroiddata>.
   2. In a checkout of the `v1.0` tag: `node android/fdroid/render.mjs
-     --repo-url <the public repository's address> --signed-by <SHA-256>
-     > /tmp/recipe.yml` (the id, name, version and tag's commit filled in).
-  3. In your fork, create `metadata/<the app's id>.yml` with that text; open a
-     merge request to `fdroid/fdroiddata` titled "New app: <name>" with its
+     --repo-url https://github.com/nowmichaelclark/balladfalls --signed-by
+     <SHA-256> > /tmp/recipe.yml` (the id, name, version and tag's commit
+     filled in).
+  3. In your fork, create `metadata/com.balladfalls.app.yml` with that text;
+     open a merge request to `fdroid/fdroiddata` titled "New app: Ballad Falls" with its
      "New app" template. Its CI runs F-Droid's build and lint, as
      `.github/workflows/fdroid.yml` does here.
   4. Reviewers answer in the merge request, usually within a few weeks. Likely
@@ -51,7 +74,7 @@ your ears, and a revert follows if you find trouble.
      rebuilds it, and the WebView (no network permission); the recipe's
      comments hold the reasons.
   5. Once merged, the listing appears in a few days. Then set `APP_LINK` in
-     `js/main.js` to `https://f-droid.org/packages/<the app's id>/`, bump
+     `js/main.js` to `https://f-droid.org/packages/com.balladfalls.app/`, bump
      `BUILD` and `CACHE`, and merge.
 
   The other way in, a "Request for Packaging" issue at
@@ -68,8 +91,8 @@ your ears, and a revert follows if you find trouble.
 
 Each is a few minutes. Say a step's number if something is wrong.
 
-1. **The latest APK, ten minutes with the screen off: before 31 merges**
-   (promise 1 on a phone; #473 to #475, and v218; download the
+1. **The latest APK, ten minutes with the screen off: after 1.0** (you,
+   2026-11-25; promise 1 on a phone; #473 to #475, and v218; download the
    `driftloom-debug-apk` artifact of
    <https://github.com/nowmichaelclark/driftloom/actions/runs/45550549271>,
    built from commit 4ddf186, the same code as main's v218; it needs a GitHub
@@ -124,7 +147,7 @@ Each is a few minutes. Say a step's number if something is wrong.
     again. (A few seconds into a track it still goes to the track before, not
     back to the start of the one playing: say if you want "restart first".)
 11. **The layers with a long piece** (item 110, #440), in the browser and the
-    app: open <https://driftloom.nowmichaelclark.workers.dev/#c=ELAAAAAF_DHAbt>
+    app: open <https://balladfalls.com/#c=ELAAAAAF_DHAbt>
     (a 128-bar arc), play, switch to Layers. In the first 15 seconds the kit and
     bass come in and the texture rises: their dots come up dimmer and brighten
     as they are heard; a note you hear has its dot when the playhead reaches it.

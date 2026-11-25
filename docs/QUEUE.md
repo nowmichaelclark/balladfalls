@@ -7,15 +7,14 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-25:** `main` is at v218 and hands session 30 (the polish) is
-done: #479 to #482. **1.0: go (brain B5, 2026-11-25).** Before session 31
-merges, two of Mikey's checks: the Moto's step 1 in `docs/notes/for-mikey.md`
-(ten minutes with the screen off, and its Diagnostics) and the icon on his
-phone. **Next:** this repository is frozen at B5's merge (tag
-`driftloom-final`) and copied into the new one (`docs/DECISIONS.md`,
-2026-11-18); there, 31a (the new name, built and left open), then 31 (1.0),
-which merges 30l's icon (item 120, draft #465 here, its branch copied across)
-and 31a. Done: every item to 122 but 120, and
+**Status, 2026-11-25:** this is the new repository, `nowmichaelclark/
+balladfalls`, a copy of driftloom (frozen at v218, #483; PR numbers to #483 are
+driftloom's). **1.0: go (brain B5, 2026-11-25).** Session 31a (the new name,
+v219) is built and left open as its PR, with 30l's icon as #1 (item 120);
+nothing else holds session 31 (Mikey, 2026-11-25: the Moto's step 1 is after
+1.0, and the icon is seen on his phone). **Next:** 31 (1.0), which merges #1
+and 31a's PR first; then Mikey's launch-day steps in `docs/notes/for-mikey.md`
+("The new name"). Done: every item to 122 but 120, and
 the sessions before them (`docs/sessions/README.md` is the order; every merge
 has its line in `docs/DONE.md`; the longer status paragraphs, as they stood,
 are in `docs/archive/queue-items.md`, "Old status notes"). Open: 120 (the

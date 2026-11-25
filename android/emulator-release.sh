@@ -16,7 +16,7 @@ set -eu
 apk=${1:?usage: android/emulator-release.sh APK [SCREENSHOT]}
 shot=${2:-}
 here=$(cd "$(dirname "$0")" && pwd)
-pkg=$(sed -n 's/^driftloom\.applicationId=//p' "$here/gradle.properties")
+pkg=$(sed -n 's/^driftloom\.releaseApplicationId=//p' "$here/gradle.properties")
 . "$here/emulator-lib.sh"
 boot_emulator
 

@@ -16,7 +16,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v218';
+const BUILD = 'v219';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -35,18 +35,18 @@ const CANT_PLAY = "Can't play here. Try recent Chrome, Firefox or Safari.";
 // so not the line above.
 const NOT_LOADED = 'Please refresh.';
 // And one that plays it, but too slowly even on lite (queue item 100; Mikey,
-// 2026-11-10): the line, and where the Driftloom app is. The link is empty
+// 2026-11-10): the line, and where the Android app is. The link is empty
 // until the Android app has a page (F-Droid, queue item 107); the second
 // sentence shows only when it is set.
 const TOO_SLOW = 'Browser too slow.';
 // The app's name, where the page needs it (the app is renamed at 1.0:
 // session 31a changes it here). Since session 30e no popup names it.
-const APP_NAME = 'Driftloom';
+const APP_NAME = 'Ballad Falls';
 // The app's address, where a link to a loop has none of the page's own (the
 // Android app's files are inside it). Renamed with the app; index.html's
 // preview tags carry the same address and name (test/preview.test.mjs holds
 // them, the manifest and these two together).
-const APP_URL = 'https://driftloom.nowmichaelclark.workers.dev/';
+const APP_URL = 'https://balladfalls.com/';
 // Each a popup of two or three words, and what a screen reader hears for it.
 const OLD_CODE = ['Code too old', `That code is from an older ${APP_NAME} and can't be opened.`];
 const NEWER_CODE = ['Needs update', `That code needs a newer ${APP_NAME}.`];
@@ -1972,10 +1972,30 @@ async function pasteCode() {
 // page make sound before a tap). The address is cleared of it, so a reload
 // does not bring the album in twice.
 function openLink() {
+  if (location.hash.startsWith('#move=')) { takeLibrary(); return; }
   if (!location.hash.startsWith('#c=')) return;
   const code = share.codeOfLink(location.hash);
   try { history.replaceState(null, '', location.pathname + location.search); } catch { /* the code is read already */ }
   openCode(code, { play: false, link: true });
+}
+
+// The Library from the old address (session 31a): its page packs the backup
+// into this link, "#move=...", with the link it was opened by after it
+// ("&then=c=..."). Added as a restore adds, then that link opens.
+async function takeLibrary() {
+  const params = new URLSearchParams(location.hash.slice(1));
+  const then = params.get('then') || '';
+  try { history.replaceState(null, '', location.pathname + location.search + (then ? `#${then}` : '')); } catch { /* read already */ }
+  try {
+    const res = store.importAll(await store.unpackMove(params.get('move') || ''));
+    savedChanged();
+    if (res.failed) ui.toast(...CANT_SAVE);
+    else if (res.added) ui.toast('Library moved', `Moved ${res.added} loop${res.added === 1 ? '' : 's'} to your Library`);
+    else ui.toast('Nothing new');
+  } catch {
+    ui.toast(...BAD_LINK);
+  }
+  if (then) openLink();
 }
 
 // An album's tracks into the Library as an album of its own (a code pasted
@@ -2583,7 +2603,7 @@ function wire() {
   });
 
   ui.el('exportJson').addEventListener('click', () => {
-    ui.download(store.exportAll(), 'driftloom-loops.json');
+    ui.download(store.exportAll(), 'balladfalls-loops.json');
   });
   ui.el('importBtn').addEventListener('click', () => ui.el('importFile').click());
 

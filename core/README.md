@@ -1,6 +1,6 @@
-# dlcore: Driftloom's audio core
+# dlcore: Ballad Falls' audio core
 
-The engine under Driftloom: the code that makes the sound. It is the same
+The engine under Ballad Falls: the code that makes the sound. It is the same
 code in the website (as WebAssembly), in a native build, and in someone's
 game. It is plain Rust with `no_std`, no dependencies and no threads, and
 it allocates nothing after `Core::new`. The same notes make the same samples,

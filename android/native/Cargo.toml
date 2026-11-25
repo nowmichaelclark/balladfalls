@@ -3,7 +3,7 @@ name = "dlandroid"
 version = "0.1.0"
 edition = "2024"
 publish = false
-description = "Driftloom's core on Android's own audio: the AAudio stream, the engine's queue and the JNI bridge"
+description = "Ballad Falls' core on Android's own audio: the AAudio stream, the engine's queue and the JNI bridge"
 license-file = "../../LICENSE"
 
 # The core itself, from the same source as the web's module, with the same

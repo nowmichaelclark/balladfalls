@@ -4,7 +4,7 @@
 Session 18). Phase 1 (items 42-46, done) is in `docs/archive/queue-items.md`. Changes to the
 charter are his to make; the brain proposes them, with the reason.
 
-The core is Driftloom's engine: the part users never see but developers
+The core is Ballad Falls' engine: the part users never see but developers
 do. It decides the notes and makes the sound, and it is the same code in
 the website, the Android app, a desktop build, or someone's game. It is
 the number one priority (Mikey, 2026-10-12): shoot for the moon, take the
@@ -149,7 +149,7 @@ small files, one way of doing each thing.
 - *Measure:* a fresh Claude session, given only the guide, adds a new
   instrument recipe and a new building block correctly on the first try.
 
-### 7. It still sounds like Driftloom
+### 7. It still sounds like Ballad Falls
 
 Freedom from Chromium is freedom to be better, not different by
 accident.
@@ -184,7 +184,7 @@ accident.
 ### 9. Stereo across the board, with a mono switch
 
 Mikey, 2026-10-15 (replaces "stereo possible, mono the default" of
-2026-10-13 and "mono only" of 2026-10-11): **Driftloom is stereo**,
+2026-10-13 and "mono only" of 2026-10-11): **Ballad Falls is stereo**,
 everywhere, with an optional switch that makes everything mono for
 listeners and developers who prefer it. Stereo has endlessly many
 variables, and each should be easy for developers and users to tweak.
@@ -356,7 +356,7 @@ one before it.
    is happening; the core leans its vibes), with requests on events
    (promise 11). Earlier, from phase 1 on, the native command-line
    renderer and a tiny test host stand in for a game in CI. *Done
-   when:* Broken Friends plays Driftloom following its creatures, time
+   when:* Broken Friends plays Ballad Falls following its creatures, time
    and events on an Android phone and in a phone's browser, with promise
    1's no-glitch measure.
 5. **Instruments as recipes.** First the catalogue of block ideas for

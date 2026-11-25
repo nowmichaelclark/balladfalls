@@ -1,12 +1,17 @@
-// Cloudflare Workers, assets only. Driftloom has no build step and no
+// Cloudflare Workers, assets only. Ballad Falls has no build step and no
 // server logic, so there is no `main` entry: Wrangler uploads the folder
 // and Cloudflare serves it. Unmatched paths return 404, which is right for
 // a static site -- do not set single-page-application here, or a typo'd
 // URL would quietly serve index.html instead of failing.
 {
-  "name": "driftloom",
+  // The Worker's name in Cloudflare (Workers Builds, connected to this
+  // repository): Workers Builds refuses a build whose name differs.
+  "name": "balladfalls",
   "compatibility_date": "2026-09-19",
   "assets": { "directory": "./" },
+  // The domain (session 31a), as a Custom Domain: Cloudflare makes its DNS
+  // record and certificate. The workers.dev address stays on as well.
+  "routes": [{ "pattern": "balladfalls.com", "custom_domain": true }],
   // PR branches build as Cloudflare Previews (`npx wrangler preview`),
   // which needs this block; it can stay empty. Each deploy gets its own
   // Deployment URL that never moves, which is what the A/Bs use.

@@ -4,6 +4,8 @@
 #
 #   android/fdroid/check-apk.sh APK DEPENDENCIES.txt
 #
+# 0. The release's id and name (session 31a): android/gradle.properties's
+#    driftloom.releaseApplicationId, and the launcher's label its appName.
 # 1. The permissions are exactly the ones AndroidManifest.xml declares and
 #    android/LICENSES.md names: no network, no location, no storage.
 # 2. No tracker, no ad or analytics library, no Google Play Services: none of
@@ -25,6 +27,16 @@ ok() { echo "ok   $*"; }
 bad() { echo "FAIL $*"; failed=1; }
 
 aapt2=$(ls "${ANDROID_HOME:-/opt/android-sdk}"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)
+
+# 0. the id and the name
+props=$here/../gradle.properties
+want_id=$(sed -n 's/^driftloom\.releaseApplicationId=//p' "$props")
+want_name=$(sed -n 's/^driftloom\.appName=//p' "$props")
+badging=$("$aapt2" dump badging "$apk")
+id=$(echo "$badging" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
+label=$(echo "$badging" | sed -n "s/^application-label:'\(.*\)'$/\1/p")
+[ "$id" = "$want_id" ] && ok "the id is the release's: $id" || bad "the id is $id, expected the release's $want_id"
+[ "$label" = "$want_name" ] && ok "the launcher's label is the name: $label" || bad "the label is \"$label\", expected \"$want_name\""
 
 # 1. permissions
 want="android.permission.FOREGROUND_SERVICE android.permission.FOREGROUND_SERVICE_DATA_SYNC android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK android.permission.POST_NOTIFICATIONS android.permission.WAKE_LOCK"

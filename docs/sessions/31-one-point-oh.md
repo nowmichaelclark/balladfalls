@@ -1,5 +1,7 @@
 # Session 31: 1.0 (item 108)
 
+**Changed by session 31a (2026-11-25):** Mikey's two checks no longer hold this session (`docs/DECISIONS.md`, 2026-11-25: the Moto's step 1 is after 1.0, and the icon is seen on his phone). In the new repository the icon's PR is #1.
+
 **Changed by brain B5 (2026-11-25):** this session runs in the new repository (a copy of driftloom, Mikey, 2026-11-18), where 30l's branch is copied across and opened as its own PR; and before it starts, Mikey's two checks: the Moto's ten minutes with the screen off (promise 1 on a phone) and the icon on his phone.
 
 **Changed by brain B-parallel 4 (2026-11-23):** session 30l's PR (the new name's icon, left open like 31a's) merges with 31a's, just before it.
@@ -7,13 +9,13 @@
 **Changed by brain B1 (2026-11-11):** merges session 31a's PR (the new name) first; the place check counts 31a's row as ticked when its PR is open and green.
 
 - **Model:** Sonnet 5.5. **Effort:** medium.
-- **Start after:** brain session B5's go (2026-11-25), Mikey's go-ahead written in docs/notes/for-mikey.md or the queue (with the Moto's step 1 and the icon on his phone), and sessions 30l's and 31a's PRs open and green in the new repository (they stay unmerged until this session: its row is ticked inside it).
+- **Start after:** brain session B5's go (2026-11-25), and sessions 30l's and 31a's PRs open and green in the new repository (#1 and 31a's; they stay unmerged until this session: its row is ticked inside it). Nothing of Mikey's holds it but a look at the new domain (`docs/notes/for-mikey.md`, "The new name", step 1).
 - **Queue item:** item 108.
 
 Paste everything in the block as the session's first message.
 
 ````text
-Hands session 31 on the road to Driftloom's 1.0 (Sonnet 5.5, medium): 1.0 (item 108).
+Hands session 31 on the road to Ballad Falls' 1.0 (Sonnet 5.5, medium): 1.0 (item 108).
 
 Work in the new repository, not in driftloom (frozen at tag driftloom-final, archived on launch day): its main, tags and history are a copy of driftloom's; PRs and Actions history are not, so read an old PR on driftloom's GitHub.
 

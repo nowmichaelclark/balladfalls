@@ -24,7 +24,7 @@
 // playing each took longer than the audio it made (the render behind real
 // time, so the output runs dry), or the device filled in that often where
 // the browser says (`playoutStats`), the browser is too slow to play
-// Driftloom smoothly, and the page says so (js/main.js). The line is set
+// Ballad Falls smoothly, and the page says so (js/main.js). The line is set
 // from what is known of the devices: the weakest we support, Mikey's Lenovo
 // tablet, renders lite's busiest loops at 2.0 to 3.1 times real time (item
 // 87: its quarter-seconds at a third to a half of their time), so it would

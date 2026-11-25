@@ -73,7 +73,7 @@ jobs:
       - name: lint and rewritemeta
         run: |
           set -eu
-          id=$(sed -n 's/^driftloom\.applicationId=//p' android/gradle.properties)
+          id=$(sed -n 's/^driftloom\.releaseApplicationId=//p' android/gradle.properties)
           work="$RUNNER_TEMP/recipe"
           mkdir -p "$work"
           cp -r "$RUNNER_TEMP/fdroiddata/config" "$RUNNER_TEMP/fdroiddata/srclibs" "$work/"
@@ -97,7 +97,7 @@ jobs:
       - name: the update check finds a new tag
         run: |
           set -eu
-          id=$(sed -n 's/^driftloom\.applicationId=//p' android/gradle.properties)
+          id=$(sed -n 's/^driftloom\.releaseApplicationId=//p' android/gradle.properties)
           work="$RUNNER_TEMP/updates"
           rm -rf "$work" && mkdir -p "$work/metadata" "$work/src/android"
           cp -r "$RUNNER_TEMP/fdroiddata/config" "$RUNNER_TEMP/fdroiddata/srclibs" "$work/"
@@ -139,7 +139,7 @@ jobs:
           cat "$RUNNER_TEMP/fdroid"/*.yml
           p=android/gradle.properties
           {
-            echo "APP_ID=$(sed -n 's/^driftloom\.applicationId=//p' $p)"
+            echo "APP_ID=$(sed -n 's/^driftloom\.releaseApplicationId=//p' $p)"
             echo "VERSION_CODE=$(sed -n 's/^driftloom\.versionCode=//p' $p)"
             echo "NDK=$(sed -n 's/^driftloom\.ndkVersion=//p' $p)"
           } >> "$GITHUB_ENV"
@@ -344,4 +344,4 @@ jobs:
         run: sh android/fdroid/compare-apks.sh
 
       - name: the APK holds only what it should (anti-features, permissions, licenses)
-        run: sh android/fdroid/check-apk.sh a/driftloom-universal-release-unsigned.apk a/dependencies.txt
+        run: sh android/fdroid/check-apk.sh a/balladfalls-universal-release-unsigned.apk a/dependencies.txt

@@ -1,4 +1,4 @@
-// Making the phone treat Driftloom as a music player.
+// Making the phone treat the app as a music player.
 //
 // Web Audio on its own gets no lock-screen controls, no notification, and
 // no claim on the Bluetooth transport buttons.
@@ -45,6 +45,10 @@
 
 import { appLink } from './app.js';
 import { coverPng } from './covers.js';
+
+// The album the lock screen shows: the app's name, as js/main.js's APP_NAME
+// (test/preview.test.mjs holds the two together).
+const APP_NAME = 'Ballad Falls';
 
 const KEEPALIVE = [
   ['audio/keepalive.flac', 'audio/flac'],
@@ -113,7 +117,7 @@ export class SessionArt {
 
 const sessionArt = new SessionArt(coverPng, ({ title, artist }, artwork) => {
   try {
-    navigator.mediaSession.metadata = new MediaMetadata({ title, artist, album: 'Driftloom', artwork });
+    navigator.mediaSession.metadata = new MediaMetadata({ title, artist, album: APP_NAME, artwork });
   } catch { /* metadata is a nicety, not a requirement */ }
 });
 

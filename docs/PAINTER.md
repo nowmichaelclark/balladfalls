@@ -101,7 +101,7 @@ code ("a peaceful, zany loop at 77 bpm, 16 bars, when the sun rises").
   feel), and feels such as straight or swung.
 - **Scale and key.** The set of notes the loop uses (major, minor,
   dorian, pentatonic and so on) and its home note.
-- **Profile.** Driftloom's styles (cinder, tide, wayfare, shrine and
+- **Profile.** Ballad Falls' styles (cinder, tide, wayfare, shrine and
   the rest), each with its own character, instruments and drums.
 - **Instruments, per layer.** Which voice plays the melody (kalimba,
   music box, marimba, fiddle, ocarina...), the chords, the bass, the
@@ -110,7 +110,7 @@ code ("a peaceful, zany loop at 77 bpm, 16 bars, when the sun rises").
   be left out (fewer layers is welcome variety).
 - **Three states for every pick.** Each choice can be **pinned** (exactly
   this), given a **range** (anywhere from 70 to 85 bpm) or **left to
-  chance** (Driftloom decides, as today). The design needs one clear,
+  chance** (Ballad Falls decides, as today). The design needs one clear,
   consistent way to show and switch these three states on every pick.
 - **A range control.** Setting the low and high ends of a range.
 - **Clear all picks.** Back to "everything left to chance", like Vibes'
@@ -176,7 +176,7 @@ album can fit in under 20 characters).
   how many tracks, and the picks they share; **save** puts it in the
   Library (item 121).
 - **"Needs a newer version" / "needs an instrument" messages.** When a
-  code needs a newer Driftloom, or an instrument someone made that this
+  code needs a newer Ballad Falls, or an instrument someone made that this
   device doesn't have.
 - **Custom instrument badge.** A small mark that a code carries a
   home-made instrument inside it.
@@ -189,11 +189,11 @@ Instruments are becoming small recipes anyone can make, including mods.
   (glassy bell tones), floorDrop (a soft low drum hit), arc (a gentle
   rising tone), and more as they are approved.
 - **Modded or recipe instrument badge.** In Layers and Sounds, a quiet
-  mark that an instrument is not one of Driftloom's own.
+  mark that an instrument is not one of Ballad Falls' own.
 
 ## 6. Stereo (soon: stereo by default, with a mono switch)
 
-- **The Mono switch.** A setting that makes all of Driftloom mono
+- **The Mono switch.** A setting that makes all of Ballad Falls mono
   (exactly today's sound), for people who prefer it or listen on one
   speaker. Stereo is the default.
 - **Mono or stereo indicator,** if wanted: which one is playing.
@@ -219,7 +219,7 @@ Instruments are becoming small recipes anyone can make, including mods.
 
 ## 9. Games and developers
 
-Driftloom's engine is going into Broken Friends, Mikey's own game
+Ballad Falls' engine is going into Broken Friends, Mikey's own game
 (Mikey, 2026-10-24; it replaced the three mod games), where the music
 follows each creature, the time of day and what is happening at camp.
 

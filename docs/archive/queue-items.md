@@ -124,9 +124,9 @@ queue is `docs/QUEUE.md`. The notes the hands left on these items are in
 - [53. The picks through the core's commands (phase 3)](#53-the-picks-through-the-cores-commands-phase-3)
 - [115. No crackles in the Android app (done, hands, 2026-11-23 to 24)](#115-no-crackles-in-the-android-app-done-hands-2026-11-23-to-24)
 
-## Old status notes (until 2026-11-24)
+## Old status notes (until 2026-11-25)
 
-The status paragraphs the queue carried at the top, as written (to 2026-10-25, then the one of 2026-11-24 at the end).
+The status paragraphs the queue carried at the top, as written (to 2026-10-25, then the ones of 2026-11-24 and 2026-11-25, driftloom's last, at the end).
 
 **Status, 2026-10-12:** items 0-33 are done (13 stopped at its gate by
 design): the Rust core is Driftloom's engine and plays by default; the
@@ -5032,3 +5032,18 @@ Session 30 closed or restated each: the queue's "Known issues" says which. The e
   and are not redrawn by the wander, whatever the slider says (item 67's
   kick swap aside); with the salt, the upper range's wandering would vary
   play to play, while the loop's choices stay its own.
+
+**Status, 2026-11-25:** `main` is at v218 and hands session 30 (the polish) is
+done: #479 to #482. **1.0: go (brain B5, 2026-11-25).** Before session 31
+merges, two of Mikey's checks: the Moto's step 1 in `docs/notes/for-mikey.md`
+(ten minutes with the screen off, and its Diagnostics) and the icon on his
+phone. **Next:** this repository is frozen at B5's merge (tag
+`driftloom-final`) and copied into the new one (`docs/DECISIONS.md`,
+2026-11-18); there, 31a (the new name, built and left open), then 31 (1.0),
+which merges 30l's icon (item 120, draft #465 here, its branch copied across)
+and 31a. Done: every item to 122 but 120, and
+the sessions before them (`docs/sessions/README.md` is the order; every merge
+has its line in `docs/DONE.md`; the longer status paragraphs, as they stood,
+are in `docs/archive/queue-items.md`, "Old status notes"). Open: 120 (the
+icon), 108 (1.0), 75 (low priority), 37 (on hold) and the known issues
+below.

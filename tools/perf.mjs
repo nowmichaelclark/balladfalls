@@ -71,7 +71,7 @@
 // Chromium only, launched directly over the DevTools protocol (Playwright's
 // own page handling keeps every tab "visible", which would make the hidden
 // measurements a lie). Uses the Chromium Playwright installs, or --chrome.
-// A developer dependency of this one tool, not of Driftloom.
+// A developer dependency of this one tool, not of Ballad Falls.
 
 import http from 'node:http';
 import fs from 'node:fs';
@@ -1287,7 +1287,7 @@ function table(head, rows) {
 
 function report(data, opts) {
   const out = [];
-  out.push(`Driftloom perf harness -- ${data.build}, Chromium ${data.chromium}, ${data.cpus}; ${opts.seconds} s windows after ${opts.warmup} s of play, drift on.`);
+  out.push(`Ballad Falls perf harness -- ${data.build}, Chromium ${data.chromium}, ${data.cpus}; ${opts.seconds} s windows after ${opts.warmup} s of play, drift on.`);
   if (data.load) {
     const L = data.load;
     const total = L.rows.reduce((a, r) => a + r.bytes, 0);
@@ -1350,7 +1350,7 @@ function report(data, opts) {
 // throttle, each side measured back to back with the other.
 function abReport(data, opts) {
   const sides = opts.abQuery ? `A: this folder, B: this folder with ?${opts.abQuery}` : `A: ${opts.ab}, B: this folder`;
-  const out = [`Driftloom perf harness, A/B -- ${sides}; Chromium ${data.chromium}, ${data.cpus}; ${opts.seconds} s windows, drift on.`, ''];
+  const out = [`Ballad Falls perf harness, A/B -- ${sides}; Chromium ${data.chromium}, ${data.cpus}; ${opts.seconds} s windows, drift on.`, ''];
   const ok = data.runs.filter((r) => !r.error);
   const groups = [...new Set(ok.map((r) => `${r.part}|${r.quality}|${r.throttle}`))];
   const figs = [['audio render ms', (r) => r.renderMs], ['main thread ms', (r) => r.taskMs], ['script ms', (r) => r.scriptMs],

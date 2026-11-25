@@ -17,6 +17,9 @@
 #          reader, with the description its screen lost (session 30e, item
 #          113), Share's views fitting; its screenshots of every screen at
 #          360 px and a tablet's width, light and dark, are uploaded
+#   move   tools/old-address.mjs (session 31a): an installed app at the old
+#          address sent on by old-address/worker.js, its Library carried
+#          across, a link's code kept, and a fresh browser at the new one plays
 #   a11y   tools/a11y.mjs (session 30f, item 114): WCAG 2.2 AA's measurable
 #          parts in every theme: contrast as rendered, focus, names and
 #          roles, targets, the fit at 200% text and on short and sideways
@@ -31,7 +34,7 @@
 #          zip or files), the same watch, the zip tested by unzip and every
 #          track checked against its own job
 #
-# By hand: `jobs` (rows, views, card, names, a11y, long or all), `repeat` (the rows, that many
+# By hand: `jobs` (rows, views, card, names, a11y, move, long or all), `repeat` (the rows, that many
 # times in a row, all must pass), `length` (seconds, the track length the
 # export takes, session 30c), `burn` and `format` (lossless or small) for the long job,
 # and `album` and `box` (item 121) to make it an album's.
@@ -73,11 +76,14 @@ on:
       - 'tools/card.mjs'
       - 'tools/export*.mjs'
       - 'tools/ogg-read.mjs'
+      - 'tools/old-address.mjs'
+      - 'old-address/**'
+      - 'sw.js'
       - '.github/workflows/export.yml'
   workflow_dispatch:
     inputs:
       jobs:
-        description: 'Which jobs: rows, views, card, names, a11y, long or all'
+        description: 'Which jobs: rows, views, card, names, a11y, move, long or all'
         default: 'all'
       repeat:
         description: 'The rows, this many times in a row'
@@ -125,6 +131,20 @@ jobs:
             echo "=== rows, run $i ==="
             node tools/rows.mjs || exit 1
           done
+
+  move:
+    if: github.event_name != 'workflow_dispatch' || inputs.jobs == 'all' || inputs.jobs == 'move'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Playwright's Chromium
+        run: npm install --no-save --no-audit --no-fund playwright@1.56.1 && npx playwright install --with-deps chromium
+      - name: The old address sends the installed app on, with its Library
+        run: node tools/old-address.mjs
 
   views:
     if: github.event_name == 'workflow_dispatch' && (inputs.jobs == 'views' || inputs.jobs == 'all')

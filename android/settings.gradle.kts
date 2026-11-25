@@ -1,4 +1,4 @@
-// Driftloom's Android app: one module, `app`. The repositories are Google's
+// Ballad Falls' Android app: one module, `app`. The repositories are Google's
 // and Maven Central only (F-Droid builds from them, and nothing else is
 // trusted); Gradle itself is the wrapper's, pinned and checksummed
 // (gradle/wrapper/gradle-wrapper.properties).

@@ -1,4 +1,4 @@
-/* dlcore.h: the Driftloom core, from C (docs/CORE.md, promise 4).
+/* dlcore.h: the Ballad Falls core, from C (docs/CORE.md, promise 4).
  *
  * Today it holds the player (queue item 82): a loop from its seed, made and
  * played inside the core with its own sequencer, as the app plays it, and

@@ -1,4 +1,4 @@
-# Driftloom for Android
+# Ballad Falls for Android
 
 Queue item 107. This folder is the Android app: one activity, one WebView,
 the page's own files inside the APK, served to it from a local origin, and the
@@ -92,11 +92,11 @@ listing, build recipe, release workflow and checks (the sections "F-Droid",
 ## Build
 
 ```bash
-cd android && ./gradlew assembleDebug   # app/build/outputs/apk/debug/driftloom-*-debug.apk
+cd android && ./gradlew assembleDebug   # app/build/outputs/apk/debug/balladfalls-*-debug.apk
 ```
 
 One APK for each ABI (arm64-v8a for phones, armeabi-v7a for older 32-bit
-ones, x86_64 for the emulator) and `driftloom-universal-debug.apk` with all
+ones, x86_64 for the emulator) and `balladfalls-universal-debug.apk` with all
 three. `-Pdriftloom.abis=x86_64` builds one ABI, quicker.
 
 Needs JDK 17 or newer and the Android SDK (`ANDROID_HOME`, or `sdk.dir` in
@@ -121,13 +121,23 @@ for the emulator (CI's is PulseAudio with a null sink). The workflow's
 `smoke_runs` input (run it by hand) boots that many emulators for the smoke
 test at once.
 
-## The rename (session 31a): one line each
+## The ids and the name (session 31a)
 
-1. The id: `driftloom.applicationId` in `gradle.properties`.
-2. The name: `driftloom.appName` in `gradle.properties` (the APK's file name).
-3. The launcher label: `app_name` in `app/src/main/res/values/strings.xml`.
+1. The test builds' working id: `driftloom.applicationId` in
+   `gradle.properties` (`io.github.nowmichaelclark.driftloom`, kept: debug
+   builds, CI's emulator tests).
+2. The release's id: `driftloom.releaseApplicationId`
+   (`com.balladfalls.app`), set on release builds only (`app/build.gradle.kts`,
+   `androidComponents`); F-Droid's recipe and `fdroid/check-apk.sh` read it. A
+   test build and the release install side by side.
+3. The name: `driftloom.appName` (the APK's file name, lowercase without
+   spaces: `balladfalls-universal-release-unsigned.apk`).
+4. The launcher label and the lock screen's album: `app_name` in
+   `app/src/main/res/values/strings.xml`.
 
-The Kotlin package (`app.loops`, the `namespace`) is not the id and stays.
+The Kotlin package (`app.loops`, the `namespace`), the native library
+(`libdriftloom.so`) and the `driftloom.*` property names are identifiers, not
+the name, and stay.
 
 ## Choices
 

@@ -1,6 +1,6 @@
 //! lowBell (queue item 101g; batch 6's #2, Ears 13, approved by Mikey
 //! 2026-11-08, both kinds): a struck low bell on the chord's root, in a
-//! register Driftloom's other bells never reach. The player strikes it
+//! register Ballad Falls' other bells never reach. The player strikes it
 //! (`Synth::low_bell`) at each chord whose root changes, or the same root
 //! again after a while, between D2 and C#3, so its fundamental stays above
 //! the 60 Hz guard; this file is what it plays.

@@ -1,5 +1,5 @@
 // Deterministic pseudo-random number generation.
-// Everything in Driftloom grows from seeds, so the same seed always
+// Everything in Ballad Falls grows from seeds, so the same seed always
 // produces the same loop. That is what makes a share code of about
 // seventy bytes enough to carry a whole loop.
 

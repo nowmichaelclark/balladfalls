@@ -277,7 +277,7 @@ impl<const C: usize> Compressor<C> {
     /// infinitely loud, so a node that has just been built dips whatever
     /// first reaches it, by up to 9 dB (the bus compressor) or 14 dB (the
     /// ceiling), for the next hundred milliseconds or so while the detector
-    /// climbs back and the gain follows. The core is Driftloom's own
+    /// climbs back and the gain follows. The core is Ballad Falls' own
     /// engine, not a copy of Chromium's: this plays that settling out on
     /// silence, so the node starts where Chromium's own ends up, and only
     /// the dip is gone. (Where that is, is Chromium's too: the detector's

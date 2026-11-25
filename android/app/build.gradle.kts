@@ -5,7 +5,10 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Test builds (debug) keep the working id; release builds take the release id
+// (session 31a: android/gradle.properties).
 val appId = providers.gradleProperty("driftloom.applicationId").get()
+val releaseId = providers.gradleProperty("driftloom.releaseApplicationId").get()
 val appName = providers.gradleProperty("driftloom.appName").get()
 
 // The ABIs the core is built for (session 26): phones and tablets (arm64-v8a,
@@ -13,7 +16,9 @@ val appName = providers.gradleProperty("driftloom.appName").get()
 // for a quicker local build.
 val abis = providers.gradleProperty("driftloom.abis").get().split(',').map { it.trim() }.filter { it.isNotEmpty() }
 
-base.archivesName.set(appName.lowercase())
+// "balladfalls-universal-release-unsigned.apk": the name, lowercase, no spaces
+// (android/fdroid/render.mjs names the signed APK the same way).
+base.archivesName.set(appName.lowercase().filter { it.isLetterOrDigit() })
 
 android {
     // The Kotlin package of the code, not the app's id: it stays when the
@@ -113,6 +118,14 @@ android {
     sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("generated/bundled-site"))
     // The core's libraries, built from source: see buildNative below.
     sourceSets.getByName("main").jniLibs.srcDir(layout.buildDirectory.dir("generated/native"))
+}
+
+// A release build is the app listeners install: its own id (an Android
+// variant's id is set here; a build type can only add a suffix).
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.applicationId.set(releaseId)
+    }
 }
 
 kotlin {

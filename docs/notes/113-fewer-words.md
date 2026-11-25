@@ -3,7 +3,7 @@
 Session 30e, PR #449. For the brain (these are for `docs/DECISIONS.md`,
 which is at its size limit) and for any session that quotes the app's
 words: 30f, 30, B5. The before and after of every line is in
-`docs/notes/for-mikey.md`, under Decisions.
+`docs/archive/notes/113-words-table.md`.
 
 ## Mikey, 2026-11-22, to session 30e directly
 

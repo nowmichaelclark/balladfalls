@@ -14,7 +14,7 @@
 //                       of the APK you sign yourself: adds Binaries and
 //                       AllowedAPKSigningKeys, so F-Droid publishes your signed
 //                       APK once its own build matches it byte for byte
-//                       (docs/notes/for-mikey.md, "Signing")
+//                       (docs/notes/for-mikey.md, "Accounts")
 //
 // The result is plain text; check it with `fdroid lint` and `fdroid
 // rewritemeta` (CI does).

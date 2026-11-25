@@ -9,6 +9,7 @@
 // Run with:  node test/old-address.test.mjs
 
 import fs from 'node:fs';
+import vm from 'node:vm';
 import worker, { pack } from '../old-address/worker.js';
 import { unpackMove } from '../js/storage.js';
 
@@ -35,6 +36,7 @@ console.log('\nThe addresses');
   check('the site\'s custom domain is APP_URL\'s host', site.routes.some((r) => r.custom_domain && `https://${r.pattern}/` === appUrl), JSON.stringify(site.routes));
   check('the site\'s Worker is "balladfalls"', site.name === 'balladfalls', site.name);
   check('the old address\'s Worker takes the old name, "driftloom"', old.name === 'driftloom', old.name);
+  check('its bundle keeps no __name helper (keep_names off)', old.keep_names === false);
   check('it sends everything to APP_URL', `${old.vars.NEW_ORIGIN}/` === appUrl, old.vars.NEW_ORIGIN);
   check('the site does not upload the old address\'s folder', read('.assetsignore').split('\n').includes('old-address'));
 }
@@ -62,6 +64,23 @@ console.log('\nA page visit gets the page');
   let parses = true;
   try { new Function(script); } catch (e) { parses = String(e); }
   check('its script parses', parses === true, parses);
+  // Run it as a browser with no Library would, but with its functions as
+  // Wrangler's bundler gives them (wrapped in __name, which no browser has):
+  // the deployed page once stopped there, blank, and never went on.
+  const bundled = script.replace(/const \$ = \(id\) => ([^;]+);/, 'const $ = /* @__PURE__ */ __name((id) => $1, "$");');
+  const went = [];
+  const el = () => ({ hidden: true, focus() {}, addEventListener() {}, set textContent(v) {}, set href(v) {} });
+  const sandbox = {
+    document: { getElementById: el },
+    location: { hash: '#c=ELAAAAAF_DHAbt', replace: (u) => went.push(u) },
+    localStorage: { getItem: () => null, setItem() {} },
+    navigator: {}, matchMedia: () => ({ matches: false }),
+    TextEncoder, Blob, Response, btoa, JSON,
+  };
+  let ran = true;
+  try { vm.runInNewContext(bundled, sandbox); } catch (e) { ran = String(e); }
+  check('its script runs from bundled functions too', ran === true && bundled.includes('__name(('), ran);
+  check('with no Library it goes straight on, the link\'s code kept', went[0] === `${NEW}/some/where?q=1#c=ELAAAAAF_DHAbt`, JSON.stringify(went));
   check('it says the name and where', html.includes('Ballad Falls') && html.includes('balladfalls.com'));
   const lib = await (await visit('/library?x=1')).text();
   check('/library always offers, and goes to the new address\'s start', lib.includes(`, true);`) && lib.includes(JSON.stringify(`${NEW}/`)));

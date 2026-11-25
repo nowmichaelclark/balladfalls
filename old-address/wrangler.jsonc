@@ -9,6 +9,9 @@
   "main": "worker.js",
   "compatibility_date": "2026-09-19",
   "workers_dev": true,
+  // The page's script is put there from worker.js's own functions: don't let
+  // the bundler wrap them in its __name helper, which the browser lacks.
+  "keep_names": false,
   "vars": {
     // Where everything goes: the same path and query on the new address.
     "NEW_ORIGIN": "https://balladfalls.com"

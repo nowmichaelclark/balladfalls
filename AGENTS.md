@@ -95,6 +95,8 @@ that changes how it sounds.
   `test/old-address.test.mjs` checks it in Node, `node tools/old-address.mjs`
   in Chromium (an installed app sent on, its Library moved; CI's `move` job in
   the export workflow).
+- Icons (item 120): every size from `icons/icon.svg` by `node tools/icons.mjs`
+  (`--check` the safe zones; ImageMagick 7 with librsvg).
 - Docs: `node tools/check-docs.mjs`.
 - Android (item 107): `cd android && ./gradlew assembleDebug` (needs the NDK
   `android/gradle.properties` pins and rustup; the core is built native by

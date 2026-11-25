@@ -8,33 +8,34 @@ at 1.0 (queue item 108). Cleaned by session 30 (2026-11-24): what you had
 answered or replaced is gone, the rest shorter; the words table of item 113 is
 in `docs/archive/notes/113-words-table.md`.
 
-**Nothing here holds 1.0 but your release key, the domain at 31a's start,
-and your eyes on the icon.** The icon is picked (round 20c, 2026-11-24) and waits as draft #465
+**Nothing here holds 1.0 but the new repository and the domain at 31a's
+start, and before 31 merges, your eyes on the icon and the Moto's step 1.**
+The release key is made (2026-11-25). The icon is picked (round 20c, 2026-11-24) and waits as draft #465
 until 31 merges it. Everything else is a check that closes with your phone or
 your ears, and a revert follows if you find trouble.
 
 ## Accounts
 
-- **The new name's domain** (bought on Cloudflare): you attach it when session
-  31a starts, once the new repository exists (which Worker holds it depends on
-  the move; 2026-11-24, to the brain). Confirm the Android release id then (the
-  brain proposes the domain reversed plus `.app`). You paste the name, the
-  domain and the id into 31a.
-- **Make your release key** (you chose your own, 2026-11-22). Keep it safe for
-  good: lose it and the app can never be updated. On your computer, never in
-  CI, a chat or the repo:
-  1. `keytool -genkeypair -v -keystore release.jks -alias release -keyalg RSA
-     -keysize 4096 -validity 36500` (a password and your name; any answers do).
-     Keep `release.jks` and the password in your password manager and a second
-     backup place.
-  2. `keytool -list -v -keystore release.jks -alias release`: copy the
-     **SHA-256** line, lowercase, without the colons.
-  3. At each release (the tag workflow gives the unsigned APK as an artifact):
-     `apksigner sign --ks release.jks --out signed.apk
-     driftloom-universal-release-unsigned.apk` with `apksigner` from
-     build-tools 34 (not 35 or newer), and upload `signed.apk` to the release
-     page as the file F-Droid compares with.
-  4. Rendering the recipe (below) takes `--signed-by <that SHA-256>`.
+- **The new repository, now** (`docs/DECISIONS.md`, 2026-11-18): this
+  repository is frozen at the release check's merge. Then, in order:
+  1. On GitHub, create the new repository, public and empty (no README), and
+     give the Claude GitHub app access to it; add it to the Claude project's
+     repositories. The brain then copies main, the tags and the icon's branch
+     into it, with full history.
+  2. In Cloudflare, create a Worker from the new repository (Workers Builds)
+     and attach the domain to it as a custom domain. The old `driftloom` Worker
+     stays as it is until launch day.
+  3. Start 31a there with its three lines (the name, the domain, the release
+     id the brain holds).
+- **Your release key** is made (2026-11-25; SHA-256 in `docs/DECISIONS.md`).
+  Keep `release.jks` and its password safe for good: lose either and the app
+  can never be updated.
+  - At each release (the tag workflow gives the unsigned APK as an artifact):
+    `apksigner sign --ks release.jks --out signed.apk
+    driftloom-universal-release-unsigned.apk` with `apksigner` from
+    build-tools 34 (not 35 or newer), and upload `signed.apk` to the release
+    page as the file F-Droid compares with.
+  - Rendering the recipe (below) takes `--signed-by <that SHA-256>`.
 - **Submit to F-Droid after 31** (the merge request is public and carries the
   new name):
   1. A free GitLab account; fork <https://gitlab.com/fdroid/fdroiddata>.
@@ -67,10 +68,11 @@ your ears, and a revert follows if you find trouble.
 
 Each is a few minutes. Say a step's number if something is wrong.
 
-1. **The latest APK, ten minutes with the screen off** (#473 to #475, v215;
-   download the `driftloom-debug-apk` artifact of
-   <https://github.com/nowmichaelclark/driftloom/actions/runs/45438442207>,
-   built from commit 96887bf, the same code as main's v215; it needs a GitHub
+1. **The latest APK, ten minutes with the screen off: before 31 merges**
+   (promise 1 on a phone; #473 to #475, and v218; download the
+   `driftloom-debug-apk` artifact of
+   <https://github.com/nowmichaelclark/driftloom/actions/runs/45550549271>,
+   built from commit 4ddf186, the same code as main's v218; it needs a GitHub
    sign-in). Play E9T-ZxDxj, then the Batch 6 album (Library, `docs/ALBUMS.md`):
    screen off for ten minutes, then a few minutes behind the home screen. No
    gap, no crackle, the loops changing on their time. Then Diagnostics,

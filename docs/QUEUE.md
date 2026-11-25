@@ -10,10 +10,10 @@ builds from the Done list.
 **Status, 2026-11-25:** this is the new repository, `nowmichaelclark/
 balladfalls`, a copy of driftloom (frozen at v218, #483; PR numbers to #483 are
 driftloom's). **1.0: go (brain B5, 2026-11-25).** Session 31a (the new name,
-v219) is built and left open as its PR, with 30l's icon as #1 (item 120);
+v219) is built and left open as #2, with 30l's icon as #1 (item 120);
 nothing else holds session 31 (Mikey, 2026-11-25: the Moto's step 1 is after
 1.0, and the icon is seen on his phone). **Next:** 31 (1.0), which merges #1
-and 31a's PR first; then Mikey's launch-day steps in `docs/notes/for-mikey.md`
+and #2 first; then Mikey's launch-day steps in `docs/notes/for-mikey.md`
 ("The new name"). Done: every item to 122 but 120, and
 the sessions before them (`docs/sessions/README.md` is the order; every merge
 has its line in `docs/DONE.md`; the longer status paragraphs, as they stood,

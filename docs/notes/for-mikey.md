@@ -17,7 +17,7 @@ with your phone or your ears, and a revert follows if you find trouble.
 
 ## Accounts
 
-- **The new name** (session 31a's PR, left open; session 31 merges it, with
+- **The new name** (session 31a's #2, left open; session 31 merges it, with
   the icon's #1, right before 1.0). The new repository and its Worker
   `balladfalls`, with balladfalls.com attached, are made (2026-11-25).
   1. **Before 31 merges:** open <https://balladfalls.com/>: something answers

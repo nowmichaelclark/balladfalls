@@ -9,7 +9,7 @@
 **Changed by brain B1 (2026-11-11):** merges session 31a's PR (the new name) first; the place check counts 31a's row as ticked when its PR is open and green.
 
 - **Model:** Sonnet 5.5. **Effort:** medium.
-- **Start after:** brain session B5's go (2026-11-25), and sessions 30l's and 31a's PRs open and green in the new repository (#1 and 31a's; they stay unmerged until this session: its row is ticked inside it). Nothing of Mikey's holds it but a look at the new domain (`docs/notes/for-mikey.md`, "The new name", step 1).
+- **Start after:** brain session B5's go (2026-11-25), and sessions 30l's and 31a's PRs open and green in the new repository (#1 and #2; they stay unmerged until this session: its row is ticked inside it). Nothing of Mikey's holds it but a look at the new domain (`docs/notes/for-mikey.md`, "The new name", step 1).
 - **Queue item:** item 108.
 
 Paste everything in the block as the session's first message.

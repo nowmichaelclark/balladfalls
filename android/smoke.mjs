@@ -87,7 +87,9 @@ try {
   check('no error in the engine line', !/none \(|error|fail/i.test(engine));
   check('the player plays on (its step moves)', second !== first, `step ${first}, then ${second}`);
   const named = await ev("document.getElementById('loopName').textContent.trim()");
-  check('the pasted busy loop is the one playing', named.startsWith('shatter'), named);
+  // The page shows a loop's name without its style ("glein-fei" for shatter-glein-fei).
+  const shown = LOOPS.shatter.name.replace(/^[a-z]+-/, '');
+  check('the pasted busy loop is the one playing', named === shown, `${named} for ${shown}`);
   if (!CDP && native) {
     // Android's font size is the page's root size (session 30f), changed under the running app.
     const scale = (v) => execFileSync('adb', ['shell', 'settings', 'put', 'system', 'font_scale', String(v)]);

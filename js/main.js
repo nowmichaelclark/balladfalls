@@ -16,7 +16,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v215';
+const BUILD = 'v217';
 
 // A test's slow device (queue item 87b): `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
@@ -2655,6 +2655,9 @@ function wire() {
   ui.el('goAdvanced').addEventListener('click', renderDiag);
   ui.el('diagReset').addEventListener('click', () => {
     if (state.engine) state.engine.clearMetrics();
+    // The core's late, missed and dropped notes read from here (the engine
+    // line): the page's start again, the core's own run on.
+    if (state.output && state.output.core && !state.output.core.native) state.output.core.resetCounts();
     // The Android app's native counts (session 30g): the stream's, too.
     if (state.ctx && state.ctx.native) state.ctx.resetCounts();
     store.setPrefs({ liteAutoReset: new Date().toISOString() });

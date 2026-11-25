@@ -129,6 +129,11 @@ export class CoreHost {
     this.missed = 0;
     this.dropped = 0;
     this.droppedBy = DROP_CAUSES.map(() => 0);
+    // What the core last said, and what Diagnostics' "reset counters" took
+    // away from it (the core's counts run on from load; the page's start
+    // again).
+    this._said = { late: 0, missed: 0, dropped: 0, droppedBy: DROP_CAUSES.map(() => 0) };
+    this._base = { late: 0, missed: 0, dropped: 0, droppedBy: DROP_CAUSES.map(() => 0) };
     this.failed = null;
     // What the core's render costs, each layout apart (queue item 66): the
     // milliseconds its blocks took and the seconds of sound they made.
@@ -320,12 +325,31 @@ export class CoreHost {
     if (this.port.onmessage && !this.native) this.port.onmessage = null;
   }
 
+  // The counts as the page shows them: the core's, less what a reset took.
+  _counts() {
+    const said = this._said;
+    const base = this._base;
+    this.late = Math.max(0, said.late - base.late);
+    this.missed = Math.max(0, said.missed - base.missed);
+    this.dropped = Math.max(0, said.dropped - base.dropped);
+    this.droppedBy = said.droppedBy.map((n, i) => Math.max(0, n - (base.droppedBy[i] || 0)));
+  }
+
+  // Diagnostics' "reset counters": the late, missed and dropped notes read
+  // from here. (The core keeps counting; the page keeps its own start.)
+  resetCounts() {
+    const said = this._said;
+    this._base = { late: said.late, missed: said.missed, dropped: said.dropped, droppedBy: said.droppedBy.slice() };
+    this._counts();
+  }
+
   _receive(m) {
     if (m.type === 'counts' || m.type === 'pong' || m.type === 'cost' || m.type === 'probe') {
-      if (m.late != null) this.late = m.late;
-      if (m.dropped != null) this.dropped = m.dropped;
-      if (m.missed != null) this.missed = m.missed;
-      if (m.droppedBy) this.droppedBy = m.droppedBy;
+      if (m.late != null) this._said.late = m.late;
+      if (m.dropped != null) this._said.dropped = m.dropped;
+      if (m.missed != null) this._said.missed = m.missed;
+      if (m.droppedBy) this._said.droppedBy = m.droppedBy;
+      this._counts();
       if (m.player) this.playerAt = m.player;
     }
     if (m.type === 'cost') {

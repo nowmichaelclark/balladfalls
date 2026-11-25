@@ -259,9 +259,13 @@ git tag v1.0 && git push origin v1.0
 The `android-release` workflow checks the tag against `gradle.properties`,
 checks that `js/dlplayer.wasm` is what `core/` builds, builds the unsigned
 release APKs (one for each ABI and the universal one) and keeps them, with
-their checksums, as the run's artifact. Nothing is signed or published by CI,
-and no key is stored there: `docs/notes/for-mikey.md` ("Accounts") says what is
-done with the artifact.
+their checksums, as the run's artifact. Then (since 2026-11-25, Mikey's word)
+it signs the universal one with the release key from the repository's secrets
+(apksigner from build-tools 34), checks the certificate's SHA-256 is the
+release key's, and attaches it to the tag's release as
+`balladfalls-<version>.apk`, the file F-Droid's recipe names. Run by hand with
+a tag, it signs and attaches that release again. The secrets and how to add
+them: `docs/notes/for-mikey.md`, "Your release key".
 
 ## F-Droid
 

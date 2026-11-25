@@ -107,7 +107,7 @@ for (const size of SIZES) {
     })();`);
     await page.goto(`${BASE}/index.html`);
     await page.evaluate(async (p) => {
-      const g = await import('/js/generator.js');
+      const g = await import('/js/gen.js');
       const store = await import('/js/storage.js');
       if (!store.loadAll().length) {
         const ids = [];

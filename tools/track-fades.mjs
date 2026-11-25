@@ -127,6 +127,11 @@ for (const [what, spec0] of cases) {
     const midOut = level(r.sq, end - FADE_OUT / 2, 0.25);
     if (fin) {
       if (!(first < SILENT)) fail(`${tag}: its first window at ${first.toFixed(1)} dB, not silence`);
+      // The fade is what made it so: halfway through, the loop is audibly
+      // quieter than the same loop with no fade (a fade the core ignored,
+      // on a loop that happens to start quietly, would pass the lines above).
+      const plainMidIn = level(plain.sq, START + FADE_IN / 2, 0.25);
+      if (!(midIn < plainMidIn - 3)) fail(`${tag}: ${midIn.toFixed(1)} dB halfway through its fade in, the same loop with none ${plainMidIn.toFixed(1)}`);
       if (!(atIn > plainIn - 3)) fail(`${tag}: ${atIn.toFixed(1)} dB after its fade in against ${plainIn.toFixed(1)}`);
       // Rising: no window in the fade louder than where it arrives.
       if (loudest(r.sq, START, START + FADE_IN - 0.25) > atIn + 1) fail(`${tag}: louder in its fade in than after it`);
@@ -138,6 +143,8 @@ for (const [what, spec0] of cases) {
     if (fout) {
       if (!(lastWin < SILENT)) fail(`${tag}: its last window at ${lastWin.toFixed(1)} dB, not silence`);
       if (!(after < SILENT)) fail(`${tag}: ${after.toFixed(1)} dB after its end`);
+      const plainMidOut = level(plain.sq, end - FADE_OUT / 2, 0.25);
+      if (!(midOut < plainMidOut - 3)) fail(`${tag}: ${midOut.toFixed(1)} dB halfway through its fade out, the same loop with none ${plainMidOut.toFixed(1)}`);
       if (!(before > own - 6)) fail(`${tag}: ${before.toFixed(1)} dB as its fade out begins, the loop's ${own.toFixed(1)}`);
     } else {
       // Nothing faded to the second (with no fade in: from the start; with

@@ -64,7 +64,7 @@ const BASE = `http://127.0.0.1:${server.address().port}`;
 // the generator changes.
 const SEED_VIBES = ['merry', 'tender'];
 const SEED_LIBRARY = `(async () => {
-  const g = await import('/js/generator.js');
+  const g = await import('/js/gen.js');
   const store = await import('/js/storage.js');
   localStorage.clear();
   const ids = [];
@@ -331,7 +331,7 @@ for (const s of Object.values(states)) {
 // The Layers rows follow the playhead bar by bar. The pattern comes from
 // the app's own generator, read the way ui.js reads it (stepsForBar).
 const loop = await page.evaluate(async () => {
-  const g = await import('/js/generator.js');
+  const g = await import('/js/gen.js');
   const store = await import('/js/storage.js');
   const ui = await import('/js/ui.js');
   const name = document.getElementById('loopName').textContent;
@@ -341,7 +341,8 @@ const loop = await page.evaluate(async () => {
   const spb = pattern.stepsPerBar || 16;
   const bars = Math.max(1, Math.round(pattern.totalSteps / spb));
   const layers = {};
-  for (const layer of g.LAYERS) {
+  const { LAYERS } = await import('/js/request.js');
+  for (const layer of LAYERS) {
     const cycle = (pattern.cycles && pattern.cycles[layer]) || pattern.totalSteps;
     layers[layer] = [];
     for (let bar = 0; bar < bars; bar++) {

@@ -79,7 +79,13 @@ adb shell pidof "$pkg" >/dev/null || fail "the app's process is gone"
 echo "ok   still playing, process alive, 20 s later"
 
 if [ -n "$shot" ]; then adb exec-out screencap -p >"$shot" && echo "screenshot: $shot"; fi
-bad=$(adb logcat -d | grep -E "FATAL EXCEPTION|UnsatisfiedLinkError|ClassNotFoundException|NoSuchMethodError|NoSuchFieldError|Process $pkg.* has died" || true)
+# A crash is the app's own: "FATAL EXCEPTION" counts only where its "Process:"
+# line names the app (uiautomator, which reads the screen above, crashed now
+# and then and failed this check for it, twice; session 30).
+log=$(adb logcat -d || true)
+bad=$(printf '%s\n' "$log" | grep -E "UnsatisfiedLinkError|ClassNotFoundException|NoSuchMethodError|NoSuchFieldError|Process $pkg.* has died" || true)
+fatal=$(printf '%s\n' "$log" | grep -A3 "FATAL EXCEPTION" | grep -E "Process: $pkg(,| |\$)" || true)
+[ -z "$fatal" ] || bad=$(printf '%s\n%s' "$bad" "$fatal")
 [ -z "$bad" ] || { echo "$bad" >&2; fail "logcat holds a crash"; }
 echo "ok   no crash in logcat"
 echo "the release APK plays"

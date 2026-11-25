@@ -133,13 +133,13 @@ jobs:
       # android/test-signing/README.md).
       - name: build the debug APK
         working-directory: android
-        run: ./gradlew --no-daemon --console=plain assembleDebug assembleDebugAndroidTest -Pdriftloom.versionCode=${{ github.run_number }}
+        run: sh gradle-retry.sh assembleDebug assembleDebugAndroidTest -Pdriftloom.versionCode=${{ github.run_number }}
 
       # Android's lint (session 28: the app passes it with no errors). The
       # report is kept; an error fails the build.
       - name: Android lint
         working-directory: android
-        run: ./gradlew --no-daemon --console=plain lintDebug -Pdriftloom.versionCode=${{ github.run_number }}
+        run: sh gradle-retry.sh lintDebug -Pdriftloom.versionCode=${{ github.run_number }}
 
       - uses: actions/upload-artifact@v4
         if: always()

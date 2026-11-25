@@ -65,6 +65,8 @@
 //                       does not add to it.
 //   --phases <names>    only these views (by the start of their names)
 //   --json <file>  --md <file>  --port <n>  --chrome <path>
+//
+// Exits 1 when any view or session failed (an error in the table).
 
 import fs from 'node:fs';
 import {
@@ -686,6 +688,14 @@ async function main() {
   console.log(text);
   if (opts.json) fs.writeFileSync(opts.json, `${JSON.stringify(rows, null, 1)}\n`);
   if (opts.md) fs.writeFileSync(opts.md, text);
+  // A view that failed (no key to press, a list that did not scroll, a
+  // session that threw) fails the run: it used to exit 0 with the error in
+  // the table (session 30c found it, 30 fixed it).
+  const failed = rows.filter((r) => r.error);
+  if (failed.length) {
+    log(`views: ${failed.length} failed: ${failed.map((r) => `${r.loop} ${r.throttle}x ${r.quality} ${r.view || 'session'}: ${r.error}`).join('; ')}`);
+    process.exitCode = 1;
+  }
 }
 
 await main();

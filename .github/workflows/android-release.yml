@@ -1,7 +1,7 @@
 # The release (queue item 107e, session 29): a tag `v<versionName>` builds the
 # unsigned release APKs from that commit and keeps them as an artifact. Nothing
 # is signed or published here, and no key is in this repository or its secrets:
-# docs/notes/for-mikey.md ("Signing") says what is done with the artifact.
+# docs/notes/for-mikey.md ("Accounts") says what is done with the artifact.
 #
 #   git tag v1.0 && git push origin v1.0
 #
@@ -65,7 +65,7 @@ jobs:
 
       - name: build the release APKs
         working-directory: android
-        run: ./gradlew --no-daemon --console=plain assembleRelease
+        run: sh gradle-retry.sh assembleRelease
 
       - name: the APKs
         run: |

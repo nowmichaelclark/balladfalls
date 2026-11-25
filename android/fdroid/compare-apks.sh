@@ -6,12 +6,17 @@
 # and with diffoscope, and written to the job's summary. Exits 1 when a and b
 # differ; F-Droid's build differing from a is reported and fails too (the
 # signature copying F-Droid verifies a signed APK with needs it identical).
+# No F-Droid build in f/ fails too (session 30: it used to pass, "the same
+# bytes" having compared machines a and b alone); `--no-fdroid` says a run
+# is meant to compare a and b only.
 #
 #   a/<name>-<abi>-release-unsigned.apk  b/ the same  f/<id>_<versionCode>.apk
 #
-# Run from the directory that holds a/, b/ and (optionally) f/.
+# Run from the directory that holds a/, b/ and f/.
 
 set -u
+want_f=yes
+[ "${1:-}" = "--no-fdroid" ] && want_f=no
 summary=${GITHUB_STEP_SUMMARY:-/dev/null}
 status=0
 
@@ -71,7 +76,11 @@ done
 f=$(ls f/*.apk 2>/dev/null | head -1 || true)
 if [ -n "$f" ]; then
   compare "universal, machine a against F-Droid's build" a/*-universal-release-unsigned.apk "$f" || status=1
+elif [ "$want_f" = yes ]; then
+  echo "FAIL  no F-Droid build in f/ to compare with: the builds are not shown the same bytes"
+  echo "| universal, machine a against F-Droid's build | **not compared** | no F-Droid build |" >>"$summary"
+  status=1
 else
-  echo "no F-Droid build to compare with"
+  echo "no F-Droid build to compare with (--no-fdroid)"
 fi
 exit $status

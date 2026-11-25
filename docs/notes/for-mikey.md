@@ -593,10 +593,12 @@ the last one (same key). On the **Moto** and on the **tablet**:
 
 ## Accounts
 
-- **The new name (2026-11-18: the domain is bought, on Cloudflare):** attach
-  it to the Worker when you're ready (Workers, driftloom, Settings, Domains),
-  and confirm the Android release id (the brain proposes the reverse of the
-  domain plus `.app`). Session 31a needs both.
+- **The new name (2026-11-18: the domain is bought, on Cloudflare):** wait
+  to attach it until the new repo is set up (Mikey, 2026-11-25): a domain
+  belongs to a Worker, and the new repo may deploy a Worker of its own, with
+  the old one left to send people on. Session 31a's start is when the brain
+  asks for it. Before then, confirm the Android release id (the brain
+  proposes the reverse of the domain plus `.app`).
 
 ## Decisions
 

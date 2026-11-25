@@ -312,10 +312,12 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   fades over; the lock screen's Play after two minutes paused fixed; Lite's
   50% line kept on the emulator's burn sweep; ten rows 45457406778), and
   the docs #470, #471. **Nightlies** green on v206 (45354665649), v211
-  (45410614887) and v215 (45464909251). **Open:** 30l, draft #465 (v212, a
-  placeholder; the drawing with Mikey, round 16's ten styles on
-  `s30l-shots`), its thread still running; its Left list is current.
-  **Waits on Mikey (not holding 30):** the icon's pick; the phone checks in
+  (45410614887) and v215 (45464909251). **Open:** 30l, draft #465 (v216, a
+  placeholder): Mikey picked round 20's c (2026-11-25), built, all 28
+  checks green on 81c8bd0; 31 merges it. **Session 30** started
+  2026-11-24 as a project thread. **Waits on Mikey (not holding 30):** the
+  icon on his phone (#465's APK); the new domain, attached at 31a's start;
+  the phone checks in
   `docs/notes/for-mikey.md` (Chrome's scroll, the keys, the album export,
   item 115's v215 test). **Learned:** GitHub runs no pull_request workflow
   while a PR conflicts with main (30k's CI never started until main was

@@ -113,7 +113,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 30i | `30i-any-bars.md` | 117: "any bars" sometimes a long piece; what never comes unasked, measured | Opus 5.5, high | 30g's #458 | every row 30h to 30n, 30g's Left list | yes, 2026-11-23 (#462) |
 | 30j | `30j-pickers.md` | 118: the tempo, key, style and voices pickers | Opus 5.5, high | 30g's #458 | 30h, 30i, 30l, 30m, 30g's Left list | yes, 2026-11-24 (#463, v205) |
 | 30k | `30k-the-look.md` | 119: the card's art to the right, a new playhead (Mikey picks), solid knobs, the die, speakers, Chrome's scroll | Opus 5.5, high | 30h | 30i, 30l, 30m, 30g's Left list | yes, 2026-11-24 (#468, v209) |
-| 30l | `30l-icon.md` | 120: the new name's icon (Mikey picks); left open, merged with 31a by 31 | Opus 5.5, high | 30g's #458 | every row 30h to 30n, 30g's Left list || open on purpose: draft #465 (v212, a placeholder), the drawing with Mikey (round 16, 2026-11-24); 31 merges it |
+| 30l | `30l-icon.md` | 120: the new name's icon (Mikey picks); left open, merged with 31a by 31 | Opus 5.5, high | 30g's #458 | every row 30h to 30n, 30g's Left list || open on purpose: draft #465 (v216, a placeholder), Mikey's pick (round 20's c, 2026-11-25) built and green; 31 merges it |
 | 30m | `30m-album-export.md` | 121: an album exported whole and tagged, a zip or a file a track; a seed album saved | Opus 5.5, high | 30g's #458 | 30h, 30i, 30j, 30k, 30l | yes, 2026-11-24 (#466, v206; #467, v207) |
 | 30n | `30n-keys.md` | 122: the keyboard as music players have it, letter keys with a switch to turn them off | Opus 5.5, high | 30h, 30j, 30k, 30m | 30i, 30l, 30g's Left list | yes, 2026-11-24 (#472, v211) |
 | | | **Then in order, one at a time** | | | | |

@@ -118,7 +118,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 30n | `30n-keys.md` | 122: the keyboard as music players have it, letter keys with a switch to turn them off | Opus 5.5, high | 30h, 30j, 30k, 30m | 30i, 30l, 30g's Left list | yes, 2026-11-24 (#472, v211) |
 | | | **Then in order, one at a time** | | | | |
 | 30g | `30g-crackles.md` | 115: no crackles in the Android app (a 1.0 blocker, Mikey 2026-11-22) | Opus 5.5, high | 29 | 30f (the app's audio path only, merging after it); its Left list beside 30i, 30j, 30k, 30l, 30n | yes, 2026-11-23 (#458, Mikey heard it clean); its Left list 2026-11-24 (#473, #474, #475, v213 to v215) |
-| 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | 18, 21, 24, 24c, 29, B4, 30f, 30g (and its Left list), 30h to 30n (30l open) | none | |
+| 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | 18, 21, 24, 24c, 29, B4, 30f, 30g (and its Left list), 30h to 30n (30l open) | none | yes, 2026-11-25 (#479, #480, #481, #482) |
 | B5 | `brain-5-release.md` | Brain: the release check | Opus 5.5, high | 30 | none | |
 | | **you** | Your signing key (chosen 2026-11-22: your own; the steps are in `docs/notes/for-mikey.md`); buy the new name's domain and attach it to the Worker, if not done. **31a waits for this.** | | 29 | | |
 | 31a | `31a-new-name.md` | The new name, built and left open (you paste the name, the domain and the id) | Opus 5.5, high | B5, the row above | none | |

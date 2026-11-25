@@ -681,3 +681,31 @@ pairs and once 9% (lite at 4x, 202 → 220 ms/s), which two more passes of
 that pair put at 191 → 190: noise. Hidden, about 1 ms/s more (the
 worklet's four reports a second). Device fill-ins in 1 run of 16 on v91
 (2 events), none on v92.
+
+## Addendum: the same harness at v215 (2026-11-25, session 30)
+
+`node tools/perf.mjs` without `--ab` (nothing to compare with on main),
+`--parts load,idle,matrix,memory --throttle 1,4 --seconds 30`, the
+harness's seven loops, full and lite, headless Chromium 158 on 4 cores.
+Against the v54 figures above:
+
+| | v54 | v215 |
+|---|---|---|
+| main thread playing, visible, 1x | 71-84 ms/s | 41-65 ms/s |
+| of which paint | 57-67 ms/s | 16-25 ms/s |
+| of which script | 6-9 ms/s | 5-7 ms/s |
+| audio render, 1x | 38-95 ms/s | 32-64 ms/s |
+| long tasks, notes late or dropped | none | none (all 28 rows, 1x and 4x) |
+| memory, 5 minutes (undertow, full and lite) | 0.02-0.03 MB/min | 0.01-0.02 MB/min |
+| tap to sound, cold, 1x | 240-270 ms | 181-360 ms |
+
+Page weight is the one number that went up: 2.1 MB sent on a first visit
+(the local server does not compress, so the gzipped column shows 1.5 MB;
+the core's wasm is 1.1 MB of it) against 714 KB. The app is bigger and
+everything it plays is generated in the browser from it.
+
+Not read: the device's fill-ins (`playoutStats`, empty in headless
+Chromium 158, so the table's column is "-"), and the tap to sound at 4x
+on two loops (shatter and undertow-vith-glour, full and lite), where the
+table shows no cold figure and a negative warm one (-363 to -577 ms): the
+harness failed to time those taps, it is not a delay.

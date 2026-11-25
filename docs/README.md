@@ -36,6 +36,7 @@ Sizes are limited and checked in CI (`node tools/check-docs.mjs`).
 | `data/` | The generation data as plain text, read by the core's generator (compiled in) and by the page for its labels and ranges: profiles, vibes, moods, the voice table and the choice tables. The format is in `js/data.js`'s header. | hands, brain (vibes) |
 | `docs/ALBUMS.md` | Listening albums out for Mikey. | brain |
 | `README.md`, `core/README.md`, `core/golden/README.md` | The public front page; how a host drives the core and how to add a block; the golden renders. | everyone; core developers |
+| `CHANGELOG.md` | What changed for listeners, in plain words, by release (begun in session 30; session 31 writes the 1.0 entry). | everyone; session 31 |
 | `Mikey's Thoughts.md` | His. | Mikey |
 
 ## The archive (`docs/archive/`)
@@ -44,7 +45,7 @@ Out of the Project sync. Open one when a question needs it.
 
 | File | What it holds |
 |---|---|
-| `queue-items.md` | The full text of every finished item, with an index; an item number like "item 46" means the text there. Also the queue's old status notes. |
+| `queue-items.md` | The full text of every finished item, with an index; an item number like "item 46" means the text there (phase 3, batch 6, long pieces, export, codes and Android since session 30). Also the queue's old status notes. |
 | `notes.md`, `notes/` | The hands' notes: everything before 2026-10-26 in `notes.md`; closed notes from `docs/notes/` after. |
 | `done.md` | Done lines before #277. |
 | `brain-log.md` | The brain's log and the early History, newest first. |

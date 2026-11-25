@@ -247,7 +247,7 @@ The `android-release` workflow checks the tag against `gradle.properties`,
 checks that `js/dlplayer.wasm` is what `core/` builds, builds the unsigned
 release APKs (one for each ABI and the universal one) and keeps them, with
 their checksums, as the run's artifact. Nothing is signed or published by CI,
-and no key is stored there: `docs/notes/for-mikey.md` ("Signing") says what is
+and no key is stored there: `docs/notes/for-mikey.md` ("Accounts") says what is
 done with the artifact.
 
 ## F-Droid

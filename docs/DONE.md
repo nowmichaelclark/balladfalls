@@ -710,3 +710,26 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   screen's Play after two minutes paused plays again (Android had stopped
   the paused service and its session); a slower phone swept on the emulator
   kept Lite's 50% line for the app. Listen for nothing new. No album loop.
+- #479, the checks that could not fail (session 30, no app file, no
+  version): the views run exits 1 when a view failed; the track-fades check
+  sees a fade the core ignored; the long export says "not checked" where the
+  browser cannot count fill-ins; the Android smoke test pastes a fixed busy
+  loop; F-Droid's byte check fails when its files are missing; Gradle
+  retries a failed download; the Painter's test kit reads `/js/gen.js`. Each
+  was shown passing on its fault first. Listen for nothing. No album loop.
+- #480, reset counters in a browser (session 30, v217), preview URL: the
+  branch's preview (no hash kept): Diagnostics' "reset counters" now clears
+  the late, missed and dropped counts on the web, as it does in the app.
+  Listen for nothing new. No album loop.
+- #481, a loop's tone held to 1 (session 30, core, v218), preview URL: the
+  branch's preview (no hash kept): once in about 84,000 loops a warm feel
+  pushed a tone past 1 and the generator refused it; the tone is clamped.
+  All 5139 generation goldens unchanged, so nothing that drew before sounds
+  different. Listen for nothing new. No album loop.
+- #482, the docs closed for 1.0 (session 30, docs only): `docs/notes/for-mikey.md`
+  by device (what is for Mikey's phone, ears, accounts or a decision, each
+  line checked); the queue cut to its live items (phase 3 to 107 and the
+  known issues archived, each done or said not to be for 1.0); the README as
+  a newcomer reads it; `CHANGELOG.md` begun from this list, grouped for
+  listeners; the v215 numbers against the v54 baseline in
+  `docs/archive/perf-baseline.md`. Listen for nothing. No album loop.

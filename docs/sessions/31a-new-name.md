@@ -12,8 +12,10 @@ one place, so this is a short list of edits.
 which session 24 had left only in for-mikey, is now in the first step.
 
 - **Model:** Opus 5.5. **Effort:** high.
-- **Start after:** brain session B5's "go", the domain bought and attached
-  to the Worker (`docs/notes/for-mikey.md`, Accounts), and session 29.
+- **Start after:** brain session B5's "go", the domain bought, and session
+  29. The domain is attached at this session's start, to the Worker the new
+  repo deploys (Mikey, 2026-11-25: not before the new repo exists;
+  `docs/notes/for-mikey.md`, Accounts).
 - **Queue item:** item 108's rename.
 
 Paste everything in the block as the session's first message, with the

@@ -1,22 +1,19 @@
 # Session 30l: the new name's icon (120)
 
-**Left** (2026-11-24, brain B-parallel 5; the session with this prompt was
-still running as a project thread when B-parallel 5 ended):
+**Left** (2026-11-25, brain B-parallel 5): the icon is picked and built;
+only the merge is left, and that is session 31's.
 
-- Draft #465 (head 1637187, main to #468 merged in, v212, a placeholder:
-  v210 and v211 were taken) still builds sketch 3f from `icons/icon.svg`
-  through `tools/icons.mjs`. It stays a draft for session 31.
-- The drawing went on with Mikey in rounds 10 to 16, each recorded in #465's
-  body by number: round 15's layout is the base he approved, and round 16
-  draws it in ten styles for his pick (on `s30l-shots`, 762a0dd, one folder
-  a round). The files and the body carry no subject word.
-- Then, as before: port the approved drawing into `icons/icon.svg` (its
-  `#background`, `#foreground` and `#monochrome` groups and `key` classes, no
-  group opacity, radial gradients on circles only), run
-  `node tools/icons.mjs`, fix the safe zones if its check fails, take the next
-  version after main's, push, and read CI (android, fdroid).
-- The rules hold: the name and the drawing's subject go into no file, commit
-  message or PR text.
+- Mikey picked round 20's c (2026-11-25, "good enough"). Draft #465 builds
+  it: `icons/icon.svg` from round 20 on `s30l-shots`, every size from
+  `node tools/icons.mjs`, the four checks passing; head 81c8bd0, v216 as a
+  placeholder (main at v215 merged in); all 28 checks green, android and
+  fdroid included.
+- Mikey's phone check is the one thing left before 31: the APK of #465's
+  last `android` run, as the line the PR adds to `docs/notes/for-mikey.md`
+  says.
+- Session 31 merges #465 with 31a's rename, taking the next version after
+  main's then. The rules hold: the name and the drawing's subject go into
+  no file, commit message or PR text.
 
 Written by brain B-parallel 4 (2026-11-23) from Mikey's list that day (his
 item 6) and his answer: an SVG in the app's colors and mood, not a

@@ -3,10 +3,10 @@
 What changed for the people who listen, in plain words. Each line says what
 you will hear or what you can do now; `docs/DONE.md` has every merge with its
 numbers, for the people who build it. Begun by session 30 (2026-11-24) from
-`docs/DONE.md`, from the testers' version (v153) on; session 31 dates and names
-the 1.0 entry and adds what the polish still changes.
+`docs/DONE.md`, from the testers' version (v153) on; session 31 dated the 1.0
+entry.
 
-## 1.0 (not yet released)
+## 1.0 (2026-11-25)
 
 ### A new name
 
@@ -83,6 +83,9 @@ the 1.0 entry and adds what the polish still changes.
   words everywhere, and a screen reader says what the screen shows.
 - **Works for everyone:** the app follows WCAG 2.2 AA (text sizes, focus,
   contrast, touch targets, screen readers), checked by `tools/a11y.mjs`.
+- **Codes that last.** A code or link made on 1.0 plays the same loop on every
+  version after it; new sounds join later codes only.
+- **The version,** 1.0, at the end of Advanced and at the top of Diagnostics.
 
 ### Fixed
 

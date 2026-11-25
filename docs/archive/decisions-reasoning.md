@@ -184,3 +184,11 @@ The lines as they stood in `docs/DECISIONS.md` (moved 2026-11-25, session 31a):
 
 - 2026-11-12 -- **The long pieces before the rest of batch 6 (Mikey, 2026-11-12):** sessions 11 to 15 (102a to 102e, with 11 and 14 on Fable 5.2) run next, while his usage allows Fable, and batch 6's 04 to 10 follow; 16 runs once his notes on the long pieces are in. Nothing in 11 to 15 reads batch 6's remaining sounds; the later batch 6 sessions keep the long pieces' checks green, and session 10 checks its rule inside long pieces too.
 - 2026-11-12 -- **The Fable sessions at medium effort (Mikey, 2026-11-12):** sessions 11 and 14 run on Fable 5.2 at medium, since high uses too many tokens. (The brain's plan, not Mikey's words: if one falls short of its yardsticks, the brain says so and the rest is finished in a follow-up rather than redone.)
+
+## Three lines moved by session 31 (2026-11-25)
+
+The lines as they stood in `docs/DECISIONS.md`: the keyboard's (superseded 2026-11-23), and the testing phase's two on codes, which end at 1.0, when codes freeze.
+
+- 2026-11-22 -- **The keyboard (Mikey, 2026-11-22):** "closer in alignment with what a DAS or Music Player like Spotify would choose; align with the industry standards and the accessible ones": no bare letters; the set is #457's. (Superseded 2026-11-23: letter keys, with a switch.)
+- 2026-09-23 -- **Old share codes, saved loops and albums may change or break** while the app is in testing (2026-09-23). Keep draws stable where it's free, only because it keeps A/B albums comparing the same loops.
+- 2026-10-29 -- **No compatibility bloat (Mikey, 2026-10-29):** "There's zero need to try to preserve old codes. The app is still in it's testing phase. Old codes and old programming code is fine to change and or get rid of. We don't want to build bloat for no reason." No retired slots, shims or fallbacks kept for old codes.

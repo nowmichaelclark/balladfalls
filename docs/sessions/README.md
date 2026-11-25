@@ -113,7 +113,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 30i | `30i-any-bars.md` | 117: "any bars" sometimes a long piece; what never comes unasked, measured | Opus 5.5, high | 30g's #458 | every row 30h to 30n, 30g's Left list | yes, 2026-11-23 (#462) |
 | 30j | `30j-pickers.md` | 118: the tempo, key, style and voices pickers | Opus 5.5, high | 30g's #458 | 30h, 30i, 30l, 30m, 30g's Left list | yes, 2026-11-24 (#463, v205) |
 | 30k | `30k-the-look.md` | 119: the card's art to the right, a new playhead (Mikey picks), solid knobs, the die, speakers, Chrome's scroll | Opus 5.5, high | 30h | 30i, 30l, 30m, 30g's Left list | yes, 2026-11-24 (#468, v209) |
-| 30l | `30l-icon.md` | 120: the new name's icon (Mikey picks); left open, merged with 31a by 31 | Opus 5.5, high | 30g's #458 | every row 30h to 30n, 30g's Left list || open on purpose: draft #465 (v216, a placeholder), Mikey's pick (round 20's c, 2026-11-25) built and green; 31 merges it |
+| 30l | `30l-icon.md` | 120: the new name's icon (Mikey picks); left open, merged with 31a by 31 | Opus 5.5, high | 30g's #458 | every row 30h to 30n, 30g's Left list || yes, 2026-11-25 (draft #465, carried across as balladfalls #1; merged by 31) |
 | 30m | `30m-album-export.md` | 121: an album exported whole and tagged, a zip or a file a track; a seed album saved | Opus 5.5, high | 30g's #458 | 30h, 30i, 30j, 30k, 30l | yes, 2026-11-24 (#466, v206; #467, v207) |
 | 30n | `30n-keys.md` | 122: the keyboard as music players have it, letter keys with a switch to turn them off | Opus 5.5, high | 30h, 30j, 30k, 30m | 30i, 30l, 30g's Left list | yes, 2026-11-24 (#472, v211) |
 | | | **Then in order, one at a time** | | | | |
@@ -122,7 +122,7 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | B5 | `brain-5-release.md` | Brain: the release check | Opus 5.5, high | 30 | none | yes, 2026-11-25 (go, at v218; run in the B-parallel 5 thread) |
 | | **you** | Your signing key (chosen 2026-11-22: your own; the steps are in `docs/notes/for-mikey.md`); buy the new name's domain and attach it to the Worker, if not done. **31a waits for this.** | | 29 | | yes, 2026-11-25 (the key made; the new repository and its Worker `balladfalls`, balladfalls.com attached) |
 | 31a | `31a-new-name.md` | The new name, built and left open (you paste the name, the domain and the id) | Opus 5.5, high | B5, the row above | none | yes, 2026-11-25 (#2, open on purpose, v219; 31 merges it) |
-| 31 | `31-one-point-oh.md` | 108: 1.0 (merges 30l and 31a first) | Sonnet 5.5, medium | B5, 31a open and green | none | |
+| 31 | `31-one-point-oh.md` | 108: 1.0 (merges 30l and 31a first) | Sonnet 5.5, medium | B5, 31a open and green | none | yes, 2026-11-25 (balladfalls #1, #2, #3, v220 to v222; the tag by Mikey's Releases page if refused here) |
 | | **you** | Launch day: the old address's Worker, archive driftloom; the F-Droid submission (its merge request is public, so after 1.0) | | 31 | | |
 
 **Mikey's seven** (2026-11-18, queue items 109 to 114): his list for 1.0,

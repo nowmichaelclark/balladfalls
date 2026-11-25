@@ -12,8 +12,7 @@ core compiled to WebAssembly, built to the committed `js/dlplayer.wasm`)
 generates it, and its player decides and plays the notes in an
 AudioWorklet. The page sends commands and draws events (`js/player.js`),
 and reads a loop's record and notes from the same module (`js/gen.js`).
-Since item 97 there is no JavaScript generator or synth: a browser that
-can't run the core gets one plain line. The page has no build step and no dependencies, and it
+A browser that can't run the core gets one plain line. The page has no build step and no dependencies, and it
 deploys as static files (`wrangler.jsonc`; pushing to `main` deploys). Mikey
 (nowmichaelclark) owns it. His ears are the acceptance test for anything
 that changes how it sounds.
@@ -38,6 +37,8 @@ that changes how it sounds.
 - **Merge policy** (Mikey: yes). The hands merge their own PRs when CI is
   green and every check the item names passes (`docs/QUEUE.md`, "Merge
   policy"). Red or unfinished checks: don't merge, say what is failing.
+  Nothing slow holds one, at 1.0 too: the nightly, the ten rows, export's
+  `long` (Mikey, 2026-11-25).
 - **Never write a token anywhere:** not in a file, commit, PR, note, memory
   or the Project. Mikey pastes one into a session's opening message; use
   it, never keep it.

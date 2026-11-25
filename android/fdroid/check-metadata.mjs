@@ -91,6 +91,9 @@ if (m) {
   if (release) {
     check(versionCode === want, `versionCode ${versionCode} is ${want} for ${versionName}`);
     check(logs.includes(`${versionCode}.txt`), `changelogs/${versionCode}.txt exists`);
+    // The version the listener reads (Advanced's last line, Diagnostics): the same.
+    const page = /^const VERSION = '([^']*)';$/m.exec(readFileSync(join(root, 'js/main.js'), 'utf8'));
+    check(page && page[1] === versionName, `js/main.js's VERSION is ${versionName} (${page ? page[1] : 'none'})`);
   } else {
     console.log(`note a test version (${versionName}, code ${versionCode}): the release checks wait for 1.0`);
   }

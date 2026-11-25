@@ -7,20 +7,20 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-25:** this is the new repository, `nowmichaelclark/
-balladfalls`, a copy of driftloom (frozen at v218, #483; PR numbers to #483 are
-driftloom's). **1.0: go (brain B5, 2026-11-25).** Session 31a (the new name,
-v219) is built and left open as #2, with 30l's icon as #1 (item 120);
-nothing else holds session 31 (Mikey, 2026-11-25: the Moto's step 1 is after
-1.0, and the icon is seen on his phone). **Next:** 31 (1.0), which merges #1
-and #2 first; then Mikey's launch-day steps in `docs/notes/for-mikey.md`
-("The new name"). Done: every item to 122 but 120, and
-the sessions before them (`docs/sessions/README.md` is the order; every merge
-has its line in `docs/DONE.md`; the longer status paragraphs, as they stood,
-are in `docs/archive/queue-items.md`, "Old status notes"). Open: 120 (the
-icon), 108 (1.0), 75 (low priority), 37 (on hold) and the known issues
-below. A new Claude Code session starts here: read the standing rules and the
-merge policy, then take the next item.
+**Status, 2026-11-25: 1.0 is merged (session 31).** In the new repository
+(`nowmichaelclark/balladfalls`; driftloom is the frozen archive): the icon (#1,
+item 120), the new name (#2, session 31a) and 1.0 itself (#3, item 108, v222:
+the version 1.0 in the app and the APK, codes frozen). What is left of 108 is
+Mikey's: the `v1.0` tag if the session's push was refused, signing the APK,
+the old address's Worker, archiving driftloom and the F-Droid submission, in
+that order (`docs/notes/for-mikey.md`, "Launch day, in order"). Done: every
+item to 122, and the sessions before them (`docs/sessions/README.md` is the
+order; every merge has its line in `docs/DONE.md`; the longer status
+paragraphs, as they stood, are in `docs/archive/queue-items.md`, "Old status
+notes"). Open: 108's launch-day steps, 75 (low priority), 37 (on hold) and the
+known issues below; the first item after 1.0 is the known issue "The app drops
+a code's version", before any new sound. A new Claude Code session starts
+here: read the standing rules and the merge policy, then take the next item.
 
 **Two tracks:** app work (fixes, redesigns, vibe tuning, new controls) goes
 on alongside the core track, as separate PRs; app-track sessions stay out of
@@ -100,7 +100,7 @@ removed. If 48 kHz must move, stop and leave a note for a decision.
 Done and archived (`docs/archive/queue-items.md`, by number): phase 3 (93 to
 100), 101 (batch 6), 102 (long pieces), 103 (the fast gate), 104 (export), 105
 (codes), 106 (long pieces on screen), 107 (the Android app, but for the
-submission below), 109 to 119, 121 and 122 (Mikey's seven and last changes).
+submission below), 109 to 122 (Mikey's seven and last changes, and the icon).
 
 **The app's 1.0 comes before the game** (Mikey, 2026-11-10): Broken Friends and
 the other games wait (the core already works in Broken Friends); the music app
@@ -122,21 +122,15 @@ signing key, and the submission to F-Droid after 31 (the merge request is
 public and carries the new name): `docs/notes/for-mikey.md`, "Accounts". Then
 `APP_LINK` in `js/main.js` points at the listing (item 100's link).
 
-## 120. The new name's icon (Mikey, 2026-11-23; open until 1.0)
-
-Session 30l: an SVG icon for the new name, drawn with Mikey over rounds; he
-picked round 20 c on 2026-11-24. Built into draft #465
-(`icons/icon.svg` and `tools/icons.mjs`, v216 a placeholder for `BUILD` and
-`CACHE`), left open on purpose: it merges with 31a's rename at 1.0, so the
-testers' surprise holds. Nothing touches #465, `icons/` or anything that names
-the app until session 31.
-
 ## 108. 1.0
 
-**Hands:** then Mikey. First the new name (session 31a, built and left open
-until this moment, since a merge deploys). The version named 1.0 in the app and the APK, a short
-changelog, codes frozen (105), the nightly's checks back as merge gates
-(103), and `docs/notes/for-mikey.md` empty or answered.
+**Hands:** then Mikey. **Merged by session 31 (2026-11-25, balladfalls #3);
+Mikey's launch-day steps are left** (`docs/notes/for-mikey.md`). First the new
+name (session 31a, built and left open until this moment, since a merge
+deploys). The version named 1.0 in the app and the APK, a short
+changelog, codes frozen (105), and `docs/notes/for-mikey.md` empty or
+answered. (The nightly's checks stay nightly, Mikey, 2026-11-25: "Merge
+policy".)
 
 **Also noted, not on the road to 1.0:**
 
@@ -251,7 +245,7 @@ Mikey decides this line:
 
 - (yes, from Mikey) When CI is green and every check above passes, Claude
   Code merges its own PR and starts the next item.
-- (Mikey, 2026-11-10) Until the app is 1.0 and on F-Droid, "CI is green"
+- (Mikey, 2026-11-10; kept past 1.0 on 2026-11-25) "CI is green"
   means the fast gate (item 103: the `core` and `docs` workflows, locally
   `tools/gate.sh`); the nightly's slow renders (`nightly.yml`) never hold a
   merge, and a red nightly is fixed by the next session that sees it.
@@ -274,3 +268,11 @@ Mikey decides this line:
 - (Mikey, 2026-11-18) Don't wait on the `export` workflow's `long` job:
   merge once every other check is green on the last commit (the export
   rows included).
+- (Mikey, 2026-11-25, at 1.0) Save every long run for the nightly: "can we
+  skip any long waits and save those for nightly checks?" Nothing that takes
+  over about 30 minutes holds a merge, now or after 1.0: not the nightly's
+  renders (they stay nightly and do not come back as merge gates, as the
+  2026-11-10 line had it), not the export workflow's `long` job or its ten
+  rows. A merge waits on the gate (`core`, `docs`) and, on a PR that touches
+  them, the `fdroid` and `android` workflows; a red nightly is fixed by the
+  next session that sees it.

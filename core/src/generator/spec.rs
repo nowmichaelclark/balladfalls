@@ -803,7 +803,10 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         *s = r.seed32();
     }
     let mut tone = [
-        r.range(c.tone[0][0], c.tone[0][1]) * (0.6 + feel.warmth * 0.6),
+        // Held to 1: a range's top times a warm feel (up to 1.2) once in about
+        // 84,000 loops went past it, and `with_tone` then refused the loop's
+        // own tone (session 30).
+        character::clamp01(r.range(c.tone[0][0], c.tone[0][1]) * (0.6 + feel.warmth * 0.6)),
         r.range(c.tone[1][0], c.tone[1][1]),
         r.range(c.tone[2][0], c.tone[2][1]),
     ];

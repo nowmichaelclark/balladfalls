@@ -155,6 +155,10 @@ function movePage(to, always) {
   <div class="keys" id="go"><a class="key" id="open" href="${attr(to)}">Open Ballad Falls</a></div>
 </main>
 <script>
+// Wrangler's bundler wraps named functions in __name(...) (keep_names), and
+// the two functions below are put here from their bundled source, where the
+// browser has no __name: define it, so the page never stops blank.
+var __name = (f) => f;
 ${pack.toString().replace(/^export /, '')}
 (${page.toString()})(${js(to)}, ${always ? 'true' : 'false'});
 </script>

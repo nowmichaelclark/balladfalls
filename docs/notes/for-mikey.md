@@ -307,14 +307,18 @@ Each is a few minutes. Say a step's number if something is wrong.
    and attaches `balladfalls-1.0.apk` to the v1.0 release; a later tag does it
    by itself.
 4. **The old address and driftloom:**
-   - **The old address's Worker:** in Cloudflare, Workers & Pages, `driftloom`,
-     Settings, Build: disconnect the driftloom repository and connect
-     `nowmichaelclark/balladfalls`, branch `main`, root directory
-     `old-address`, deploy command `npx wrangler deploy`, no build command
-     (build watch paths: `old-address/*`, so only its own changes rebuild it);
-     then Retry the latest build, or push. Or by hand on your computer, in a
-     checkout of this repository: `cd old-address && npx wrangler login &&
-     npx wrangler deploy`. Either way the Worker keeps its name and address.
+   - **The old address's Worker** (connected 2026-11-25): in Cloudflare,
+     Workers & Pages, `driftloom`, Settings, Build: the repository
+     `nowmichaelclark/balladfalls`, branch `main`, no build command, deploy
+     command `cd old-address && npx wrangler deploy` (Cloudflare's form has no
+     root directory field). Its first build starts with the next commit to
+     `main`. Cloudflare's yellow box suggesting `"name": "driftloom"` for
+     `wrangler.jsonc` means the repository's root file: leave it, since the
+     root is the `balladfalls` Worker and `old-address/wrangler.jsonc` already
+     says `driftloom`. Close, don't merge, any pull request Cloudflare opens to
+     change it. Or by hand on your computer, in a checkout of this repository:
+     `cd old-address && npx wrangler login && npx wrangler deploy`. Either way
+     the Worker keeps its name and address.
    - **Check the old address:** open
      <https://driftloom.nowmichaelclark.workers.dev/#c=ELAAAAAF_DHAbt>: it
      lands on balladfalls.com with that loop. `curl -sI

@@ -169,3 +169,11 @@ The brain's reading: the version filter on additions costs no characters and sta
 ## New instruments welcome again (2026-10-09)
 
 - 2026-10-09 -- **New instruments are welcome again** (2026-10-09; the 2026-09-25 pause on new sounds was temporary). Mikey liked the ears' first five as clips (stereo, roundBass, glass, floorDrop, arc: "all the new stuff is sounding really great"); build the ones he approves, in the core, except stereo (dropped 2026-10-11: mono only). Inspiration only from wholesome, comforting music, not harsh or dark records. No new *profiles* still. Fiddle, accordion and drone may get more nuance later. [Stereo came back on 2026-10-15; see "The engine and stereo".]
+
+
+## Two lines moved by brain B5 (2026-11-25)
+
+As they stood in `docs/DECISIONS.md`, word for word:
+
+- 2026-11-12 -- **The arc merged short of two yardsticks (Mikey merged #377, 2026-11-12):** brightness rises and falls on 87% of arc pieces (9 in 10 asked) and one 1,024-bar piece steps 2.7 LU between sections (2 asked); the misses are four loops a centroid can't read well (nothing above about 1 kHz, or batch 6's slowOpening hiding the arc's opening). His ears at B3 are the test. The 2.7 LU step, a breath that rests the tune in one 50 s section, goes to session 15.
+- 2026-11-01 -- **The budget lets old notes go at full quality too (Mikey, 2026-11-01).** He heard the Lite Room Album (item 85c): "it sounded great for lite mode"; asked whether an audio engineer would have a reason not to do the same at full, and if not, to add it. The brain found none (voice stealing is the standard way synths and samplers handle a full voice pool; dropping the new note is the unusual choice), with the field's usual refinements: let go of notes already in their release before held ones, oldest first. Item 85e.

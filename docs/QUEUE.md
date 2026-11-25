@@ -8,9 +8,14 @@ map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
 **Status, 2026-11-25:** `main` is at v218 and hands session 30 (the polish) is
-done: #479 to #482. **Next:** brain B5's release check (`docs/sessions/brain-5-release.md`),
-then 31a (the new name, built and left open), then 31 (1.0), which merges 31a
-and 30l's icon (item 120, draft #465). Done: every item to 122 but 120, and
+done: #479 to #482. **1.0: go (brain B5, 2026-11-25).** Before session 31
+merges, two of Mikey's checks: the Moto's step 1 in `docs/notes/for-mikey.md`
+(ten minutes with the screen off, and its Diagnostics) and the icon on his
+phone. **Next:** this repository is frozen at B5's merge (tag
+`driftloom-final`) and copied into the new one (`docs/DECISIONS.md`,
+2026-11-18); there, 31a (the new name, built and left open), then 31 (1.0),
+which merges 30l's icon (item 120, draft #465 here, its branch copied across)
+and 31a. Done: every item to 122 but 120, and
 the sessions before them (`docs/sessions/README.md` is the order; every merge
 has its line in `docs/DONE.md`; the longer status paragraphs, as they stood,
 are in `docs/archive/queue-items.md`, "Old status notes"). Open: 120 (the
@@ -235,8 +240,8 @@ archive), or says in a line why it is not for 1.0.
 - **Checks that passed having checked nothing** (session 30c found them; fixed
   in session 30, each shown to fail on its fault first): `tools/views.mjs` now
   exits 1 when a view fails, and CI runs it on Endless too;
-  `tools/export-long.mjs` counts the audio device's fill-ins and fails where it
-  can't; `tools/track-fades.mjs` fails if the fade in does nothing; the
+  `tools/export-long.mjs` counts the audio device's fill-ins, and says "not
+  checked" in the check's name where the browser can't count them; `tools/track-fades.mjs` fails if the fade in does nothing; the
   Android smoke check plays a fixed busy loop; the F-Droid check fails with no
   build of F-Droid's to compare with; the F-Droid emulator check counts only
   the app's own crash; the Gradle build retries a refused download.

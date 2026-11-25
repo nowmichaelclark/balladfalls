@@ -752,3 +752,9 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   repository's secrets (apksigner 34), checks its certificate, and attaches
   `balladfalls-<version>.apk` to the tag's release; by hand with a tag it signs
   that release again. Nothing to hear.
+- balladfalls #7, the F-Droid listing's screenshots retaken (Mikey,
+  2026-11-25; no app change): seven screens, each with a loop and cover of its
+  own and a theme of its own (Nocturne, Dawn, Tidal, Ember, Abyss, Night Light,
+  AMOLED), by `android/screenshots.mjs` on CI's emulator. The F-Droid recipe
+  names this merge for 1.0, since F-Droid reads the listing from the commit it
+  builds. Nothing to hear.

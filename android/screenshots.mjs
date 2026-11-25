@@ -10,6 +10,9 @@
 // (fastlane/metadata/android/en-US/images/phoneScreenshots/). Retake them with
 // the `screenshots` job of .github/workflows/android.yml whenever the screens
 // or the app's name change (session 31a), and commit the artifact's files.
+// Each screen is taken in a theme of its own (Mikey, 2026-11-25: show off the
+// themes), so the listing shows seven of the nine, and a loop of its own
+// (its name and cover), the next after the screen before it.
 
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -50,9 +53,27 @@ const goNow = async () => {
   if (await ev("document.getElementById('viewNow').hidden")) await click('nowBtn');
   await shown('viewNow');
 };
+// A theme, as the listener picks it: its swatch in Advanced (applied at once,
+// and kept, so each screen after it is in that theme until the next).
+const theme = async (cls) => {
+  await ev(`document.querySelector('#themes .sw[data-theme="${cls}"]').click()`);
+  await until(`the ${cls} theme`, () => ev(`document.getElementById('app').classList.contains('${cls}')`), 5000);
+  await sleep(800);
+};
+// The next loop, so each screen shows a loop (and cover) of its own: Next,
+// then a wait for the new name and for it to be playing a few seconds in.
+const nextLoop = async () => {
+  const was = await ev("document.getElementById('loopName').textContent");
+  await click('nextBtn');
+  await until('a new loop', () => ev(`document.getElementById('loopName').textContent !== ${JSON.stringify(was)}`), 60000);
+  await until('the new loop to play', () => ev("document.getElementById('playBtn').getAttribute('aria-label') === 'Pause'"), 60000);
+  await sleep(4000);
+};
 let failed = 0;
-async function screen(n, name, steps) {
+async function screen(n, name, cls, steps) {
   try {
+    await theme(cls);
+    if (n > 1) await nextLoop();
     await steps();
     await sleep(1500);
     shot(n);
@@ -67,10 +88,14 @@ try {
   demoMode();
 
   // 1. Now Playing: a loop playing, a few seconds in.
-  await screen(1, 'Now playing', async () => {
+  await screen(1, 'Now playing', 't-nocturne', async () => {
     await click('playBtn');
     await until('the player to play', () => ev("document.getElementById('playBtn').getAttribute('aria-label') === 'Pause'"), 60000);
     await sleep(6000);
+    await goNow();
+  });
+  // 2. Now Playing again, in a light theme.
+  await screen(2, 'Now playing, light', 't-dawn', async () => {
     await goNow();
   });
   // The bottom-right key opens the last of Sound and Layers, and switches
@@ -84,28 +109,28 @@ try {
     }
     await shown(view);
   };
-  // 2. Layers: what is playing, drawn as it plays.
-  await screen(2, 'Layers', async () => {
+  // 3. Layers: what is playing, drawn as it plays.
+  await screen(3, 'Layers', 't-tidal', async () => {
     await edit('viewLayers');
     await sleep(5000);
   });
-  // 3. Sound: the loop's sliders.
-  await screen(3, 'Sound', async () => {
+  // 4. Sound: the loop's sliders.
+  await screen(4, 'Sound', 't-ember', async () => {
     await edit('viewSounds');
   });
-  // 4. The vibe panel: what new loops lean toward.
-  await screen(4, 'Vibe', async () => {
+  // 5. The vibe panel: what new loops lean toward.
+  await screen(5, 'Vibe', 't-abyss', async () => {
     await goNow();
     await click('vibesBtn');
     await shown('viewVibe');
   });
-  // 5. The Library.
-  await screen(5, 'Library', async () => {
+  // 6. The Library.
+  await screen(6, 'Library', 't-nightlight', async () => {
     await click('libraryBtn');
     await shown('viewLibrary');
   });
-  // 6. Save and share.
-  await screen(6, 'Save and share', async () => {
+  // 7. Save and share.
+  await screen(7, 'Save and share', 't-amoled', async () => {
     await click('saveBtn');
     await shown('viewSave');
   });

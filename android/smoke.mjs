@@ -24,6 +24,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { AppPage, appId, until } from './cdp.mjs';
+import { LOOPS } from '../tools/stalls.mjs';
 
 const argv = process.argv.slice(2);
 const opt = (name, fallback) => {
@@ -57,7 +58,15 @@ try {
   const native = await ev("typeof window.DriftloomNative === 'object' && !!window.DriftloomNative");
   if (!CDP) check('the app\'s bridge to the native core is in the page', native);
 
-  await ev("document.getElementById('playBtn').click()", true);
+  // A fixed busy loop, pasted (a paste plays): the opening loop is drawn at
+  // random, and a quiet one gave the blocked-page check less sound than the
+  // time it waited (2 of 106 loops on main's own core, session 30).
+  const code = LOOPS.shatter.code;
+  await ev(`(() => {
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText: async () => ${JSON.stringify(code)}, writeText: async () => {} } });
+    document.getElementById('pasteCode').click();
+    return true;
+  })()`, true);
   text = await until('the player to play', async () => {
     const t = await diag();
     const m = /player: playing, step (\d+)/.exec(line(t, 'engine'));
@@ -77,7 +86,10 @@ try {
   }
   check('no error in the engine line', !/none \(|error|fail/i.test(engine));
   check('the player plays on (its step moves)', second !== first, `step ${first}, then ${second}`);
-  check('the page has a loop named', (await ev("document.getElementById('loopName').textContent.trim()")).length > 1);
+  const named = await ev("document.getElementById('loopName').textContent.trim()");
+  // The page shows a loop's name without its style ("glein-fei" for shatter-glein-fei).
+  const shown = LOOPS.shatter.name.replace(/^[a-z]+-/, '');
+  check('the pasted busy loop is the one playing', named === shown, `${named} for ${shown}`);
   if (!CDP && native) {
     // Android's font size is the page's root size (session 30f), changed under the running app.
     const scale = (v) => execFileSync('adb', ['shell', 'settings', 'put', 'system', 'font_scale', String(v)]);

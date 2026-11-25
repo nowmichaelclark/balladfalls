@@ -23,7 +23,7 @@
 // size of every Chromium process, from /proc), the export's progress, and
 // what plays meanwhile: the core's late, missed and dropped notes
 // (Diagnostics' engine line), the audio device's fill-ins
-// (AudioContext.playoutStats, where Chromium has it) and the windows in
+// (AudioContext.playoutStats, where Chromium has it: headless Chromium 158 does not, and the line says "not counted" instead of passing quietly) and the windows in
 // which the audio thread fell behind (the worklet's busy reports). Then the
 // file the app downloaded is checked by tools/export.mjs --file: lossless,
 // it decodes and nulls against a straight render of the job the page sent;
@@ -322,7 +322,11 @@ async function main() {
     const peak = Math.max(...samples.slice(q).map((s) => s.rss));
     check('memory flat through the run', samples.length >= 8 && last - second < 32e6 && peak - second < 96e6, `${samples.length} samples; second quarter ${mb(second)} MB, last ${mb(last)} MB, peak ${mb(peak)} MB`);
     check('nothing late, missed or dropped in what played meanwhile', after.late === before.late && after.missed === before.missed && after.dropped === before.dropped, `${before.line} -> ${after.line}`);
-    check('no fill-ins, the audio thread never behind', (fills0 == null || fills1 === fills0) && behind1 === behind0, `fill-ins ${fills0 ?? '-'} -> ${fills1 ?? '-'}, behind ${behind1 - behind0}`);
+    // Where the browser counts the fill-ins they must not move; where it
+    // cannot (headless Chromium has no playoutStats) the check says so in its
+    // name, and the audio thread's busy reports (`behind`) are what holds.
+    const counted = Number.isFinite(fills0) && Number.isFinite(fills1);
+    check(counted ? 'no fill-ins, the audio thread never behind' : 'the audio thread never behind (this browser does not count fill-ins: not checked)', (!counted || fills1 === fills0) && behind1 === behind0, `fill-ins ${fills0 ?? 'not counted'} -> ${fills1 ?? 'not counted'}, behind ${behind1 - behind0}`);
     check('the music still playing', playing === 'Pause', playing);
     check('no page errors', errors.length === 0, errors.join('; '));
     if (end.type === 'done' && !ALBUM) {

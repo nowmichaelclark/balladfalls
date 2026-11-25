@@ -113,17 +113,17 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | 30i | `30i-any-bars.md` | 117: "any bars" sometimes a long piece; what never comes unasked, measured | Opus 5.5, high | 30g's #458 | every row 30h to 30n, 30g's Left list | yes, 2026-11-23 (#462) |
 | 30j | `30j-pickers.md` | 118: the tempo, key, style and voices pickers | Opus 5.5, high | 30g's #458 | 30h, 30i, 30l, 30m, 30g's Left list | yes, 2026-11-24 (#463, v205) |
 | 30k | `30k-the-look.md` | 119: the card's art to the right, a new playhead (Mikey picks), solid knobs, the die, speakers, Chrome's scroll | Opus 5.5, high | 30h | 30i, 30l, 30m, 30g's Left list | yes, 2026-11-24 (#468, v209) |
-| 30l | `30l-icon.md` | 120: the new name's icon (Mikey picks); left open, merged with 31a by 31 | Opus 5.5, high | 30g's #458 | every row 30h to 30n, 30g's Left list || open on purpose: draft #465 (v212, a placeholder), the drawing with Mikey (round 16, 2026-11-24); 31 merges it |
+| 30l | `30l-icon.md` | 120: the new name's icon (Mikey picks); left open, merged with 31a by 31 | Opus 5.5, high | 30g's #458 | every row 30h to 30n, 30g's Left list || open on purpose: draft #465 (v216, a placeholder), Mikey's pick (round 20's c, 2026-11-25) built and green; 31 merges it |
 | 30m | `30m-album-export.md` | 121: an album exported whole and tagged, a zip or a file a track; a seed album saved | Opus 5.5, high | 30g's #458 | 30h, 30i, 30j, 30k, 30l | yes, 2026-11-24 (#466, v206; #467, v207) |
 | 30n | `30n-keys.md` | 122: the keyboard as music players have it, letter keys with a switch to turn them off | Opus 5.5, high | 30h, 30j, 30k, 30m | 30i, 30l, 30g's Left list | yes, 2026-11-24 (#472, v211) |
 | | | **Then in order, one at a time** | | | | |
 | 30g | `30g-crackles.md` | 115: no crackles in the Android app (a 1.0 blocker, Mikey 2026-11-22) | Opus 5.5, high | 29 | 30f (the app's audio path only, merging after it); its Left list beside 30i, 30j, 30k, 30l, 30n | yes, 2026-11-23 (#458, Mikey heard it clean); its Left list 2026-11-24 (#473, #474, #475, v213 to v215) |
-| 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | 18, 21, 24, 24c, 29, B4, 30f, 30g (and its Left list), 30h to 30n (30l open) | none | |
-| B5 | `brain-5-release.md` | Brain: the release check | Opus 5.5, high | 30 | none | |
+| 30 | `30-polish.md` | The known issues and the polish | Sonnet 5.5, high | 18, 21, 24, 24c, 29, B4, 30f, 30g (and its Left list), 30h to 30n (30l open) | none | yes, 2026-11-25 (#479, #480, #481, #482) |
+| B5 | `brain-5-release.md` | Brain: the release check | Opus 5.5, high | 30 | none | yes, 2026-11-25 (go, at v218; run in the B-parallel 5 thread) |
 | | **you** | Your signing key (chosen 2026-11-22: your own; the steps are in `docs/notes/for-mikey.md`); buy the new name's domain and attach it to the Worker, if not done. **31a waits for this.** | | 29 | | |
 | 31a | `31a-new-name.md` | The new name, built and left open (you paste the name, the domain and the id) | Opus 5.5, high | B5, the row above | none | |
 | 31 | `31-one-point-oh.md` | 108: 1.0 (merges 30l and 31a first) | Sonnet 5.5, medium | B5, 31a open and green | none | |
-| | **you** | Rename the repo; the F-Droid submission (its merge request is public, so after 1.0) | | 31 | | |
+| | **you** | Launch day: the old address's Worker, archive driftloom; the F-Droid submission (its merge request is public, so after 1.0) | | 31 | | |
 
 **Mikey's seven** (2026-11-18, queue items 109 to 114): his list for 1.0,
 as six sessions before the polish. The two fixes and the card start as soon

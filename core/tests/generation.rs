@@ -84,6 +84,26 @@ fn the_canonical_text_is_the_tools() {
     assert_eq!(h.0, 0xaf63_dc4c_8601_ec8c);
 }
 
+#[test]
+fn a_loops_tone_never_passes_one() {
+    // Session 30: about 1 loop in 84,000 drew a warmth a little over 1 (the
+    // tone's range times a warm feel), which the tone's own edit then refused
+    // and the page could not play. These three seeds drew it.
+    std::thread::Builder::new()
+        .stack_size(64 << 20)
+        .spawn(|| {
+            for seed in [983_236_608_u32, 720_091_369, 2_840_407_293] {
+                let spec = dlcore::generator::spec::new_spec(seed, &Request::new());
+                for (k, t) in spec.tone.iter().enumerate() {
+                    assert!((0.0..=1.0).contains(t), "seed {seed}: tone {k} is {t}");
+                }
+            }
+        })
+        .expect("a thread")
+        .join()
+        .expect("the tones");
+}
+
 struct Text(String);
 
 impl canon::Sink for Text {

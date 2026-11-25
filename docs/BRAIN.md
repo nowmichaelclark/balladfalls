@@ -288,10 +288,34 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 - `tools/check-docs.mjs` -- the size limits on the live docs (see "The docs
   stay small"); CI runs it.
 
-## State -- 2026-11-22
+## State -- 2026-11-25
 
 ### Start here (for the next brain)
 
+- **Brain B5, the release check (2026-11-25, run in B-parallel 5's thread
+  at Mikey's word to carry the plan on): 1.0 is go at v218.** Read back:
+  session 30's #479 to #482 (the weak checks fixed, each shown failing on
+  its fault; reset counters in a browser, v217; the tone clamped, 5139
+  goldens unchanged, v218; the docs cut), each head green; the ten rows
+  45550491670 and the nightly 45550557717 green on v218 (19 jobs: six
+  targets' golden renders, 24 hours of Endless, the long pieces' joins and
+  table, the rates); the gate green on main 65ab842; item 115 closed by his
+  ears ("There are no more crackles"); `data/codes.txt` has no member added
+  since 24c's rule (its last change, 1541058, was the rule's words); the
+  F-Droid recipe and lint green on 4ddf186, MIT, no network permission,
+  the listing's words plain; his own key made (2026-11-25, its SHA-256 in
+  `docs/DECISIONS.md`) and the release id confirmed. **Holds 31, not 31a:**
+  the Moto's step 1 (ten minutes with the screen off and its Diagnostics:
+  promise 1 on a phone; no figures from his phones yet) and the icon on his
+  phone. Every other line in `docs/notes/for-mikey.md` is left for after
+  1.0, safe because each is a check of something shipped, with a revert.
+  **Next:** this repository frozen at this PR's merge (tag
+  `driftloom-final`), Mikey creates the new repository (public, empty) and
+  gives the Claude app access; the brain copies main, the tags and #465's
+  branch into it; Mikey makes its Worker and attaches the domain; then 31a
+  there (its prompt now says so), then 31. Views at 4x and 6x and
+  `autolite.mjs` were not run by hand in 30: not for 1.0 (the nightly's
+  checks and the ten rows cover the app's controls).
 - **Brain B-parallel 5 (Opus 5.5, 2026-11-24, a cloud thread of the
   claude.ai Driftloom project on Mikey's other account; the next is session
   30, then B5).** Hands sessions ran as threads of the project (Mikey: "Start
@@ -312,10 +336,12 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   fades over; the lock screen's Play after two minutes paused fixed; Lite's
   50% line kept on the emulator's burn sweep; ten rows 45457406778), and
   the docs #470, #471. **Nightlies** green on v206 (45354665649), v211
-  (45410614887) and v215 (45464909251). **Open:** 30l, draft #465 (v212, a
-  placeholder; the drawing with Mikey, round 16's ten styles on
-  `s30l-shots`), its thread still running; its Left list is current.
-  **Waits on Mikey (not holding 30):** the icon's pick; the phone checks in
+  (45410614887) and v215 (45464909251). **Open:** 30l, draft #465 (v216, a
+  placeholder): Mikey picked round 20's c (2026-11-25), built, all 28
+  checks green on 81c8bd0; 31 merges it. **Session 30** started
+  2026-11-24 as a project thread. **Waits on Mikey (not holding 30):** the
+  icon on his phone (#465's APK); the new domain, attached at 31a's start;
+  the phone checks in
   `docs/notes/for-mikey.md` (Chrome's scroll, the keys, the album export,
   item 115's v215 test). **Learned:** GitHub runs no pull_request workflow
   while a PR conflicts with main (30k's CI never started until main was

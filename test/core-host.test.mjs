@@ -100,5 +100,19 @@ console.log('\nA context faster than the core holds (queue item 45)');
   check('the space settings js/pins.js copies are the core\'s', core.length === 40 && JSON.stringify(core) === JSON.stringify(SPACE_SETTINGS), JSON.stringify(core));
 }
 
+console.log('\nDiagnostics\' "reset counters" (session 30)');
+{
+  const host = new CoreHost({}, { bytes: new Uint8Array(4) }, [{}, {}, {}, {}, {}]);
+  const by = (a, b, c, d) => [a, b, c, d];
+  host._receive({ type: 'counts', late: 3, missed: 1, dropped: 4, droppedBy: by(2, 0, 2, 0) });
+  check('the counts as the core says them', host.late === 3 && host.missed === 1 && host.dropped === 4 && host.droppedBy[0] === 2, `${host.late} ${host.missed} ${host.dropped}`);
+  host.resetCounts();
+  check('a reset shows none of them', host.late === 0 && host.missed === 0 && host.dropped === 0 && host.droppedBy.every((n) => n === 0), `${host.late} ${host.missed} ${host.dropped} ${host.droppedBy}`);
+  host._receive({ type: 'counts', late: 3, missed: 1, dropped: 4, droppedBy: by(2, 0, 2, 0) });
+  check('and the core saying the same again still none', host.late === 0 && host.dropped === 0);
+  host._receive({ type: 'counts', late: 5, missed: 1, dropped: 7, droppedBy: by(2, 0, 5, 0) });
+  check('what comes after the reset is counted from it', host.late === 2 && host.missed === 0 && host.dropped === 3 && host.droppedBy[2] === 3 && host.droppedBy[0] === 0, `${host.late} ${host.missed} ${host.dropped} ${host.droppedBy}`);
+}
+
 console.log(failures === 0 ? '\nAll good.\n' : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);

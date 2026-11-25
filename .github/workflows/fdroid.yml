@@ -146,11 +146,17 @@ jobs:
 
       - name: the build, in F-Droid's buildserver container
         run: |
-          docker run --rm \
-            -v "$GITHUB_WORKSPACE:/src:ro" -v "$RUNNER_TEMP/fdroid:/recipe:ro" -v "$RUNNER_TEMP/out:/out" \
-            -e APP_ID -e VERSION_CODE -e NDK -e "RECIPE=/recipe/$APP_ID.yml" \
-            registry.gitlab.com/fdroid/fdroidserver:buildserver-trixie \
-            bash /src/android/fdroid/build-in-container.sh
+          # Maven's download is refused now and then to a busy runner: one more
+          # try (a real failure fails twice, the same way; session 30).
+          for attempt in 1 2; do
+            docker run --rm \
+              -v "$GITHUB_WORKSPACE:/src:ro" -v "$RUNNER_TEMP/fdroid:/recipe:ro" -v "$RUNNER_TEMP/out:/out" \
+              -e APP_ID -e VERSION_CODE -e NDK -e "RECIPE=/recipe/$APP_ID.yml" \
+              registry.gitlab.com/fdroid/fdroidserver:buildserver-trixie \
+              bash /src/android/fdroid/build-in-container.sh && break
+            [ "$attempt" = 2 ] && exit 1
+            echo "attempt $attempt failed; again in 30 s"; sleep 30
+          done
 
       - uses: actions/upload-artifact@v4
         if: always()

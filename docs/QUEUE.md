@@ -7,69 +7,21 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-24:** `main` is at v215; **next: item 120, Mikey's last change, session 30l, then 30** (v215 what the Android app says (reset counters clears its counts, the time with the screen off) and the lock screen's Play after a long pause, Lite's line measured natively and kept, #475; v214 the native samples clean, Lite by hand fades over, #474; v213 every command timed natively, Init's compressors kept, #473, all 30g's Left list for item 115; v211 the keyboard as music players have it: Space and K play, the arrows next and previous, Shift with them a bar, Up and Down the volume, M mute, R and 1 to 5 the dice, a letter a view, Esc back, ? the list of keys, and Advanced's letter keys switch, item 122, #472; v209 the look: the card's art on the right, the playhead a diffused LED (Mikey's pick), the sliders' knobs solid, the die a die, the layers' on and off a speaker, and in Chrome's tab a drag up or down anywhere scrolls the bar away, item 119, #468; v207 an album exported whole, as one zip or a file a track, in flac or opus, every exported file tagged with its title, album, track number, code and cover, item 121b, #467; v206 a seed album saved to the Library, item 121a, #466; v205 the tempo, key, style and voices pickers from the Vibe panel's lines, one, a range or a set, or any, long lists paged, and clear all, item 118, #463; v204 the timeline moves the playhead on any loop, paused or playing, and the album's way back goes after a new track, item 116, #461; v203 with nothing picked about 1 new loop in 10 a long piece, 64 to 512 bars with its journey drawn, and what never comes unasked measured, `tools/unasked.mjs`, item 117, #462; v201 the Android app's stream on a music player's path, Mikey heard it clean with the screen off, item 115 closed, #458; v200 sideways as Mikey asked: swapped, centered, the browser's bar put away by a scroll, item 114 done, #457; v199 the loop's own cover as Now Playing art, #455; v198 the final pass, one app, #454; v197 accessibility to WCAG 2.2 AA and its check, `tools/a11y.mjs`, #453; v196 every screen fits: short phones and a phone on its side, #452, all item 114; v195 fewer words: Share as keys, Export a key a format (flac, opus, midi), one word or a symbol where it will do, a popup two words and said whole, item 113, #449; v194 the codes made ready to freeze: a removed member plays something close, every draw filtered by version, one version a release; twang's slow and bright taken out, item 105e, #450; v193 Track length, its own view, to the second, with a fade in and a fade out; the Sound view's Length slider and the export's How much gone, item 111, #448; v192 the info card: every detail line whole at any width or text size, what doesn't fit left off in a fixed order and a tap away, the playhead round, item 112, #446; v191 Previous works in an album, item 109, #442; v190 the layers show what is heard: each step's notes drawn as each layer sounded them, a long piece's quiet layers dimmer, item 110, #440; v189 an album's code carries how long each track plays, item 105d, #438; v188 the Android app with the screen off: a foreground service, the lock screen and notification with the loop's own cover, audio focus, saving through Android's picker, item 107d, #431; v187 links, an album from one seed and the plain lines, item 105c, #433; v186 share codes version 2 in the app, item 105b, #427, with a loop's own name in the code, #425; v185 the nightly green again, twang's seed renders and no join a hole on corpus piece #27, #430; v184 audio export, the small format (Opus in an Ogg file), item 104c, #424; v183 long pieces on screen, item 106b, #419; v182 the Android app on the native core, item 107c, #420; v181 audio export in the app, item 104b, #416; v180 the jump within a long piece, item 106a, #417; v179 twang soft only, #414; v178 codes version 2 in the core, item 105a, #412; v177 the chords nearer the tune, item 84b, #404; v176 the keepalive without its hiss, #403; session 01 done: v154 the tools
-made steady, Diagnostics without the old scheduler's lines, Mikey's shorter
-plain lines; v155 the width ceiling's rest fix; session 02 done: v156, item
-101a, batch 6's far ends: deepDuck, wideSweep, slowOpening; session 03 done:
-v157 tuningOffset and v159 padWow, item 101b, and v158 the nightly's
-Emscripten step green again). Done: items 0-36 and 38-47 (13
-stopped at its gate by design), the core's phase 1 (42-46c), the sound batch
-(54-73), 74 and 76-76d, and **phase 2, the generator in Rust (items 77-92)**,
-checked by the brain's Session 29 and heard by Mikey in its blind album
-(2026-11-07). **Phase 3: item 93 done** (the player's module, 636 KB; the
-brain accepted the size, `docs/archive/notes/93-module-size.md`) and **94a done**
-(#337), **94b done** (#343, after Mikey's device check), 99 done (#341),
-and **95** (the picks through the core's commands); Ears 13b approved
-(2026-11-09). **The road to 1.0 (a long hands run, 2026-11-10; what waits
-for Mikey is in `docs/notes/for-mikey.md`):** 103 done (the fast gate,
-#354), 96 done (the checks on the player, #355), **97 done (the JavaScript
-retired: one generator, one engine, the core's, #356)**, 100 done (the
-too-slow line).
-**Next: the sessions in `docs/sessions/README.md`** (Mikey, 2026-11-10: the
-rest of the road cut into sessions, each with its prompt, its model and its
-place in the order; the items below stay the briefs). Brain B1 done
-(2026-11-11: 97 and 100 checked, phase 3's control rendered, the plan
-reviewed); hands session 01 done (2026-11-11: the stall test clean, the
-testers' steps written, the control's two loops explained and fixed); hands
-session 02 done (2026-11-11: 101a, batch 6's far ends, #363); hands session
-03 done (2026-11-12: 101b, tuningOffset #367 and padWow #369; the nightly's
-stereo hashes #366 and Emscripten stack #368); hands session 11 done
-(2026-11-12: 102a, v160, the long pieces' plan and its map, nothing heard
-yet; the design that stands is `docs/LONGFORM.md`); hands session 12 done
-(2026-11-12: 102b, v161, the wander heard, #375; holds kept within 300 s;
-`tools/longform.mjs` checks what is played); hands session 13 done
-(2026-11-12: 102c, v162, the arc's energy, an opening and a close heard,
-#377); hands session 14 done (2026-11-13: 102d, v163, the arc's second
-theme, its variations, its keys and movements of different kinds heard,
-and the wander's theme turn on, #379; the brightness order's note
-`docs/notes/102d-arc-brightness.md`); hands session 15 done (2026-11-13:
-102e, v164, the joins, endings that land and the breath between arcs, #381;
-the measures and the listening set, #382: 31 clips on the branch
-`long-clips`); brain B3 done in part (2026-11-14: 102 checked on v164, three
-bugs found for 102f, `docs/notes/102-b3-measured.md`; the "Long Pieces Album"
-page out, `docs/ALBUMS.md`); Mikey heard it (2026-11-14: every piece kept,
-`docs/notes/102-mikey.md`); hands session 16 done (2026-11-14: 102f, v165,
-the two holes fixed and a yardstick against holes, nothing retuned; the
-second listening set on `long-clips`); hands session 04 done (2026-11-14: 101c,
-v166, widePad, both kinds, #387); hands session 19 done alongside
-(2026-11-14: 104a, the FLAC writer in the core, #390; the app unchanged);
-hands session 25 done alongside (2026-11-14: 107a, the Android project and its
-CI build, `android/`, #389; no app change); hands session 05 done (2026-11-14: 101d, v167 tripletKit #391, v168
-dottedPulse #392); hands session 16b done (2026-11-14: 102g, v169, no join
-a hole on any piece, #395; the listening set on `long-clips`); hands session 06
-done (2026-11-15: 101e, v170, colorTone, #396); hands session 07 done
-(2026-11-16: 101f, v171, planingSevenths, #397); hands session 08 done
-(2026-11-16: 101g, v172 lowBell #398, v173 dropSpotlight #399); hands
-session 09 done (2026-11-16: 101h, v174 twang #400; the batch's locks
-#401: the balance lock re-baselined, unchanged since session 07; then
-Mikey's two calls, v175 #402: batch 6's draws count against a loop's
-changes, way A of `docs/archive/notes/101h-change-counts.md`, and twang picks a
-beat apart); hands session 10 done (2026-11-17: 84b, v177, the chords a
-fifth under the tune where 84's whole octave left them past an octave, #404);
-brain B2 done (2026-11-17: batch 6 and 84b checked on v177, the "Batch 6 Album" out, `docs/ALBUMS.md`; sessions 17 and 22's prompts adjusted); brain B-parallel (2026-11-17, in Claude Code): from 17 on the road runs as four chains, two sessions at a time (`docs/sessions/README.md`, "From 17 on"), started and overseen by that brain; Mikey heard the Batch 6 Album (2026-11-17: every sound kept, twang soft only, in session 17's first PR; 84b kept); hands session 22 done (2026-11-17: 105a, v178, codes version 2 in the core, #412; the app writes version 1 until session 23); hands session 26 done (2026-11-17: 107b, the core native on Android's own audio, AAudio from a Rust crate in `android/native`, a debug screen and tests, #411; no app change); hands session 17 done (2026-11-18: v179 twang soft only, Mikey's call, #414; 106a, v180, the core's jump within a long piece, where it is, and the piece's map for the page, #417; no screens yet, session 18's); hands session 20 done (2026-11-18: 104b, v181, audio export in the app, lossless, safe first, #416; the Small choice is session 21's); hands session 18 done (2026-11-18: 106b, v183, long pieces on screen: where you are, the piece's line and jumps, the journey pick, the Library's lengths, #419); hands session 27 done (2026-11-18: 107c, v182, the Android app plays on the native core, the page driving it by the worklet's messages, #420; the screen off and the notification are session 28's); Mikey's seven for 1.0 queued (2026-11-18: items 109 to 114, sessions 30a to 30f, before the polish); hands session 21 done (2026-11-18: 104c, v184, the Small choice in the export sheet: Opus through the browser's own encoder, an Ogg file the page muxes itself, `js/ogg.js`; hidden where the browser has no Opus encoder; #424); hands session 24 done (2026-11-18: 105c, v187, a link is the address with `#c=` and the code (no server sees it; offline works), a link preview, an album from one seed in Save, Share, the plain lines; #433); hands session 23 done (2026-11-18: 105b, a loop's own name travels with its code in any script, #425; v186, the app speaks version 2 only, the Library untouched, #427; v185, the nightly green again: #414's twang seed renders, and #402's three holes on corpus piece #27 fixed by a long note's life past 4 s, #430); hands session 28 done (2026-11-18: 107d, v188, the Android app plays on with the screen off: a media-playback foreground service with its notification and MediaSession carrying the loop's own cover, audio focus (a call pauses and returns), the headphones pulled, a wake lock only while playing or saving, nothing held paused; exports and MIDI and the backup saved through Android's own picker as they are made, the restore file's picker; the page kept running while it plays or saves; #431); hands session 24b done (2026-11-18: 105d, v189, an album's code carries each track's length slider setting, written once where tracks share it, nothing where they play on; a loop's code and an album from one seed carry none; #438); hands session 29 done (2026-11-18: 107e, no app change: F-Droid's listing in `fastlane/metadata/android/en-US/` (descriptions, changelog, icon, feature graphic, six phone screenshots from the app), the adaptive icon with its monochrome layer, the build recipe as a template (`android/fdroid/`) built from a clean clone by F-Droid's own tooling in CI, reproducible-build notes and the two-builds check (`docs/notes/107-reproducible.md`), the licenses list and the anti-features check (`android/LICENSES.md`), the version scheme and the tag's release workflow; the signing choice and the submission steps are in `docs/notes/for-mikey.md`, the submission waits for 31; #437); hands session 30b done (2026-11-18: 110, v190, the layers show what is heard: the core reports what each layer sounded at each step (a Heard event, web and Android), the page draws it, dimmer as a long piece's plan or a kit coming in holds a layer down, nothing drawn that the budget left out; Android measures its own output latency; `tools/heard.mjs` measures drawn against heard; #440); hands session 30a done (2026-11-18: 109, v191, Previous works in an album: the key stays on in one, round from the first track to the last, and goes round a deleted track the way it was going; #442); hands session 30c done (2026-11-22: 111, v193, Track length its own view, to the second: the core's track a time on its own clock with a fade in and a fade out, an album code's pace the time and its fades, the export the track's length; #448); hands session 30e done (2026-11-22: 113, v195, fewer words on every screen and popup, by Mikey's rule and his calls that day (`docs/notes/113-fewer-words.md`): Share as keys, Export its own view, a die, the infinity sign, +, arrows, Lite, the new description; what left the screen is still a screen reader's, held by `tools/names.mjs`; #449); next: the chains, and his testers' pastes
-(`docs/notes/98-testers.md`). Item
-75 is low priority. 37 stays on hold. A new Claude Code session starts here:
-read the standing rules and the merge policy, then take the next item.
+**Status, 2026-11-25:** `main` is at v218 and hands session 30 (the polish) is
+done: #479 to #482. **1.0: go (brain B5, 2026-11-25).** Before session 31
+merges, two of Mikey's checks: the Moto's step 1 in `docs/notes/for-mikey.md`
+(ten minutes with the screen off, and its Diagnostics) and the icon on his
+phone. **Next:** this repository is frozen at B5's merge (tag
+`driftloom-final`) and copied into the new one (`docs/DECISIONS.md`,
+2026-11-18); there, 31a (the new name, built and left open), then 31 (1.0),
+which merges 30l's icon (item 120, draft #465 here, its branch copied across)
+and 31a. Done: every item to 122 but 120, and
+the sessions before them (`docs/sessions/README.md` is the order; every merge
+has its line in `docs/DONE.md`; the longer status paragraphs, as they stood,
+are in `docs/archive/queue-items.md`, "Old status notes"). Open: 120 (the
+icon), 108 (1.0), 75 (low priority), 37 (on hold) and the known issues
+below. A new Claude Code session starts here: read the standing rules and the
+merge policy, then take the next item.
 
 **Two tracks:** app work (fixes, redesigns, vibe tuning, new controls) goes
 on alongside the core track, as separate PRs; app-track sessions stay out of
@@ -144,492 +96,41 @@ send, is the first sound it shows in: golden 16-grove (5 s, the organ) reads
 list back inside 0.2 dB, so the 0.4 dB tolerance (and the `steady` line) can be
 removed. If 48 kHz must move, stop and leave a note for a decision.
 
-## Phase 3: off the page (items 93-98)
-
-`docs/CORE.md`, phase 3: the whole core runs on the audio side; the page
-sends commands and draws what the core reports. The scheduler, the
-lookahead and the JavaScript synth and generator retired in item 97.
-*Done when:* promise 1's stall test is clean and the testers' phones
-report zero late notes. The notes under "For phase 3" below are part of
-every item here; item 53's brief (below them) is item 95's.
-
-**Decided for phase 3 (Mikey, 2026-11-07):** once the JavaScript synth is
-gone, a browser that can't run the core (no WebAssembly or no AudioWorklet)
-shows one plain line instead of playing, "This browser can't play
-Driftloom; try a recent Chrome, Firefox or Safari", in the info card's
-place. No fallback synth is kept for it.
-
-## 94a. Everything the app does, as a command or an event
-
-**Hands:** Opus 5.5, high. Core and its wasm only, no app change yet.
-
-**Why:** today `?engine=player` plays a code's seed and request, and the
-page's engine still does the rest. Before the app can move, every action
-and every thing it shows must have its way through the core.
-
-**What:** list every control and display the app has (Play, Next,
-Previous and history, a re-rolled layer (`rerollLayer`, the layers'
-seeds), mutes, tempo, the Sound panel's warmth, space and wobble (`tone`),
-the length slider (`playFor`), "Let the loop wander" and its salt, the
-picks, volume, mono, lighter on processor, export, the cursor and the
-layers' grid, the info card (name, style mix, vibes, key, bpm, metre,
-bars), the cover, share codes, Diagnostics), and give each its command or
-event in the player and the wasm (and the C header where a game would
-want it): what exists (`load`, `change`, `set_mute`, `set_tempo`,
-`set_volume`, `set_wander`, `position`, `pass`, `piece`), what is missing
-(at least: a layer's seed, the tone, the loop's description for the info
-card and the cover, the grid's notes for a pass, the events that say where
-the loop is: step, pass, phrase line, section). Build what is missing,
-with tests. Say which of `js/share.js`, `js/cover.js` and the rest still
-need the JavaScript generator, and how they stop needing it (a code is
-decoded to a seed, a request, layer seeds and tone; what it shows comes
-from the core).
-
-**Yardsticks:** a table in the PR, every control and display against its
-command or event; the new ones tested natively and in wasm; nothing that
-plays moved (goldens, seeds, baseline).
-
-## 94b. The app plays the player
-
-**Hands:** Opus 5.5, high. App and worklet.
-
-**What:** the app's default engine becomes the core's player: the page
-sends 94a's commands and draws its events; the page's engine keeps no
-lookahead and decides no notes (`?engine=page` keeps today's path, for
-comparison, until 97). Next, Previous and the length slider's hand-over
-are `Player::change` at the moments the app uses (a crossfade; 88b's
-"next phrase line with a short fade" when the slider ends a long loop);
-the automatic lite switch (87b) keeps today's fade and the loop from its
-top, now on the player (brain, Session 30: a crossfade needs two cores at
-once, twice the cost on the slow device that is switching, or a mix
-switchable while it plays, which is core work; Mikey, 2026-11-03: the fade
-"doesn't bother" him). A one-core crossfade is a later item. The page is
-free to stall: the worklet has what it needs. If 94b needs a core change,
-keep it small: item 99 may be in `core/` at the same time (the sketch build
-only).
-
-**Yardsticks:** every row of 94a's table works in the app (a check per
-row, scripted where it can be); promise 1's stall test on the player (the
-page's main thread blocked for 2 s, hidden for a minute, frozen): no late
-note, no underrun; `tools/views.mjs` on every view; then Mikey on his
-phone and tablet with Diagnostics ("For phase 3": the tablet's new-loop
-case, the phones' costs). **Merge after Mikey's check** on the PR's preview
-(Mikey, 2026-11-03: a check on the tablet before the app switches), not on
-green CI alone; then the brain's phase check.
-
-## 95. The picks through the core's commands (was 53)
-
-**Hands:** Opus 5.5, high. Item 53's brief, below, with 88b's meaning of
-the bars picker (the loop's length; the length slider says when it ends).
-
-**Built (hands, 2026-11-08, v151):** the panel's request is a command
-(`Player::set_picks`, `dl_play_picks`), held by the core with a number the
-page gives it; the core makes every new loop itself (`Player::next` at Next,
-and a track's end with nothing of the page's armed), its seeds drawn from a
-seed the page sends each core (`set_draws`), and says which (`Kind::Own`,
-the picks' number, before the `Loop` with the seed); the page draws the same
-spec for its card and history and sends nothing. Picks the core can't meet
-are held as their vibes, and the panel's line is the core's own words. The
-pills and the Bars picker's time read the picks the core holds. An armed
-loop carries its own track (`change_with_track`), so a page asleep at a
-hand-over leaves the core playing what it would have set. The opening loop
-(before Play) is still drawn on the page: there is no core before a tap.
-
-## 100. When a browser is too slow even on lite (done, hands, 2026-11-10)
-
-**Why:** a friend's Pixel 9 on GrapheneOS played "too fast and really
-skippy" (v151): its browser runs WebAssembly on an interpreter unless JIT
-is allowed for the site (54.7% of real time on lite interpreted, 9.3% with
-JIT). **Mikey (2026-11-10):** no browser workarounds and no cushion or
-lower tier; a plain line telling them to get the Driftloom app.
-
-**Built (v153):** on lite, however it was chosen, when 8 of the
-quarter-seconds in the last 20 s of playing each took longer than the
-audio it made, or the device filled in 8 times in them where the browser
-counts (`playoutStats`), the card's place says "This browser is too slow."
-(Mikey, 2026-11-11; it first read "...too slow to play Driftloom smoothly",
-changed in v154) (`quality.stuck`, js/quality.js, which says
-how the line was set from the tablet's and the Pixel's figures). "Get the
-Driftloom app." follows as a link once `APP_LINK` in js/main.js is set
-(item 107); Play goes on, and Diagnostics reads `slow: lite past the line,
-Ns (why)`. `tools/autolite.mjs` has the `stuck` case, and its other cases
-check the line never shows.
-
-## 96. The checks on the player (done, hands, 2026-11-10)
-
-**Built:** `tools/measure.mjs` and `tools/baseline.mjs` play loops from
-their seeds on `js/dlplayer.wasm` in Node (`tools/play-lib.mjs`, the meters
-in `tools/meter.mjs`): no browser, and the up-front harness is gone for the
-core (the old tool is `tools/measure-js.mjs`, for the JavaScript fallback
-until 97). The voice probe, a request as text and the budget's counts are
-the core's `tools` feature (`tools/build-core.sh --tools`, never shipped;
-`player/probe.rs` hands the sequencer a loop of one note). For the same 40
-loops the old path and the player agree to 0.005 dB in loudness and peak;
-the baseline's `voices`, `player` and `costs` parts did not move, and
-`loops`, `stereo` and `refusals` are now the player's 45 s renders, on
-purpose. `tools/perf.mjs` and `tools/views.mjs` drive the app, which plays
-the player since 94b.
-
-## 97. The JavaScript retires (done, hands, 2026-11-10)
-
-**Built (v152):** `js/synth.js`, `js/engine.js`, `js/clock.js`,
-`js/generator.js`, `js/draw.js`, `js/dlmath.js` and `js/dlcore.wasm` are
-gone, with `?engine=js` and `?engine=page`. The page reads a loop's record
-and notes from one more instance of `js/dlplayer.wasm` (`js/gen.js`; the
-request and the record are `js/request.js`), and `js/output.js` takes the
-core's node to the speakers. A browser that can't run the core shows the
-plain line in the card's place; a module that never arrives says
-"Please refresh." (Mikey, 2026-11-11; v154, it first read "Driftloom
-couldn't load. Check the connection and reload.") The page's
-JavaScript went from 19,538 lines (835 KB) to 9,166 (363 KB), and 252 KB of
-`.wasm` less. The tools read what the generator decides from the tools'
-build (`tools/gen-lib.mjs`, `tools/build-core.sh --tools`): the generation
-goldens (all 5,124 cases, `gen-golden.mjs --check`, the file now the list
-of cases), the balance lock (`stats.mjs --check`), the dials, the octave
-check. `tools/rows.mjs` gained the plain line's two rows.
-
-## 98. The phase's proof
-
-**Hands:** Sonnet 5.5, high; then Mikey and the testers.
-
-**What:** promise 1's stall test, clean, on the shipped app; the testers'
-phones (Mikey's Moto and tablet, and the friends' Pixels on GrapheneOS)
-report zero late notes in Diagnostics over a listening session each, with
-a few Nexts, a long loop, Endless and the screen off. Write the steps for
-the testers in plain words, one paste each.
-
-**Then the brain:** its phase check, and a control album (today's app
-against the app before phase 3, the same codes): it should sound the same.
-**Brain B1 (2026-11-11):** on `main` at v153 (d9d6ffe): `build-core.sh
---check`, the generation goldens (5,124 of 5,124, the Rust generator alone),
-the balance lock (22 of 22), the Node tests, `tools/rows.mjs` (29 of 29), the core baseline (nothing
-moved) and CI's gate all pass; the page's JavaScript 835,298 bytes (31 files) before
-97, 362,742 (28) after, 125,911 gzipped against 272,991. The control: 30
-corpus loops rendered by v149's own Engine and Synth on the core and by
-today's player: names and starts the same, 28 null at -82 dB or lower, two
-differ after a silent bar at the same loudness (session 01 explains them).
-The album, "Phase 3 Control", is out (`docs/ALBUMS.md`).
-**Hands session 01 (2026-11-11):** promise 1's stall test on the shipped app
-(v154; `tools/stalls.mjs`: the main thread blocked 2 s and 5 s, the page
-frozen, the tab hidden a minute; shatter, the 32,768-bar piece and Endless;
-4x and 6x CPU; full and lite) reads zero late, left-out and dropped notes in
-all 84 rows, the audio thread's busiest quarter-second at most 21% (Chromium
-153 has no `playoutStats`, so that is the figure for underruns; the PR has
-the table). The testers' steps: `docs/notes/98-testers.md`. The two loops
-the control found different (tui-doask, soath-wa) are the width ceiling's
-(`core/src/blocks/width.rs`): in a long rest its mid window rounds to
-exactly zero beside a side window of float dust, it reads "far too wide" and
-takes the side's gain toward nothing, and the loop returns narrow for about
-ten seconds. It does that in v149 and in today's player alike (the same
-samples at the player's 0.25 s hand-over); the brain's v149 renders handed
-notes over far ahead, where the dust fell the other way. Fixed in v155: the
-ceiling takes a window with next to no mid in it (under 1e-9 in sum of
-squares, about -140 dB a sample) as nothing to hold the side against, so its
-gain goes back up; the two loops now render within -88 dB of each other at
-either hand-over, and one baseline loop (ri-houng, full, stereo) moved.
-
-## 99. The sketch levers for Ears 13b (alongside phase 3)
-
-**Hands:** Sonnet 5.5, high. After 94a merges, from the latest `main`; it
-may run alongside 94b. The sketch build only (`--features sketch`): the
-app's and the player's modules stay byte for byte (`tools/build-core.sh
---check`), and nothing that plays moves (goldens, seeds, baseline).
-
-**Why:** Ears 13 (`docs/ears/batch-6.md`, "Levers wanted") sketched five of
-its twelve candidates; the other seven need a hook item 83's levers don't
-have. The ears session never writes core code, so the hands add the hooks
-and an Ears 13b sketches with them.
-
-**What,** each as small as the batch's table says, in `core/sketch/`'s way
-(a forced choice, a `tuning.rs` name, a pin, or a clip lever in
-`tools/clips.mjs`), all under `#[cfg(feature = "sketch")]`:
-- **tripletKit:** a forceable choice that re-times the kit's hats and ghost
-  hits from four sixteenths to three thirds of the beat (no straight
-  eighth), the kick on the beat.
-- **dottedPulse:** a forceable choice adding a soft part (a rim or a tuned
-  tick) every three eighths, or the kick on a 3-3-2.
-- **planingSevenths:** a forceable option of the progression draw: every
-  chord a major seventh, roots a whole step or a minor third apart.
-- **slowOpening:** `latefloor.SECONDS_MAX` and `latefloor.FADE` in
-  `tuning.rs`'s `NAMES`.
-- **tuningOffset:** `master.CENTS` in `NAMES`, read where a note becomes Hz.
-- **widePad:** the side reaches whole-channel blocks in a stereo render
-  (`render_side`, as the buses get it), or a clip lever that sets a space
-  setting past its range; take whichever is smaller.
-- **dropSpotlight:** the sketch hears the floor drop (a route into the
-  sketch's `MODS`, as subDuck is keyed, or a floor-drop event to the
-  channels).
-- **Chord sketches:** in the sketch build, the chords channel gets a
-  retune at every chord (today only while the organ plays), so a chord
-  sketch sees arpeggiated chords whole without a silent organ.
-
-**Yardsticks:** each lever tested under `--features sketch` (it moves what
-it says, and off it is bit for bit today); `core/sketch/README.md` and the
-header of `tools/clips.mjs` document the new levers; clippy pedantic clean
-with the feature; the standing checks unchanged.
-
 ## The road to 1.0 (Mikey, 2026-11-10)
 
-Items 106 and 104 are done (sessions 17 to 21, 2026-11-18): `docs/archive/queue-items.md`.
+Done and archived (`docs/archive/queue-items.md`, by number): phase 3 (93 to
+100), 101 (batch 6), 102 (long pieces), 103 (the fast gate), 104 (export), 105
+(codes), 106 (long pieces on screen), 107 (the Android app, but for the
+submission below), 109 to 119, 121 and 122 (Mikey's seven and last changes).
 
-**The app's 1.0 comes before the game** (Mikey, 2026-11-10): Broken Friends
-and the other games wait (the core already works in Broken Friends); the
-music app is finished first, and **1.0 includes the Android app on
-F-Droid** (Mikey, 2026-11-10). Order, after 103: phase 3's 96, 97, 100 and
-98's hands part; then 101, 84b and 102; then 106, 104 and 105; then 107;
-then Mikey's seven (109 to 114, 2026-11-18); then the known issues, the polish, and 108. **Screens:** the hands build
-plain ones in the app's current style, keeping `docs/PAINTER.md`'s rules
-(one screen, no new settings, scrolling in its two places); a Painter
-session may restyle any of them later (Mikey, 2026-11-10). Each sound change merges under the policy and is
-gathered into one listening album for Mikey; what needs his ears or a
-decision goes in `docs/notes/for-mikey.md` and the work moves on.
+**The app's 1.0 comes before the game** (Mikey, 2026-11-10): Broken Friends and
+the other games wait (the core already works in Broken Friends); the music app
+is finished first, and **1.0 includes the Android app on F-Droid**. What is
+left, in order: the polish (session 30), the release check (brain B5), the new
+name (31a), then 108. Screens: the hands build plain ones in the app's style,
+keeping `docs/PAINTER.md`'s rules (one screen, no new settings, scrolling in
+its two places). What needs Mikey's ears, phone or accounts is in
+`docs/notes/for-mikey.md`, and the work moves on. Sessions and their order:
+`docs/sessions/README.md`.
 
-**In sessions** (`docs/sessions/README.md`, 2026-11-10, reviewed by brain B1
-2026-11-11): 98 is session 01;
-101 is 101a to 101h (sessions 02 to 09: the far ends, pitch, width, the
-kit, colorTone, planingSevenths, lowBell with dropSpotlight, twang and the
-batch's locks); 84b is session 10; 102 is 102a to 102f (sessions 11 to 16:
-the plan and its map, the wander, the arc's energy, its themes and keys,
-the joins and the listening set, then tuning from Mikey's notes;
-`docs/sessions/long-pieces-brief.md`); 106 is 106a and 106b (17, 18); 104
-is 104a to 104c (19 to 21); 105 is 105a to 105c (22 to 24); 107 is 107a to
-107e (25 to 29); 109 to 114 are 30a to 30f (Mikey's seven, 2026-11-18); the polish is 30, the new name is 31a (Mikey, 2026-11-11: the app is
-renamed at 1.0, kept from the testers until then) and 108 is 31. Five brain sessions (B1 to
-B5) check the work between them.
+## 107. The Android app, on F-Droid (built; the submission is open)
 
-## 103. The fast gate (done, hands, 2026-11-10)
+Sessions 25 to 29 built it (the brief and what came of it are archived with
+item 107): the core native on Android's audio, the page's screens in a
+WebView, the screen off, F-Droid's listing and recipe, reproducible builds
+(`android/README.md`, `docs/notes/107-reproducible.md`). **Open, Mikey's:** his
+signing key, and the submission to F-Droid after 31 (the merge request is
+public and carries the new name): `docs/notes/for-mikey.md`, "Accounts". Then
+`APP_LINK` in `js/main.js` points at the listing (item 100's link).
 
-**Built:** `.github/workflows/core.yml` is the gate, on every PR and push,
-its jobs side by side, each one part of `tools/gate.sh` (what a session runs
-locally): `core` (`build-core.sh --check`, `cargo test --locked`, clippy
-pedantic), `sketch` (the same, sketch build), `node` (every
-`test/*.test.mjs`, `gen-golden.mjs --check`, the balance lock on the Rust
-generator) and `baseline` (the "nothing moved" guard, 11 minutes in one
-piece, so in four groups of its parts). `.github/workflows/nightly.yml`, on
-a schedule and by hand, never gating: every target's golden renders,
-Emscripten, Endless for 24 hours, `gen-golden --chromium`, `ahead --sweep`,
-`rates.mjs` and `stats.mjs --check`. A session looks at the nightly's
-latest run before it starts an item and fixes a red one first. **Back as
-gates at 1.0 on F-Droid** (item 108).
+## 120. The new name's icon (Mikey, 2026-11-23; open until 1.0)
 
-## 101. Batch 6, built
-
-**Hands:** Opus or Fable, high. After 97 (one generator, so each change is
-made once). Split as 101a, 101b and on, one PR each, in batch-6's ranked
-order or the order the code wants.
-
-**What:** the fourteen approved (`docs/ears/batch-6.md`, Verdicts; Mikey,
-2026-11-08 and 2026-11-09, all at the sketched levels, every version as an
-option weighted by the vibes): tripletKit, lowBell (struck, swelling),
-padWow, widePad, colorTone, deepDuck, wideSweep (wide, fast), dottedPulse
-(pulse, kick332), slowOpening, planingSevenths, dropSpotlight (struck,
-swelling), tuningOffset, and twang (soft, slow, bright), each as its
-section and "For the brain" say. Batch 5's rule (Mikey, 2026-10-18): today's
-behavior stays one option of every choice; weights from the batch's
-[JUDGMENT] lines, never 0. Where a lever fell short ("What the levers
-did"), the build finishes it and says how. The standing rules for sound
-items (level, cost, the coffee-shop probe, refusals); the balance lock and
-the baseline move on purpose, said in each PR. Then the batch album
-(Session 26's way): loops with each, for Mikey.
-
-- **84b, the chords nearer the tune** (Mikey's blind album, 2026-11-07): of
-  item 84's octave moves he preferred, wherever he heard a difference, the
-  chords nearer the melody: where 84 lifted the chords up toward the tune
-  (gap about 17 semitones to about 5) the new side won 3 of 3, and where it
-  dropped them away (about 5 to 17) the old side won 2 of 3 (the third,
-  sung-hal, "a slight difference, but I might not"). Keep 84's rule (the
-  octave read from the progression, so a pin can't flip it) and change its
-  aim: the chords sit within about a fifth to an octave under the tune,
-  never pushed down to about 17 semitones under it. It merges under the
-  policy; more of 84's downward movers go in the album for Mikey, and a
-  revert follows if he hears worse.
-
-## 102. Long pieces, composed
-
-**Hands:** Fable, high. After 101; the composing work promise 11 left for
-later (`docs/CORE.md`, "Any length, up to endless";
-`core/src/generator/piece.rs`).
-
-**Why** (Mikey, 2026-11-10): the longer lengths should sound composed.
-Today a piece past 32 bars is its loop played section after section, each
-the loop's next wandered pass: one idea, wandering. Mikey wants both
-journeys (2026-10-13): **an arc**, as a symphony's (themes that return,
-changed; a build and a release; related keys; a close), and **long, slow
-wandering** (one thing at a time moving, long held states, nothing
-abrupt), chosen per piece by the vibes and somewhat at random (his taste),
-and pinnable by a request.
-
-**Rules:** promise 11 holds: any section reached straight from the seed and
-its number, the same memory and cost for 64 bars or Endless; Endless never
-ends (arcs in turn, or the wander); loops of up to 32 bars play exactly as
-today (the balance lock holds); changes at phrase lines, never mid-phrase;
-music computers are good at, not copies (Mikey, 2026-11-08). The
-generation goldens' long-length cases move on purpose, said in the PR.
-
-**Added by brain B1 (2026-11-11), from the code** (the brief has each):
-the journey plays at any wander setting (a section is today's pass at the
-slider's amount; the slider becomes only its breathing); pins, mutes and a
-code's edits are never moved; the plan's spans in time, in phrases where
-sections are few; endings that land when the length slider stops a piece
-before its close; movements (a finite piece's last arc looks back);
-theme B's making spread across blocks (the tablet's margin); and the
-listening set as rendered excerpts with a blind before-and-after pair,
-since the app can't jump or take a journey until 106.
-
-**102f** (session 16; brain B3, 2026-11-14): Mikey kept every piece and
-every first pick, so nothing is retuned. Two holes B3 measured on v164 are
-fixed: a pivot struck at velocity 0 in 1 loop in 12 (its velocity from a
-silent entry chord), and "the tune alone" over a varied tune that is silent
-there (three seconds near silence in fei-no); and a yardstick holds a join
-from silence. The developments' frequent breaths were heard and kept.
-`docs/notes/102-mikey.md`, `docs/notes/102-b3-measured.md`. **Done**
-(session 16, v165): the pivot struck at the landing's velocity, "the tune
-alone" only over a tune that sounds there as the unit plays it (else a
-breath), and the yardstick: `tools/longform.mjs` holds every arc's join,
-as played, from a hole (25 dB under the loop as itself, and made by the
-join), and `core/tests/joins.rs` every pivot struck and every tune alone
-sounding.
-
-**102g** (session 16b; brain B3, 2026-11-14): no join a hole on any piece.
-Session 05 found three on Endless arcs that session 16's yardstick never
-plays (ta-muin 1337654778 at 2:05 and 9:26, "the tune alone" 19 to 38 dB
-under the loop for about 2 s; yi-yoar 819045617 at 6:14, a floor out 33 to
-40 dB under), the same since v164: a join whose kept layers carry little of
-the loop. A join that would be a hole falls back (decided from the unit's
-notes, at a flat cost); every other join stays as Mikey kept it; the
-yardstick plays at least 200 pieces' joins, Endless arcs among them.
-**Done** (session 16b, v169): a tune alone, a floor out or a breath is read
-from its notes when its unit is made (`Heard::under`: each voice's loudness
-over a note's life, `[longform loudness]`, `tools/voice-loudness.mjs`; the
-echoes as the mix sends them) and falls back to a breath, or to a glide,
-where it would leave the mix 12 dB under (`[longform joins] hole`); over
-200 pieces rendered, 88 holes before and none after (but three half-beat
-breaths, the kind Mikey kept), and 704 of 29,729 written joins over the
-corpus's maps changed, most of them breaths become glides. The wide run is the nightly's
-(`tools/longform-holes.mjs`), the three places in `tools/longform.mjs`.
-
-**102e done** (session 15, v164; #381, #382): every line where a unit meets
-the next and something changes is written, chosen by what changes and the
-energy either side (`longform::Join`, `Form::join_of`; heard in
-`Heard::joins`): a chord both keys share held across a key's line, the
-bass on its root; a fill into a rise; the floor out before a fall; the
-tune alone, or a breath, where a theme changes; a wander's line move a
-breath of its layer; what glides, its glide. A breath between arcs thins
-the tune across it instead of resting it (the 2.7 LU step gone). Endings that land: where
-the length slider stops a piece or Endless before its close, the phrases
-before the stop play the close and land on the tonic, ringing out
-(`Heard::stop_at`; `dlrender --track`). A landing struck at velocity 0
-since 102c fixed. The arc's brightness judged on its opening, peak and
-close (`docs/LONGFORM.md`, "The joins", "Endings that land";
-`core/tests/joins.rs`). Measured over 240 seeds at 64, 256, 1,024 and
-32,768 bars and Endless (#382's table): every check but one, a lite pass
-block a microsecond over its lightest audio block on one seed, as on `main`;
-promise 1's stall test clean on an arc of 32,768 bars and on Endless (120
-rows). The listening set: 31 clips, 23 minutes, two blind pairs (before and
-after item 102), on the throwaway branch `long-clips`
-(`tools/longform-clips.mjs`; `docs/notes/for-mikey.md`).
-
-**102d done** (session 14, v163): a second theme (another seed's tune bent
-into the loop, made a stage a block a section ahead), the variations as
-marks on the notes, the related keys (a fifth away, the relative and the
-parallel along the mode), the return prepared on the home fifth, call and
-response in the development, movements of four kinds in a cycle, a finale
-that looks back, and the wander's hand-over of the tune
-(`heard::Lift::themed`, `Generator::prepare`, `longform::Kind`;
-`docs/LONGFORM.md`, "How an arc's themes are heard";
-`node tools/longform-themes.mjs`, `core/tests/themes.rs`).
-
-**102c done** (session 13, v162): the arc's energy heard, and a finite
-arc's landing on the tonic (`heard::Lift`; `docs/LONGFORM.md`, "How an arc
-is heard").
-
-**102b done** (session 12, v161): the wander heard (`core/src/generator/heard.rs`;
-`docs/LONGFORM.md`, "How the wander is heard").
-
-**102a done** (session 11): the plan as code (`core/src/generator/longform.rs`,
-`data/longform.txt`), `journey=arc` and `journey=wander`, `dlgen --map`,
-`tools/longform.mjs` and `core/tests/longform.rs`. The design that stands
-is `docs/LONGFORM.md`; sessions 12 to 16 build from it.
-
-**Yardsticks:** a piece map (`dlgen --map SEED REQUEST`: each section's key,
-tempo, energy, theme and journey) for any length; corpus checks that an
-arc's themes return and its energy rises and falls, that a wander moves at
-most one thing a section, and that a section's cost doesn't grow with its
-number; then, for Mikey, a listening set: a few pieces each at 64, 256 and
-1,024 bars and Endless, as album codes he plays in the app, with short
-excerpts (the start, a quarter, half, three quarters, the close) so a piece
-can be judged in minutes.
-
-## 105. Short codes and links (codes, version 2)
-
-**Hands:** Opus or Fable, high. Before 1.0, after 102, so it
-carries everything 1.0 has (B-parallel, 2026-11-17: not after 104 or
-106, since a code carries no export and no jump); **from 1.0 on, codes stay stable** (Mikey,
-2026-11-10). `docs/CORE.md` phase 6 and promise 8, `docs/PAINTER.md`,
-"Share codes, version 2": short plain codes (what was pinned beside the
-seed, nothing else), plain links that open the loop, an album from one
-seed, and plain "needs a newer version" lines. Old codes stop working
-(Mikey, 2026-10-12: that's fine before 1.0).
-
-**Room to grow** (Mikey, 2026-11-10): a code carries a version; everything
-in it is named by a stable id, never by its place in a list, and ids and
-lengths are variable-width, so new instruments, profiles, vibes, styles,
-picks and later a modder's recipe fit without a new format. **Additions
-leave old codes as they sound:** each instrument, profile, vibe and option
-records the version it joined, and a code's draws see only what existed at
-its version (a pool is filtered by version before the draw, so a newer
-member can't shift an older code's picks). A deliberate improvement to an
-existing sound still changes old codes, and the release notes say so. A
-code naming something this app doesn't have says "needs a newer version",
-never plays the wrong thing.
-
-**Yardsticks:** a loop with nothing pinned has a code under about 20
-characters; every pick, length, journey and edit round-trips; the
-generation goldens hold; a test adds a dummy instrument, profile and vibe
-at a later version and shows every golden code renders bit for bit the
-same, while a new code can draw them; a code from a "newer" version is
-refused plainly.
-
-**105e, before the freeze (brain B4, 2026-11-18; session 24c, after 30c):** the
-format's bytes stay; four things settled against Mikey's "no code rot"
-(2026-11-17). A removed member keeps its row marked gone and plays a stand-in
-or goes without, so an id with a row is this build's and one with none a
-newer build's (no longer code); a field past today's range plays the nearest;
-twang's slow and bright are the first removed. Every draw is filtered by
-version, a drawn setting's words and a new drawn setting too (today they are
-not). The dummy build covers the rest of the lists and the removals. And one
-version a release (`released` in `data/codes.txt`), since the head is one
-character only up to version 15.
-
-## 107. The Android app, on F-Droid
-
-**Hands:** Fable, high. Alongside 104 to 106 (B-parallel, 2026-11-17:
-the chains in `docs/sessions/README.md`; it reads no codes). Mikey (2026-10-12): from the same Rust
-core, with the web screens inside it; the website stays. The core native,
-on Android's own audio (AAudio, through a small Rust layer or Oboe) at a
-high priority, the page's screens in a WebView talking to it by the same
-commands and events as the worklet (94a); no Google services, nothing
-F-Droid's rules refuse. Built in CI (GitHub's runners have the Android
-SDK), an APK Mikey can install, `fastlane` metadata, and an F-Droid build
-recipe with reproducible-build notes. **For Mikey:** the submission to
-F-Droid (his account, after 1.0: the merge request is public and carries
-the new name) and the signing choice. Test builds use a working id; the
-release id and name come with the rename (31a). Then item 100's link points
-at the listing. **Yardsticks:** the Moto and the tablet play with nothing
-late (Diagnostics in the app), the screen off for ten minutes, a long
-piece and an export; the APK builds from a clean checkout.
-
-## 109 to 114. Mikey's seven, before the polish (2026-11-18)
-
-Mikey's list for 1.0, in his words in each session's prompt
-(`docs/sessions/30a-album-previous.md` to `30f-painter-final.md`); the order
-and what may run together are `docs/sessions/README.md`, "Mikey's seven".
-
-- **109 to 114 done** (#442, #440, #448, #446, #449; #452 to #455 and #457;
-  v190 to v200): the briefs of 109 to 113 are in
-  `docs/archive/queue-items.md`, "109 to 113. Mikey's seven"; 114's is
-  session 30f's file. What 114 left for Mikey to decide is in
-  `docs/notes/for-mikey.md`.
+Session 30l: an SVG icon for the new name, drawn with Mikey over rounds; he
+picked round 20 c on 2026-11-24. Built into draft #465
+(`icons/icon.svg` and `tools/icons.mjs`, v216 a placeholder for `BUILD` and
+`CACHE`), left open on purpose: it merges with 31a's rename at 1.0, so the
+testers' surprise holds. Nothing touches #465, `icons/` or anything that names
+the app until session 31.
 
 ## 108. 1.0
 
@@ -648,94 +149,6 @@ changelog, codes frozen (105), the nightly's checks back as merge gates
   charter's handhelds and consoles), an item trims the generator's frames
   with a measured aim; for Broken Friends' web build, the header's line is
   enough.
-
-## 116 to 122. Mikey's last changes, before the polish (2026-11-23)
-
-Mikey's list of 2026-11-23, his answers folded in (`docs/DECISIONS.md`, that
-day), as seven sessions run two at a time by brains B-parallel 4 and 5 (all merged by 2026-11-24 but 120, a draft until 31); the order
-and what may run together are `docs/sessions/README.md`, "Mikey's last
-changes". Each brief, in his words, is its session's file. All hold 1.0:
-session 30 waits for them.
-
-- **116** (30h): the timeline moves the playhead on a short loop too, and a
-  long piece's while paused; the album's way back goes once a new track is
-  made.
-- **117** (30i): with nothing picked, about 1 new loop in 10 a long piece
-  (64 to 512 bars, a journey drawn); what never comes unasked, measured.
-- **118** (30j): the tempo, key and scale, style and voices pickers.
-- **119** (30k): the card's art on the right, a new round playhead (Mikey
-  picks from a few), solid slider knobs, a die that looks like one,
-  speakers for the layers' on and off, Chrome's address bar scrolled from
-  anywhere.
-- **120** (30l): the new name's icon, an SVG (Mikey picks); left open and
-  merged with 31a's rename at 1.0, so the testers' surprise holds.
-- **121** (30m): a seed album saved to the Library; an album exported whole,
-  one zip or a file a track as the listener chooses, every file tagged
-  (title, album, track number, the code, the cover).
-- **122** (30n): the keyboard as music players have it: Space, the arrows,
-  a letter a view, ? for the list, and a switch in Advanced to turn the
-  letter keys off (a fourth setting, Mikey's exception).
-
-## For phase 3 (from item 82; brain, Session 28)
-
-- **When notes reach the core** (`docs/archive/notes/82-hand-over.md`): the
-  core sums its voices in an order that depends on when notes were handed
-  over, so the up-front harness and the player differ in their last bits (77
-  dB or more under the music). **Brain's call: no canonical order now.** The
-  player's fixed hand-over is what every check holds, and the app's own
-  engine already varies in its last bits play to play, inaudibly. In phase 3,
-  when the app plays the player and the page's hand-over goes away, move the
-  core baseline's older parts (`tools/baseline.mjs`'s loops, refusals and
-  the rest) onto player renders, so one way of playing is checked, and retire
-  the up-front harness for the core (it stays for the JavaScript fallback).
-  A canonical order only if a host turns up that must hand notes over itself
-  and needs bit-identity.
-- **The automatic lite switch becomes a crossfade** (Mikey, 2026-11-03: the
-  fade and restart from the top doesn't bother him, a proper crossfade is a
-  good idea): item 87b's `quality.handOff` moves onto `Player::change`.
-- **A new loop's first notes on a slow device** (brain, 2026-11-03; Mikey:
-  wait for phase 3 rather than fix the page's scheduling now). On v142 his
-  Lenovo tablet left out 10 notes in a minute at two new loops (87b's switch
-  at 19.5 s, a new loop at 56.0 s): `304-350 ms behind the core, posted
-  250-339 ms ahead (inside the buffer), left out; decided by play, new loop
-  [margin]`, each followed by a render-ahead jump to 600-643 ms
-  (`worstRenderAheadMs: 643`, `leastSpareMs: -315`); the Moto had none.
-  Phase 3 removes the page's note hand-over, so the notes themselves go; but
-  find what made the core jump at those moments (the new loop's work on the
-  page, or the new worklet compiling on the audio thread at the switch), since
-  a stall of the audio thread there would still be heard. Yardstick before
-  the app switches: the tablet shows no late notes and no underruns over a
-  few minutes, a few Nexts and an automatic switch.
-- **Phones:** the player's costs were measured on a cloud machine; a block
-  while a loop is made is 9.6% of its deadline in wasm. Check a phone
-  (`?engine=player`, Diagnostics: late and dropped notes) before the app
-  switches.
-
-## 53. The picks through the core's commands (phase 3)
-
-**Why:** phase 3 moves the whole core off the page; the page only sends
-commands and draws events. The picks become a command like the rest,
-and long pieces and Endless play from the core alone.
-
-**What:**
-- The panel's request is sent as a command; the core holds it and
-  applies it to every new loop, re-roll and wandered pass. No pick
-  logic left on the page.
-- Long pieces and Endless play with the page asleep, hidden or busy
-  (promise 1's stall test), with no lookahead on the page.
-- Now Playing's pills, the panel and the Length picker's play time read
-  from the core's events, so what they show is what the core will play.
-- Long-piece display on Now Playing (where you are, time left, Endless
-  with no "time left": `docs/PAINTER.md`, section 2) only once a Painter
-  session has designed it; until then, today's clock.
-
-**Yardsticks:**
-- Promise 1's stall test clean with a 32,768-bar piece and with
-  Endless.
-- A pick made while a loop plays changes the next loop, never the
-  current one.
-- Picks survive the page being hidden and shown again, and a reload
-  (stored as the vibes are today).
 
 ## 37. Word albums on `/rank`: one word, "does it fit?"
 
@@ -808,79 +221,30 @@ stay channel sources until an ears session needs a voice's note-by-note play
 
 ## Known issues
 
-- **CI's flakes and weak checks; for session 30** (brain B-parallel 3,
-  2026-11-22). Flakes, worst first: the Kotlin Gradle plugin's download
-  (four times in a day); the F-Droid emulator check counts UiAutomation's
-  own crash as the app's (twice); `android/smoke.mjs`'s blocked-page check
-  plays a random loop and fails on a quiet one (2 of 106 loops on main's own
-  core: give it a fixed loop); `tests/longform.rs`'s "a section costs the
-  same at one and at a billion", and `tools/longform.mjs`'s "no section
-  line's block over the loop's own worst audio block", are timings. Weak,
-  found by 30c: `tools/views.mjs` exits 0 when a view fails, and CI never
-  runs it on Endless; `tools/export-long.mjs`'s "no fill-ins" passes with no
-  count; `tools/track-fades.mjs`'s "first 5 ms silence" passes with the fade
-  in off.
-- **CI's slow parts, 2026-11-24 (brain B-parallel 5); for session 30:** the
-  ten rows (export, repeat=10) take about 130 minutes now, and #472 raised
-  the rows job's timeout from 120 to 180 minutes for them; apt's mirror can
-  take 19 minutes for ffmpeg with its recommends (the `flac` job installs
-  without them and caches the packages since #467; export's long job
-  installs without them too).
-- **The export rows' "music on" on a sparse loop; for session 30** (hands
-  30j, 2026-11-24, #463): it failed twice in about twenty passes after v204
-  (30h's branch once; run 45271085229, pass 9, the small export's Cancel
-  row), never in about sixty before. Not #461 or #462: the loop playing
-  was neisk-nesk (`ELU8xSDBAF7`, seed 3536307467, 8 bars that play on,
-  hollow, no drums), the random loop the picks rows' Next drew, which is
-  silent for up to 6 s at a time (about 48 s in 4 minutes, rendered in
-  Node, full and lite). The export rows now paste the fixed busy loop
-  (shatter) first and keep 3 s of listening; any other "music on" row on a
-  random loop can fail the same way.
-- **F-Droid's CI passes a byte check it didn't make; for session 30** (hands
-  30e, 2026-11-22, #449): `android/fdroid/compare-apks.sh` exits 0 with "no
-  F-Droid build to compare with" when that APK is missing, so "the same
-  bytes" can be green having compared machines a and b alone. And the
-  clean-clone build's Maven download is refused now and then.
+Session 30 (2026-11-24) went through every entry: each is done (and in the
+archive), or says in a line why it is not for 1.0.
+
 - **The app drops a code's version** (found by 105e, #450; Mikey,
   2026-11-22: "Before first new sound"). **Blocks the first addition after
   1.0, not 1.0: session 30 doesn't build it.** No member joins
   `data/codes.txt` until the app keeps a code's version
   (`docs/notes/105e-page.md`, 1): until then an addition would move every
   older code played in the app.
-- **A drawn loop can refuse to play; for session 30** (hands 30f, 2026-11-22,
-  on main's generator, ab1b9d7): about 1 loop in 84,000 (3 in 253,456) is
-  drawn with a warmth a little over 1 (`core/src/generator/spec.rs`, the
-  tone's range times `0.6 + feel.warmth * 0.6`, not held to 1). The page
-  shows it, then `render` gives it back as the tone's edit, `with_tone`
-  refuses it and the page throws: nothing plays. Seeds 983236608, 720091369
-  and 2840407293 show it (`gen.render(gen.newSpec(seed))` in Node; with the
-  warmth held to 1 they play). It only says "can't do that": `take` notes
-  the reason in `REFUSED`, and `dl_play_refusal` reads `PICKS_REFUSED`.
-  Holding it to 1 may move those loops' sound and goldens. It may be what
-  failed #454's rows once (job 137211756616, the codes rows, the page's
-  opening loop drawn at random: the same error, the seed not logged).
-- **"Let the loop wander" repeats itself since item 44** (Mikey,
-  2026-10-18). Since #211 each pass's wandering is drawn from the loop's
-  code and the pass number, so replaying a saved loop wanders exactly as
-  it did last time, at every slider setting. Mikey: the wander slider
-  (0 to 2.4) says how far a loop wanders, and **all the way to the right
-  it should feel experimental: not repeatable.** Not urgent. Brain's
-  sketch for when it is queued (the generator's port, phase 2, is the
-  natural place): the core's draws stay a pure function of what the host
-  sends (promise 3 holds); the host adds a per-play salt to the wander's
-  seed across the slider's whole upper range (**decided by Mikey,
-  2026-10-18**; where that range starts is to be tuned by ear as we
-  go), so the same code with the slider lower still wanders the same
-  way, and a share code or export says which it was.
-  **Built as item 92 (hands, 2026-11-03); the rest of this entry is history.**
-  **Queued as item 92 (brain, Session 26).** Where it was written down (brain, Session 24, 2026-10-19): to be
-  built in phase 2's port, not before; carried in `docs/CORE.md` (phase
-  2, beside the octave fix) and in `docs/BRAIN.md` ("Start here"), so
-  whoever writes phase 2's items queues it. Until then the sound batch
-  leaves it as it is: item 54's per-loop choices are drawn once a loop
-  and are not redrawn by the wander, whatever the slider says (item 67's
-  kick swap aside); with the salt, the upper range's wandering would vary
-  play to play, while the loop's choices stay its own.
+- **CI's timings (not for 1.0).** Two checks are timings and flake on a busy
+  shared runner: `tests/longform.rs`'s "a section costs the same at one and at
+  a billion", and `tools/longform.mjs`'s "no section line's block over the
+  loop's own worst audio block": re-run once. CI is slow in two places, the
+  ten rows (export, repeat=10: about 130 minutes, the rows job's timeout 180)
+  and apt's mirror (the `flac` and `long` jobs install without recommends and
+  cache the packages).
+- **Checks that passed having checked nothing** (session 30c found them; fixed
+  in session 30, each shown to fail on its fault first): `tools/views.mjs` now
+  exits 1 when a view fails, and CI runs it on Endless too;
+  `tools/export-long.mjs` counts the audio device's fill-ins, and says "not
+  checked" in the check's name where the browser can't count them; `tools/track-fades.mjs` fails if the fade in does nothing; the
+  Android smoke check plays a fixed busy loop; the F-Droid check fails with no
+  build of F-Droid's to compare with; the F-Droid emulator check counts only
+  the app's own crash; the Gradle build retries a refused download.
 
 ## Merge policy
 

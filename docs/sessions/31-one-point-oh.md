@@ -1,11 +1,13 @@
 # Session 31: 1.0 (item 108)
 
+**Changed by brain B5 (2026-11-25):** this session runs in the new repository (a copy of driftloom, Mikey, 2026-11-18), where 30l's branch is copied across and opened as its own PR; and before it starts, Mikey's two checks: the Moto's ten minutes with the screen off (promise 1 on a phone) and the icon on his phone.
+
 **Changed by brain B-parallel 4 (2026-11-23):** session 30l's PR (the new name's icon, left open like 31a's) merges with 31a's, just before it.
 
 **Changed by brain B1 (2026-11-11):** merges session 31a's PR (the new name) first; the place check counts 31a's row as ticked when its PR is open and green.
 
 - **Model:** Sonnet 5.5. **Effort:** medium.
-- **Start after:** brain session B5, Mikey's go-ahead written in docs/notes/for-mikey.md or the queue, and sessions 30l's and 31a's PRs open and green (they stay unmerged until this session: its row is ticked inside it).
+- **Start after:** brain session B5's go (2026-11-25), Mikey's go-ahead written in docs/notes/for-mikey.md or the queue (with the Moto's step 1 and the icon on his phone), and sessions 30l's and 31a's PRs open and green in the new repository (they stay unmerged until this session: its row is ticked inside it).
 - **Queue item:** item 108.
 
 Paste everything in the block as the session's first message.
@@ -13,7 +15,9 @@ Paste everything in the block as the session's first message.
 ````text
 Hands session 31 on the road to Driftloom's 1.0 (Sonnet 5.5, medium): 1.0 (item 108).
 
-Read first: AGENTS.md; docs/sessions/README.md (the order, and "Rules for every session": they are part of this prompt); docs/QUEUE.md (status, standing rules, merge policy, item 108); docs/notes/for-mikey.md (it should be empty or answered: if it is not, stop and list what is open); CHANGELOG.md; session 29's PR (the version scheme, the release workflow, the fastlane changelog).
+Work in the new repository, not in driftloom (frozen at tag driftloom-final, archived on launch day): its main, tags and history are a copy of driftloom's; PRs and Actions history are not, so read an old PR on driftloom's GitHub.
+
+Read first: AGENTS.md; docs/sessions/README.md (the order, and "Rules for every session": they are part of this prompt); docs/QUEUE.md (status, standing rules, merge policy, item 108); docs/notes/for-mikey.md (its top line says which lines hold 1.0, as the release check left them: if one of those is open, stop and list it; the rest are left for after 1.0, each a check with a revert if it fails); CHANGELOG.md; session 29's PR (the version scheme, the release workflow, the fastlane changelog).
 
 Check your place: in docs/sessions/README.md every row above session 31 should be ticked, apart from rows the table says may run meanwhile and sessions 30l's and 31a's, left open on purpose. If one is not, stop and say so. If this file has a "Left" list at its top, an earlier session with this prompt stopped partway: start from that list.
 

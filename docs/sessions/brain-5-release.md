@@ -1,5 +1,9 @@
 # Brain session B5: the release check
 
+**Done 2026-11-25 (in brain B-parallel 5's thread, at Mikey's word to carry
+the plan on):** 1.0 is go at v218. The verdict and what it rests on are in
+`docs/BRAIN.md`'s State and `docs/DECISIONS.md` (2026-11-25).
+
 **Changed by brain B-parallel 3 (2026-11-22):** the prompt said "Merge only
 docs-only changes", stale since Mikey's line of 2026-11-18 (the brain merges
 any PR that is green and checked; `docs/DECISIONS.md`); and step 1 now names

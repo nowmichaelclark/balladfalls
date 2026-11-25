@@ -1,4 +1,4 @@
-# Driftloom design spec: start here
+# Ballad Falls design spec: start here
 
 This folder is the **design spec** for the one-screen phone app. It is not part of the app: `.assetsignore` keeps it off the live site.
 

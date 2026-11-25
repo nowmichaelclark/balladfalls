@@ -177,3 +177,10 @@ As they stood in `docs/DECISIONS.md`, word for word:
 
 - 2026-11-12 -- **The arc merged short of two yardsticks (Mikey merged #377, 2026-11-12):** brightness rises and falls on 87% of arc pieces (9 in 10 asked) and one 1,024-bar piece steps 2.7 LU between sections (2 asked); the misses are four loops a centroid can't read well (nothing above about 1 kHz, or batch 6's slowOpening hiding the arc's opening). His ears at B3 are the test. The 2.7 LU step, a breath that rests the tune in one 50 s section, goes to session 15.
 - 2026-11-01 -- **The budget lets old notes go at full quality too (Mikey, 2026-11-01).** He heard the Lite Room Album (item 85c): "it sounded great for lite mode"; asked whether an audio engineer would have a reason not to do the same at full, and if not, to add it. The brain found none (voice stealing is the standard way synths and samplers handle a full voice pool; dropping the new note is the unusual choice), with the field's usual refinements: let go of notes already in their release before held ones, oldest first. Item 85e.
+
+## The session order and the Fable effort, the lines as they stood (2026-11-12)
+
+The lines as they stood in `docs/DECISIONS.md` (moved 2026-11-25, session 31a):
+
+- 2026-11-12 -- **The long pieces before the rest of batch 6 (Mikey, 2026-11-12):** sessions 11 to 15 (102a to 102e, with 11 and 14 on Fable 5.2) run next, while his usage allows Fable, and batch 6's 04 to 10 follow; 16 runs once his notes on the long pieces are in. Nothing in 11 to 15 reads batch 6's remaining sounds; the later batch 6 sessions keep the long pieces' checks green, and session 10 checks its rule inside long pieces too.
+- 2026-11-12 -- **The Fable sessions at medium effort (Mikey, 2026-11-12):** sessions 11 and 14 run on Fable 5.2 at medium, since high uses too many tokens. (The brain's plan, not Mikey's words: if one falls short of its yardsticks, the brain says so and the rest is finished in a follow-up rather than redone.)

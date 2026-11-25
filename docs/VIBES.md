@@ -217,7 +217,7 @@ export const VIBES = {
 join: glacial (designed with him on 2026-10-26) and twenty the brain proposed
 from the gaps in the list and the records the ears still have to hear. Four
 leave: **soft** (it fit 18 of 23 loops in the ranking test, so it named
-Driftloom rather than a loop; mellow and chill take its place), **energetic**
+Ballad Falls rather than a loop; mellow and chill take its place), **energetic**
 (enthusiastic and lively stay; lively takes its drive), **silly** (goofy
 stays) and **comfy** (cozy stays). He turned down *nostalgic* ("too many
 meanings") and *sleepy* (restful and soothing stay; restful takes the
@@ -229,7 +229,7 @@ outright, with no retired slots.
   (early morning), dusky (the warm dim hour before night), moonlit (cool,
   silvery night). Sunny and starry were the only two before.
 - **Weather:** rainy (cozy, not gloomy; the commonest lo-fi weather).
-- **What Driftloom is about:** whimsical (the Ocarina of Time sense: catchy,
+- **What Ballad Falls is about:** whimsical (the Ocarina of Time sense: catchy,
   childlike magic, where goofy and quirky are jokes), dreamy (Boards of
   Canada, Ulrich Schnauss, Bowery Electric), chill (relaxed *with* a beat;
   soothing and restful are mostly drumless), mellow (soft's gentle side,

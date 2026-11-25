@@ -1,4 +1,4 @@
-# Driftloom
+# Ballad Falls
 
 A procedural loop machine. It makes relaxing, meditative and joyful
 nostalgic loops, plays them for as long as you like, and lets you re-roll one
@@ -6,8 +6,13 @@ layer at a time until it's yours. Nothing is a recording and nothing is
 downloaded: every loop, a tune, chords, a bass, drums and soft textures, is
 written and played in your browser (or in the Android app) from a seed.
 
-Live at <https://driftloom.nowmichaelclark.workers.dev/>. Open it, press
-Play, and press Next for another.
+Live at <https://balladfalls.com/>. Open it, press Play, and press Next for
+another.
+
+It was called Driftloom until 1.0. Its history up to then is in this
+repository too; the old repository,
+<https://github.com/nowmichaelclark/driftloom>, is the archive with its pull
+requests, and the old address sends every link on to the new one.
 
 The music engine is a small Rust core, compiled to WebAssembly, that decides
 every note and renders every sound; the same core runs natively in the Android
@@ -140,7 +145,7 @@ change.
 
 `docs/README.md` is the map: which doc is for what and who reads it.
 
-- `AGENTS.md` -- the guide for Claude sessions: what Driftloom is, the roles,
+- `AGENTS.md` -- the guide for Claude sessions: what Ballad Falls is, the roles,
   the rules that hold everywhere, build and test commands (`CLAUDE.md` imports
   it; `core/AGENTS.md` adds the core's rules).
 - `ROADMAP.md` -- what is still ahead, what was decided against, and the
@@ -155,7 +160,7 @@ change.
 - `docs/MOODS.md` -- the mood vocabulary and its draft recipes.
 - `docs/ALBUMS.md` -- listening albums waiting for answers.
 - `docs/EARS.md` -- what the ears sessions measured on Mikey's albums
-  against Driftloom, and what they're for; their tools are in `tools/ears/`.
+  against Ballad Falls, and what they're for; their tools are in `tools/ears/`.
 - `docs/ears/` -- everything the ears sessions write: reports, the plan,
   album cards, raw data (index in `docs/ears/README.md`). Ears outputs live
   in the repo, not only in the Project (Mikey, 2026-10-17).

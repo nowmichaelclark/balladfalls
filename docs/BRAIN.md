@@ -18,7 +18,7 @@ Three roles.
 - **Mikey** -- the ears. His listening is the acceptance test for anything
   that changes how the app sounds. He relays between brain and hands.
 - **Ears** (since 2026-10-09) -- separate claude.ai chats that measure
-  records Mikey loves against Driftloom renders and write findings with
+  records Mikey loves against Ballad Falls renders and write findings with
   yardsticks (`docs/EARS.md`, `tools/ears/`, and the reports, plan and
   album cards in `docs/ears/`; read `docs/ears/sessions.md` for their
   scope and for the rule that their outputs live in the repo).
@@ -106,18 +106,23 @@ default. Move text, don't rewrite decisions.
 
 ## Getting oriented
 
-- Repo (public): `https://github.com/nowmichaelclark/driftloom`. A PR:
-  `git fetch origin pull/N/head:prN`. It moved from `Kruu-Mikey/driftloom`
-  on 2026-10-08 with its history, PR numbers and branches.
-- Live: `https://driftloom.nowmichaelclark.workers.dev/`. Cloudflare
-  Workers, assets only (`wrangler.jsonc`). Push to `main` deploys; only
-  testers see it. Every PR gets preview deploys: the Cloudflare bot's PR
+- Repo (public): `https://github.com/nowmichaelclark/balladfalls`, a copy
+  of `nowmichaelclark/driftloom` (2026-11-25) with its main, history and
+  tags; PR numbers and Actions runs before the copy (#1 to #483) are
+  driftloom's, read there (archived at 1.0). A PR: `git fetch origin
+  pull/N/head:prN`. Driftloom moved from `Kruu-Mikey/driftloom` on
+  2026-10-08 with its history, PR numbers and branches.
+- Live: `https://balladfalls.com/` (session 31a; until 31 merges it, the
+  testers' site is still the old address, built from the frozen driftloom).
+  Cloudflare Workers, assets only (`wrangler.jsonc`, the Worker
+  `balladfalls`). Push to `main` deploys. The old address's Worker is
+  `old-address/` (deployed on launch day: `docs/notes/for-mikey.md`). Every PR gets preview deploys: the Cloudflare bot's PR
   comment has the branch and **commit** preview URLs (use the commit one;
   it never moves), and when the bot doesn't comment, the Workers Builds
   check run's output carries the commit preview URL. An old commit's
   preview stays live, which is what makes A/Bs across merged PRs possible.
   Since the move, PR branches build as Cloudflare **Previews**: the commit
-  link is the Deployment URL, `<deployment-id>-driftloom...`; the
+  link is the Deployment URL, `<deployment-id>-balladfalls...` (`-driftloom...` before the copy); the
   branch's Preview URL moves (see Session 5 in State). Previews from the
   old account's links in the Done lists (`docs/DONE.md`,
   `docs/archive/done.md`) depend on that account.

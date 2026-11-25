@@ -1,4 +1,4 @@
-//! Driftloom's audio core: its own engine, in Rust.
+//! Ballad Falls' audio core: its own engine, in Rust.
 //!
 //! It decides nothing and knows nothing about browsers: a host owns a
 //! `Core`, starts it at a sample rate (`start`), hands it notes as they are
@@ -19,7 +19,7 @@
 //! automation, fixed output buffers. Nothing allocates after `Core::new`,
 //! and nothing reachable from `process` can panic.
 //!
-//! The core is Driftloom's own engine, not a copy of Chromium. It was
+//! The core is Ballad Falls' own engine, not a copy of Chromium. It was
 //! ported from the JavaScript synth and proven against it to the sample,
 //! which is why many blocks still say what Chromium does; the JavaScript
 //! synth is now only the fallback a host without the core plays (until the

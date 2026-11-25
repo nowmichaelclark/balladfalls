@@ -30,7 +30,7 @@ Next. Every code decoded back; the long pieces' link opened in the app as
 
 #### Batch 6 in the app
 
-<https://driftloom.nowmichaelclark.workers.dev/#c=FAPJKOYsYDW0FJ7ZatZAW0HGfJIxZAJ4c7hKCWkMJu7pCOAWsHJKky18BWgJJHbNWxCWwHJXpKi6AWkLJ63vuPBW8HJxTa0wAW4IJTYm7NBWwJJH3VwoDWkGJ8i3bEBW0GGCVXKDBJFzdmMAWwKWgIeSQmF0Y2ggNiBpbiB0aGUgYXBwTr>
+<https://balladfalls.com/#c=FAPJKOYsYDW0FJ7ZatZAW0HGfJIxZAJ4c7hKCWkMJu7pCOAWsHJKky18BWgJJHbNWxCWwHJXpKi6AWkLJ63vuPBW8HJxTa0wAW4IJTYm7NBWwJJH3VwoDWkGJ8i3bEBW0GGCVXKDBJFzdmMAWwKWgIeSQmF0Y2ggNiBpbiB0aGUgYXBwTr>
 
 1. deepDuck (vor-the), 3 passes
 2. wideSweep wide (brai-fei), 14 passes
@@ -50,7 +50,7 @@ Next. Every code decoded back; the long pieces' link opened in the app as
 
 #### Nearer chords (84b)
 
-<https://driftloom.nowmichaelclark.workers.dev/#c=FAGGZIRo3DJWHNQHCW4HJKreV6AW4IJAgQiVBW8HJem_wlDW8IJLMMy3AWkGWgGeTTmVhcmVyIGNob3JkcyAoODRiKQeS>
+<https://balladfalls.com/#c=FAGGZIRo3DJWHNQHCW4HJKreV6AW4IJAgQiVBW8HJem_wlDW8IJLMMy3AWkGWgGeTTmVhcmVyIGNob3JkcyAoODRiKQeS>
 
 1. shu-san, 10 passes
 2. glai-thel, 4 passes
@@ -61,7 +61,7 @@ Next. Every code decoded back; the long pieces' link opened in the app as
 
 #### Long pieces in the app
 
-<https://driftloom.nowmichaelclark.workers.dev/#c=FAKO0U0niCF_BHAWgLPlG_oEBF_HHAWwmCPapBrACF_HHAWwhCPAcCz6BF_fHAWskIRHbNWxCCAQBF_fWosHJHAAAAAGHBJJeyuABGHBMB1tFqACmCQBGJlG_oEBGHAOxkMs_AF_BHAWwdeWTG9uZyBwaWVjZXMgaW4gdGhlIGFwcAKc>
+<https://balladfalls.com/#c=FAKO0U0niCF_BHAWgLPlG_oEBF_HHAWwmCPapBrACF_HHAWwhCPAcCz6BF_fHAWskIRHbNWxCCAQBF_fWosHJHAAAAAGHBJJeyuABGHBMB1tFqACmCQBGJlG_oEBGHAOxkMs_AF_BHAWwdeWTG9uZyBwaWVjZXMgaW4gdGhlIGFwcAKc>
 
 1. tha-vol 64 bars, an arc
 2. brum-yei 256 bars, an arc in two movements

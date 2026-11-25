@@ -76,6 +76,25 @@ export function exportAll() {
   });
 }
 
+// The Library handed over from the old address (session 31a: its Worker,
+// old-address/worker.js, packs exportAll's backup into the link): the backup's
+// JSON, deflated where the browser could ("z") or as it is ("j"), in
+// base64url. Returns the backup, for importAll; throws if it isn't one.
+export async function unpackMove(text) {
+  const kind = text[0];
+  const bin = atob(text.slice(1).replace(/-/g, '+').replace(/_/g, '/'));
+  let bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  if (kind === 'z') {
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+  } else if (kind !== 'j') {
+    throw new Error('not a moved Library');
+  }
+  const backup = JSON.parse(new TextDecoder().decode(bytes));
+  if (!backup || backup.format !== 'driftloom.v1' || !Array.isArray(backup.loops)) throw new Error('not a moved Library');
+  return backup;
+}
+
 // A loop is only restorable if it has the pieces render() needs. Anything
 // missing them would throw the moment it was opened, which from the outside
 // looks like the app breaking rather than one bad entry.

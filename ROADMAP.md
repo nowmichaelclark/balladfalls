@@ -128,7 +128,7 @@ profiles when this item is done.
 ## 16. A compiled audio engine (Rust) — **L** — *the core is the engine and plays by default; what is ahead is the phases in `docs/CORE.md`*
 
 The synth, the effects and the master chain shipped (queue items 21-32), and the core is
-Driftloom's own engine now (`docs/DECISIONS.md`, "The engine and stereo"). What is still
+Ballad Falls' own engine now (`docs/DECISIONS.md`, "The engine and stereo"). What is still
 ahead is the charter's phases: the generator in Rust, the page off the audio path, the
 platforms and the export (`docs/CORE.md`). The original entry -- the timing, the feasibility
 probes, the language comparison -- is in `docs/archive/roadmap-shipped.md`.

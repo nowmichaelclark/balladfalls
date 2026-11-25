@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Renders F-Droid's build recipe (recipe.yml.in) for the checkout it is run in
 // (queue item 107e). The id, the name and the version come from
-// android/gradle.properties (one value each; session 31a changes them there);
+// android/gradle.properties (one value each; the id is the release's);
 // the commit and the repository's address from git.
 //
 //   node android/fdroid/render.mjs                   print the recipe
@@ -37,7 +37,8 @@ const props = Object.fromEntries(
   readFileSync(join(here, '..', 'gradle.properties'), 'utf8').split('\n')
     .filter((l) => /^[\w.]+=/.test(l)).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()]));
 const need = (key) => props[key] || fail(`android/gradle.properties has no ${key}`);
-const appId = need('driftloom.applicationId');
+// The release's id: the test builds' working id is never published.
+const appId = need('driftloom.releaseApplicationId');
 const appName = need('driftloom.appName');
 const versionName = need('driftloom.versionName');
 const versionCode = need('driftloom.versionCode');
@@ -60,9 +61,10 @@ let allowed = '';
 const signedBy = opt('--signed-by');
 if (signedBy) {
   if (!/^[0-9a-f]{64}$/.test(signedBy)) fail('--signed-by is the signing certificate\'s SHA-256, 64 lowercase hex digits');
-  // The APK you upload to the release (docs/notes/for-mikey.md): <name>-<versionName>.apk,
-  // the universal one, signed with apksigner.
-  binaries = `Binaries: ${repoUrl}/releases/download/v%v/${appName.toLowerCase()}-%v.apk\n`;
+  // The APK you upload to the release (docs/notes/for-mikey.md):
+  // <name, lowercase, no spaces>-<versionName>.apk, the universal one, signed
+  // with apksigner.
+  binaries = `Binaries: ${repoUrl}/releases/download/v%v/${appName.toLowerCase().replace(/[^a-z0-9]/g, '')}-%v.apk\n`;
   allowed = `AllowedAPKSigningKeys: ${signedBy}\n`;
 }
 

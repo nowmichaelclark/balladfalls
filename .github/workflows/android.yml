@@ -162,6 +162,12 @@ jobs:
             echo "| $(basename "$apk") | $(stat -c %s "$apk") | $libs |" >> "$GITHUB_STEP_SUMMARY"
           done
           ls -l android/app/build/outputs/apk/debug/ android/app/build/outputs/apk/androidTest/debug/
+          # A test build keeps the working id (session 31a: the release's is
+          # its own, android/fdroid/check-apk.sh), so the two install side by side.
+          aapt2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          want=$(sed -n 's/^driftloom\.applicationId=//p' android/gradle.properties)
+          id=$("$aapt2" dump badging android/app/build/outputs/apk/debug/*-universal-debug.apk | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
+          [ "$id" = "$want" ] && echo "ok   the test build's id is the working one: $id" || { echo "::error::the test build's id is $id, expected $want"; exit 1; }
           for so in android/app/build/generated/native/*/libdriftloom.so; do
             echo "$so: $(stat -c %s "$so") bytes"
           done

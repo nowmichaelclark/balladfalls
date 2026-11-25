@@ -1,6 +1,6 @@
 // The Rust core, main-thread side (queue item 21, roadmap 16).
 //
-// The core is Driftloom's engine, and the app plays the core's player: the
+// The core is Ballad Falls' engine, and the app plays the core's player: the
 // core decides every note itself, on the audio thread (core/src/player/,
 // through js/dlplayer.wasm in js/worklet.js), plays them, mixes them and
 // finishes them, so its node goes straight to the speakers. The page sends

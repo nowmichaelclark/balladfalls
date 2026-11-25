@@ -2127,13 +2127,13 @@ async function codeRows(browser) {
   // What can't be opened says so in one plain line.
   await paste('DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR');
   let t = await toast();
-  row('codes: a version 1 code pasted: it is from an older Driftloom and can\'t be opened', t === 'Code too old', t);
+  row('codes: a version 1 code pasted: it is from an older Ballad Falls and can\'t be opened', t === 'Code too old', t);
   const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
   let h = 0;
   for (const c of 'GRiSNBA') h = (h * 64 + A.indexOf(c) + 1) % 4093;
   await paste(`GRiSNBA${A[h & 63]}${A[h >> 6]}`);
   t = await toast();
-  row('codes: a newer build\'s code pasted: it needs a newer Driftloom', t === 'Needs update', t);
+  row('codes: a newer build\'s code pasted: it needs a newer Ballad Falls', t === 'Needs update', t);
 
   // An album's code pasted lands in the Library and plays; shared again, it
   // is the same album.
@@ -2405,11 +2405,11 @@ async function linkRows(browser) {
   const newer = `GRiSNBA${A[h & 63]}${A[h >> 6]}`;
   const newerTab = await fresh(`${ORIGIN}/#c=${newer}`);
   st = await state(newerTab);
-  row('links: a link from a newer build says it needs a newer Driftloom', st.toast === 'Needs update', st.toast);
+  row('links: a link from a newer build says it needs a newer Ballad Falls', st.toast === 'Needs update', st.toast);
   await newerTab.close();
   const olderTab = await fresh(`${ORIGIN}/#c=DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR`);
   st = await state(olderTab);
-  row('links: a link with a version 1 code says it is from an older Driftloom', st.toast === 'Code too old', st.toast);
+  row('links: a link with a version 1 code says it is from an older Ballad Falls', st.toast === 'Code too old', st.toast);
   await olderTab.close();
   await tab.close();
   row('links: no page errors in their tabs', !bad.length, bad.join('; '));

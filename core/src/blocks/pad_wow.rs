@@ -1,7 +1,7 @@
 //! padWow (queue item 101b; batch 6's #3, approved by Mikey 2026-11-08): a
 //! slow tape-like wow on the chord layer alone, the kick and the bass steady.
 //!
-//! Driftloom's wobble (`master.rs`) moves the whole mix together, 1 to 11
+//! Ballad Falls' wobble (`master.rs`) moves the whole mix together, 1 to 11
 //! cents at 0.32 Hz. Ten of the batch's records drift the pads alone 15 to
 //! 27 cents at 0.3 to 1.2 Hz. This is the Ears 13 sketch
 //! (`tools/ears/sketches/ears13/padWow/block.rs`) built for the app: a

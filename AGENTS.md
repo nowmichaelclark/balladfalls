@@ -1,11 +1,11 @@
-# Driftloom: guide for agents
+# Ballad Falls: guide for agents
 
 Read first by every Claude session in this repo (`CLAUDE.md` points here).
 `docs/README.md` maps every doc and says who reads it.
 
-## What Driftloom is
+## What Ballad Falls is
 
-A procedural loop machine at <https://driftloom.nowmichaelclark.workers.dev/>:
+A procedural loop machine at <https://balladfalls.com/>:
 relaxing, nostalgic loops, generated and synthesized in the browser, played
 forever. A loop is a seed and a request; the core (`core/`, a Rust audio
 core compiled to WebAssembly, built to the committed `js/dlplayer.wasm`)
@@ -27,7 +27,7 @@ that changes how it sounds.
 - **Hands** (Claude Code): write code, open PRs, measure, merge, report.
   Start at `docs/QUEUE.md`: status, standing rules, the next item. A
   session that touches `core/` also reads `core/AGENTS.md`.
-- **Ears** (claude.ai chats): measure records Mikey loves against Driftloom
+- **Ears** (claude.ai chats): measure records Mikey loves against Ballad Falls
   and write findings and sketches, never app or core code. Start at
   `docs/ears/sessions.md`, then `docs/ears/plan.md`.
 - **Painter** (design sessions): the look and the screens. Starts at
@@ -90,6 +90,11 @@ that changes how it sounds.
 - Accessibility (item 114): `node tools/a11y.mjs` (Playwright's Chromium;
   CI's `a11y` job in the export workflow runs it). Not the gate: it takes
   minutes and a browser.
+- The old address (session 31a): `old-address/` is its own Worker (deployed
+  under the old name, `driftloom`), sending every path on to the new one;
+  `test/old-address.test.mjs` checks it in Node, `node tools/old-address.mjs`
+  in Chromium (an installed app sent on, its Library moved; CI's `move` job in
+  the export workflow).
 - Icons (item 120): every size from `icons/icon.svg` by `node tools/icons.mjs`
   (`--check` the safe zones; ImageMagick 7 with librsvg).
 - Docs: `node tools/check-docs.mjs`.

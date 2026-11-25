@@ -24,7 +24,7 @@
 //              2,902 us at 44.1 kHz), so lite too renders behind real time
 //              (queue item 100): the app moves to lite, and then says, in
 //              the card's place, that this browser is too slow to play
-//              Driftloom smoothly; Play goes on; Diagnostics says
+//              Ballad Falls smoothly; Play goes on; Diagnostics says
 //              `slow: lite past the line`. The other cases never show it.
 
 import fs from 'node:fs';
@@ -234,7 +234,7 @@ async function stuck() {
   console.log(`        ${line(text, 'cores')}\n        ${line(text, 'busiest')}\n        ${line(text, 'slow')}`);
   check('the app moved to lite first', /lite: true, auto \(/.test(text), line(text, 'cores'));
   check(`the line shows in the card's place (after ${after.toFixed(0)} s)`, shown === TOO_SLOW, String(shown));
-  check('with no second sentence while the app has no page', shown !== null && !/Get the Driftloom app/.test(shown));
+  check('with no second sentence while the app has no page', shown !== null && !/Get app/.test(shown));
   check('Diagnostics says so', /^slow: lite past the line, \d+s \(/m.test(text), line(text, 'slow'));
   const playing = await t.page.evaluate(() => document.getElementById('playBtn').getAttribute('aria-label'));
   check('Play goes on', playing === 'Pause', playing);

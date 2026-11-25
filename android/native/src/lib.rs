@@ -1,4 +1,4 @@
-//! Driftloom's core on Android's own audio (queue item 107b): the library
+//! Ballad Falls' core on Android's own audio (queue item 107b): the library
 //! the app loads (`libdriftloom.so`), one for each ABI, built from the same
 //! source as the web's module (`core/`, a path dependency: the core stays
 //! `no_std` with no dependencies, and everything Android needs is here).

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#160830">
-<title>Driftloom speed test</title>
+<title>Ballad Falls speed test</title>
 <!--
   The speed test (queue item 87): the figures promise 1 and item 87 ask of
   a phone. It plays the busiest loops on the core's player (js/dlplayer.wasm)
@@ -120,7 +120,7 @@ async function run() {
   try { wake = await navigator.wakeLock?.request('screen'); } catch { wake = null; }
   const rate = Number(q.get('rate')) || await deviceRate();
   const bytes = await (await fetch('./js/dlplayer.wasm', { cache: 'no-store' })).arrayBuffer();
-  say(`Driftloom speed test (item 87), ${await build()}, ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`);
+  say(`Ballad Falls speed test (item 87), ${await build()}, ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`);
   say(`device: ${navigator.userAgent}`);
   say(`cores ${navigator.hardwareConcurrency || '?'}, memory ${navigator.deviceMemory || '?'} GB, rate ${rate} Hz (deadline ${(128 / rate * 1e6).toFixed(0)} us a block), isolated ${self.crossOriginIsolated ? 'yes' : 'no'}`);
   const p = plan();
@@ -161,7 +161,7 @@ async function run() {
   }
   say(`took ${((performance.now() - t0) / 60000).toFixed(1)} min`);
   status.textContent = 'Done';
-  document.title = 'Driftloom speed test: done';
+  document.title = 'Ballad Falls speed test: done';
   try { await wake?.release(); } catch { /* the screen may sleep again */ }
   go.disabled = false;
 }

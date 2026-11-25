@@ -8,6 +8,17 @@ the 1.0 entry and adds what the polish still changes.
 
 ## 1.0 (not yet released)
 
+### A new name
+
+- **Driftloom is Ballad Falls now,** at <https://balladfalls.com/>, with a new
+  icon. The old address sends every link on, its loop or album with it. The
+  first time you open the old address (or the app you installed from it), it
+  offers to bring your Library across: your loops and albums, as they are.
+  Say not now and they stay where they were; a backup file restores at the new
+  address as it always did. Install the app again from the new address.
+- **On Android,** Ballad Falls is a new app, from F-Droid. The test builds
+  stay apart; move a Library across with a backup.
+
 ### New to hear
 
 - **New sounds, all soft and all drawn into loops now and then.** Each shows up

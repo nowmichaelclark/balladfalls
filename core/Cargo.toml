@@ -3,7 +3,7 @@ name = "dlcore"
 version = "0.1.0"
 edition = "2024"
 publish = false
-description = "Driftloom's audio core: the synth's voices, host-agnostic"
+description = "Ballad Falls' audio core: the synth's voices, host-agnostic"
 license-file = "../LICENSE"
 
 # No dependencies, by design (roadmap 16).

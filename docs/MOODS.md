@@ -342,7 +342,7 @@ as color's nineteen). Votes, not verdicts.
 - **Words that fit nearly every loop:** steady (12 of 12, first 10
   times), cool (10/10), zany (10/10), wistful (9/9), strange (9/10),
   minimal (7/8), hypnotic (12/14), soft (18/23). They can't tell one loop
-  from another: they describe Driftloom itself.
+  from another: they describe Ballad Falls itself.
 - **Words that almost never fit:** heartwarming (0/8), joyful (1/10),
   booming (2/21), warm (2/10), starry (2/10), spicy (2/11), goofy (2/10),
   chiming (4/23), twinkling (4/21), intricate (5/22). Joyful is one of

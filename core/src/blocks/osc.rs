@@ -135,7 +135,7 @@ impl TableOsc {
     }
 
     /// Start `cycles` (0 to 1) into the wave rather than at its top, after
-    /// `schedule` (session 17: a sweep's LFO, at the phase a jump within a
+    /// `schedule` (a sweep's LFO, at the phase a jump within a
     /// piece lands on). Read where the wave's place is first set (`lead`),
     /// so only for a start past the context's first block, as every
     /// loop's is. At 0, the place is exactly what it was.

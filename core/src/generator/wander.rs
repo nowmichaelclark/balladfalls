@@ -1,10 +1,10 @@
-//! "Let the loop wander" (queue item 81): `drift`, the variation a pass
+//! "Let the loop wander": `drift`, the variation a pass
 //! plays, drawn from the loop's seed and the pass's number
 //! (`Engine._wander` in `js/engine.js`), so the same code wanders the same
 //! way every time and any pass can be reached without playing the ones
-//! before it. With it, the floor drop (queue item 58) and its shapes (item
-//! 70, `shapeDrop`), the pedal's passing tones (item 71), and the tuned
-//! kick a pass swaps to (item 67, `kickKindOf`). The goldens hash each of a
+//! before it. With it, the floor drop and its shapes
+//! (`shapeDrop`), the pedal's passing tones, and the tuned
+//! kick a pass swaps to (`kickKindOf`). The goldens hash each of a
 //! loop's first eight passes as `passes`.
 //!
 //! A pass never edits the loop: it is the loop's own events as `render`
@@ -36,13 +36,13 @@ const WRITTEN_SALT: u32 = 0x6b69_7433;
 /// How far a loop wanders, the app's default (`Engine.driftAmount`): the
 /// goldens' passes are drawn at it.
 pub const AMOUNT: f64 = 1.0;
-/// The floor drop's chance a pass at full wander (queue item 58).
+/// The floor drop's chance a pass at full wander.
 const FLOOR_DROP_RATE: f64 = 0.35;
 /// The drums that are the floor.
 const FLOOR_DRUMS: [&str; 3] = ["kick", "softkick", "frame"];
 /// The steps a bass passing tone takes.
 const PASSING: [f64; 5] = [-2.0, 3.0, 5.0, 7.0, 12.0];
-/// The bass's register since roundBass (queue item 56).
+/// The bass's register since roundBass.
 const BASS_LOW: f64 = 36.0;
 const BASS_HIGH: f64 = 57.0;
 
@@ -96,8 +96,8 @@ pub struct Pass {
     /// piece's pass at 0 (a wander heard with the slider at its left) has
     /// no marks of its own and keeps the loop's own kick.
     pub breathes: bool,
-    /// What a long piece's plan asks of this section (queue item 102b,
-    /// `heard`): nothing but in a wander's, set by `hear` after the draw.
+    /// What a long piece's plan asks of this section
+    /// (`heard`): nothing but in a wander's, set by `hear` after the draw.
     pub heard: Heard,
 }
 
@@ -132,12 +132,12 @@ impl Pass {
         self.draw_salted(cx, base, kick, pass, amount, 0);
     }
 
-    /// The same, on the wander's stream salted by `salt` (queue item 92):
+    /// The same, on the wander's stream salted by `salt`:
     /// the host's per-play salt across the slider's upper range, so a loop
     /// played twice there wanders two ways (`Engine.wanderSalt`). The
     /// pass's draws stay a function of what the host sends; a salt of 0 is
     /// the stream every code has always wandered on. The tuned kick a pass
-    /// swaps to is not salted: it is the loop's own choice (item 67).
+    /// swaps to is not salted: it is the loop's own choice.
     pub fn draw_salted(&mut self, cx: &Cx, base: &Render, kick: Option<&'static str>, pass: u32, amount: f64, salt: u32) {
         let seed = cx.spec.seed;
         let mut rng = Rng::new((seed ^ DRIFT_SALT ^ salt).wrapping_add(pass.wrapping_mul(0x9e37_79b1)));
@@ -164,7 +164,7 @@ impl Pass {
         let scale = spec.steps();
 
         // Hats flicker in and out, and so do the hand kit's zils. The hats a
-        // kit choice wrote (queue item 101d, after the loop's own) flicker on
+        // kit choice wrote (after the loop's own) flicker on
         // a stream of their own, so every draw here and after is the one the
         // loop's own kit made.
         let written = base.drums_out.written;
@@ -187,7 +187,7 @@ impl Pass {
             let vel = 0.16 + rng.f() * 0.14;
             let inst = if base.drums_out.kit == "hand" { layers::hand(inst) } else { inst };
             let ghost = DrumEvent { step, inst: inst.into(), vel, vel0: vel, roll: false, micro: None };
-            // In a kit in threes (queue item 101d), at its third, from the
+            // In a kit in threes, at its third, from the
             // same draws.
             let ghost = if base.choice("tripletKit") == Some("on") { kit::ghost_in_threes(ghost, spec.swing) } else { ghost };
             self.ghost = Maybe::some(ghost);
@@ -352,8 +352,8 @@ impl Pass {
         }
     }
 
-    /// `shapeDrop`: a floor drop in one of the shapes (queue item 70), on
-    /// the bars item 58's drop drew (`start` and `span`, in a loop of
+    /// `shapeDrop`: a floor drop in one of the shapes, on
+    /// the bars the floor drop drew (`start` and `span`, in a loop of
     /// `bars` bars), its shape drawn with `rng`. A shape follows the bar's
     /// length, as the sketch's did; a stutter with no room for two drops is
     /// a single one.
@@ -420,8 +420,8 @@ impl Pass {
         (if (m & SILENT) != 0 || self.out(step, Layer::Drums, 0.0) { 0.0 } else { e.vel }, inst)
     }
 
-    /// An arc's kit hit `inst` of velocity `vel` at section step `step`
-    /// (session 13): silent where the plan rests the kit, its shimmer (the
+    /// An arc's kit hit `inst` of velocity `vel` at section step `step`:
+    /// silent where the plan rests the kit, its shimmer (the
     /// hats, the shakers) coming in and leaving with the energy, every piece
     /// softer as the energy is lower.
     fn kit_at(&self, step: f64, inst: &str, vel: f64) -> f64 {
@@ -444,14 +444,14 @@ impl Pass {
     }
 
     /// Whether `layer`'s note at section step `step`, `dur` steps long, is
-    /// left out, the plan's rests and its joins both (session 15: a join
+    /// left out, the plan's rests and its joins both (a join
     /// takes out the notes that end by its line).
     #[must_use]
     pub fn out(&self, step: f64, layer: Layer, dur: f64) -> bool {
         self.rests(step, layer) || self.heard.on && self.heard.unit(step).is_some_and(|u| u.joins_out(layer, step, dur))
     }
 
-    /// A fill's hit at section step `step` (session 15, the join into a
+    /// A fill's hit at section step `step` (the join into a
     /// line where the energy rises): its instrument and velocity, the
     /// arc's kit marks on it; none where no hit falls, or the kit rests.
     #[must_use]
@@ -462,7 +462,7 @@ impl Pass {
         (!self.rests(step, Layer::Drums) && keeps > 0.0 && vel > 0.0).then_some((inst, vel * keeps))
     }
 
-    /// The chord a pivot strikes at section step `step` (session 15, the
+    /// The chord a pivot strikes at section step `step` (the
     /// join where the key changes), with the unit that holds it.
     #[must_use]
     pub fn pivot_at(&self, step: f64) -> Option<&super::heard::Unit> {
@@ -470,7 +470,7 @@ impl Pass {
     }
 
     /// How far the plan doubles the tune at section step `step`, in
-    /// semitones (0 none: toward an arc's peak, session 13), and the
+    /// semitones (0 none: toward an arc's peak), and the
     /// double's share of the tune's velocity.
     #[must_use]
     pub fn double(&self, step: f64) -> (i16, f64) {
@@ -489,7 +489,7 @@ impl Pass {
     pub fn bass_at(&self, step: f64, i: usize, e: &BassEvent) -> (f64, f64) {
         let (m, midi) = self.bass.get(i).copied().unwrap_or((0, e.midi));
         // In the plan's key; before a return, on the home key's fifth
-        // (session 14).
+        //.
         let pedal = self.heard.unit(step).filter(|u| u.pedal != 0 && step >= u.pedal_from).map(|u| f64::from(u.pedal));
         let midi = if self.heard.on { pedal.unwrap_or(midi + self.moved(step, Layer::Bass, midi)) } else { midi };
         (if (m & SILENT) != 0 || self.out(step, Layer::Bass, e.dur) { 0.0 } else { e.vel }, midi)
@@ -546,7 +546,7 @@ impl Pass {
         (if out { 0.0 } else { e.vel }, midi)
     }
 
-    /// Note `i` of the section's second tune, `e` (session 14), at section
+    /// Note `i` of the section's second tune, `e`, at section
     /// step `step`: its velocity (left out where the plan rests or thins
     /// the tune) and its pitch as written in the home key. The pass's own
     /// marks are the loop's tune's, not this one's.
@@ -653,7 +653,7 @@ impl Pass {
             render::write_melody(w, &MelodyEvent { midi, vel, ..*e });
         }
         w.end_list();
-        // The tune the section plays beside the loop's own (session 14),
+        // The tune the section plays beside the loop's own,
         // as written in the home key: the goldens hold its making too.
         if let Some(second) = second {
             w.key("second");

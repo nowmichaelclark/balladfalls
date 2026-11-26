@@ -1,4 +1,4 @@
-//! tuningOffset (queue item 101b; batch 6's #12): the whole loop a little off
+//! tuningOffset (batch 6's #12): the whole loop a little off
 //! A440, drawn per loop at load on a stream of its own (`choices::tuning_of`).
 //! What it holds to: most loops play at A440 and the rest within the data's
 //! cents, either way; the vibes lean how often as the batch's table says; a
@@ -107,7 +107,7 @@ fn a_pin_plays_its_offset_and_0_holds_a440() {
         };
         let (drawn, bpm, choices) = ask(&mut g, "");
         // At A440 the offset no longer takes one of the loop's changes, and
-        // the list may fill it (queue item 101h); nothing else moves.
+        // the list may fill it; nothing else moves.
         let (zero, zero_bpm, more) = ask(&mut g, "tuning.cents=0");
         let changed = |c: &[&str]| c.iter().filter(|w| !w.is_empty() && **w != "today").count();
         assert_eq!((zero, zero_bpm), (0.0, bpm), "seed {seed} (drawn {drawn}): held at A440");
@@ -201,7 +201,7 @@ fn every_pitched_note_moves_by_the_offset_and_the_kit_keeps_its_pitch() {
         let (mut moved, mut kept) = (0, 0);
         for seed in seeds {
             // The choices the loop draws at A440, pinned for both, since the
-            // offset counts against its changes (queue item 101h).
+            // offset counts against its changes.
             let held = {
                 let mut g = Box::new(Generator::new());
                 g.load_with(seed, &Request::parse("tuning.cents=0").expect("a request"));

@@ -1,10 +1,10 @@
-//! Batch 6's kits (queue item 101d), made once the loop's own kit is drawn
+//! Batch 6's kits, made once the loop's own kit is drawn
 //! and its choices are (`Render::choices_part`): each rewrites the kit's
 //! hits where the loop drew it, on a stream of its own, so nothing else the
 //! loop draws moves.
 //!
 //! - **tripletKit** (batch 6's #1, approved by Mikey 2026-11-09): a kit in
-//!   threes, the 12/8 shuffle of five records. Item 99's lever re-timed the
+//!   threes, the 12/8 shuffle of five records. The old lever re-timed the
 //!   sixteenths and dropped the eighth, so an eighth-note kit (most of
 //!   them) lost its off-beats and gained no thirds ("What the levers did").
 //!   This finishes it: the eighth moves to two thirds of the beat (the

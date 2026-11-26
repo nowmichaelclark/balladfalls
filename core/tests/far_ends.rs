@@ -1,4 +1,4 @@
-//! Batch 6's far ends (queue item 101a): deepDuck (subDuck's `deep`),
+//! Batch 6's far ends: deepDuck (subDuck's `deep`),
 //! wideSweep (padSweep's `wide` and `fast`) and slowOpening (lateFloor's
 //! `slow`), each an option of an approved choice, drawn on the choice's own
 //! stream (`ownStream`). What they hold to: each option is drawn, within its

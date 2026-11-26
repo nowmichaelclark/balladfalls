@@ -1,4 +1,4 @@
-//! A long piece's plan (queue item 102; `docs/LONGFORM.md` is the design):
+//! A long piece's plan (`docs/LONGFORM.md` is the design):
 //! what each section of a piece past 32 bars, or of Endless, is, as a pure
 //! function of the loop's seed, its request and the section's number.
 //!
@@ -39,11 +39,11 @@
 //! and the tempo is the loop's own throughout.
 //!
 //! **Heard** (`heard`): a wander's section plays its units' states as marks
-//! and levels on the loop's wandered pass (session 12), and an arc's its
-//! units' energy, with a finite arc's landing on the tonic (session 13),
-//! and its themes, their variations and its keys (session 14).
+//! and levels on the loop's wandered pass, and an arc's its
+//! units' energy, with a finite arc's landing on the tonic,
+//! and its themes, their variations and its keys.
 //!
-//! **Movements of different kinds** (session 14). A piece of three arcs or
+//! **Movements of different kinds**. A piece of three arcs or
 //! more, and Endless, plays its movements in a repeating cycle drawn per
 //! piece (`Kind`): a full arc, then a gentle one, a light one and (four or
 //! more) an interlude in the wander's way, in a drawn order, each a share
@@ -51,7 +51,7 @@
 //! arc, so its first and its last are full and the last alone closes; a
 //! unit finds its movement by a division still.
 //!
-//! **The joins** (session 15, `Join`). Where two units meet and something
+//! **The joins** (`Join`). Where two units meet and something
 //! changes, each unit names how it meets the next, chosen from what changes
 //! and the energy either side (`Form::join_of`), the unit after found by
 //! number like any other.
@@ -102,7 +102,7 @@ const TURNS_MAX: usize = 10;
 /// other kinds.
 const CYCLE_MAX: usize = 4;
 
-/// What kind a movement is (session 14; Mikey, 2026-11-12: a long piece's
+/// What kind a movement is (Mikey, 2026-11-12: a long piece's
 /// movements should differ in kind, as a symphony's do).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
@@ -260,7 +260,7 @@ pub enum Theme {
 }
 
 /// How a theme is changed where it comes again. The plan says which; what
-/// each does to the notes is `heard`'s (session 14).
+/// each does to the notes is `heard`'s.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Variation {
     /// As first stated.
@@ -462,7 +462,7 @@ pub struct Span {
     /// What changed from the unit before (`changed`); nothing at a piece's
     /// first.
     pub changed: u16,
-    /// The kind of the movement it is in (session 14; a wander's: full).
+    /// The kind of the movement it is in (a wander's: full).
     pub kind: Kind,
     /// The movement's drawn number, from 0 to 1, that its variations are a
     /// function of: which way a register moves, which voice takes the
@@ -475,12 +475,12 @@ pub struct Span {
     /// holds the home key's fifth.
     pub prepares: bool,
     /// How the unit meets the one after it, at the line at its end
-    /// (session 15, `Join`).
+    /// (`Join`).
     pub join: Join,
 }
 
-/// How a unit meets the one after it at the line between them (session 15;
-/// `docs/LONGFORM.md`, "The joins"): written where something changes, not
+/// How a unit meets the one after it at the line between them
+/// (`docs/LONGFORM.md`, "The joins"): written where something changes, not
 /// left to chance. The plan chooses it from what changes at the line and
 /// the energy either side (`Form::join_of`); `heard` plays it over the
 /// unit's last bar (`[longform joins]`). First the empty one, so a unit of
@@ -510,7 +510,7 @@ pub enum Join {
     /// move, only the layer that moves).
     Breath,
     /// The return prepared: the bass on the home key's fifth for the last
-    /// phrase (session 14).
+    /// phrase.
     Prepared,
 }
 
@@ -623,7 +623,7 @@ pub struct Form {
     arc_units: u64,
     pub small: bool,
     pub second: bool,
-    /// The movements' cycle (session 14): its kinds in order, a full arc
+    /// The movements' cycle: its kinds in order, a full arc
     /// first (one place: every movement a full arc), each place's share in
     /// thousandths of a full arc's, how many whole cycles a finite piece
     /// plays before its last full arc, and each place's units in Endless.
@@ -648,11 +648,11 @@ pub struct Form {
     voicing: u8,
     parity: u16,
     /// The layers the loop plays, and of them those an arc's energy may
-    /// fade (none asked on, off or re-rolled), a bit each (session 13).
+    /// fade (none asked on, off or re-rolled), a bit each.
     pub playing: u8,
     pub fading: u8,
     /// Whether the code edited the warmth, and the space: an arc never
-    /// moves them (session 13).
+    /// moves them.
     pub toned: [bool; 2],
 }
 
@@ -680,7 +680,7 @@ fn related(spec: &Spec, home: Key) -> [Option<Key>; 4] {
     // No related key is darker than the data's floor, unless home is.
     let bright = |scale: usize| SCALES.get(scale).map_or(0.0, |s| s.bright);
     // A mode that joined after the loop's version is no related key's
-    // (queue item 105e).
+    //.
     let there = |id: &str| data::there(data::CODE_SCALES, id, spec.version);
     let floor = js::min(LONGFORM.dark, bright(home.scale));
     let relative = side.and_then(|major| {
@@ -725,7 +725,7 @@ impl Form {
     /// The plan of the piece of `spec`, made with `edits` (the request's:
     /// a tone edited is never moved), whose loop plays the layers `present`
     /// (a bit each in `LAYERS`' order). None for a loop that is no long
-    /// piece: no length (asked, or drawn with none asked: queue item 117),
+    /// piece: no length (asked, or drawn with none asked),
     /// or one of up to 32 bars, which plays as it always has.
     #[must_use]
     pub fn of(spec: &Spec, edits: &Edits, present: u8) -> Option<Form> {
@@ -765,7 +765,7 @@ impl Form {
 
         // The journey: asked, or drawn, the arc's weight leaned by the vibes.
         // A journey that joined after the loop's version is never drawn
-        // (queue item 105e).
+        //.
         let weight = |name| if data::there(data::CODE_JOURNEYS, name, spec.version) { data::lookup(LONGFORM.weights, name).unwrap_or(1.0) } else { 0.0 };
         let arc = weight("arc") * lean_of(Some(LONGFORM.vibes), v) * if endless { LONGFORM.endless } else { 1.0 };
         let drawn = if stream(seed, JOURNEY_SALT, 0).f() * (arc + weight("wander")) < arc { Journey::Arc } else { Journey::Wander };
@@ -799,7 +799,7 @@ impl Form {
         // The arcs: a finite piece holds a whole number, each with room for
         // its form; Endless plays arcs of the drawn length in turn.
         let wanted = round.map_or(0, |r| (arcs_wanted as u64).min(r.units / FULL_UNITS).max(1));
-        // The movements' kinds (session 14): a cycle drawn per piece, a full
+        // The movements' kinds: a cycle drawn per piece, a full
         // arc first, then the others in a drawn order (three movements: one
         // other, never an interlude). A finite piece is as many whole
         // cycles as fill it and a last full arc; every movement has room
@@ -1066,7 +1066,7 @@ impl Form {
     }
 
     /// Unit `phrase` of section `n` (`at`) with its join toward the unit
-    /// after it (`Span::join`, session 15): what the map writes. `at` leaves
+    /// after it (`Span::join`): what the map writes. `at` leaves
     /// it none, so a unit costs what it did; `heard` reads the join from
     /// the units it has at hand (`join_of`).
     #[must_use]
@@ -1098,7 +1098,7 @@ impl Form {
     }
 
     /// How unit `a` meets `b` where `b` is not the plan's own next unit (a
-    /// close the length slider asks for, session 15): `b` with what changed
+    /// close the length slider asks for): `b` with what changed
     /// from `a` read again, and the join between them.
     #[must_use]
     pub fn join_between(&self, a: &Span, b: &Span) -> (Span, Join) {
@@ -1107,7 +1107,7 @@ impl Form {
         (b, self.join_of(a, &b))
     }
 
-    /// How unit `a` meets unit `b` after it (`Join`; session 15), from what
+    /// How unit `a` meets unit `b` after it (`Join`), from what
     /// changes between them (`b.changed`) and the energy either side.
     ///
     /// - **A key** changes: the return prepared where it is (the bass on
@@ -1359,7 +1359,7 @@ impl Form {
         };
         let returns = vary(LONGFORM.returns, &mut r);
         let builds = vary(LONGFORM.builds, &mut r);
-        // (Session 14's draws, after the others, so none of those moved.)
+        // (The themes' draws, after the others, so none of those moved.)
         let pick = r.f();
         let prepared = r.f() < LONGFORM.prepare;
 
@@ -1390,7 +1390,7 @@ impl Form {
         let mut fragment = false;
         let mut calls = false;
         let (theme, variation, key) = match role {
-            // (A breath keeps the tune at its thinnest, session 15: resting it
+            // (A breath keeps the tune at its thinnest: resting it
             // in a breath one unit long stepped 2.7 LU from its neighbors.)
             Role::Opening | Role::Close | Role::Breath => (Theme::A, Variation::Outline, self.home),
             Role::Theme | Role::Holding | Role::Turning => (Theme::A, Variation::Plain, self.home),
@@ -1459,7 +1459,7 @@ impl Form {
         }
     }
 
-    /// Unit `j` of the `n` of movement `k`, an interlude (session 14): the
+    /// Unit `j` of the `n` of movement `k`, an interlude: the
     /// wander's way for the span. Up to three of the things a wander moves
     /// (never the key or the theme) go out one at a time, a hold apart, and
     /// come home in the same order, so one thing moves at each hold's end
@@ -1666,7 +1666,7 @@ impl Form {
     /// Whether epoch `e` is one of the away ones: a two-state thing is the
     /// loop's own every other epoch, so it always moves. Every thing goes
     /// out in the even epochs, the first among them, and comes home in the
-    /// odd ones, one turn at a time (session 12): so every epoch has all its
+    /// odd ones, one turn at a time: so every epoch has all its
     /// turns, and none is stretched to fill it. (102a gave each thing its
     /// own parity, so the first epoch moved about half of them, and its
     /// holds outlasted 300 s.)
@@ -1707,9 +1707,8 @@ impl Form {
         let resting = self.resting & !voiced(voice) & !voiced(e.checked_sub(1).and_then(voice_of));
         let mut r = draw(Thing::Key);
         // A wander visits a key a fifth away only: the whole loop moved as
-        // it is, every chord and note the same in the new key (session 12;
-        // the relative and the parallel change what the chords are, which
-        // is the arc's to sound, session 14).
+        // it is, every chord and note the same in the new key (the relative and the parallel change what the chords are, which
+        // is the arc's to sound).
         let fifths = || self.related.iter().flatten().filter(|k| k.relation.is_fifth());
         let keys = fifths().count();
         let visit = r.f() < LONGFORM.key;
@@ -1867,8 +1866,8 @@ fn write_key<S: Sink>(w: &mut Writer<S>, k: Key) {
 /// sum to the epoch, and no hold outlasts the data's longest where the
 /// epoch has turns enough to fill it (`total` at most `hi` a turn); an
 /// epoch with fewer splits itself evenly. (Scaling the draws to the epoch,
-/// as 102a did, let one long draw beside short ones outlast 300 s by
-/// nearly twice: session 12 measured 587 s.)
+/// as the first plan did, let one long draw beside short ones outlast
+/// 300 s by nearly twice: 587 s was measured.)
 fn fit_holds(holds: &mut [f64], total: f64, lo: f64, hi: f64) {
     let n = holds.len();
     if n == 0 {

@@ -1,9 +1,8 @@
-//! The request's pins (queue item 85b; `generator::request::Pins`): their
-//! numbers and refusals, as `js/pins.js` has them (test/generator.test.mjs
-//! walks the same), and the space recipe's pins reaching the core through
-//! the player, and let go again by a loop that doesn't pin them. What each
-//! pin does to a loop is held to the JavaScript by the generation goldens'
-//! `pins` cases.
+//! The request's pins (`generator::request::Pins`): their
+//! numbers and refusals, as `js/pins.js` has them, and the space recipe's
+//! pins reaching the core through the player, and let go again by a loop
+//! that doesn't pin them. What each pin does to a loop is held by the
+//! generation goldens' `pins` cases.
 
 // Pinned values are compared exactly on purpose: a pin is the number asked.
 #![allow(clippy::float_cmp)]

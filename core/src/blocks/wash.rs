@@ -1,4 +1,4 @@
-//! The wash (queue item 62; Ears 4, round 5, approved by Mikey 2026-10-16):
+//! The wash (Ears 4, round 5, approved by Mikey 2026-10-16):
 //! a slow swell of air on a channel of its own (`WASH_CHANNEL`), every 17 to
 //! 26 seconds, whose level follows the loop.
 //!
@@ -54,7 +54,7 @@ pub mod set {
     pub const WEIGHT: usize = 6;
     /// How many settings hold a value (the weights the last).
     pub const COUNT: usize = 11;
-    /// Where the swells are (session 17, a jump within a piece): the
+    /// Where the swells are (a jump within a piece): the
     /// seconds since they started, at the setting's time, as playing from
     /// the loop's first step would have them. They start again there, that
     /// far on, the ones before fading as a new loop's do. Past the values:
@@ -148,7 +148,7 @@ pub struct Wash {
     lows: [Biquad; 2],
     tints: [Biquad; 2],
     /// The same filters for the side, half the two noises' difference, in
-    /// a stereo render (queue item 65): the sketch's two noises went out
+    /// a stereo render: the sketch's two noises went out
     /// left and right, so the mono render hears them folded.
     side_lows: [Biquad; 2],
     side_tints: [Biquad; 2],
@@ -445,7 +445,7 @@ impl Block for Wash {
 }
 
 // A source on its own bus in the wash's channel; in a stereo render its own
-// width as side (queue item 65).
+// width as side.
 impl Channel for Wash {
     fn render_side(&mut self, block: u64, cx: &Context, signal: &mut Signal, mods: &Mods, side: &mut Signal) {
         self.play(block, cx, signal, mods, Some(side));

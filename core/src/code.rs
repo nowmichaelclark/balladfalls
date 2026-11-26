@@ -1,4 +1,4 @@
-//! Share codes, version 2 (queue item 105): a loop, or an album, written as a
+//! Share codes, version 2: a loop, or an album, written as a
 //! short run of the 64 link-safe characters (`A-Z a-z 0-9 - _`), read back
 //! by any host the same way. `core/README.md`, "Share codes", is the format,
 //! small and exact; this is the one implementation of it.
@@ -10,7 +10,7 @@
 //! unrepeatably; a name of its own, if it was renamed: `name.rs`). A loop
 //! with nothing asked is nine characters. **An album's** holds its tracks'
 //! bodies, and how long each plays before the next where its maker set it
-//! (`Pace`, session 24b): the pace most tracks share once, the others each
+//! (`Pace`): the pace most tracks share once, the others each
 //! their own.
 //!
 //! **Everything is named by its id** (`data/codes.txt`): a vibe, a profile, a
@@ -21,7 +21,7 @@
 //! holding only what had joined by then, so an addition never moves an older
 //! code's picks.
 //!
-//! **What was taken out plays something close** (queue item 105e; Mikey,
+//! **What was taken out plays something close** (Mikey,
 //! 2026-11-17: no code rot). An id's row stays after its member goes, so an
 //! id with a row is this build's, gone or not: a gone one plays its
 //! stand-in, or goes without (an option, its choice's today). A number a
@@ -63,7 +63,7 @@ pub const NOT_AT_VERSION: &str = "asks for something its version does not have";
 pub const BAD_ALBUM: &str = "a bad album";
 /// The line for a track's pace a code can't carry: a time of none, or past
 /// `PACE_MOST`, or a kind the player has no such track for (whole passes and
-/// bars among them, since session 30c).
+/// bars among them).
 pub const BAD_PACE: &str = "a bad track length";
 
 /// The alphabet, a character a sextet (its value, 0 to 63, by place).
@@ -85,8 +85,8 @@ const VIBE_ROWS: usize = data::CODE_VIBES.len();
 const CHECK_PRIME: u32 = 4093;
 
 /// The fields' tags, in the order a code writes them (`core/README.md`).
-/// One this build stops writing keeps its tag and its reading, set aside
-/// (queue item 105e): a tag is never given again, and never refused.
+/// One this build stops writing keeps its tag and its reading, set aside:
+/// a tag is never given again, and never refused.
 mod tag {
     pub const VERSION: u64 = 0;
     pub const VIBE: u64 = 1;
@@ -117,7 +117,7 @@ mod tag {
 /// A loop as a code holds it: its seed, what was asked of it (its version
 /// among it: `Request::version`, 0 for this build's newest), the layers the
 /// listener muted (a bit each in the core's layer order), the wander's
-/// salt of the play it was shared from (queue item 92; 0 for none) and its
+/// salt of the play it was shared from (0 for none) and its
 /// own name, if it was renamed (`Name::NONE` for the one its seed gives).
 #[derive(Clone, Copy)]
 pub struct Loop {
@@ -142,14 +142,14 @@ impl Loop {
 }
 
 /// The most seconds a track's pace counts: a day, as the player's longest
-/// time (`fades::TRACK_MOST`; session 30c).
+/// time (`fades::TRACK_MOST`).
 pub const PACE_MOST: u32 = TRACK_MOST;
 
-/// How long an album's track plays before the next (session 24b; Mikey,
+/// How long an album's track plays before the next (Mikey,
 /// 2026-11-18: "an album's code should carry track lengths and all
 /// necessary info"): the Track length view as the album's maker had it, as
 /// the player takes it (`player::Track`, `player::Fades`; `spec.track` in
-/// the app), so an album plays as its maker heard it. Since session 30c a
+/// the app), so an album plays as its maker heard it. It is a
 /// time to the second, with its fade in and fade out (Mikey, 2026-11-18:
 /// "Should be able to set track length to an exact second"), where it was
 /// whole passes or bars. A loop's own code carries none: one loop sounds
@@ -227,7 +227,7 @@ impl Pace {
     }
 
     /// The pace of a number `number` wrote (every number below
-    /// `PACE_NUMBERS` is one: a code made before session 30c, whose numbers
+    /// `PACE_NUMBERS` is one: a code made in the old form, whose numbers
     /// were passes and bars, still reads, as times of a few seconds).
     const fn from_number(p: u32) -> Pace {
         match p {
@@ -849,7 +849,7 @@ fn id32(x: u64) -> u32 {
     u32::try_from(x).unwrap_or(u32::MAX)
 }
 
-/// A member a code names, as this build has it (queue item 105e).
+/// A member a code names, as this build has it.
 #[derive(Clone, Copy)]
 struct Named {
     /// Its place in its list in `data/codes.txt`.

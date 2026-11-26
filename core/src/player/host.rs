@@ -1,4 +1,4 @@
-//! What the player asks of a core (queue item 82): the calls the web host
+//! What the player asks of a core: the calls the web host
 //! makes to it for the page's engine (`js/core.js`, `CoreHost`), as one
 //! trait, so a host can watch them (`dlrender --seed --calls` writes them
 //! down beside the page's own, `tools/player.mjs --calls`) at no cost to
@@ -30,16 +30,15 @@ pub trait Host {
     fn param(&mut self, id: u32, op: u32, value: f64, time: f64, tau: f64);
     /// `Core::steal`: the notes of `channel` keyed `key` fall to nothing
     /// from `from` to `to` and end (the voice budget taking room from a
-    /// layer's oldest notes, queue item 85c).
+    /// layer's oldest notes).
     fn steal(&mut self, channel: u32, key: Key, from: f64, to: f64);
     /// `Core::fade_all`: every note sounding or waiting falls to nothing
-    /// from `from` to `to` and ends (a loop handing over by a crossfade,
-    /// queue item 86).
+    /// from `from` to `to` and ends (a loop handing over by a crossfade).
     fn fade_all(&mut self, from: f64, to: f64);
     /// `Core::bass_lift`: the bass layer's level for the loop.
     fn bass_lift(&mut self, db: f64);
     /// `Core::space_range`: a space setting's range, from the next loop's
-    /// start (a request's space pins, queue item 85b).
+    /// start (a request's space pins).
     fn space_range(&mut self, which: usize, lo: f64, hi: f64);
 }
 

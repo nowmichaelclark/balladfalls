@@ -1,4 +1,4 @@
-//! Queue item 94a: everything the app does, as a command or an event. The
+//! Everything the app does, as a command or an event. The
 //! events say where the loop is, in time and in order; a code's edits make
 //! the spec the app makes; a re-roll keeps its place; the track ends where
 //! the app's length slider ends it, and a change waiting for it starts
@@ -368,7 +368,7 @@ fn the_grid_and_the_description_report_what_plays() {
 
 #[test]
 fn a_loop_resumed_on_a_new_core_does_not_wait_out_its_late_floor_again() {
-    // Queue item 94b: the app's automatic switch to "lighter on processor"
+    // The app's automatic switch to "lighter on processor"
     // starts a new core and the loop again from its top, as the page's
     // `Engine.load(spec, { resume: true })` does: the kit and the bass come
     // in at once, where a load of a lateFloor loop keeps them out a while.

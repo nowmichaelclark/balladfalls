@@ -1,4 +1,4 @@
-//! Queue item 93: a new player is all zero bytes, so `js/dlplayer.wasm` keeps
+//! A new player is all zero bytes, so `js/dlplayer.wasm` keeps
 //! it in `.bss` (no bytes in the file) and loads small. A field whose empty
 //! state is not zero (a default number, an `Option` whose `None` Rust writes
 //! as a spare value, a `&'static str`) fails here, with where it is.

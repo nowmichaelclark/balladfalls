@@ -1,4 +1,4 @@
-//! The wander heard (queue item 102b; `docs/LONGFORM.md`, "The wander"): what
+//! The wander heard (`docs/LONGFORM.md`, "The wander"): what
 //! a long piece's plan asks of a section, as marks and levels on the loop's
 //! own events and the mix, the way a wandered pass is.
 //!
@@ -33,7 +33,7 @@
 //! starts as the loop's own, every layer easing back up over its first
 //! unit. Endless never closes.
 //!
-//! **An arc is heard by its energy** (queue item 102c, session 13: `Lift`,
+//! **An arc is heard by its energy** (`Lift`,
 //! `hear_arc`): each unit's energy, smoothed over its neighbors, played the
 //! same way, as marks and levels gliding over the unit: the kit, the bass
 //! and the texture down a little (gone only as a close thins), the chords
@@ -50,8 +50,8 @@
 //! from the close. Endless plays arc after arc, a breath between, and never
 //! lands. A pass of a loop that is no piece is exactly as before.
 //!
-//! **An arc's themes, variations and keys** (queue item 102d, session 14:
-//! `Lift::themed`). A unit plays the loop's own tune, the piece's second
+//! **An arc's themes, variations and keys** 
+//! (`Lift::themed`). A unit plays the loop's own tune, the piece's second
 //! (`Tune`: another seed's tune bent into this loop, or the loop's own
 //! answered, made by the generator a section ahead, `Generator::prepare`),
 //! or one then the other by the halves of each phrase: a fragment (the
@@ -73,7 +73,7 @@
 //! where its units name more, the first is the section's and stands in for
 //! the others.
 //!
-//! **The joins** (queue item 102e, session 15: `Heard::joins`). Each unit's
+//! **The joins** (`Heard::joins`). Each unit's
 //! line toward the next is played as the plan chose it (`longform::Join`),
 //! over the unit's last bar at most: a chord both keys share held across
 //! a key's line, the bass on its root; a fill of the kit's backbeat into a
@@ -125,7 +125,7 @@ const ANSWER_SALT: u32 = 0x414e_5357;
 /// The textures whose sound rises and falls over the length of their note,
 /// however long (the rest sound their voice's own life): `Heard::under`.
 const SWELLING: [&str; 3] = ["swell", "wind", "waves"];
-/// What `Heard::under` hears past a join's notes (session 16b): each
+/// What `Heard::under` hears past a join's notes: each
 /// layer's send into the echo, in `LAYERS`' order (the mix's `ECHO`,
 /// `core/src/mix.rs`), the echo's feedback, and its return, fitted against
 /// renders: four times its sends' power. A join's depth against the loop as
@@ -157,7 +157,7 @@ pub mod tune {
     pub const REST: u8 = 2;
 }
 
-/// A tune beside the loop's own, as the generator makes it (session 14):
+/// A tune beside the loop's own, as the generator makes it:
 /// which, and from what seed. All zero bytes is none.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Tune {
@@ -223,7 +223,7 @@ pub struct Unit {
     pub stretch: f64,
     /// Each layer moved to another key, in semitones (0 none).
     pub shift: [i16; 5],
-    /// An arc's (session 13): how much softer the kit's hits are, a share
+    /// An arc's: how much softer the kit's hits are, a share
     /// of their velocity, at the start and the end (0 their own).
     pub soft: [f64; 2],
     /// How far down the kit's shimmer is (the hats, the shakers, the
@@ -241,7 +241,7 @@ pub struct Unit {
     /// The arc's filter's aim, at the start and the end: -1 its darkest, 0
     /// the loop's own swing, 1 its brightest.
     pub aim: [f64; 2],
-    /// What each half of a phrase plays (session 14, `tune`): the loop's
+    /// What each half of a phrase plays (`tune`): the loop's
     /// own tune, the section's second, or a rest.
     pub tune: [u8; 2],
     /// The tune moved, in semitones (an octave, a variation's register).
@@ -257,7 +257,7 @@ pub struct Unit {
     /// `pedal_from` to the unit's end: a return prepared.
     pub pedal: i16,
     pub pedal_from: f64,
-    /// How the unit meets the next at its end (session 15, `Join`), as
+    /// How the unit meets the next at its end (`Join`), as
     /// played: from section step `join_from` to the unit's end, the layers
     /// `out` leave their notes out (a bit each, `LAYERS`' order; the tails
     /// ring).
@@ -278,7 +278,7 @@ pub struct Unit {
     pub pivot_vel: f64,
     pub pivot_hold: f64,
     /// How far under the unit as it plays the join leaves the mix, by its
-    /// notes (`Heard::under`, session 16b), in dB.
+    /// notes (`Heard::under`), in dB.
     pub under: f64,
 }
 
@@ -345,7 +345,7 @@ impl Unit {
     }
 
     /// Whether `layer`'s note at `step`, `dur` steps long, is left out for
-    /// the join at the unit's end (session 15): the floor out, the tune
+    /// the join at the unit's end: the floor out, the tune
     /// alone, a breath, the chords under a pivot.
     #[must_use]
     pub fn joins_out(&self, layer: Layer, step: f64, dur: f64) -> bool {
@@ -440,7 +440,7 @@ impl Unit {
     }
 }
 
-/// What a kit hit is to an arc's energy (session 13): its shimmer, its
+/// What a kit hit is to an arc's energy: its shimmer, its
 /// backbeat, or another piece (the kick).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Piece {
@@ -463,7 +463,7 @@ impl Piece {
     }
 }
 
-/// A finite arc's landing (session 13): over the round's last bars the
+/// A finite arc's landing: over the round's last bars the
 /// loop's tonic chord and the tune on the tonic, alone, held for half of
 /// them and ringing out. Every field is nothing at zero.
 #[derive(Clone, Copy)]
@@ -515,13 +515,13 @@ pub struct Heard {
     /// Each tune note's place among the tune's notes by rank, from just
     /// over 0 to 1 (`sounds`): its share of the notes ranked at or under it.
     places: [f32; MELODY_MAX],
-    /// Whether it is an arc's (session 13), not a wander's.
+    /// Whether it is an arc's, not a wander's.
     pub arc: bool,
     /// An arc's: the steps in which the tune sounds whole (its last phrase
     /// before the landing; none where the two are equal), and the landing.
     whole: [f64; 2],
     pub landing: Landing,
-    /// The tune the section plays beside the loop's own (session 14; none:
+    /// The tune the section plays beside the loop's own (none:
     /// `Tune::NONE`), a phrase's steps and its first half's, and the home
     /// note.
     pub second: Tune,
@@ -531,7 +531,7 @@ pub struct Heard {
     /// Whether the section plays a close the length slider asked for
     /// (`stop_at`): the track ends ringing out, not faded.
     pub stops: bool,
-    /// The section's first step, counted from the piece's (session 16): a
+    /// The section's first step, counted from the piece's: a
     /// layer with a cycle of its own is placed by it, as the sequencer
     /// places it (`abs_step`), not by the section's step.
     start: f64,
@@ -645,7 +645,7 @@ impl Heard {
     }
 
     /// Whether unit `u` plays a note of a tune from section step `from` to
-    /// `to` (session 16): its own or the second, by the half of the phrase
+    /// `to`: its own or the second, by the half of the phrase
     /// each step is in, stretched where the unit stretches it, and left out
     /// where the unit thins it past the note's rank, as the sequencer plays
     /// them (`tune_at`, `stretched_from`, `sounds`, `second_sounds`). The
@@ -691,7 +691,7 @@ impl Heard {
 
     /// How far under the mix the join of unit `u` would leave it, where
     /// the layers `out` leave out the notes they strike from section step
-    /// `from` to `to` (session 16b; a note that rings across `to` plays, as
+    /// `from` to `to` (a note that rings across `to` plays, as
     /// `Unit::joins_out` has it), in dB: from the notes alone, never from
     /// audio. Read over the window's second half (what a yardstick's median
     /// frame hears), each layer's notes sounding there and their echoes as
@@ -1017,7 +1017,7 @@ impl Heard {
         self.last_join(form, cx, base, second, &ways, n, prev);
     }
 
-    /// Hear section `n` of an arc (session 13): each unit's energy, as
+    /// Hear section `n` of an arc: each unit's energy, as
     /// marks and levels (`Lift::end`), gliding over the unit from where the
     /// unit before ended, so a build is a slow swell and nothing jumps; and
     /// at a finite piece's end, the tune's last phrase whole and the landing
@@ -1038,11 +1038,11 @@ impl Heard {
         let spb = cx.spb;
         let unit_steps = form.unit_bars * spb;
         let count = (form.units_in(n) as usize).min(UNITS_MAX);
-        // A second tune that rests (its theme's own loop has none: queue
-        // item 85f, a theme that rests stays resting, never given a tune)
+        // A second tune that rests (its theme's own loop has none: a
+        // theme that rests stays resting, never given a tune)
         // leaves the arc its one theme: those units play theme A, in the
         // unit's key. (A rest of the tune through a second role sat 4.4 LU
-        // under its neighbors in a tune-led loop: session 14 measured.)
+        // under its neighbors in a tune-led loop, as measured.)
         let has = self.second != Tune::NONE && second.is_some_and(|m| m.iter().any(|e| e.vel != 0.0));
         let mut from = form.before(n, 0).map(|(b, p)| {
             let span = smoothed(form, b, p).0;
@@ -1110,7 +1110,7 @@ impl Heard {
         }
     }
 
-    /// The joins at the ends of section `n`'s units (session 15): each
+    /// The joins at the ends of section `n`'s units: each
     /// unit's `Join`, as the plan chose it, played over its last bar (at
     /// most `[longform joins] share` of the unit; a breath over its share of
     /// that, a fill over the last beat), where the loop has what it needs,
@@ -1166,7 +1166,7 @@ impl Heard {
         // The pivot's voice and velocity: the loop's first chord it plays,
         // else its first with notes at the chords' loudest. (A chord the
         // loop leaves silent, an entry's, gave its velocity, 0: every pivot
-        // of 1 loop in 12 was a hole, 30 to 58 dB under the loop. Session 16;
+        // of 1 loop in 12 was a hole, 30 to 58 dB under the loop. See
         // the landing's way, `land`.)
         let with_notes = || base.chords.iter().enumerate().filter(|(_, e)| !e.notes.is_empty());
         let loudest = with_notes().map(|(_, e)| e.vel).fold(0.0, js::max);
@@ -1281,7 +1281,7 @@ impl Heard {
             // A join takes out only a layer heard in the unit before it (two
             // notes struck there at least): a sparse loop's one bass note in
             // its last bar is the unit's bass, not a floor to take out
-            // (session 15 measured such a unit 6 LU under the loop).
+            // (such a unit measured 6 LU under the loop).
             if u.out != 0 {
                 let keep = heard_out(cx, base, u.from, u.join_from, u.out) | if kind == Join::Pivot { u.out & bit(Layer::Chords) } else { 0 };
                 u.out = keep;
@@ -1291,7 +1291,7 @@ impl Heard {
             }
             u.join = kind;
         }
-        // Never a hole (session 16b): where what the join keeps would leave
+        // Never a hole: where what the join keeps would leave
         // the mix `[longform joins] hole` dB under the unit, by its notes
         // (`under`), it falls back to a breath (every layer heard there out
         // for the join's last half) well clear of it, else to a glide:
@@ -1325,7 +1325,7 @@ impl Heard {
         }
     }
 
-    /// An ending that lands (session 15; the brief's "Endings that land"):
+    /// An ending that lands (the brief's "Endings that land"):
     /// the length slider will stop the piece `stop` steps from this
     /// section's first, before its own close (or in Endless), so the
     /// phrases before the stop play the close in place of the fade: from
@@ -1498,7 +1498,7 @@ impl Heard {
         let pc = |n: i16| n.rem_euclid(12);
         // The tonic chord: the mode's triad on the root (its third and its
         // fifth, or their nearest where the mode has none; a planed loop's
-        // is major, its tonic's major seventh, queue item 101f), as the loop
+        // is major, its tonic's major seventh), as the loop
         // voices it where it plays one in root position, else built at the
         // chords' lowest. (A loop whose chords are played a
         // note at a time has no chord of three: it lands on the triad,
@@ -1512,7 +1512,7 @@ impl Heard {
         let chords = || base.chords.iter().enumerate().filter(|(_, e)| !e.notes.is_empty());
         let tonic = |e: &plan::ChordEvent| e.notes.len() >= 3 && triad.iter().all(|&t| e.notes.iter().any(|&n| pc(n) == t));
         // (A chord the loop leaves silent, an entry's or a rest's, gives its
-        // notes and its voice but never its velocity: session 15 found
+        // notes and its voice but never its velocity: a measure found
         // landings struck at 0. The chords' own loudest stands in.)
         let loudest = chords().map(|(_, e)| e.vel).fold(0.0, js::max);
         let sounding = |vel: f64| if vel > 0.0 { vel } else { loudest };
@@ -1556,7 +1556,7 @@ impl Heard {
     }
 
     /// The heard units' canonical text (the goldens' passes, a piece of the
-    /// wander's), in the pass's own: an arc's (session 13) as its units,
+    /// wander's), in the pass's own: an arc's as its units,
     /// its last phrase whole and its landing.
     pub fn write<S: Sink>(&self, w: &mut Writer<S>) {
         if !self.arc {
@@ -1641,7 +1641,7 @@ impl Heard {
             }
             w.key("from");
             w.num(u.from);
-            // How it meets the next (session 15), where it does more than
+            // How it meets the next, where it does more than
             // glide.
             if !matches!(u.join, Join::None | Join::Glide) {
                 w.key("join");
@@ -1752,7 +1752,7 @@ impl Default for Heard {
 }
 
 /// The spans of a note's life `[longform loudness]` reads its loudness in,
-/// in seconds from its start: to 8 s since session 23, the last span's
+/// in seconds from its start: to 8 s, the last span's
 /// loudness held past it. A long note's life past 4 s had been read as its
 /// 2 to 4 s; a pad held 8 s sounds 6 dB under that there, and a floor join
 /// on corpus piece #27 that kept such a pad alone read 8 dB under the loop
@@ -1812,9 +1812,9 @@ fn note_energy(sums: &mut [[[f64; 3]; 5]; SPANS], spans: &[[f64; 2]; SPANS], l: 
 
 /// The layers of `out` heard from section step `from` to `to` of the loop
 /// rendered as `base` (two notes struck there at least, a bit each): what a
-/// join may take out (session 15). A sparse loop's one bass note in a
-/// unit's last bar is the unit's bass, not a floor to take out (session 15
-/// measured such a unit 6 LU under the loop).
+/// join may take out. A sparse loop's one bass note in a
+/// unit's last bar is the unit's bass, not a floor to take out (such a
+/// unit measured 6 LU under the loop).
 fn heard_out(cx: &Cx, base: &Render, from: f64, to: f64, out: u8) -> u8 {
     let cycle = |layer: Layer| cx.spec.cycles.of(layer as usize).filter(|&c| c > 0.0).unwrap_or(cx.spec.bars * cx.spb);
     let falls = |step: f64, len: f64| len > 0.0 && step + js::ceil((from - step) / len) * len < to;
@@ -1873,7 +1873,7 @@ fn rank(seed: u32, i: usize) -> f64 {
     f64::from((x >> 32) as u32) / 4_294_967_296.0
 }
 
-/// How a loop plays an arc's energy (session 13), worked out once a
+/// How a loop plays an arc's energy, worked out once a
 /// section: the layers that may fade with it, whether its tune may be
 /// doubled, whether the filter and the space may move.
 #[allow(clippy::struct_excessive_bools)] // four separate facts about a loop, not a state
@@ -1964,7 +1964,7 @@ impl Lift {
         u.soft = [x.soft * below; 2];
         let [thin_at, thinnest] = x.thin;
         u.thin = [if e < thin_at && thin_at > 0.0 { thinnest * (thin_at - e) / thin_at } else { 0.0 }; 2];
-        // A breath between arcs (session 15): the tune never rests, but thins
+        // A breath between arcs: the tune never rests, but thins
         // across it, at its thinnest at the breath's own lowest energy (the
         // data's `energy.breath`), so it is spread over the breath's units
         // rather than stepped into.
@@ -1992,7 +1992,7 @@ impl Lift {
 
 impl Lift {
     /// Unit `span` of an arc's theme, its variation and its key, on the
-    /// unit `u` its energy made (session 14; the module's doc). `has`: the
+    /// unit `u` its energy made (the module's doc). `has`: the
     /// section plays a tune beside the loop's own.
     #[allow(clippy::unused_self)] // beside `end`, which it follows
     fn themed(&self, form: &Form, ways: &Ways, span: &Span, has: bool, u: &mut Unit) {
@@ -2035,8 +2035,8 @@ impl Lift {
             }
         }
         match variation {
-            // The peak's register is its double, an octave over (session
-            // 13), and so is any rising role's: a build's swells in at the
+            // The peak's register is its double, an octave over,
+            // and so is any rising role's: a build's swells in at the
             // double's share from its first unit, the small form's lift's
             // with its energy. (The tune itself moved an octave there sat
             // under the theme before it, either way: measured.) A return
@@ -2062,8 +2062,7 @@ impl Lift {
                 u.stretch = ways.stretch(1);
             }
             // (A planed loop's chords are not reharmonized: they slide by
-            // a shape of their own, and the tune follows them, queue item
-            // 101f.)
+            // a shape of their own, and the tune follows them.)
             Variation::Reharmonized if !ways.planing => {
                 if let Some(relative) = form.related().find(|k| k.relation == Relation::Relative) {
                     u.map = key_map(form.home, relative);
@@ -2075,7 +2074,7 @@ impl Lift {
                 }
             }
             // (An opening and a close are already as thin as their energy
-            // makes them, session 13: the outline's share is the release's,
+            // makes them: the outline's share is the release's,
             // whose energy alone leaves the tune whole.)
             Variation::Outline if span.role == Role::Release => u.thin = [js::max(u.thin[1], LONGFORM.outline); 2],
             _ => {}
@@ -2085,7 +2084,7 @@ impl Lift {
 }
 
 /// How far each pitch class, counted from `home`'s note, moves to play in
-/// the key `to` (session 14). The relative key (the same notes, another
+/// the key `to`. The relative key (the same notes, another
 /// home note): every note the same count of the mode's steps along, the
 /// nearer way, so a tune keeps its shape and a chord becomes the chord
 /// that many steps away; a note outside the mode goes with the mode's note
@@ -2131,7 +2130,7 @@ pub fn key_map(home: Key, to: Key) -> [i8; 12] {
     map
 }
 
-/// `key_map` for a loop that planes (queue item 101f): its chords are
+/// `key_map` for a loop that planes: its chords are
 /// major sevenths sliding around the home note, in no mode, so the relative
 /// key moves every pitch class alike to the new home note, the nearer way
 /// (the shape and the tune over it kept whole), and the parallel moves
@@ -2158,13 +2157,13 @@ struct Ways {
     /// Each layer's lowest and highest note.
     ranges: [Option<[f64; 2]>; 5],
     /// How far the tune's centre sits over the chords' (the chords' octave
-    /// rule, queue item 84: five semitones apart at least where the loop
+    /// rule: five semitones apart at least where the loop
     /// keeps it); none without both.
     gap: Option<f64>,
     /// The same for the section's second tune, where it plays one with
     /// notes.
     second_gap: Option<f64>,
-    /// The loop planes (queue item 101f): its key moves whole, and its
+    /// The loop planes: its key moves whole, and its
     /// chords are not reharmonized under the tune (`planing`).
     planing: bool,
 }
@@ -2280,7 +2279,7 @@ impl Ways {
         out
     }
 
-    /// An arc's move to the key `shift` semitones away (session 14): as
+    /// An arc's move to the key `shift` semitones away: as
     /// `shift`, but every layer over the bass takes the way up where it
     /// fits its range (a fifth above is seven semitones up, not a fourth
     /// down), so a second theme and a peak in the related key sit brighter
@@ -2334,7 +2333,7 @@ impl Ways {
         }
     }
 
-    /// The chords' octave rule in the unit's key (queue item 84): where the
+    /// The chords' octave rule in the unit's key: where the
     /// loop keeps its tune's centre five semitones or more from its
     /// chords', a unit whose moves bring them nearer moves the chords an
     /// octave away from the tune, or the tune an octave from the chords,
@@ -2464,7 +2463,7 @@ impl Ways {
         u.register = self.register(s.register);
         u.stretch = self.stretch(s.length);
         u.shift = self.shift(span.key.relation.shift());
-        // The tune handed to the piece's second theme (session 14).
+        // The tune handed to the piece's second theme.
         if span.theme == Theme::B {
             u.tune = [tune::SECOND; 2];
         }

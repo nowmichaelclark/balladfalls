@@ -1,5 +1,5 @@
 //! Note lists: everything the core needs to render a loop with no
-//! JavaScript, and a host that renders one (queue item 42).
+//! JavaScript, and a host that renders one.
 //!
 //! A note list is plain ASCII text, one fact per line, because it is
 //! committed beside the hashes it produces and a diff of it should be
@@ -89,7 +89,7 @@ pub struct List {
     pub frames: u64,
     pub events: Vec<Event>,
     /// The layout to render it in: 1 (mono, what a list is) or 2 (stereo,
-    /// `dlrender --stereo`, queue item 64).
+    /// `dlrender --stereo`).
     pub layout: u32,
 }
 
@@ -319,8 +319,8 @@ pub fn render(list: &List, keep: Option<usize>) -> Result<Rendered, String> {
 
 /// Run `f` on a thread with `stack` bytes of stack: a core and a player are
 /// megabytes each, and a build without optimizations makes them on the
-/// stack before boxing them. Emscripten's build has no threads (queue item
-/// 87: Broken Friends' web build links none), so there `f` runs here, on the
+/// stack before boxing them. Emscripten's build has no threads
+/// (Broken Friends' web build links none), so there `f` runs here, on the
 /// stack the link gives it (`core/.cargo/config.toml`).
 ///
 /// # Errors

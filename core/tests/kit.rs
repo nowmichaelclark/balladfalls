@@ -1,4 +1,4 @@
-//! Batch 6's kits (queue item 101d; `generator::kit`): tripletKit, and
+//! Batch 6's kits (`generator::kit`): tripletKit, and
 //! dottedPulse below. tripletKit: a kit in
 //! threes, a choice drawn by itself (`alone`), not among the changes, on a
 //! stream of its own. What it holds to: it goes only to loops with a kit and

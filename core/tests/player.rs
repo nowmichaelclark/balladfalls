@@ -1,4 +1,4 @@
-//! The player (queue item 82): a loop from a seed, played in the core. Its
+//! The player: a loop from a seed, played in the core. Its
 //! samples are held to the page's elsewhere (`tools/baseline.mjs`'s
 //! `player` part, `core/golden/seeds.hashes`); these hold it to itself: a
 //! load spread across blocks hands over the notes one made at once does,
@@ -285,7 +285,7 @@ fn passes_of(seed: u32, amount: f64, salt: Option<u32>) -> Vec<Vec<String>> {
     host.passes
 }
 
-/// Queue item 92: a host's salt on the wander's stream. None (or 0) is the
+/// A host's salt on the wander's stream. None (or 0) is the
 /// wander every code has always had, bit for bit; a salt wanders a loop
 /// another way, from the same seed, pass after pass; and the same salt
 /// again makes the same notes, so the draws stay a function of what the

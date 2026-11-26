@@ -1,4 +1,4 @@
-//! padWow (queue item 101b; batch 6's #3, approved by Mikey 2026-11-08): a
+//! padWow (batch 6's #3, approved by Mikey 2026-11-08): a
 //! slow tape-like wow on the chord layer alone, the kick and the bass steady.
 //!
 //! Ballad Falls' wobble (`master.rs`) moves the whole mix together, 1 to 11
@@ -48,7 +48,7 @@ pub const REST: Settings = Settings { depth: 0.0, rate: 0.0 };
 pub const DEPTH: usize = 0;
 /// The rate.
 pub const RATE: usize = 1;
-/// Where its swings are (session 17, a jump within a piece): the seconds
+/// Where its swings are (a jump within a piece): the seconds
 /// the wow has swung at the setting's time, as playing from the loop's first
 /// step would have it (both phases from where `apply` starts them), so a
 /// jump lands on the phase playing would have reached. Nothing else moves.

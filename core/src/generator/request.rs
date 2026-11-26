@@ -1,5 +1,5 @@
 //! What a host asks of the next loop, beside its seed (promise 11's
-//! request; queue item 85): `readRequest` and `parseRequest` in
+//! request): `readRequest` and `parseRequest` in
 //! `js/generator.js`, read the same way.
 //!
 //! One shape for everyone: the app's picks, a developer's code and a game's
@@ -9,11 +9,11 @@
 //! mood and the time of day; the core never knows what a friend is), the
 //! tempo, pinned or a range, a theme (a seed whose loop this one bends: a
 //! friend keeps its tune as the day changes), the pins (`Pins`) and the
-//! length (queue item 88, `Length`: a piece of any number of bars, or
-//! Endless), the home notes and the modes (queue item 89: each a set to
-//! choose from, one note or mode being the pin) and the style (queue item 90:
+//! length (`Length`: a piece of any number of bars, or
+//! Endless), the home notes and the modes (each a set to
+//! choose from, one note or mode being the pin) and the style (
 //! the profiles, one or a set), the voices of each layer (a set to choose
-//! from) and the layers on or off (queue item 91).
+//! from) and the layers on or off.
 //!
 //! **Bends, never breaks.** A request is checked as it is built: a vibe the
 //! core does not have, a bad weight or a tempo outside `TEMPO_LIMIT` is
@@ -24,15 +24,15 @@
 //! a vibe and its weight (`glacial=0.7`), the tempo (`bpm=77`,
 //! `bpm=70-85`), the theme (`theme=1234`) or a pin (`organ=on`,
 //! `arc.period=240`; `Pins`), the length (`bars=1024`, `bars=endless`) and the journey a long piece takes
-//! (`journey=arc`, `journey=wander`; queue item 102), the
+//! (`journey=arc`, `journey=wander`), the
 //! key (`key=D`, `key=D|G`) and the mode (`scale=dorian`,
 //! `scale=dorian|aeolian`), the style (`style=tide`, `style=tide|shrine`),
 //! a layer's voices (`voice.melody=kalimba|marimba`) and a layer on or off
 //! (`layer.drums=off`, `layer.melody=on`) and the version it is drawn at
-//! (`version=2`; queue item 105, a share code's); empty or `-` for nothing. The generation goldens, `dlrender --request` and the
+//! (`version=2`; a share code's); empty or `-` for nothing. The generation goldens, `dlrender --request` and the
 //! wasm hosts write it so.
 //!
-//! **A code's edits** (queue item 94a, `Edits`): what a listener changed in a
+//! **A code's edits** (`Edits`): what a listener changed in a
 //! loop after it was made, which a share code carries and a load must make
 //! again: a layer's seed (`edit.seed.drums=1234`), a layer re-rolled (its seed
 //! and always played, `edit.roll.drums=1234`: `rerollLayer`), the tone
@@ -90,7 +90,7 @@ pub const BAD_TONE: &str = "a bad tone";
 /// The line for an edit the core does not know.
 pub const NO_SUCH_EDIT: &str = "no such edit";
 
-/// The first version of the share codes (queue item 105): version 1 was the
+/// The first version of the share codes: version 1 was the
 /// old `DL1-` codes, which nothing reads now.
 pub const FIRST_VERSION: u32 = 2;
 /// The line for a code, or a version asked, from a newer build than this
@@ -103,10 +103,10 @@ pub const BAD_VERSION: &str = "a bad version";
 /// name them.
 pub const TONE_NAMES: [&str; 3] = ["warmth", "space", "wobble"];
 
-/// What a listener changed in a loop after it was made (queue item 94a; the
+/// What a listener changed in a loop after it was made (the
 /// module's doc): each set or not. A share code carries them and a load makes
 /// them again, after every draw (`Edits::apply`). All zero bytes when nothing
-/// is set (queue item 93): `Option`'s `None` is.
+/// is set: `Option`'s `None` is.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Edits {
     /// Each layer's seed set, in the core's layer order.
@@ -267,11 +267,11 @@ pub const SCALES_ALL: u32 = (1 << SCALES.len()) - 1;
 /// cap on the music: at 190 bpm in 2/4 it is some seventy million years.
 pub const LENGTH_MOST: f64 = 9_007_199_254_740_991.0;
 
-/// How long the piece asked for is (promise 11, queue item 88): a number of
+/// How long the piece asked for is (promise 11): a number of
 /// bars, any whole number from 1 up, or one that never ends.
 // The discriminants start at 1 so that an `Option<Length>` that is `None` is
 // all zero bytes (the niche is 0): a spec, and the player holding one, start
-// as zeros, which the module keeps as `.bss` (queue item 93).
+// as zeros, which the module keeps as `.bss`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 pub enum Length {
@@ -281,7 +281,7 @@ pub enum Length {
     Endless = 2,
 }
 
-/// The journey a long piece takes (queue item 102; `longform`): an arc, as
+/// The journey a long piece takes (`longform`): an arc, as
 /// a symphony's, or the long slow wander. Asked, it is the piece's; left
 /// out, the piece draws one from its seed, leaned by its vibes.
 // From 1, as `Length`'s: none asked is all zero bytes.
@@ -315,37 +315,37 @@ pub struct Request {
     asked: [bool; VIBE_COUNT],
     /// Each asked vibe's weight; NaN where it was asked without one. Read
     /// only where `asked` is true, so an unasked vibe's slot is zero, and a
-    /// request of nothing is all zero bytes (queue item 93).
+    /// request of nothing is all zero bytes.
     weights: [f64; VIBE_COUNT],
     /// The tempo asked, [low, high] in whole bpm (equal when pinned).
     tempo: Option<[f64; 2]>,
-    /// The theme (queue item 85d): the seed whose loop this one bends.
+    /// The theme: the seed whose loop this one bends.
     theme: Option<u32>,
-    /// The named settings fixed (queue item 85b).
+    /// The named settings fixed.
     pins: Pins,
-    /// The length asked (queue item 88).
+    /// The length asked.
     length: Option<Length>,
-    /// The home notes asked (queue item 89): a bit each, C the lowest; 0 for
+    /// The home notes asked: a bit each, C the lowest; 0 for
     /// none asked.
     keys: u32,
-    /// The modes asked (queue item 89): a bit each by its place in
+    /// The modes asked: a bit each by its place in
     /// `theory::SCALES`; 0 for none asked.
     scales: u32,
-    /// The styles asked (queue item 90): a bit each by place in
+    /// The styles asked: a bit each by place in
     /// `PROFILE_ORDER`; 0 for none asked.
     styles: u32,
-    /// The voices asked of each layer (queue item 91), in the core's layer
+    /// The voices asked of each layer, in the core's layer
     /// order: a bit each by place in the layer's `VOICE_ORDER`; 0 for none.
     voices: [u32; 5],
     /// The layers asked on, a bit each in the core's layer order.
     layers_on: u8,
     /// The layers asked off.
     layers_off: u8,
-    /// A code's edits (queue item 94a).
+    /// A code's edits.
     edits: Edits,
-    /// The journey asked of a long piece (queue item 102).
+    /// The journey asked of a long piece.
     journey: Option<Journey>,
-    /// The version the loop is drawn at (queue item 105): a share code's,
+    /// The version the loop is drawn at: a share code's,
     /// whose draws see only what existed then (`data::joined`); 0, this
     /// build's newest, for a loop no code asked for.
     version: u32,
@@ -358,7 +358,7 @@ impl Request {
         Request { asked: [false; VIBE_COUNT], weights: [0.0; VIBE_COUNT], tempo: None, theme: None, pins: Pins::NONE, length: None, keys: 0, scales: 0, styles: 0, voices: [0; 5], layers_on: 0, layers_off: 0, edits: Edits::NONE, journey: None, version: 0 }
     }
 
-    /// The same, drawn at `version` (queue item 105): what a share code of
+    /// The same, drawn at `version`: what a share code of
     /// that version plays, its pools holding only what had joined by then
     /// (`data/codes.txt`). A code's own reading sets it; a host need not.
     ///
@@ -407,7 +407,7 @@ impl Request {
         &self.pins
     }
 
-    /// The same, bending the loop of `seed` (queue item 85d): the loop made
+    /// The same, bending the loop of `seed`: the loop made
     /// keeps that loop's profile mix, its key and mode, its metre and its
     /// tune, and the vibes, the tempo, the pins and the load's own seed bend
     /// the rest. The load's seed the theme's own and nothing else asked is
@@ -487,7 +487,7 @@ impl Request {
         Ok(self)
     }
 
-    /// The same, with the length asked (queue item 88): a piece of `bars`
+    /// The same, with the length asked: a piece of `bars`
     /// bars, or Endless. A length of up to `piece::SECTION_BARS` bars is the
     /// loop's own; a longer one, or Endless, is the loop as drawn played
     /// section after section, each drawn as a wandering pass is
@@ -512,8 +512,8 @@ impl Request {
         self.length
     }
 
-    /// The same, with the journey a long piece takes pinned (queue item
-    /// 102): it plays that one whatever its seed and vibes would draw. A
+    /// The same, with the journey a long piece takes pinned:
+    /// it plays that one whatever its seed and vibes would draw. A
     /// loop of up to 32 bars has no journey, and plays as it does without.
     #[must_use]
     pub fn with_journey(mut self, journey: Journey) -> Self {
@@ -527,7 +527,7 @@ impl Request {
         self.journey
     }
 
-    /// The same, with the home notes asked (queue item 89): a set to choose
+    /// The same, with the home notes asked: a set to choose
     /// from, a bit each (C the lowest), one note being a pinned key. The
     /// loop's key is its seed's own where that is in the set, else one of
     /// them drawn from the seed. 0 asks for nothing.
@@ -548,7 +548,7 @@ impl Request {
         self.keys
     }
 
-    /// The same, with the modes asked (queue item 89): a set to choose from,
+    /// The same, with the modes asked: a set to choose from,
     /// a bit each by its place in `theory::SCALES`. The loop's mode is its
     /// seed's own where that is in the set, else one of them drawn from the
     /// seed, leaning toward the ones its profiles and vibes favor. 0 asks for
@@ -570,7 +570,7 @@ impl Request {
         self.scales
     }
 
-    /// The same, with the styles asked (queue item 90): the profiles to
+    /// The same, with the styles asked: the profiles to
     /// choose from, a bit each by place in `PROFILE_ORDER`, one being a
     /// pinned style. A loop whose profile mix is all inside the set stands;
     /// else each profile outside it is replaced by one of the set, drawn from
@@ -672,8 +672,8 @@ impl Request {
 
     /// The same, with layer `layer`'s seed (0 to 4, the core's order) set to
     /// `seed`, and with `rolled` the layer re-rolled as well: always played,
-    /// as the app's Roll button does (`rerollLayer`). A code's edit (queue
-    /// item 94a): the loop's other draws are not moved.
+    /// as the app's Roll button does (`rerollLayer`). A code's edit:
+    /// the loop's other draws are not moved.
     ///
     /// # Errors
     /// `NO_SUCH_LAYER` for a layer past the fifth.
@@ -688,7 +688,7 @@ impl Request {
 
     /// The same, with the tone's part `which` (`TONE_NAMES`' order: warmth,
     /// space, wobble) set to `value`, as the Sound panel's sliders set it. A
-    /// code's edit (queue item 94a).
+    /// code's edit.
     ///
     /// # Errors
     /// `BAD_TONE` for a part past the third or a value outside 0 to 1.
@@ -703,7 +703,7 @@ impl Request {
 
     /// The same, with the tempo set to `bpm` after the loop is drawn, as the
     /// app's tempo slider sets it (not a tempo asked: `with_tempo` asks the
-    /// draws for one). A code's edit (queue item 94a).
+    /// draws for one). A code's edit.
     ///
     /// # Errors
     /// `BAD_TEMPO` for a tempo that is not a number, `TEMPO_OUT` for one
@@ -719,7 +719,7 @@ impl Request {
         Ok(self)
     }
 
-    /// The code's edits (queue item 94a).
+    /// The code's edits.
     #[must_use]
     pub fn edits(&self) -> &Edits {
         &self.edits
@@ -733,7 +733,7 @@ impl Request {
         self
     }
 
-    /// The same request with only its vibes (queue item 95): what the
+    /// The same request with only its vibes: what the
     /// app's picks become when the rest of them can't be met, as the page's
     /// `drawNew` leaves a request out and keeps the moods.
     #[must_use]
@@ -1018,7 +1018,7 @@ enum Allowed {
     Values(data::NumPool),
 }
 
-/// The request's pins (queue item 85b; `js/pins.js`, whose doc says what a
+/// The request's pins (`js/pins.js`, whose doc says what a
 /// pin is and does): the named settings a host fixes for the loops it asks
 /// for, by number, each the value it is pinned to (a word by its place in
 /// the pin's list), and which are pinned (a bit each: nothing pinned is all
@@ -1084,7 +1084,7 @@ impl Pins {
             "kick.short" => Allowed::Range(KICK.short, false),
             "kick.long" => Allowed::Range(KICK.long, false),
             // A setting a choice's options each draw from their own range
-            // (queue item 101a) takes any of them; the loop then holds it to
+            // takes any of them; the loop then holds it to
             // the range of the option it plays (`choices`, `held`).
             "subDuck.depth" => Allowed::Range(span(&[SUBDUCK.depth, SUBDUCK.deep_depth]), false),
             "subDuck.recover" => Allowed::Range(span(&[SUBDUCK.recover, SUBDUCK.deep_recover]), false),
@@ -1098,13 +1098,13 @@ impl Pins {
             "echo.beats" => Allowed::Values(ECHO.beats),
             "lateFloor.fade" => Allowed::Range(LATEFLOOR.slow_fade, false),
             // tuningOffset either way, as far as the data draws it; 0 holds
-            // the loop at A440 (queue item 101b).
+            // the loop at A440.
             "tuning.cents" => Allowed::Range([-TUNING.cents[1], TUNING.cents[1]], false),
-            // The progression's kind: today's, or planing (queue item 101f).
+            // The progression's kind: today's, or planing.
             "progression.kind" => Allowed::Words(super::planing::KINDS),
-            // lowBell's kind: none, struck or swelling (queue item 101g).
+            // lowBell's kind: none, struck or swelling.
             "lowBell.kind" => Allowed::Words(super::choices::LOW_BELL_KINDS),
-            // twang's version: none, or soft (queue items 101h and 105e).
+            // twang's version: none, or soft.
             "twang.kind" => Allowed::Words(super::choices::TWANG_KINDS),
             #[cfg(feature = "dummy")]
             "dummy.kind" => Allowed::Words(super::choices::DUMMY_KINDS),
@@ -1116,7 +1116,7 @@ impl Pins {
 
     /// The words pin `number` takes, by place (a choice's options, or a
     /// setting's words), or `None` for a pin that takes a number or no pin:
-    /// a share code names the word by its id (queue item 105).
+    /// a share code names the word by its id.
     #[must_use]
     pub fn words(number: usize) -> Option<data::Pool> {
         match Self::allowed(number)? {
@@ -1146,7 +1146,7 @@ impl Pins {
     }
 
     /// The value pin `number` takes nearest `x`, for a number an older code
-    /// holds that its range or its list has left since (queue item 105e):
+    /// holds that its range or its list has left since:
     /// `None` for a pin of words, or no pin.
     #[must_use]
     pub fn nearest(number: usize, x: f64) -> Option<f64> {

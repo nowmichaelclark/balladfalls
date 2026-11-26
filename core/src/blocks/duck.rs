@@ -1,12 +1,12 @@
 //! A duck: a gain on a whole channel, pressed down by another channel's
 //! signal.
 //!
-//! The third of queue item 46c's demonstration blocks, in the tests only
+//! The third of three demonstration blocks for a channel's own block, in the tests only
 //! (its line in the registry carries `#[cfg(test)]`). It proves that a
 //! sidechain is one new file -- this one -- plus one line in the registry:
 //! its key is one of its `MODS`, so the host routes another channel into it
 //! (`Core::route`), and the test kit probes it with no test written for it.
-//! subDuck (item 68) is this, on the bass channel, keyed by the drums.
+//! subDuck is this, on the bass channel, keyed by the drums.
 //! `core/README.md` walks through it.
 
 use crate::block::{Block, Channel, Context, Mod, Mods, Probe, Signal};

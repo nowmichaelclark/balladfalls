@@ -1,13 +1,13 @@
 //! A swell on a whole channel, whose rate the host sets for the loop.
 //!
-//! The first of queue item 46c's three demonstration blocks, in the tests
+//! The first of three demonstration blocks for a channel's own block, in the tests
 //! only (its line in the registry carries `#[cfg(test)]`). It proves that a
 //! channel's own block with per-loop settings is still one new file -- this
 //! one -- plus one line in the registry: it works on its channel's whole
 //! signal (`Channel::WHOLE`), carries its own `Lfo`, and says which of its
 //! settings a host sets (`SETTINGS`); `Core::set` reaches them, and the test
-//! kit finds and probes them with no test written for it. padSweep (item
-//! 72) and the arc (item 63) are this, with a filter in place of the gain.
+//! kit finds and probes them with no test written for it. padSweep
+//!  and the arc are this, with a filter in place of the gain.
 //! `core/README.md` walks through it.
 
 use crate::QUANTUM;

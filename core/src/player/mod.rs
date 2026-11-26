@@ -1,9 +1,9 @@
-//! The player (queue item 82): a loop from a seed, played in the core, with
+//! The player: a loop from a seed, played in the core, with
 //! no JavaScript. Broken Friends' gate (each friend's theme, from a seed),
 //! and the end of phase 2's port.
 //!
 //! It is what the page does between the generator and the core's notes:
-//! the generator (`generator`, items 79 to 81) makes the loop and what the
+//! the generator (`generator`) makes the loop and what the
 //! engine decides loading it; the sequencer (`sequencer`, `Engine` in
 //! `js/engine.js`) walks it step by step, pass after pass, wandering as the
 //! app's does; and the synth's note calls (`synth`, `Synth` in
@@ -21,7 +21,7 @@
 //! itself calls before each block). Wander, mutes, tempo and volume are
 //! the app's controls, as it has them (`set_wander` and the rest).
 //!
-//! **A change at a moment** (queue item 86, `change`): `change` asks for the
+//! **A change at a moment** (`change`): `change` asks for the
 //! next loop at a beat, bar, phrase or pass of the one playing, handing over
 //! by a crossfade or a ring-out, on the same core with no reset; the new loop
 //! is made in the blocks before the boundary and starts on it.
@@ -97,8 +97,8 @@ pub const LOOKAHEAD: f64 = 0.25;
 /// seconds (the measure harness's 0.05).
 pub const START: f64 = 0.05;
 
-/// How long the track's gain takes back to 1 where a fade left it under
-/// (session 30c): a new loop after a track that faded out (with no fade in
+/// How long the track's gain takes back to 1 where a fade left it under:
+/// a new loop after a track that faded out (with no fade in
 /// of its own), or a time set again while it fades. Long enough not to
 /// click, short enough to be heard as the loop's own start.
 pub const GAIN_RETURN: f64 = 0.25;
@@ -112,12 +112,12 @@ pub const GAIN_DIP: f64 = 0.02;
 /// track's fade, and the next's fade in and fade out.
 const GAIN_POINTS: usize = 8;
 
-/// How long a jump's old notes take to fall to nothing, in seconds (session
-/// 17): a short fade, from the jump's first step, under the place it lands.
+/// How long a jump's old notes take to fall to nothing, in seconds:
+/// a short fade, from the jump's first step, under the place it lands.
 pub const JUMP_FADE: f64 = 0.25;
 
-/// Where a jump within the loop playing goes (session 17, queue item 106a;
-/// `Player::jump`), straight from the seed and the number (promise 11):
+/// Where a jump within the loop playing goes
+/// (`Player::jump`), straight from the seed and the number (promise 11):
 /// nothing before it is made or walked.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Jump {
@@ -129,7 +129,7 @@ pub enum Jump {
     /// A time from the piece's start, in seconds at the tempo playing, on
     /// the phrase line at or before it.
     Seconds(f64),
-    /// A step from the load (0), exactly (session 30h, queue item 116: a
+    /// A step from the load (0), exactly (a
     /// short loop's rail, which a listener presses anywhere): the step
     /// asked, not a phrase line, and the track's clock moves with it, so a
     /// time's track ends as long after it as it would have from that step.
@@ -156,8 +156,8 @@ impl Jump {
     }
 }
 
-/// Where the loop playing is, as a listener hears it (session 17,
-/// `Player::place`): for a piece, in the round playing.
+/// Where the loop playing is, as a listener hears it
+/// (`Player::place`): for a piece, in the round playing.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Place {
     /// The bar heard, from the piece's start (0): whole bars, and the step
@@ -176,8 +176,8 @@ pub struct Place {
     pub section: u64,
 }
 
-/// What a host asks for, beside the seed (promise 11's request, queue item
-/// 85: the vibes with or without weights, and the tempo): the generator's
+/// What a host asks for, beside the seed (promise 11's request,
+/// the vibes with or without weights, and the tempo): the generator's
 /// own, `generator::request::Request`, which says how to build one.
 pub use crate::generator::request::Request;
 
@@ -234,7 +234,7 @@ pub struct Player {
     wandering: bool,
     next_drawn: bool,
     /// Whether the next pass of a piece is drawn but not yet heard: it is
-    /// heard in a block of its own after it (session 16b, `decide`).
+    /// heard in a block of its own after it (`decide`).
     next_unheard: bool,
     /// Whether the loop playing is a piece whose plan is heard (`journeys`).
     journeyed: bool,
@@ -247,8 +247,8 @@ pub struct Player {
     /// How far each pass wanders (`Engine.driftAmount`), 0 for the loop as
     /// composed.
     wander: Biased<{ AMOUNT.to_bits() }>,
-    /// The host's salt on the wander's stream (queue item 92,
-    /// `set_wander_salt`): 0, every code's own wander.
+    /// The host's salt on the wander's stream
+    /// (`set_wander_salt`): 0, every code's own wander.
     salt: u32,
     /// When the loop asked for should take its first step, on the core's
     /// clock (0: as soon as it is made); and, stopped, when to go on.
@@ -256,7 +256,7 @@ pub struct Player {
     resume_at: Option<f64>,
     /// A tempo asked while the loop is being made: it starts at that.
     tempo: Option<f64>,
-    /// The changes waiting for their boundaries (queue item 86), one for
+    /// The changes waiting for their boundaries, one for
     /// each kind of moment but `Now`, and how many have been asked.
     pending: [Maybe<Change>; SLOTS],
     asked: u32,
@@ -268,8 +268,8 @@ pub struct Player {
     beat: Biased<{ 4.0_f64.to_bits() }>,
     /// The full mix or lite's, as started (`attach`).
     full: bool,
-    /// The work the voices asked for, a pass at a time (queue item 87,
-    /// `units`): the budget's `held` when the pass being decided began, and
+    /// The work the voices asked for, a pass at a time
+    /// (`units`): the budget's `held` when the pass being decided began, and
     /// its first step's time; and the mean cost units the voices held over
     /// the last whole pass decided (negative: none yet).
     pass_held: f64,
@@ -281,12 +281,12 @@ pub struct Player {
     /// The loop's setups before a re-roll (`revise`), to send again only
     /// those that differ, as the app's engine does.
     kept: Maybe<Load>,
-    /// How long the track plays (queue item 94a, `set_track`), the step from
+    /// How long the track plays (`set_track`), the step from
     /// the load it counts from, and whether its end was told.
     track: Track,
     count_from: u64,
     ended: bool,
-    /// The track's fades (session 30c, `set_track_with`), the second on the
+    /// The track's fades (`set_track_with`), the second on the
     /// core's clock a time's track ends on (0 until its loop starts), and
     /// the track's gain as planned (`TRACK_GAIN`): its points (a time and a
     /// value, ramped between), how many, whether it ever moved from 1, and
@@ -302,7 +302,7 @@ pub struct Player {
     /// Whether the load being made is a loop resumed on a new core
     /// (`load_resumed`): it doesn't wait out its lateFloor a second time.
     resumed: bool,
-    /// The host's picks (queue item 95, `set_picks`): what every loop the
+    /// The host's picks (`set_picks`): what every loop the
     /// core makes itself asks, and the number the host gave them.
     picks: Request,
     picks_tag: u32,
@@ -316,13 +316,13 @@ pub struct Player {
     own_tag: u32,
     /// What the player tells the host (`event`).
     events: Events,
-    /// A jump under way (session 17, `jump`): the step from the load it
+    /// A jump under way (`jump`): the step from the load it
     /// lands on, and its stage (0: none; 1, the section's second tune made,
     /// a stage a block; 2, its pass drawn; 3, the sequencer moved and the
     /// pass heard; 4, it lands), one a block, as a load is spread.
     jump_to: u64,
     jumping: u8,
-    /// A jump asked while stopped (session 30h: the app's line pressed while
+    /// A jump asked while stopped (the app's line pressed while
     /// paused), taken up at the resume: until then `place` reads it.
     jump_held: bool,
     /// A step jump moves a time's track (`Jump::Step`): whether this one
@@ -491,8 +491,8 @@ impl Player {
         self.jump_held = false;
     }
 
-    /// `load_at` for a loop that was already playing on another core (queue
-    /// item 94b: the app's automatic switch to "lighter on processor", which
+    /// `load_at` for a loop that was already playing on another core
+    /// (the app's automatic switch to "lighter on processor", which
     /// starts a new core at the other quality and the loop again from its
     /// top, as `Engine.load(spec, { resume: true })` does): the same, but its
     /// lateFloor (the kit and the bass sitting out after a load) is not waited
@@ -503,7 +503,7 @@ impl Player {
     }
 
     /// Change to the loop of `seed`, with what `request` asks, at a musical
-    /// moment of the loop playing (queue item 86; `change`'s module says
+    /// moment of the loop playing (`change`'s module says
     /// how): `Moment::Now` as soon as it is made, else on the next beat,
     /// bar line, phrase or pass it can make (`lead` away at least). The old
     /// loop hands over by `handover`. No reset, no second core.
@@ -520,15 +520,15 @@ impl Player {
     }
 
     /// `change`, and the track its loop plays once it starts (`set_track`,
-    /// counted from its first step), or none to keep the track as it is
-    /// (queue item 95). The app arms the loop that follows a track's end
+    /// counted from its first step), or none to keep the track as it is.
+    /// The app arms the loop that follows a track's end
     /// this way, with that loop's own length, so a page asleep at the
     /// boundary leaves the core playing what it would have set.
     pub fn change_with_track(&mut self, seed: u32, request: &Request, moment: Moment, handover: Handover, track: Option<Track>) {
         self.change_with(seed, request, moment, handover, track.map(|t| (t, Fades::NONE)));
     }
 
-    /// `change_with_track`, the track with its fades (session 30c).
+    /// `change_with_track`, the track with its fades.
     pub fn change_with(&mut self, seed: u32, request: &Request, moment: Moment, handover: Handover, track: Option<(Track, Fades)>) {
         let change = Change {
             seed,
@@ -596,7 +596,7 @@ impl Player {
         }
     }
 
-    /// Change to a new loop of the core's own (queue item 95; the app's
+    /// Change to a new loop of the core's own (the app's
     /// Next, at the end of its history): its seed the next drawn from the
     /// host's (`set_draws`), with the host's picks (`set_picks`), at
     /// `moment`, handing over by `handover`; it plays on (its track
@@ -630,7 +630,7 @@ impl Player {
         }
     }
 
-    /// Drop the change waiting for `moment` (queue item 95; nothing for
+    /// Drop the change waiting for `moment` (nothing for
     /// `Moment::Now`, which never waits). The app drops the one armed for
     /// the track's end when nothing it holds comes next, so the core's own
     /// loop follows instead (`set_draws`).
@@ -640,7 +640,7 @@ impl Player {
         }
     }
 
-    /// Hold `request` as the host's picks (queue item 95; the app's New
+    /// Hold `request` as the host's picks (the app's New
     /// loops panel), numbered `tag` by the host: every loop the core makes
     /// itself from now on asks it (`next`, and a track's end with nothing
     /// waiting for it). The loop playing never changes for it, nor does a
@@ -658,8 +658,8 @@ impl Player {
         (&self.picks, self.picks_tag)
     }
 
-    /// Give the core a seed to draw its own loops' seeds from (queue item 95;
-    /// the app draws one at random each time it starts a core): the loops
+    /// Give the core a seed to draw its own loops' seeds from
+    /// (the app draws one at random each time it starts a core): the loops
     /// it makes itself are then a pure function of this seed and the picks
     /// (promise 3). 0 takes the core's own loops away: a track's end with
     /// nothing waiting for it plays on, as before.
@@ -678,7 +678,7 @@ impl Player {
     }
 
     /// The loop playing, made again with `request` and kept in its place
-    /// (queue item 94a; the app's re-roll, `loadSpec(next, { keepPosition:
+    /// (the app's re-roll, `loadSpec(next, { keepPosition:
     /// true })`): the seed's loop with a layer's new seed, say
     /// (`Request::with_layer_seed`). It is made a stage a block as a load is
     /// and takes over at the next step the old loop would have decided,
@@ -703,7 +703,7 @@ impl Player {
         }
     }
 
-    /// How long the track plays (queue item 94a; the app's track length):
+    /// How long the track plays (the app's track length):
     /// whole passes or bars (a time: `set_track_with`), counted from the step heard now (the pass
     /// playing as the first), or from a new loop's first step. It holds
     /// across loads until set again. When it has run, the player tells the
@@ -713,7 +713,7 @@ impl Player {
         self.set_track_with(host, track, Fades::NONE);
     }
 
-    /// `set_track`, with its fades (session 30c, queue item 111; the app's
+    /// `set_track`, with its fades (the app's
     /// Track length view). A time (`Track::Seconds`) counts on the core's
     /// clock from the block the core renders next (or from a new loop's
     /// first step), so a tempo change doesn't move it; its music is done on
@@ -749,8 +749,8 @@ impl Player {
         if let Some(c) = self.pending.get_mut(END_SLOT).and_then(Maybe::as_mut) {
             c.target = None;
         }
-        // A long piece's sections drawn already hear the new stop (session
-        // 15: a close that lands where the track ends).
+        // A long piece's sections drawn already hear the new stop
+        // (a close that lands where the track ends).
         if self.state == State::Playing && self.journeyed && self.wandering {
             self.hear_pass(self.current, self.seq.loop_count);
             if self.next_drawn {
@@ -771,8 +771,8 @@ impl Player {
         self.fades
     }
 
-    /// The second a time's track ends on, on the core's clock, as it stands
-    /// (session 30c); none for a count of passes or bars, on and on, or
+    /// The second a time's track ends on, on the core's clock, as it stands;
+    /// none for a count of passes or bars, on and on, or
     /// before its loop starts.
     #[must_use]
     pub fn track_at(&self) -> Option<f64> {
@@ -815,7 +815,7 @@ impl Player {
         }
     }
 
-    /// The gain's plan from `from` on (session 30c): what it holds then
+    /// The gain's plan from `from` on: what it holds then
     /// kept, and the track's own fades after it. `fresh` is a loop starting
     /// at `from` (its fade in plays); else the track was set as it plays.
     fn plan_track(&mut self, from: f64, fresh: bool) {
@@ -852,8 +852,8 @@ impl Player {
         self.replan = true;
     }
 
-    /// The gain's plan after a step's jump moved a time's track (session
-    /// 30h): what it holds at `from` kept, gliding over `GAIN_DIP` to where
+    /// The gain's plan after a step's jump moved a time's track:
+    /// what it holds at `from` kept, gliding over `GAIN_DIP` to where
     /// the track's own fades have it on its clock there (part way up its
     /// fade in, or down its fade out, or at its level), and its fades from
     /// there as they would have come.
@@ -921,7 +921,7 @@ impl Player {
         }
     }
 
-    /// A time's fade out under way (session 30c): every note sounding or
+    /// A time's fade out under way: every note sounding or
     /// waiting falls to nothing on the track's last second, the notes
     /// decided since the last block among them (each fades from where the
     /// fade has reached), so the room and the echo fall with them.
@@ -937,7 +937,7 @@ impl Player {
     /// while it plays on (or nothing plays, or it has ended).
     #[must_use]
     pub fn track_end(&self) -> Option<u64> {
-        // Stopped, where it stood (session 30h: a jump while paused is told
+        // Stopped, where it stood (a jump while paused is told
         // with the track's end, which the app's rail is drawn to); none once
         // it has ended.
         let live = self.state == State::Playing || (self.paused() && !self.ended);
@@ -1052,7 +1052,7 @@ impl Player {
         &self.generator
     }
 
-    /// Force a choice in every loop made from now on (queue item 83's
+    /// Force a choice in every loop made from now on (for
     /// clips): `Generator::force`. The sketch build only.
     ///
     /// # Errors
@@ -1069,8 +1069,8 @@ impl Player {
         (self.seq.step, self.seq.loop_count, self.seq.next_step_time)
     }
 
-    /// Go on from somewhere else in the loop playing (session 17, queue item
-    /// 106a): a section, a bar or a time of a piece (`Jump`), landing on the
+    /// Go on from somewhere else in the loop playing:
+    /// a section, a bar or a time of a piece (`Jump`), landing on the
     /// phrase line at or before it (a round's last line at most, in a piece
     /// that comes round), reached straight from the seed and the section's
     /// number (promise 11). Its section is made a stage a block, as a load
@@ -1084,7 +1084,7 @@ impl Player {
     /// place; the track counts as it did, from the load, but for a step
     /// (`Jump::Step`), which moves a time's track with it. Stopped (the
     /// app's Pause), it is held: `place` reads it, and it lands as `resume`
-    /// goes on, from there (session 30h). False, and nothing moves, with no
+    /// goes on, from there. False, and nothing moves, with no
     /// loop playing or stopped, or for a place that is not a number.
     pub fn jump(&mut self, to: Jump) -> bool {
         let paused = self.paused();
@@ -1221,7 +1221,7 @@ impl Player {
         if self.track.end_step(self.generator.spec(), self.count_from).is_some_and(|end| abs < end) {
             self.ended = false;
         }
-        // A step's jump moves a time's track (session 30h): it ends as long
+        // A step's jump moves a time's track: it ends as long
         // after the step as it would have from there, its fades with it.
         if self.jump_timed && matches!(self.track, Track::Seconds(_)) && self.track_at > 0.0 {
             self.track_at = start + self.jump_left.max(0.0);
@@ -1240,7 +1240,7 @@ impl Player {
     #[must_use]
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole steps, far below 2^53
     pub fn place<H: Host>(&self, host: &H) -> Option<Place> {
-        // Stopped with a jump held (session 30h): where it will go on from.
+        // Stopped with a jump held: where it will go on from.
         let held = self.jump_held && self.paused();
         if self.state != State::Playing && !held {
             return None;
@@ -1292,7 +1292,7 @@ impl Player {
         })
     }
 
-    /// A long piece's marks for the page (session 17, queue item 106a): the
+    /// A long piece's marks for the page: the
     /// units of `count` sections from section `from` where something a
     /// listener would see marked begins (`each`, with the unit's first bar
     /// from the piece's start, its section, and the plan's unit,
@@ -1341,7 +1341,7 @@ impl Player {
         Some(())
     }
 
-    /// The piece of the loop playing (queue item 88: a length asked), or none
+    /// The piece of the loop playing (a length asked), or none
     /// for a loop with no length; `position`'s pass is its section.
     #[must_use]
     pub fn piece(&self) -> Option<Piece> {
@@ -1383,9 +1383,9 @@ impl Player {
                 // The first pass, at the pass count the engine still holds
                 // (`_wander(this.loopCount)` before the load resets it); a
                 // change's loop at its own first, so it plays as it does
-                // alone (queue item 86); a piece's at its first section, so
-                // a section is the same however it is reached (queue item
-                // 88).
+                // alone; a piece's at its first section, so
+                // a section is the same however it is reached
+                // .
                 self.current = 0;
                 self.journeyed = self.journeys();
                 self.wandering = self.wander.get() > 0.0 || self.journeyed;
@@ -1404,7 +1404,7 @@ impl Player {
     /// its stream salted as the host asked.
     fn draw(&mut self, slot: usize, number: u32) {
         self.draw_unheard(slot, number);
-        // A long piece's plan, heard (queue items 102b and 102c).
+        // A long piece's plan, heard.
         if self.journeyed {
             self.hear_pass(slot, number);
         }
@@ -1413,7 +1413,7 @@ impl Player {
     /// `draw`, the pass alone: a long piece's plan is heard after it
     /// (`hear_pass`).
     fn draw_unheard(&mut self, slot: usize, number: u32) {
-        // What the section plays beside the loop's own tune (session 14):
+        // What the section plays beside the loop's own tune:
         // made in the blocks before, a stage each (`decide`); here only
         // where the pass is drawn with no blocks to spare (a load's first).
         if self.journeyed {
@@ -1429,8 +1429,8 @@ impl Player {
 
     /// Hear pass `passes[slot]`, section `number` of a long piece: its plan
     /// (`Heard::hear`), and where the length slider will stop the piece
-    /// before its own close, the close it lands with there (session 15,
-    /// `Heard::stop_at`). Again when the slider moves (`set_track`): the
+    /// before its own close, the close it lands with there
+    /// (`Heard::stop_at`). Again when the slider moves (`set_track`): the
     /// same section heard again is the same but for the stop.
     fn hear_pass(&mut self, slot: usize, number: u32) {
         let stop = self.stop_for(number);
@@ -1459,7 +1459,7 @@ impl Player {
         let fresh = self.state == State::Wandering && self.asked_by != Asked::InPlace;
         let end = match self.track {
             // A time lands its close on the phrase line at or before its
-            // second, and only with its fade out (session 30c): without,
+            // second, and only with its fade out: without,
             // the piece stops on the second as it stands.
             Track::Seconds(n) => {
                 if !self.fades.fade_out {
@@ -1493,8 +1493,8 @@ impl Player {
         (end > start).then(|| ((end - start) as f64, decided as f64))
     }
 
-    /// Whether the loop playing is a piece whose plan is heard (a wander's,
-    /// queue item 102b; an arc's, 102c), so its sections are drawn as passes
+    /// Whether the loop playing is a piece whose plan is heard (a wander's
+    /// or an arc's), so its sections are drawn as passes
     /// at any wander setting: the slider is only how much each breathes.
     fn journeys(&self) -> bool {
         self.generator.form().is_some()
@@ -1529,13 +1529,13 @@ impl Player {
             // ahead (a tuned kick's fit can take 90-odd blocks, past the
             // lookahead), so its next step has passed: the first of its
             // steps still to come, so the new loop starts on its grid all
-            // the same (queue item 86b).
+            // the same.
             at + (js::floor((now - at) / sd) + 1.0) * sd
         } else {
             now + START
         };
         self.lead_in = start == now + START;
-        // A loop handing over by a crossfade (queue item 86): its organ lets
+        // A loop handing over by a crossfade: its organ lets
         // go over the fade, and everything it handed over falls from the new
         // loop's first step, before the new loop hands over a note.
         let fade = if self.was_playing { self.handover.fade() } else { None };
@@ -1579,7 +1579,7 @@ impl Player {
             c.target = None;
         }
         // The track counts from the new loop's first step: a time's to its
-        // second, and its fades planned from there (session 30c).
+        // second, and its fades planned from there.
         self.count_from = 0;
         self.ended = false;
         self.track_at = match self.track {
@@ -1705,7 +1705,7 @@ impl Player {
         }
         let lead = self.lead();
         let abs = self.seq.abs_step;
-        // A piece with a section cut short (queue item 88): its boundaries
+        // A piece with a section cut short: its boundaries
         // walked step by step, section by section, from the next step.
         if let Some(p) = Piece::of(g.spec()).filter(Piece::cut) {
             let (mut s, mut n, mut t) = (self.seq.step, u64::from(self.seq.loop_count), abs);
@@ -1741,8 +1741,8 @@ impl Player {
     /// there. Returns the steps decided, if it began one.
     fn arm<H: Host>(&mut self, host: &mut H, now: f64) -> Option<usize> {
         // A track that ends with nothing waiting for it hands over to a loop
-        // of the core's own, where the host gave a seed to draw from (queue
-        // item 95), so the page may sleep through it.
+        // of the core's own, where the host gave a seed to draw from,
+        // so the page may sleep through it.
         if self.draws != 0
             && self.track != Track::Always
             && self.pending.get(END_SLOT).is_some_and(|p| p.get().is_none())
@@ -1754,7 +1754,7 @@ impl Player {
                 *p = Maybe::some(c);
             }
         }
-        // A time's end falls on a step the tempo moves (session 30c): it is
+        // A time's end falls on a step the tempo moves: it is
         // worked out again each block, until it is the lead away.
         let far = |t: u64| self.time_of(t) - now > self.lead();
         if self.track_at().is_some() && self.pending.get(END_SLOT).and_then(Maybe::get).and_then(|c| c.target).is_some_and(far)
@@ -1797,7 +1797,7 @@ impl Player {
         // notes ring out at a pass's end, and fall over the crossfade asked
         // at a phrase line inside one.
         let mut handover = change.handover;
-        // A time's track (session 30c): the next loop starts on its second,
+        // A time's track: the next loop starts on its second,
         // the old one's notes left to ring (or, with the fade out, ended
         // there, the last decided among them).
         let timed = if slot == END_SLOT { self.track_at() } else { None };
@@ -1810,7 +1810,7 @@ impl Player {
                 self.ended = true;
                 self.events.push(Event { time: start, kind: Kind::End, number: 0, step: target });
             }
-            // (And where a long piece's close landed there: session 15.)
+            // (And where a long piece's close landed there.)
             if timed.is_some() || track::round_steps(self.generator.spec()).is_some_and(|r| target.is_multiple_of(r)) || self.passes.iter().any(|p| p.heard.stops) {
                 handover = Handover::RingOut;
             }
@@ -1842,7 +1842,7 @@ impl Player {
         lp.step = step;
         let (time, abs) = (self.seq.next_step_time, self.seq.abs_step);
         self.seq.schedule_step(host, &mut self.synth, &lp, now);
-        // What each layer sounded there, as heard (session 30b).
+        // What each layer sounded there, as heard.
         self.events.push(Event { time, kind: Kind::Heard, number: events::pack_heard(&self.seq.heard, &self.seq.share), step: abs });
         if self.seq.advance(&lp) {
             self.pass_measured();
@@ -1908,7 +1908,7 @@ impl Player {
             let was = self.seq.next_step_time;
             self.seq.next_step_time = if at > now { at } else { now + START };
             self.state = State::Playing;
-            // A time's track waits out the pause (session 30c): its second,
+            // A time's track waits out the pause: its second,
             // and the fades planned after the pause began, move with the
             // music.
             let shift = self.seq.next_step_time - was;
@@ -1931,7 +1931,7 @@ impl Player {
             // what was scheduled.
             self.replan = self.replan || self.gain_moved;
             // A jump asked while stopped lands now, a stage a block, and
-            // the music goes on from there (session 30h).
+            // the music goes on from there.
             if self.jump_held {
                 self.jump_held = false;
                 self.jumping = self.first_stage();
@@ -1955,7 +1955,7 @@ impl Player {
         }
         self.fade_notes(host, now, false);
         // Never past a change's boundary: the step it starts on is the next
-        // loop's; nor past a time's second (session 30c).
+        // loop's; nor past a time's second.
         let mut last = self.soonest().map_or(u64::MAX, |(_, t)| t);
         let end = self.track_at();
         if let Some(t) = end {
@@ -1965,13 +1965,13 @@ impl Player {
         if self.wandering && !self.next_drawn && !due(&self.seq) {
             let n = self.seq.loop_count.wrapping_add(1);
             // The next section's second tune first, a stage a block, as a
-            // load is spread (session 14: another seed's tune is a spec's
+            // load is spread (another seed's tune is a spec's
             // making and a melody's).
             if self.journeyed && !self.generator.prepare(u64::from(n)) {
                 return Work::Pass;
             }
             // A piece's pass drawn in one block and heard in the next
-            // (session 16b: its joins read from their notes), so neither
+            // (its joins read from their notes), so neither
             // block holds both.
             if self.journeyed && !self.next_unheard {
                 self.draw_unheard(1 - self.current, n);
@@ -2056,7 +2056,7 @@ impl Player {
         }
     }
 
-    /// The salt on the wander's stream from now on (queue item 92), heard
+    /// The salt on the wander's stream from now on, heard
     /// from the next pass: a host that wants a loop to wander differently
     /// each time it is played (the app, across the wander slider's upper
     /// range: `UNREPEATABLE_FROM` in `js/engine.js`) sends a new one each
@@ -2104,7 +2104,7 @@ impl Player {
             self.seq.bpm = bpm;
             Synth::set_echo(host, (60.0 / bpm) * self.generator.settings().echo_beats.get(), now);
             // A time's second stays where it is, and the step it falls on
-            // moves: a long piece's close lands on it again (session 30c).
+            // moves: a long piece's close lands on it again.
             if self.track_at().is_some() && self.fades.fade_out && self.journeyed && self.wandering {
                 self.hear_pass(self.current, self.seq.loop_count);
                 if self.next_drawn {
@@ -2142,7 +2142,7 @@ impl Default for Player {
 impl Player {
     /// The voice calls the budget was asked and refused, by layer, and
     /// those it let go (`Budget::counts`, `Budget::stolen`), for the
-    /// measuring tools (queue item 96; the tools build only).
+    /// measuring tools (the tools build only).
     #[must_use]
     pub fn budget_counts(&self) -> (budget::Counts, [u32; 5]) {
         (self.synth.budget.counts(), self.synth.budget.stolen())

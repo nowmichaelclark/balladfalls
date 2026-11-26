@@ -1,4 +1,4 @@
-//! `render` (queue item 80): the layers drawn over the plan, then the
+//! `render`: the layers drawn over the plan, then the
 //! entry schedules and their repairs, the gaps, the per-loop choices
 //! (`drawChoices`, which the pedal needs), the pedal, the register work,
 //! the spellings, the long chords' octave, the slurs, the strums, the
@@ -33,20 +33,20 @@ pub fn layer_bars(cx: &Cx, layer: Layer) -> f64 {
 /// The chords layer's events.
 pub type Chords = List<ChordEvent, CHORD_EVENTS_MAX>;
 
-/// The most choices there can be: room past today's sixteen (queue item
-/// 105), so a seventeenth is a line of data.
+/// The most choices there can be: room past today's sixteen,
+/// so a seventeenth is a line of data.
 const CHOICES_MAX: usize = 32;
 
 /// `Render::forced`'s mark for a choice nothing forces: zero, so that a render
-/// of nothing is all zero bytes (queue item 93); a forced option is stored
+/// of nothing is all zero bytes; a forced option is stored
 /// as its number plus one.
 #[cfg(feature = "sketch")]
 const NOT_FORCED: u8 = 0;
 
-/// The salt of a choice's own option stream (`Render::own_option`, queue
-/// item 101), plus the choice's place.
+/// The salt of a choice's own option stream (`Render::own_option`),
+/// plus the choice's place.
 const OWN_OPTION_SALT: u32 = 0x4f50_5400;
-/// The salt of a choice drawn alone (`alone`, queue item 101b), plus its
+/// The salt of a choice drawn alone (`alone`), plus its
 /// place.
 const ALONE_SALT: u32 = 0x414c_4e00;
 
@@ -66,7 +66,7 @@ pub struct Render {
     pub quiet: List<usize, MAX_BARS>,
     /// Each choice's option, in `CHOICES`' order.
     pub choices: List<Word, CHOICES_MAX>,
-    /// Choices a clip forces (`dlrender --force`, queue item 83): each
+    /// Choices a clip forces (`dlrender --force`): each
     /// choice's option number, or `NOT_FORCED`. The sketch build only.
     #[cfg(feature = "sketch")]
     forced: [u8; CHOICES_MAX],
@@ -78,19 +78,18 @@ pub struct Render {
     pub depth: Depth,
     /// Whether `depth` was decided (a developing loop's melody); a flag
     /// beside it, not an `Option`, so that a render of nothing is all zero
-    /// bytes (queue item 93).
+    /// bytes.
     pub depth_made: bool,
     /// The octave (in semitones) the chords take, decided from the
-    /// progression once the melody is drawn (`chordsOctave`, queue item
-    /// 84), and applied by the register work; less than an octave down
-    /// where a whole one would leave them too far under the tune (`lower`,
-    /// queue item 84b).
+    /// progression once the melody is drawn (`chordsOctave`),
+    /// and applied by the register work; less than an octave down
+    /// where a whole one would leave them too far under the tune (`lower`).
     pub chord_shift: f64,
     /// An octave decided elsewhere, on today's chord lengths (`Generator`
     /// plans and draws those first for a loop with held chords); taken by
     /// the next melody part in place of its own reading.
     pub register_given: Option<f64>,
-    /// colorTone's held colors (queue item 101e), where the loop drew it:
+    /// colorTone's held colors, where the loop drew it:
     /// made once the chords' octave is taken (`color::colors`).
     pub colors: Colors,
     // Working room: the pedal's notes, a developing loop's sections.
@@ -100,24 +99,24 @@ pub struct Render {
 }
 
 /// How near under the tune the chords go where a whole octave down would
-/// leave them more than an octave under it (queue item 84b): a fifth, from
+/// leave them more than an octave under it: a fifth, from
 /// the tune's centre to theirs. For Mikey's ears: nearer than this, the
 /// chords' top notes start to meet the tune's low ones.
 pub const NEAR: f64 = 7.0;
 
-/// How much deeper than `NEAR` a loop with held chords goes (queue item
-/// 84b): its octave is read on today's chord lengths (`Render::held_octave`),
+/// How much deeper than `NEAR` a loop with held chords goes:
+/// its octave is read on today's chord lengths (`Render::held_octave`),
 /// whose tune can sit a few semitones from its own.
 pub const HELD: f64 = 2.0;
 
 /// Whether `by` moves a chord whole (whole octaves, or nothing) rather than
-/// only its top notes (queue item 84b).
+/// only its top notes.
 fn whole_octaves(by: f64) -> bool {
     by % 12.0 == 0.0 || !(by > -12.0 && by < 0.0)
 }
 
 /// The line over which a chord's notes go an octave down for a move of
-/// less than an octave down (queue item 84b): its top notes, as many as take
+/// less than an octave down: its top notes, as many as take
 /// its centre at least `by` down (each moves it an octave over the chord's
 /// size), so the chord keeps its notes and changes its inversion. `None`
 /// for a chord of no notes.
@@ -134,7 +133,7 @@ pub fn line(chord: &[i16], by: f64) -> Option<i16> {
 }
 
 /// A chord's notes moved by `by` semitones, as the chords' octave moves
-/// them (queue items 84 and 84b): whole octaves move every note; less than
+/// them: whole octaves move every note; less than
 /// an octave down moves every note at or over `over`'s line (`line`: the
 /// chord as the progression voices it, which the layer's notes may
 /// arpeggiate) an octave down. The notes stay in their places in the list
@@ -215,7 +214,7 @@ impl Render {
     /// schedules, their repairs and the gaps; the choices and the pedal; the
     /// register work, the spellings, the slurs, the strums and the
     /// ornaments. A load spread across audio blocks runs one a block (the
-    /// player, queue item 82).
+    /// player).
     #[allow(clippy::too_many_lines)] // render's steps, in order
     pub fn part(&mut self, part: usize, cx: &Cx, plan: &Plan) {
         let bass_bars = layer_bars(cx, Layer::Bass);
@@ -248,10 +247,10 @@ impl Render {
         self.chord_shift = self.register_given.take().map_or_else(|| self.chords_octave(cx), Self::held_octave);
     }
 
-    /// The loop's tune made again as another tune's (session 14, a long
+    /// The loop's tune made again as another tune's (a long
     /// piece's second theme or its own answered): `cx`'s spec is the loop's
-    /// with the tune to hold (`Spec::tune`, the request's theme machinery,
-    /// queue item 85d), so the notes are drawn exactly as the loop's own
+    /// with the tune to hold (`Spec::tune`, the request's theme machinery),
+    /// so the notes are drawn exactly as the loop's own
     /// were, over the same chords, around the other figure. Into `out`;
     /// nothing of the loop moves (the working lists apart).
     pub fn second_melody(&mut self, cx: &Cx, plan: &Plan, out: &mut Melody) {
@@ -285,8 +284,8 @@ impl Render {
         if self.harmony.slots.iter().any(|s| s.steps.is_some()) {
             Self::spell_tune(&self.harmony, cx, out);
         }
-        // The chords' octave was read against the loop's own tune (queue
-        // item 84): a second tune whose centre sits within five semitones
+        // The chords' octave was read against the loop's own tune:
+        // a second tune whose centre sits within five semitones
         // of the chords' moves an octave away from them, where it has room.
         let centre = |sum: f64, n: usize| (n > 0).then(|| sum / js::num(n));
         let chords = centre(self.chords.iter().flat_map(|e| e.notes.iter()).map(|&n| f64::from(n)).sum(), self.chords.iter().map(|e| e.notes.len()).sum());
@@ -300,7 +299,7 @@ impl Render {
         }
         // As loud as the loop's own tune: its notes' mean velocity the
         // loop's tune's (a quieter second theme sat a role that should
-        // rise 2 LU under the theme before it: session 14 measured).
+        // rise 2 LU under the theme before it, as measured).
         let level = |m: &Melody| centre(m.iter().filter(|e| e.vel != 0.0).map(|e| e.vel).sum(), m.iter().filter(|e| e.vel != 0.0).count());
         if let (Some(own), Some(other)) = (level(&self.melody), level(out)) {
             let by = js::clamp(own / other, 0.5, 2.0);
@@ -331,7 +330,7 @@ impl Render {
 
     /// The chords' octave the progression and the tune ask for, without
     /// building the rest of the loop: the harmony of `plan` and the melody
-    /// over it (queue item 84). `Generator` uses it on today's chord
+    /// over it. `Generator` uses it on today's chord
     /// lengths, for a loop with held chords.
     pub fn register_of(&mut self, cx: &Cx, plan: &Plan) -> f64 {
         self.harmony = plan.harmony;
@@ -427,7 +426,7 @@ impl Render {
         self.kit_choices(cx);
     }
 
-    /// Batch 6's kits (queue item 101d, `kit`), where the loop drew them:
+    /// Batch 6's kits (`kit`), where the loop drew them:
     /// the kit rewritten once the choices are drawn and the pedal made, on
     /// today's kit, so every draw before is as it was. A hit written where the kit is
     /// silent (its entry's bars, a gap) is silent, as the loop's own are.
@@ -530,8 +529,8 @@ impl Render {
     fn apply_form(&mut self, layer: Layer, spb: f64) {
         let Some(form) = self.form.as_ref() else { return };
         let sched = &form[layer as usize];
-        // A layer re-rolled has no schedule and plays throughout (queue item
-        // 94a; `applyForm(events, null)`).
+        // A layer re-rolled has no schedule and plays throughout
+        // (`applyForm(events, null)`).
         if sched.is_empty() {
             return;
         }
@@ -641,11 +640,11 @@ impl Render {
 
     /// Force the choice `id` to the option `option` in every loop made from
     /// now on, whatever it drew and whether or not the loop is eligible for
-    /// it: a clip's lever (`dlrender --force lateFloor=on`, queue item 83),
-    /// as the brain's Session 26 patch did at the end of `drawChoices`.
+    /// it: a clip's lever (`dlrender --force lateFloor=on`),
+    /// at the end of `drawChoices`.
     /// `option` `None` lifts the force. An error naming what is wrong, in
     /// plain ASCII, if the choice or the option does not exist. The sketch
-    /// build only: the item 85 request brings this to every build.
+    /// build only.
     ///
     /// # Errors
     /// The choice or the option is not in the data.
@@ -672,13 +671,13 @@ impl Render {
         if CHOICES.is_empty() {
             return;
         }
-        // The choices drawn alone (`alone`, queue item 101b), each on a
+        // The choices drawn alone (`alone`), each on a
         // stream of its own, before the list so it knows how many there are;
         // in their order, as dottedPulse's eligibility reads tripletKit's.
         // No choice in the list reads one of them.
         let mut alone = 0;
         // A choice that joined after the loop's version is never drawn, nor
-        // counted against its changes (queue item 105).
+        // counted against its changes.
         let there = |c: &data::Choice| data::there(data::CODE_CHOICES, c.id, spec.version);
         for (i, c) in CHOICES.iter().enumerate() {
             let Some(share) = c.alone else { continue };
@@ -698,7 +697,7 @@ impl Render {
         }
         let mut r = Rng::new(js::salted(spec.seed, 0x4348_4f49, 1));
         // How many changes the loop gets, less those batch 6's own draws
-        // give it (queue item 101h, Mikey 2026-11-17): the choices drawn
+        // give it (Mikey 2026-11-17): the choices drawn
         // alone and the four settings drawn outside the list. The list fills
         // only what they leave, so most loops still get one or two.
         let count = r.weighted(data::CHANGE_COUNTS).unwrap_or(0.0) - js::num(alone) - js::num(self.settings_changes(cx));
@@ -730,12 +729,12 @@ impl Render {
             }
             k += 1.0;
         }
-        // The request's pins (queue item 85b), laid over the draws once they
+        // The request's pins, laid over the draws once they
         // are all made: today's option always, another where the loop is
         // eligible for it, and today's where it is not (a loop not eligible
         // for the choice drew today's already; one that may play the choice
         // but not this option, padSweep's fast with no kit, plays today's
-        // rather than what it drew: queue item 101a).
+        // rather than what it drew).
         for (i, c) in CHOICES.iter().enumerate() {
             let Some(o) = spec.pins.choice(i) else { continue };
             let Some(&(name, _)) = c.options.get(o) else { continue };
@@ -755,7 +754,7 @@ impl Render {
     }
 
     /// How many of the four settings drawn outside the list of choices the
-    /// loop plays (queue item 101h): tuningOffset, planingSevenths, lowBell
+    /// loop plays: tuningOffset, planingSevenths, lowBell
     /// (dropSpotlight with it, a kind of its bell) and twang, each as load
     /// draws it, from the loop as it stands before its choices. twang's kit
     /// is the kit before the choices add to it (tripletKit, dottedPulse), so
@@ -785,7 +784,7 @@ impl Render {
         self.chords.iter().any(|e| e.vel != 0.0 && !e.notes.is_empty())
     }
 
-    /// Whether the kit is no busier than twang's soft one (queue item 101h):
+    /// Whether the kit is no busier than twang's soft one:
     /// its hits a second over the kit's own cycle, `[setting twang] kitMost`
     /// or fewer (no kit at all among them).
     #[must_use]
@@ -799,7 +798,7 @@ impl Render {
     }
 
     /// The option choice number `i` plays once picked, for a choice whose
-    /// option is drawn on a stream of its own (`ownStream`, queue item 101):
+    /// option is drawn on a stream of its own (`ownStream`):
     /// one draw on the loop's seed salted by the choice's place, among the
     /// options other than today's that the loop may play
     /// (`option_eligible`), each leaned by its vibes. The choices' own
@@ -820,7 +819,7 @@ impl Render {
 
     /// Whether a loop may play option `option` of choice `id`, beside the
     /// choice's own test (`eligible`): wideSweep's fast swing only on a loop
-    /// with a kit (queue item 101a). Every other option, wherever its choice
+    /// with a kit. Every other option, wherever its choice
     /// may go.
     fn option_eligible(&self, id: &str, option: &str) -> bool {
         match (id, option) {
@@ -850,16 +849,16 @@ impl Render {
                 }
             }),
             "dubStab" => plays_chords && has_drums && self.notes_per_second(cx) >= 7.0,
-            // padWow and widePad: any loop that plays a chord (queue items
-            // 101b and 101c).
+            // padWow and widePad: any loop that plays a chord
+            // .
             "organ" | "padWow" | "widePad" => plays_chords,
-            // colorTone (queue item 101e): a chord that can take a color.
+            // colorTone: a chord that can take a color.
             "colorTone" => color::colorable(&self.harmony.slots, &self.chords, cx.spec),
             "wash" | "arc" => true,
-            // tripletKit (queue item 101d): any loop with a kit, but in 6/8,
+            // tripletKit: any loop with a kit, but in 6/8,
             // whose beat's thirds are the eighths it already plays.
             "tripletKit" => has_drums && cx.metre != Metre::SixEight,
-            // dottedPulse (queue item 101d): a kit in a bar of 16 steps (4/4,
+            // dottedPulse: a kit in a bar of 16 steps (4/4,
             // where the sketch was heard), not one in threes (tripletKit is
             // drawn first).
             "dottedPulse" => has_drums && cx.spb == 16.0 && cx.metre != Metre::SixEight && self.choice("tripletKit") != Some("on"),
@@ -924,8 +923,8 @@ impl Render {
     }
 
     /// A loop with held chords takes the octave read on today's lengths
-    /// (`by`, queue item 84): whole octaves, or none, as they are. Less
-    /// than an octave down (queue item 84b) is read there for a tune that
+    /// (`by`): whole octaves, or none, as they are. Less
+    /// than an octave down is read there for a tune that
     /// may sit a few semitones from the loop's own, so it goes `HELD` deeper,
     /// never past an octave: still read only on today's lengths, so nothing
     /// the chords' lengths follow (a tempo, a pin) can move it.
@@ -959,7 +958,7 @@ impl Render {
             } else {
                 down.first().copied().unwrap_or(0.0)
             };
-            // Queue item 84b: a whole octave down from a centre already
+            // A whole octave down from a centre already
             // under the tune's leaves the chords more than an octave under
             // it (Mikey's blind album preferred them nearer). They go down
             // only as far as a fifth under the tune (`NEAR`), their top
@@ -999,7 +998,7 @@ impl Render {
         }
     }
 
-    /// A planed loop's pitched textures (queue item 101f): a swell, a bell
+    /// A planed loop's pitched textures: a swell, a bell
     /// or a chime sounds its chord's own notes, and where it would ring on
     /// into a chord whose scale lacks one of them (planed chords move a step
     /// or a minor third, so most of a two-bar swell's second bar would rub)
@@ -1026,7 +1025,7 @@ impl Render {
     }
 
     /// `spellOver`'s respelling of one note over the chord at its step,
-    /// along the mode's steps. Over a planed chord (queue item 101f) a note
+    /// along the mode's steps. Over a planed chord a note
     /// of the bass (`tune` false), and any outside the mode, goes to the
     /// nearest note of the chord's scale instead (`planing::snap`): the
     /// bass plays the planed roots, not the mode's degrees.
@@ -1279,8 +1278,8 @@ impl Render {
         w.end_obj();
     }
 
-    /// `choices`' text: the choices there at the loop's `version` (queue
-    /// item 105; a choice that joined later is no part of an older code's
+    /// `choices`' text: the choices there at the loop's `version`
+    /// (a choice that joined later is no part of an older code's
     /// loop).
     pub fn write_choices<S: Sink>(&self, w: &mut Writer<S>, version: u32) {
         let mut order: List<usize, CHOICES_MAX> = List::new();
@@ -1299,8 +1298,8 @@ impl Render {
     }
 }
 
-/// Choice `c`'s options other than today's that had joined by `version`
-/// (queue item 105), in their order: an option added later moves no older
+/// Choice `c`'s options other than today's that had joined by `version`,
+/// in their order: an option added later moves no older
 /// code's draw.
 fn options_at(c: &data::Choice, version: u32) -> List<(&'static str, f64), { data::WORDS_MOST }> {
     data::joined_of(c.options.get(1..).unwrap_or(&[]), data::options_of(c.id), version)

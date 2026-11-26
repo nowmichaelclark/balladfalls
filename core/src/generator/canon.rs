@@ -1,4 +1,4 @@
-//! The canonical text and its hash (queue item 77; `tools/gen-golden.mjs`,
+//! The canonical text and its hash (`tools/gen-golden.mjs`,
 //! "The canonical text"), written as the JavaScript writes it, so the Rust
 //! generator's decisions hash to the goldens' lines.
 //!

@@ -519,7 +519,7 @@ pub fn vibed(mut c: Char, v: Option<&Vibes>) -> Char {
 }
 
 /// `characterOf`: the loop's profile from its mix and its vibes, its pools
-/// holding only what had joined by `version` (queue item 105; 0, the newest:
+/// holding only what had joined by `version` (0, the newest:
 /// every member).
 #[must_use]
 pub fn character_of(mix: &[(usize, f64)], v: Option<&Vibes>, version: u32) -> Char {

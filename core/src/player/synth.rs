@@ -1,4 +1,4 @@
-//! The synth's note calls (queue item 82): what `Synth` in `js/synth.js`
+//! The synth's note calls: what `Synth` in `js/synth.js`
 //! does with each note the engine asks for, on the core: the voice budget
 //! asked as it asks it, the voice's own values worked out as it works them
 //! out, and the note handed to the core with the parts that got through.
@@ -240,13 +240,13 @@ pub struct Synth {
     pub volume: Biased<{ VOLUME.to_bits() }>,
     /// The profile's level (`_gain`).
     pub level: Biased<{ 1.0_f64.to_bits() }>,
-    /// How far the loop plays off A440, in semitones (tuningOffset, queue
-    /// item 101b; `set_tuning`): added to every pitched note it sends, and
+    /// How far the loop plays off A440, in semitones (tuningOffset,
+    /// `set_tuning`): added to every pitched note it sends, and
     /// to the pitches a note carries with it (the note a slide or a slur
     /// comes from, a stab's other notes, the organ's chords).
     tune: f64,
-    /// How far a long piece's plan has each channel down (queue item 102b,
-    /// `set_plan_level`: 0 its own, 1 at rest), in the core's channel order;
+    /// How far a long piece's plan has each channel down
+    /// (`set_plan_level`: 0 its own, 1 at rest), in the core's channel order;
     /// a mute lifted comes back to this.
     plan_cut: [f64; 5],
     /// The plan's last move of the warmth and the space (`glide_tone`).
@@ -255,13 +255,13 @@ pub struct Synth {
     /// whether one is in force, so a new loop lets it go.
     plan_aim: f64,
     aimed: bool,
-    /// How each channel's plan level glides (session 30b, `plan_share`):
+    /// How each channel's plan level glides (`plan_share`):
     /// how far down it starts and ends (0 its own, as `plan_cut`), when it
     /// starts and its time constant, in the core's channel order. All
     /// zeros: every channel at its own level.
     plan_glide: [[f64; 4]; 5],
     /// The loudest note handed to each of the core's channels since the
-    /// sequencer last cleared it (session 30b, `take_sounded`): what a
+    /// sequencer last cleared it (`take_sounded`): what a
     /// part that plays for no layer of its own sounded there (a glass, a
     /// bell, a twang's string), at the velocity it was sent.
     sounded: [f64; 6],
@@ -295,7 +295,7 @@ impl Synth {
         }
     }
 
-    /// A long piece's plan sets a channel's level (queue item 102b: a layer
+    /// A long piece's plan sets a channel's level (a layer
     /// resting and returning), `level` from 0 to 1 of its own, gliding there
     /// from `time` (`tau`): its gain in the mix, as a mute does, so all it
     /// plays (its held notes, its organ, its tails) fades together. Muted,
@@ -332,7 +332,7 @@ impl Synth {
     }
 
     /// The share of its own level a long piece's plan leaves channel
-    /// `channel` at `time` (session 30b): 1 its own, 0 at rest, as its gain
+    /// `channel` at `time`: 1 its own, 0 at rest, as its gain
     /// in the mix glides there (`set_plan_level`: a target from its time,
     /// with its time constant). The layers draw a note as loud as this
     /// leaves it heard.
@@ -350,12 +350,12 @@ impl Synth {
     }
 
     /// The loudest note each of the core's channels was handed since the
-    /// last call, and none from now (session 30b).
+    /// last call, and none from now.
     pub fn take_sounded(&mut self) -> [f64; 6] {
         core::mem::take(&mut self.sounded)
     }
 
-    /// An arc's plan aims the arc's filter (queue item 102c): `aim` from -1
+    /// An arc's plan aims the arc's filter: `aim` from -1
     /// (its darkest: the swing's centre lowered by `dark` of its range) to 1
     /// (its brightest: the swing's depth `open` less), 0 the loop's own
     /// swing, gliding there from `time` (`tau`). One control, the loop's own
@@ -382,7 +382,7 @@ impl Synth {
         self.aimed = false;
     }
 
-    /// A long piece's plan moves the tone (queue item 102b): the warmth's
+    /// A long piece's plan moves the tone: the warmth's
     /// lowpass and the space's room glide to `tone` (the Sound panel's
     /// warmth and space, 0 to 1) from `time` (`tau`), as `set_tone` sets
     /// them but gently, and without the saturation's drive, which is set at
@@ -589,7 +589,7 @@ impl Synth {
 
     /// `padSweepSetup(o, time)`: the chords' lowpass swinging, `oct` last
     /// (it starts the sweep); or none (the last one glides open).
-    /// padWow's settings for the loop (queue item 101b), on the chords
+    /// padWow's settings for the loop, on the chords
     /// channel alone: its depth and rate from `time`, or, where the last
     /// loop had one and this one has none, its depth to 0 (it fades out).
     pub fn pad_wow_setup<H: Host>(&mut self, host: &mut H, wow: Option<&crate::generator::choices::PadWow>, time: f64) {
@@ -605,20 +605,20 @@ impl Synth {
         }
     }
 
-    /// colorTone's setup for the loop (queue item 101e): the chords
+    /// colorTone's setup for the loop: the chords
     /// channel's color on where the loop plays colors, off where it plays
     /// none (any it holds let go), at `time`.
     pub fn color_setup<H: Host>(host: &mut H, on: bool, time: f64) {
         host.set(CHORDS, own::COLOR_TONE, color_tone::ON, if on { 1.0 } else { 0.0 }, time);
     }
 
-    /// colorTone's color (queue item 101e): the chords channel's held color
+    /// colorTone's color: the chords channel's held color
     /// moves to `midi` at `time` (the loop's tuning in it), held `seconds`.
     pub fn color<H: Host>(&self, host: &mut H, midi: f64, time: f64, seconds: f64) {
         host.event(CHORDS, Event::color(time, midi + self.tune, seconds));
     }
 
-    /// lowBell (queue item 101g): the low bell struck on `midi` (already in
+    /// lowBell: the low bell struck on `midi` (already in
     /// its register, D2 to C#3, the loop's tuning added here) at `time`, the
     /// swelling kind if `swell`. It yields as glass and the dub stab do: it
     /// plays only where the budget has its cost and the margin to spare, and
@@ -640,7 +640,7 @@ impl Synth {
         host.event(CHORDS, Event::new(CHOKE, time, seconds));
     }
 
-    /// twang (queue item 101h): a pick of `midi` (in its register, the
+    /// twang: a pick of `midi` (in its register, the
     /// loop's tuning added here) at `time` (`blocks::twang`), its tremolo
     /// from `zero` (the loop's start), its saws from `phases` (its string's,
     /// `twang::string_phases`). It yields as the low bell does: it plays
@@ -689,7 +689,7 @@ impl Synth {
         }
     }
 
-    /// A jump within a piece (session 17, `Player::jump`): what swings from
+    /// A jump within a piece (`Player::jump`): what swings from
     /// the loop's first step stands at `time` where playing would have it,
     /// `age` seconds into the loop: the wash's swells, the chords' sweep
     /// (wideSweep's too) and their wow, the master's breath (the loop's
@@ -731,7 +731,7 @@ impl Synth {
     }
 
     /// `spaceSetup(o, time)`: what the core needs to place the loop in a
-    /// stereo render. A request's space pins (queue item 85b) narrow the
+    /// stereo render. A request's space pins narrow the
     /// recipe first (`Core::space_range`, read as the start arrives), and a
     /// setting the last loop pinned and this one doesn't goes back to its
     /// range.
@@ -757,7 +757,7 @@ impl Synth {
     // -------------------------------------------------------------- notes
 
     fn note<H: Host>(&mut self, host: &mut H, key: Key, voice: u32, channel: u32, time: f64, midi: f64, dur: f64, vel: f64, parts: u32, x: [f64; EXTRA]) {
-        // The voice call notes the channel (`_toCore`, queue item 85c).
+        // The voice call notes the channel (`_toCore`).
         self.budget.note_channel(channel);
         if let Some(x) = self.sounded.get_mut(channel as usize)
             && vel > *x
@@ -767,7 +767,7 @@ impl Synth {
         host.key(key);
         // The loop's tuning moves every pitched voice together; the kit
         // (the tuned kick's pitch is its own, in Hz) and the texture's
-        // noises keep theirs (queue item 101b). The piano's knock carries
+        // noises keep theirs. The piano's knock carries
         // its note, tuned, though it sounds a band of its own.
         let pitched = !matches!(voice, DRUM | HAT | TUNEDKICK) && (voice != TEXTURE || parts == texture::SWELL);
         let midi = if pitched { midi + self.tune } else { midi };

@@ -55,44 +55,44 @@ pub struct Spec {
     /// warmth, space, wobble.
     pub tone: [f64; 3],
     pub vibes: Option<Vibes>,
-    /// The tempo asked (queue item 85), [low, high] bpm: kept, so `metre`
+    /// The tempo asked, [low, high] bpm: kept, so `metre`
     /// finds the gait by it and a share code carries it.
     pub tempo: Option<[f64; 2]>,
-    /// The pins asked (queue item 85b), kept the same way: the choices'
+    /// The pins asked, kept the same way: the choices'
     /// draw and the load read them from here.
     pub pins: request::Pins,
-    /// The theme asked (queue item 85d): the seed whose loop this one bends,
+    /// The theme asked: the seed whose loop this one bends,
     /// kept, so `metre` finds its gait again and a share code carries it.
     pub theme: Option<u32>,
-    /// The piece's length (`piece::Piece`): the one asked (queue item 88),
+    /// The piece's length (`piece::Piece`): the one asked,
     /// which a share code carries, or with none asked one drawn from the
-    /// seed for about a loop in ten (queue item 117), which a code leaves to
+    /// seed for about a loop in ten, which a code leaves to
     /// the seed (the request is what a code writes).
     pub length: Option<Length>,
-    /// Whether `length` was drawn, none asked (queue item 117): the page's
+    /// Whether `length` was drawn, none asked: the page's
     /// record says so (`lengthDrawn`), so its request leaves it to the seed.
     pub length_drawn: bool,
-    /// The journey asked of a long piece (queue item 102), kept the same
+    /// The journey asked of a long piece, kept the same
     /// way; not written among the spec's text, which is as it was.
     pub journey: Option<request::Journey>,
-    /// The home notes asked (queue item 89), a bit each (C the lowest), and
+    /// The home notes asked, a bit each (C the lowest), and
     /// the modes asked, a bit each by their place in `theory::SCALES`; 0 for
     /// none. Kept, so a share code carries them and the loop is made again.
     pub keys: u32,
     pub scales: u32,
-    /// The styles asked (queue item 90), a bit each by place in
+    /// The styles asked, a bit each by place in
     /// `request::PROFILE_ORDER`; 0 for none. Kept the same way.
     pub styles: u32,
-    /// The voices asked of each layer (queue item 91), in `Layer`'s order: a
+    /// The voices asked of each layer, in `Layer`'s order: a
     /// bit each by place in `request::VOICE_ORDER`'s list for the layer; 0
     /// for none. The layers' draws read them.
     pub voices: [u32; 5],
-    /// The layers asked on and off (queue item 91), a bit each in `Layer`'s
+    /// The layers asked on and off, a bit each in `Layer`'s
     /// order. A layer off is muted: the spec's `mutes`, which `Player::load`
     /// hands the sequencer.
     pub layers_on: u8,
     pub layers_off: u8,
-    /// The layers re-rolled (`forceLayers`; queue item 94a, a code's edit):
+    /// The layers re-rolled (`forceLayers`; a code's edit):
     /// a bit each in the core's order, always played whatever their own
     /// chances draw, and playing throughout an airy loop.
     pub rolled: u8,
@@ -104,7 +104,7 @@ pub struct Spec {
     /// Each layer's own cycle in steps, or `None` (null); `None` overall
     /// for a loop without cycles.
     pub cycles: Cycles,
-    /// The version the loop is drawn at (queue item 105; `Request::version`):
+    /// The version the loop is drawn at (`Request::version`):
     /// its pools hold only what had joined by then. 0, the newest. Not
     /// written among the spec's text.
     pub version: u32,
@@ -114,7 +114,7 @@ pub struct Spec {
 /// where the whole object is null for a loop without cycles, and a layer's
 /// entry is null where it has none). `set` is whether the object exists. Plain
 /// fields rather than nested `Option`s, so that a spec of nothing is all
-/// zero bytes (queue item 93).
+/// zero bytes.
 #[derive(Clone, Copy)]
 pub struct Cycles {
     /// Whether the loop has cycles at all.
@@ -177,8 +177,8 @@ impl Spec {
         self.layer_seeds[layer as usize]
     }
 
-    /// `forced(spec, layer)`: whether the layer was re-rolled (queue item
-    /// 94a), and so always plays.
+    /// `forced(spec, layer)`: whether the layer was re-rolled,
+    /// and so always plays.
     #[must_use]
     pub fn forced(&self, layer: Layer) -> bool {
         self.rolled & (1 << layer as usize) != 0
@@ -196,8 +196,8 @@ impl Spec {
         character::character_of(&self.mix, self.vibes.as_ref(), self.version)
     }
 
-    /// The key, the layers, the modes and the styles asked (queue items 89 to
-    /// 91): `askKey`, the home notes by number, `askLayers`, each layer asked
+    /// The key, the layers, the modes and the styles asked:
+    /// `askKey`, the home notes by number, `askLayers`, each layer asked
     /// on or off, `askScale`, the modes by name and `askStyle`, the profiles
     /// by name, each only if asked.
     fn write_asked<S: Sink>(&self, w: &mut Writer<S>) {
@@ -248,7 +248,7 @@ impl Spec {
         }
     }
 
-    /// The layers re-rolled, `forceLayers` (queue item 94a): each `true`,
+    /// The layers re-rolled, `forceLayers`: each `true`,
     /// only if any.
     fn write_rolled<S: Sink>(&self, w: &mut Writer<S>) {
         if self.rolled == 0 {
@@ -463,7 +463,7 @@ const BORROW: f64 = 1.2;
 const BORROW_SALT: u32 = 0x4252_4954;
 
 /// `borrowedPool`: the bright modes a glad loop's profiles may borrow, with
-/// the share each adds (queue item 36), before the lean.
+/// the share each adds, before the lean.
 fn borrowed_pool(mix: &[(usize, f64)], lift: f64, version: u32) -> character::Names {
     let glad = js::max(0.0, lift - GLAD_FROM) / (1.0 - GLAD_FROM);
     let mut extra: character::Names = List::new();
@@ -502,7 +502,7 @@ fn character_of_bit(bit: usize) -> usize {
     data::character_index(request::PROFILE_ORDER[bit]).unwrap_or(0)
 }
 
-/// `askedMix`: the style asked (queue item 90), `wanted` a bit each by place
+/// `askedMix`: the style asked, `wanted` a bit each by place
 /// in the frozen order. A mix whose every profile is inside the set stands;
 /// else each profile outside it, in the order the mix was drawn, is replaced
 /// by one of the set drawn on a stream of the seed's own, weighted as the
@@ -547,7 +547,7 @@ const SCALE_SALT: u32 = 0x5343_4c45;
 /// is asked for (the profiles' own run about 0.6 to 7; for Mikey's ears).
 const ASKED_FLOOR: f64 = 0.25;
 
-/// `askedKey`: the key asked (queue item 89), `keys` a bit each. A draw
+/// `askedKey`: the key asked, `keys` a bit each. A draw
 /// already inside the set stands; else one of the set, each alike, drawn on
 /// a stream of its own.
 fn ask_key(seed: u32, root: f64, keys: u32) -> f64 {
@@ -567,7 +567,7 @@ fn ask_key(seed: u32, root: f64, keys: u32) -> f64 {
     root
 }
 
-/// `askedScale`: the mode asked (queue item 89), `wanted` a bit each. A draw
+/// `askedScale`: the mode asked, `wanted` a bit each. A draw
 /// inside the set stands; else one of the set, drawn on a stream of its own,
 /// weighted by how much the profile mix and the vibes lean toward each (the
 /// pool the mode would have come from, borrowed modes too), a mode the mix
@@ -638,7 +638,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     let vibes = character::draw_vibes(seed, request);
     let v = vibes.as_ref();
     let t = request.tempo();
-    // A theme asked (queue item 85d): its own loop, nothing asked, gives what
+    // A theme asked: its own loop, nothing asked, gives what
     // it holds (the mix, the key and mode, the metre, the tune). Every draw
     // below is still made, so nothing else moves.
     let held = request.theme().map(|th| new_spec(th, &request.nothing_at()));
@@ -647,7 +647,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     let mut pool: List<(usize, f64), { data::CHARACTER_COUNT }> = List::new();
     for (i, c) in CHARACTERS.iter().enumerate() {
         // A profile that joined after the loop's version is not in its pool
-        // (queue item 105).
+        //.
         if !data::there(data::CODE_PROFILES, c.id, request.version()) {
             continue;
         }
@@ -685,7 +685,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     if let Some(h) = &held {
         mix = h.mix;
     }
-    // The style asked (queue item 90), over the theme's too: the draws above
+    // The style asked, over the theme's too: the draws above
     // were still made, and a mix already inside the set stands.
     if request.styles() != 0 {
         mix = ask_mix(seed, &mix, request.styles(), &pool_all);
@@ -750,13 +750,13 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
 
     let mut steps_per_bar = c.steps_per_bar.as_ref().and_then(|p| r.weighted(p)).unwrap_or(f64::NAN);
     let bars = c.bars.as_ref().and_then(|p| r.weighted(p)).unwrap_or(f64::NAN);
-    // A short length asked is the loop's own (queue item 88): the draw is
+    // A short length asked is the loop's own: the draw is
     // still made, so nothing else moves, and overruled.
     let bars = match request.length() {
         Some(Length::Bars(n)) if n <= SECTION_BARS => n,
         _ => bars,
     };
-    // With no length asked, sometimes a long piece (queue item 117): its own
+    // With no length asked, sometimes a long piece: its own
     // stream, so a loop that stays short draws everything as before.
     let length = request.length().or_else(|| unasked_length(seed));
     // A theme keeps its own gait and metre; a tempo asked then plays in it.
@@ -787,7 +787,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     let scale = draw_scale(&mut r, seed, &c, &mix, feel.lift, v, request.version());
     // The theme's key and mode, over the draws.
     let (mut root, mut scale) = held.as_ref().map_or((root, scale), |h| (h.root, h.scale));
-    // The key and the mode asked (queue item 89), over the theme's too: the
+    // The key and the mode asked, over the theme's too: the
     // draws above were still made, and one already inside the set is kept.
     if request.keys() != 0 {
         root = ask_key(seed, root, request.keys());
@@ -805,7 +805,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
     let mut tone = [
         // Held to 1: a range's top times a warm feel (up to 1.2) once in about
         // 84,000 loops went past it, and `with_tone` then refused the loop's
-        // own tone (session 30).
+        // own tone.
         character::clamp01(r.range(c.tone[0][0], c.tone[0][1]) * (0.6 + feel.warmth * 0.6)),
         r.range(c.tone[1][0], c.tone[1][1]),
         r.range(c.tone[2][0], c.tone[2][1]),
@@ -872,7 +872,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
         tune: held.as_ref().map(melody::theme_tune),
         cycles,
     };
-    // A code's edits (queue item 94a), after every draw, as the app makes
+    // A code's edits, after every draw, as the app makes
     // them on the spec it holds.
     request.edits().apply(&mut spec);
     spec
@@ -881,7 +881,7 @@ pub fn new_spec(seed: u32, request: &Request) -> Spec {
 /// Salts the stream a loop with no length asked draws a long piece from.
 const UNASKED_SALT: u32 = 0x4c4f_4e47;
 
-/// A long piece for a loop made with no length asked (queue item 117; Mikey,
+/// A long piece for a loop made with no length asked (Mikey,
 /// 2026-11-23: "Sometimes"): `[longform unasked]`'s share of loops, each a
 /// length from its list by weight, both drawn from the seed alone on a
 /// stream of its own, so no other draw moves and a loop that stays short
@@ -919,7 +919,7 @@ fn write_length<S: Sink>(w: &mut Writer<S>, length: Option<Length>, drawn: bool)
     }
 }
 
-/// `themeGait(theme, mix)`: a theme's gait (queue item 85d), the one its own
+/// `themeGait(theme, mix)`: a theme's gait, the one its own
 /// loop plays, from its seed and the mix it holds, whatever the vibes lean.
 fn theme_gait(theme: u32, mix: &[(usize, f64)], version: u32) -> Option<data::Gait> {
     gait_for(theme, &character::character_of(mix, None, version))
@@ -969,7 +969,7 @@ impl Spec {
         }
     }
 
-    /// `choirOf(spec)`. None for a loop whose theme rests (queue item 85f):
+    /// `choirOf(spec)`. None for a loop whose theme rests:
     /// a friend with no tune keeps none, so its bent loop is not a choir
     /// loop at all; the choir's draws are a stream of their own, so nothing
     /// else moves.
@@ -979,8 +979,8 @@ impl Spec {
             return None;
         }
         // A voice asked of the melody or the chords is the voice they play:
-        // the choir is a rarity, and is not forced by the others (queue item
-        // 91).
+        // the choir is a rarity, and is not forced by the others
+        // .
         if self.voices[Layer::Melody as usize] != 0 || self.voices[Layer::Chords as usize] != 0 {
             return None;
         }
@@ -988,8 +988,8 @@ impl Spec {
         if !r.chance(CHOIR_RATE) {
             return None;
         }
-        // The voices that had joined by the loop's version (queue item
-        // 105e): both layers sing it, and each lists it.
+        // The voices that had joined by the loop's version:
+        // both layers sing it, and each lists it.
         let sung = data::joined_of(&[("vowel", 3.0), ("hum", 2.0)], data::CODE_VOICES[Layer::Melody as usize], self.version);
         let voice = r.weighted(&sung[..])?;
         let cents = 4.0 + r.f() * 7.0;

@@ -1,4 +1,4 @@
-//! padWow (queue item 101b; batch 6's #3): a slow wow on the chord layer
+//! padWow (batch 6's #3): a slow wow on the chord layer
 //! alone, a choice drawn by itself (`alone`), not among the changes, on a
 //! stream of its own. What it holds to: it goes only to loops that play a
 //! chord, for about its share of them, within its ranges and under the

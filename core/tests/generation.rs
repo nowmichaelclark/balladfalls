@@ -1,5 +1,5 @@
-//! The Rust generator against the generation goldens (queue items 79 to
-//! 81): every case of `core/golden/generation.hashes` generated on this
+//! The Rust generator against the generation goldens:
+//! every case of `core/golden/generation.hashes` generated on this
 //! machine, every part (`Part::ALL`: the spec, the plan, the form, the
 //! layers, the meta, the choices, the load and the eight wandered passes)
 //! equal to its hash, and nothing dropped for want of room.
@@ -31,9 +31,9 @@ fn every_case() {
         assert_eq!(generator.lost(), 0, "{}: the lists ran out of room", fields[0]);
         cases += 1;
     }
-    // With the 240 edit cases (queue item 94a), batch 6's eight far ends
-    // (item 101a), its three tuning cases (item 101b) and four long pieces
-    // that reach session 16's joins (item 102f).
+    // With the 240 edit cases, batch 6's eight far ends,
+    // its three tuning cases and four long pieces
+    // that reach the joins.
     assert_eq!(cases, 5139);
 }
 
@@ -86,7 +86,7 @@ fn the_canonical_text_is_the_tools() {
 
 #[test]
 fn a_loops_tone_never_passes_one() {
-    // Session 30: about 1 loop in 84,000 drew a warmth a little over 1 (the
+    // About 1 loop in 84,000 drew a warmth a little over 1 (the
     // tone's range times a warm feel), which the tone's own edit then refused
     // and the page could not play. These three seeds drew it.
     std::thread::Builder::new()

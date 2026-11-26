@@ -1,4 +1,4 @@
-//! The master chain (queue items 30 and 31), from `preBus` to the
+//! The master chain, from `preBus` to the
 //! speakers, as `_build()` in synth.js makes it: the tape wobble, the
 //! saturator, the tone lowpass and the highpass, then the bus compressor,
 //! the master gain, the kill gain and the ceiling.
@@ -15,7 +15,7 @@
 //!   quality (`resample`) and none on lite. `setTone` replaces the curve
 //!   outright; the new one is read from the next block on.
 //! - **Tone**: a lowpass at 7200 Hz, Q 0.6, that `setTone` moves; then, in
-//!   loops that draw it, the arc (`blocks::arc`, queue item 63), a second
+//!   loops that draw it, the arc (`blocks::arc`), a second
 //!   lowpass breathing over minutes; then a highpass at 38 Hz. The same
 //!   `Biquad` the voices use.
 //! - **comp**: Chromium's `DynamicsCompressorNode` (`compressor`) at
@@ -24,8 +24,8 @@
 //!   glide; **kill**: a gain at 1 that `silence` ramps to 0 in 60 ms and
 //!   `unsilence` back in 20 ms (`HOLD` first holds it where it is, as
 //!   `setValueAtTime(g.value, when)` does); **track**: a gain at 1 the
-//!   player moves for a track's fade in and fade out (session 30c,
-//!   `player::Player::set_track_with`), at 1 (and so the same to the bit)
+//!   player moves for a track's fade in and fade out
+//!   (`player::Player::set_track_with`), at 1 (and so the same to the bit)
 //!   wherever no fade is asked.
 //! - **ceiling**: a second compressor, the limiter: -3 dB, no knee, 20:1,
 //!   attack 1 ms, release 80 ms.
@@ -38,7 +38,7 @@
 //! Chromium runs its compressors' mono input as two identical channels,
 //! which is the same thing.
 //!
-//! **Stereo** (queue item 64; `docs/CORE.md`, promise 9). A stereo render is
+//! **Stereo** (`docs/CORE.md`, promise 9). A stereo render is
 //! the same chain on two lanes (`OUT`; `set_layout`), and the mono render
 //! still runs on the first alone, so it pays nothing for the second. In
 //! stereo the compressors are linked the other way from Chromium's: one gain
@@ -191,7 +191,7 @@ pub struct Master {
     wobble_time: f32,
     curve: [f32; CURVE],
     tone_freq: Timeline<EVENTS>,
-    /// A long piece's aim for the arc (queue item 102c): the swing's centre
+    /// A long piece's aim for the arc: the swing's centre
     /// lowered and its depth made shallower, each a share (`ARC_LOWER`,
     /// `ARC_SHALLOW`).
     arc_aim: [Timeline<EVENTS>; 2],
@@ -277,7 +277,7 @@ impl Master {
     /// keeps them, and each later one at that rate copies them, bit for bit
     /// the same: the Android app rebuilds on its audio thread at a quality
     /// switch, where that millisecond was the one command heavier than a
-    /// block's own render (session 30g, queue item 115; `docs/CORE.md`,
+    /// block's own render (`docs/CORE.md`,
     /// promise 1).
     fn warm(&mut self, rate: f64) {
         #[allow(clippy::float_cmp, reason = "the very rate they were settled at, or not")]
@@ -351,7 +351,7 @@ impl Master {
     }
 
     /// Render `lanes` lanes from the next block, as `set_layout`, in the
-    /// middle of a render (queue item 66): what the old layout held is
+    /// middle of a render: what the old layout held is
     /// carried into the new, so the sound goes on without a jump. Into
     /// stereo the second lane takes the first's state, and each compressor
     /// the mono one's; back into mono the mono compressors take the stereo
@@ -430,7 +430,7 @@ impl Master {
         &mut self.flutter_depth
     }
 
-    /// The arc (queue items 63 and 63b): the swing `s` describes, from
+    /// The arc: the swing `s` describes, from
     /// `time`; a period of 0 lets the last one go.
     pub fn arc(&mut self, s: &arc::Settings, time: f64) {
         for lane in &mut self.lanes {

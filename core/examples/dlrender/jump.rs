@@ -1,4 +1,4 @@
-//! Jumps within a piece (session 17, queue item 106a): `dlrender --jumps`.
+//! Jumps within a piece: `dlrender --jumps`.
 //! Each loop is a 32,768-bar piece at the full mix, heard from the phrase
 //! line `--at` seconds in, played from its load and jumped to:
 //!
@@ -21,7 +21,7 @@
 //!   which run free from its start: their phases are its history).
 //!
 //! What a jump cannot know without playing everything before it is said in
-//! the PR (session 17): notes struck before the line, which it lets go (a
+//! the PR: notes struck before the line, which it lets go (a
 //! long chord, a held bass), twang's strings' and the organ's pipes' phases.
 //! It fails past `JUMP_HOLDS`' figures.
 

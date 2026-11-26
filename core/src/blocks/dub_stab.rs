@@ -1,4 +1,4 @@
-//! dubStab (queue item 60; Ears 4, round 4, approved by Mikey 2026-10-16):
+//! dubStab (Ears 4, round 4, approved by Mikey 2026-10-16):
 //! a soft chord stab on the offbeat of a busy groove, thrown into the echo.
 //!
 //! One note is the whole chord, up to three notes (the note's own and two

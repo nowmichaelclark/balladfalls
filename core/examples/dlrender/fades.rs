@@ -1,4 +1,4 @@
-//! The voice budget's let-go fades, heard (queue item 85e): `dlrender --seed
+//! The voice budget's let-go fades, heard: `dlrender --seed
 //! N --fades` or `--corpus SEED:N --fades`. Each loop plays on the player as
 //! `--seed` plays it, every note the budget lets go for a newer one written
 //! down (`Host::steal`: its fade, from and to); then the largest step between

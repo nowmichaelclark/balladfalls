@@ -1,4 +1,4 @@
-//! What the engine decides at load (queue item 81): `Engine.load` in
+//! What the engine decides at load: `Engine.load` in
 //! `js/engine.js`, for a loop just rendered. The per-loop settings the host
 //! sends the core and the sequencer plays by: glass's level in a sparse
 //! loop, dubStab's density and stab, the chapel organ's registration, the
@@ -24,7 +24,7 @@ use super::render::Render;
 use super::rng::Rng;
 use crate::math;
 
-/// dubStab (queue item 60; `stabOf`): the loop's density, the chance of a
+/// dubStab (`stabOf`): the loop's density, the chance of a
 /// stab on the offbeat after beat one and after beat three, and the stab's
 /// own settings.
 #[derive(Clone, Copy, Debug)]
@@ -40,7 +40,7 @@ pub struct Stab {
     pub verb: f64,
 }
 
-/// The wash (queue item 62; `washOf`): one swell's period in seconds, the
+/// The wash (`washOf`): one swell's period in seconds, the
 /// follower's gain, and its tint (Hz, its gain and the high one in dB, its
 /// resonance).
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -53,7 +53,7 @@ pub struct Wash {
     pub tint_q: f64,
 }
 
-/// The loop's space (queue item 65; `spaceOf`): what the core needs to
+/// The loop's space (`spaceOf`): what the core needs to
 /// place it in a stereo render. Its seed (the core draws every width from
 /// it), how busy it is (notes a second, every layer, as heard), how wet,
 /// and whether its texture is a light one, whose whole layer is placed.
@@ -63,14 +63,14 @@ pub struct Space {
     pub busy: f64,
     pub wet: f64,
     pub light: bool,
-    /// The request's pins for the space recipe's settings (queue item 85b),
+    /// The request's pins for the space recipe's settings,
     /// by `space::n`, each `None` where it isn't pinned; and widePad's kind
-    /// (`space::n::WIDE`, queue item 101c), which its choice sets the same
+    /// (`space::n::WIDE`), which its choice sets the same
     /// way, a request's own pin of it first.
     pub pins: [Option<f64>; crate::space::n::COUNT],
 }
 
-/// The loop's tuned kick (queue item 67) and which of its kinds it plays
+/// The loop's tuned kick and which of its kinds it plays
 /// ("short" or "long").
 #[derive(Clone, Copy, Debug)]
 pub struct Kick {
@@ -102,27 +102,27 @@ pub struct Load {
     pub kick: Option<Kick>,
     pub sub_duck: Option<SubDuck>,
     pub pad_sweep: Option<PadSweep>,
-    /// padWow's settings (queue item 101b), for a loop that plays it.
+    /// padWow's settings, for a loop that plays it.
     pub pad_wow: Option<PadWow>,
     /// The bass layer's level, in dB.
     pub bass_lift: f64,
     pub late: Option<LateFloor>,
     pub space: Space,
     /// The echo's time, in beats (stored against 0.75, the unloaded loop's,
-    /// so that nothing loaded is all zero bytes: queue item 93).
+    /// so that nothing loaded is all zero bytes).
     pub echo_beats: Biased<ECHO_BEATS_BITS>,
-    /// How far the loop plays off A440, in cents (tuningOffset, queue item
-    /// 101b; 0, A440, for most loops). The synth adds it to every pitched
+    /// How far the loop plays off A440, in cents (tuningOffset,
+    /// 0, A440, for most loops). The synth adds it to every pitched
     /// note.
     pub tuning: f64,
-    /// The low bell the loop plays (lowBell, queue item 101g), by its place
+    /// The low bell the loop plays (lowBell), by its place
     /// in `choices::LOW_BELL_KINDS`: 0 none (most loops), 1 struck, 2 the
     /// swelling kind.
     pub low_bell: u8,
-    /// Whether it strikes in the floor drops alone (dropSpotlight, queue
-    /// item 101g).
+    /// Whether it strikes in the floor drops alone (dropSpotlight)
+    /// .
     pub spotlight: bool,
-    /// The twang the loop plays (queue item 101h), by its place in
+    /// The twang the loop plays, by its place in
     /// `choices::TWANG_KINDS`: 0 none (most loops), 1 soft.
     pub twang: u8,
     /// The profile's pump, and its level (`setCharacterLevel`).
@@ -132,13 +132,13 @@ pub struct Load {
     /// The loop's tempo and tone, for the calls.
     bpm: f64,
     tone: [f64; 3],
-    /// The layers the request asked off (`spec.mutes`, queue item 91), a bit
+    /// The layers the request asked off (`spec.mutes`), a bit
     /// each in `Layer`'s order.
     muted: u8,
 }
 
 impl crate::generator::list::Empty for Load {
-    /// Nothing loaded (all zero bytes, queue item 93).
+    /// Nothing loaded (all zero bytes).
     const EMPTY: Self = Load::EMPTY;
 }
 
@@ -192,10 +192,10 @@ impl Load {
     pub fn without_kick(cx: &Cx, r: &Render) -> Self {
         let spec = cx.spec;
         let v = spec.vibes.as_ref();
-        // A request's pins (queue item 85b) fix any of the settings.
+        // A request's pins fix any of the settings.
         let p = &spec.pins;
         let on = |id: &str| r.choice(id) == Some("on");
-        // The option a choice with several plays (queue item 101a: subDuck's
+        // The option a choice with several plays (subDuck's
         // deep, padSweep's wide and fast, lateFloor's slow), or none.
         let plays = |id: &str| r.choice(id).filter(|&o| !o.is_empty() && o != "today");
         let step = 60.0 / spec.bpm / 4.0;
@@ -205,14 +205,14 @@ impl Load {
         let chords = r.chords.iter().filter(|e| e.vel != 0.0).count();
         let kick = None;
         let space = spec.tone[1];
-        // The low bell (queue item 101g), for a loop that plays a chord; its
+        // The low bell, for a loop that plays a chord; its
         // spotlight where the floor can drop (the wander's floor drop: 4
         // bars or more, and a kick or a bass for it to take out).
         let plays_chord = chords > 0 && r.plays_chord();
         let bell = choices::low_bell_of(spec.seed, plays_chord, v, p, spec.version);
         let floor = r.drums.iter().any(|e| e.vel != 0.0 && matches!(e.inst.get(), "kick" | "softkick" | "frame")) || r.bass.iter().any(|e| e.vel != 0.0);
         let drops = js::floor(total / spb) >= 4.0 && floor;
-        // twang (queue item 101h), for a loop that plays a chord and has no
+        // twang, for a loop that plays a chord and has no
         // kit busier than a soft one: its hits a second over the kit's own
         // cycle.
         let twang = choices::twang_of(spec.seed, plays_chord && r.soft_kit(cx), v, p, spec.version);
@@ -238,7 +238,7 @@ impl Load {
                 // `spec.tone.space || 0`
                 wet: if space == 0.0 || space.is_nan() { 0.0 } else { space },
                 light: matches!(r.texture_kind.get(), "bells" | "chime" | "drops"),
-                // widePad (queue item 101c) is the space's `wide`: 1 wide,
+                // widePad is the space's `wide`: 1 wide,
                 // 2 opening late. A request's own pin of it stands.
                 pins: core::array::from_fn(|i| {
                     let wide = (i == crate::space::n::WIDE).then(|| plays("widePad")).flatten();
@@ -282,7 +282,7 @@ impl Load {
         or_null(w, self.kick.as_ref(), write_kick);
         w.key("late");
         or_null(w, self.late.as_ref(), write_late);
-        // Written only where the loop plays one (queue item 101g), so the
+        // Written only where the loop plays one, so the
         // text of every loop without it is as it was.
         if self.low_bell != 0 {
             w.key("lowBell");
@@ -308,7 +308,7 @@ impl Load {
         or_null(w, self.sub_duck.as_ref(), write_sub_duck);
         w.key("tuning");
         w.num(self.tuning);
-        // Written only where the loop plays one (queue item 101h), so the
+        // Written only where the loop plays one, so the
         // text of every loop without it is as it was.
         if self.twang != 0 {
             w.key("twang");
@@ -410,7 +410,7 @@ fn write_late<S: Sink>(w: &mut Writer<S>, l: &LateFloor) {
     w.num(l.bass);
     w.key("drums");
     w.num(l.drums);
-    // slowOpening's fade (queue item 101a), only where there is one: the
+    // slowOpening's fade, only where there is one: the
     // approved kind's text, and so its golden, is what it was.
     if l.fade > 0.0 {
         w.key("fade");

@@ -1,4 +1,4 @@
-//! FLAC, written by the core (queue item 104a; `docs/CORE.md`, phase 7,
+//! FLAC, written by the core (`docs/CORE.md`, phase 7,
 //! "Exports, safe first"): the lossless export, in a file every player
 //! opens, at about half a WAV's size, with nothing borrowed from the
 //! platform.
@@ -31,7 +31,7 @@
 //! are, or one of FLAC's fixed predictors with its residual in partitioned
 //! Rice codes (`plan`), and stereo the cheapest of left and right, either
 //! with the side, or mid and side. No LPC: a simple encoder that is correct
-//! and fast, not the smallest file (queue item 104a).
+//! and fast, not the smallest file.
 //!
 //! **The same bytes everywhere.** The samples become integers by one rule
 //! (`quantize`: rounded to the nearest step, halves away from zero, held to

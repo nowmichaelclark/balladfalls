@@ -1,7 +1,6 @@
-//! How long the track plays (queue item 94a): the app's track length (its
-//! Track length view since session 30c; its length slider before), as
-//! `Engine.endStep` and `_ends` in `js/engine.js` count it (queue item 88b),
-//! so the core knows when a track ends with the page asleep.
+//! How long the track plays: the app's track length (its Track length
+//! view), counted as the old JavaScript engine counted it, so the core
+//! knows when a track ends with the page asleep.
 //!
 //! A track is a number of whole passes (a pass of a piece is all of its
 //! sections: a round), or a number of bars shorter than a pass, ending on
@@ -10,7 +9,7 @@
 //! from a new loop's first step. A loop's own length never ends it, and
 //! Endless never ends by passes.
 //!
-//! Or a time, to the second (session 30c, queue item 111; Mikey,
+//! Or a time, to the second (Mikey,
 //! 2026-11-18: "Should be able to set track length to an exact second"):
 //! counted on the core's clock, in the output's samples, from when it is
 //! set (or from a new loop's first step), so a tempo change doesn't move
@@ -38,19 +37,19 @@ pub enum Track {
     /// This many bars, ended on the next phrase line (`spec.playBars`), at
     /// least 1.
     Bars(u32),
-    /// This many seconds, 1 to `TRACK_MOST` (session 30c), on the core's
+    /// This many seconds, 1 to `TRACK_MOST`, on the core's
     /// clock: the player knows the second it ends on (`Player::track_at`),
     /// and none of the steps' functions here end it.
     Seconds(u32),
 }
 
-/// How long a track's fade in takes from silence, in seconds (session 30c;
-/// for Mikey's ears): long enough to be heard as a rise and not a cut,
+/// How long a track's fade in takes from silence, in seconds
+/// (for Mikey's ears): long enough to be heard as a rise and not a cut,
 /// short enough that the loop is there by its first bar or two.
 pub const FADE_IN: f64 = 3.0;
 
 /// How long a time's fade out takes to reach silence on its last second,
-/// in seconds (session 30c; for Mikey's ears): a gentle ending, the notes
+/// in seconds (for Mikey's ears): a gentle ending, the notes
 /// and the mix both falling, so the last few seconds are already near
 /// silence.
 pub const FADE_OUT: f64 = 8.0;
@@ -100,7 +99,7 @@ pub fn phrase_line(spec: &Spec, at: u64) -> u64 {
     (start + k * section + js::min(js::ceil(into / unit) * unit, length)) as u64
 }
 
-/// The phrase line at or before step `at` from the load (session 17: where
+/// The phrase line at or before step `at` from the load (where
 /// a jump lands), on `phrase_line`'s grid: the line `phrase_line` gives
 /// where `at` is on one, else the one before it.
 #[must_use]

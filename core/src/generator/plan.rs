@@ -1,4 +1,4 @@
-//! What `render` plans before any layer plays (queue item 79): whether
+//! What `render` plans before any layer plays: whether
 //! the loop develops and its sections (`developmentOf`), the harmony
 //! (`genHarmony`, its long chords, `developHarmony`), the entry schedules
 //! (`genForm`) and the short gaps (`genGaps`), draw for draw as
@@ -186,8 +186,8 @@ pub struct Cx<'a> {
     /// Set while render works out the octave today's chord lengths would
     /// take (`longChordsOff`).
     pub long_chords_off: bool,
-    /// Whether the loop's progression planes (planingSevenths, queue item
-    /// 101f, `planing::planes`): drawn once from the spec, read wherever the
+    /// Whether the loop's progression planes (planingSevenths,
+    /// `planing::planes`): drawn once from the spec, read wherever the
     /// key is.
     pub planing: bool,
 }
@@ -560,7 +560,7 @@ pub fn gen_harmony(cx: &Cx, out: &mut Harmony, bars: f64, chords_seed: u32, vary
                 notes.push(note(ninth));
             }
         }
-        // planingSevenths (queue item 101f): the planed chord in place of
+        // planingSevenths: the planed chord in place of
         // the drawn one, every draw above made as ever.
         planer.notes(s == 0.0, spec.root, scale, &mut notes);
         voice_in_range(&mut notes, 55, 79);
@@ -918,7 +918,7 @@ pub fn gen_form(cx: &Cx) -> Option<Form> {
     }
     let mut form: Form = [List::new(); 5];
     for layer in LAYERS {
-        // A layer re-rolled (queue item 94a) plays throughout, so the roll is
+        // A layer re-rolled plays throughout, so the roll is
         // heard at once: no schedule (an empty one, the JavaScript's null),
         // and none of its draws.
         if spec.forced(layer) {
@@ -943,7 +943,7 @@ pub fn gen_form(cx: &Cx) -> Option<Form> {
             }
         }
     }
-    // A layer asked on plays throughout (queue item 91): every draw above is
+    // A layer asked on plays throughout: every draw above is
     // made, the schedule and the rest placed by hand included, and then it is
     // all in.
     for layer in LAYERS {
@@ -1103,7 +1103,7 @@ pub fn write_form<S: Sink>(w: &mut Writer<S>, form: Option<&Form>) {
             ] {
                 w.key(key);
                 let sched = &f[layer as usize];
-                // A layer re-rolled has none (queue item 94a): null.
+                // A layer re-rolled has none: null.
                 if sched.is_empty() {
                     w.null();
                     continue;

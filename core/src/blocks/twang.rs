@@ -1,4 +1,4 @@
-//! twang (queue item 101h; batch 6's #13, Ears 13b, approved by Mikey
+//! twang (batch 6's #13, Ears 13b, approved by Mikey
 //! 2026-11-09): a synth in the spirit of a tremolo
 //! baritone guitar (`docs/DECISIONS.md`, 2026-11-08: a synth in its spirit,
 //! never an imitation), picking each chord low and slow. The player picks it
@@ -28,7 +28,7 @@
 //!
 //! **Soft alone:** a 4.5 Hz tremolo, 35% deep; the pick's cutoff 18 times
 //! the note, the tail's 2.5. The batch's slow and bright were taken out
-//! (queue item 105e; Mikey, 2026-11-17, the Batch 6 Album: "I only liked
+//! (Mikey, 2026-11-17, the Batch 6 Album: "I only liked
 //! the soft version"), and a code pinning either plays this
 //! (`data/codes.txt`).
 //!

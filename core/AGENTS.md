@@ -4,8 +4,12 @@ Read this before you touch `core/`, the Rust engine that `js/dlplayer.wasm`
 is built from. Read the root `AGENTS.md` first. The queue's standing rules
 (`docs/QUEUE.md`) also apply; these rules come in addition.
 
-- `docs/CORE.md` is the charter: ten promises, each with its measure.
+- `docs/CORE.md` is the charter: eleven promises, each with its measure.
 - `core/README.md` says how a host drives the core and how to add a block.
+- Some comments name `js/generator.js`, `js/engine.js` or `js/synth.js`.
+  These are the JavaScript generator and synth that the core was ported
+  from and proven against. They are gone from this repo. To read them, use
+  the archived `driftloom` repo.
 
 ## Commands
 

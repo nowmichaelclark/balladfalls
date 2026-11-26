@@ -13,7 +13,7 @@
 //! its own test kit. A signal can drive a block's setting (modulation), a
 //! block can have a stereo render, and a host can send an event to the
 //! notes of a channel (`event`); the mono render pays nothing for the
-//! stereo seam (queue item 46b).
+//! stereo seam.
 //!
 //! Everything is allocated up front: a fixed pool of voices, fixed-size
 //! automation, fixed output buffers. Nothing allocates after `Core::new`,
@@ -26,7 +26,7 @@
 //! end of phase 3), not the reference. Changes are judged by the charter's
 //! measures (`docs/CORE.md`): the goldens, the baseline, the kit, and ears.
 
-// No standard library (queue item 43): the core needs no allocator, no
+// No standard library: the core needs no allocator, no
 // threads and no platform math, so it builds for a console or a
 // microcontroller as it does for the browser. Its own unit tests use `std`
 // (threads with room for a whole core on their stack, `Vec`); every real
@@ -41,7 +41,7 @@ pub mod delay;
 // so code it never calls can still shift the .wasm's bytes, and a generator or
 // data edit must not change what the app ships. The `generator` feature brings
 // it back for the checks' wasm build, the `player` feature for the player's
-// (js/dlplayer.wasm, queue item 82).
+// (js/dlplayer.wasm).
 #[cfg(any(not(feature = "web"), feature = "generator", feature = "player"))]
 pub mod generator;
 #[cfg(any(not(feature = "web"), feature = "generator", feature = "player"))]
@@ -53,7 +53,7 @@ pub mod math;
 pub mod mix;
 pub mod noise;
 pub mod param;
-// The player (queue item 82) stands on the generator, and is left out of the
+// The player stands on the generator, and is left out of the
 // app's web build with it (the `player` feature builds js/dlplayer.wasm).
 #[cfg(any(not(feature = "web"), feature = "player"))]
 pub mod player;
@@ -68,7 +68,7 @@ pub mod wave;
 #[cfg(all(target_arch = "wasm32", feature = "web"))]
 mod wasm;
 // The C face (`include/dlcore.h`), for a native C host's static library,
-// and Emscripten's (queue item 87: a web build that links the core as C,
+// and Emscripten's (a web build that links the core as C,
 // Broken Friends' Godot export).
 #[cfg(all(any(not(target_arch = "wasm32"), target_os = "emscripten"), feature = "capi"))]
 mod capi;
@@ -103,11 +103,11 @@ const MAX_FRAMES_A_SECOND: usize = if cfg!(feature = "wide") { 192_000 } else { 
 pub const MIN_RATE: f64 = 22_050.0;
 
 /// The channels the core plays into. Each is one of the synth's per-layer
-/// channels: all five of them (queue item 27), and since queue item 62 a
-/// sixth of the core's own, the wash's, which no host note plays into. Since queue item 29 the core
-/// mixes them too (`mix`), with the host's own notes for each (`inputs`),
-/// through the channel gains, the sends, the duck, the echo and the reverb;
-/// and since items 30 and 31 runs the mix through the whole master chain
+/// channels: all five of them, and a sixth of the core's own, the wash's,
+/// which no host note plays into. The core mixes them too (`mix`), with the
+/// host's own notes for each (`inputs`), through the channel gains, the
+/// sends, the duck, the echo and the reverb. Then it runs the mix through
+/// the whole master chain
 /// (`master`): the wobble, the saturator, the tone and the highpass, the bus
 /// compressor, the master and kill gains and the ceiling, out to the
 /// speakers (`output`).
@@ -122,7 +122,7 @@ pub const BASS_CHANNEL: u32 = 2;
 pub const TEXTURE_CHANNEL: u32 = 3;
 /// The drums' channel.
 pub const DRUMS_CHANNEL: u32 = 4;
-/// The wash's channel (queue item 62): its own, set like the textures'
+/// The wash's channel: its own, set like the textures'
 /// (level and sends), so its level follower can listen to the five layers
 /// without hearing the wash.
 pub const WASH_CHANNEL: u32 = 5;
@@ -165,27 +165,27 @@ pub const KILL: u32 = TONE_FREQ + 6;
 pub const BYPASS: u32 = TONE_FREQ + 7;
 /// Whether both compressors start cold, as Chromium's do.
 pub const COLD: u32 = TONE_FREQ + 8;
-/// The arc (queue item 63): where on its swing the next one starts, 0 to 1
+/// The arc: where on its swing the next one starts, 0 to 1
 /// (0 the darkest, 0.5 the brightest), for `ARC_PERIOD` to take.
 pub const ARC_FROM: u32 = TONE_FREQ + 9;
 /// The arc's swing, in seconds, from `time` (0 lets it go). It starts the
 /// swing the other `ARC_` parameters set up, so it comes last.
 pub const ARC_PERIOD: u32 = TONE_FREQ + 10;
-/// The arc's shape (queue item 63b), for `ARC_PERIOD` to take: 0 the deep
+/// The arc's shape, for `ARC_PERIOD` to take: 0 the deep
 /// swing, 1 the dip (`blocks::arc::Shape`).
 pub const ARC_SHAPE: u32 = TONE_FREQ + 11;
 /// The dip's floor, in Hz, for `ARC_PERIOD` to take.
 pub const ARC_FLOOR: u32 = TONE_FREQ + 12;
 /// The share of the swing the dip takes, 0 to 1, for `ARC_PERIOD` to take.
 pub const ARC_DIP: u32 = TONE_FREQ + 13;
-/// The width ceiling's settings (queue item 64; `blocks::width::SETTINGS`,
+/// The width ceiling's settings (`blocks::width::SETTINGS`,
 /// in that order): its target in dB against the mid, its cutoff in Hz, its
 /// window, and its down and up time constants in seconds. A stereo render's
 /// only; from the next block.
 pub const WIDTH_TARGET: u32 = TONE_FREQ + 14;
 /// The last of the width ceiling's settings (`WIDTH_TARGET` and on).
 pub const WIDTH_UP: u32 = TONE_FREQ + 18;
-/// The loop's space (queue item 65; `space::Loop`), for `SPACE_START` to
+/// The loop's space (`space::Loop`), for `SPACE_START` to
 /// draw: its seed (a whole number), how busy it is (notes a second, every
 /// layer), how wet (its reverb's space, 0 to 1), and whether its texture is
 /// a light one (not 0).
@@ -196,26 +196,26 @@ pub const SPACE_LIGHT: u32 = TONE_FREQ + 22;
 /// Draw the loop's space and take it from `time` (a stereo render's; it
 /// glides there over about 50 ms). Any value; 0 for no space (centered).
 pub const SPACE_START: u32 = TONE_FREQ + 23;
-/// A long piece's aim for the arc's filter (queue item 102c, `blocks::arc`):
+/// A long piece's aim for the arc's filter (`blocks::arc`):
 /// how far the swing's centre is lowered, a share of its range (0 its own),
 /// and how much shallower its depth is (0 its own). Glided as any
 /// parameter, by `op`.
 pub const ARC_LOWER: u32 = TONE_FREQ + 24;
 pub const ARC_SHALLOW: u32 = TONE_FREQ + 25;
-/// How long the loop's space has played at `time`, in seconds (session 17,
-/// a jump within a piece): a space that opens over the loop (widePad's late
-/// kind, queue item 101c) stands where playing from the loop's first step
+/// How long the loop's space has played at `time`, in seconds
+/// (a jump within a piece): a space that opens over the loop (widePad's late
+/// kind) stands where playing from the loop's first step
 /// would have it, open past its opening. Any other space is the same
 /// throughout, and this moves nothing of it.
 pub const SPACE_AGE: u32 = TONE_FREQ + 26;
-/// The track's gain (session 30c): 1, and moved by the player alone for a
+/// The track's gain: 1, and moved by the player alone for a
 /// track's fade in and fade out (`player::Player::set_track_with`), after
 /// the kill gain, so neither the listener's volume nor the transport's
 /// silence is touched. Any `op`.
 pub const TRACK_GAIN: u32 = TONE_FREQ + 27;
 
-/// How long a layout changed while the core plays takes (queue item 66;
-/// `Core::set_layout`), in seconds: the side fades in over it, or out
+/// How long a layout changed while the core plays takes
+/// (`Core::set_layout`), in seconds: the side fades in over it, or out
 /// before the render goes mono, so the switch neither clicks nor jumps.
 pub const LAYOUT_FADE: f64 = 0.25;
 /// Going mono, the master's two lanes agree a few blocks after the side
@@ -269,7 +269,7 @@ pub enum Taken {
     Missed = 4,
 }
 
-/// How late a note may arrive and still play, at once (queue item 41). A
+/// How late a note may arrive and still play, at once. A
 /// late note starts at the next block, whole, so the later it is the more
 /// it bunches against the notes after it -- a burst of late notes, all
 /// starting together, was the Pixel 10a's glitch. A few tens of ms late is
@@ -394,12 +394,12 @@ struct Slot {
     /// Where its note sits in its loop, as the host keyed it (`Core::key`):
     /// what `Core::steal` finds it by, with its channel.
     key: Key,
-    /// A steal's fade (queue item 85c), from and to a frame: the note falls
+    /// A steal's fade, from and to a frame: the note falls
     /// linearly to nothing between them and ends. (0, 0) for none.
     fade: (u64, u64),
     voice: Held,
-    /// Where a stereo render places it apart from its channel (queue item
-    /// 65; `space`): `UNPLACED`, or the light kit's (`KIT`, `KIT_SOFT`) or
+    /// Where a stereo render places it apart from its channel
+    /// (`space`): `UNPLACED`, or the light kit's (`KIT`, `KIT_SOFT`) or
     /// glass's (`GLASS`).
     place: u8,
 }
@@ -501,7 +501,7 @@ pub struct Core {
     waiting: usize,
     out: [[f32; QUANTUM]; CHANNELS],
     /// The notes of the voices that follow their channel
-    /// (`Voice::FOLLOWS`, queue item 101g), per channel and block, added in
+    /// (`Voice::FOLLOWS`), per channel and block, added in
     /// after the channel's own blocks; whether any sounded this block; each
     /// channel's level without them (its mean square, followed over
     /// `block::FOLLOW` seconds), and the follower's step a block.
@@ -537,7 +537,7 @@ pub struct Core {
     /// The mix going into the master, a block a lane (the second only in
     /// stereo).
     mixed: [Signal; OUT],
-    /// The space recipe (queue item 65) and the loop it last drew for, the
+    /// The space recipe and the loop it last drew for, the
     /// draw, and whether one has been set: with none, a stereo render is
     /// mono on each side.
     space: space::Space,
@@ -552,12 +552,12 @@ pub struct Core {
     space_drawn: space::Drawn,
     space_on: bool,
     /// The frame the loop's space was taken from: where a space that moves
-    /// over the loop (widePad's late kind, queue item 101c) counts from.
+    /// over the loop (widePad's late kind) counts from.
     space_from: u64,
     /// Whether that frame moved (`SPACE_AGE`): the space is set where it
     /// stands at the next block, though past its opening.
     space_moved: bool,
-    /// The bass layer's lift for the loop, in dB (queue item 76c), stamped on
+    /// The bass layer's lift for the loop, in dB, stamped on
     /// each bass note as it arrives. 0 is today's level.
     bass_lift: f64,
     /// In a stereo render with a space, this block: each channel's notes
@@ -700,7 +700,7 @@ impl Core {
     /// makes; the web host's worklet calls `init`, `quality` and
     /// `set_layout` itself.
     ///
-    /// Two layouts (queue item 64; `docs/CORE.md`, promise 9): mono, one
+    /// Two layouts (`docs/CORE.md`, promise 9): mono, one
     /// channel, and stereo, two, each a render of its own. The mono render
     /// is the one the core has always made and pays nothing for stereo; the
     /// stereo render's mid is the mono mix. Asking for another returns
@@ -727,7 +727,7 @@ impl Core {
     /// the core mono.
     ///
     /// Before the first block it is the render from the start. After it
-    /// (the listener's Mono switch, queue item 66) the sound goes on: into
+    /// (the listener's Mono switch) the sound goes on: into
     /// stereo the master takes two lanes at once (`Master::switch_layout`)
     /// and the side fades in from silence over `LAYOUT_FADE`; into mono the
     /// side fades out over it, and then the master takes one lane. Until
@@ -853,7 +853,7 @@ impl Core {
     }
 
     /// The frames `render` has handed the host so far: `next_frame`, less
-    /// what of the last block it has yet to give (queue item 87). Where a
+    /// what of the last block it has yet to give. Where a
     /// host rendering ahead in chunks stands: its next chunk starts here,
     /// whatever sizes the chunks before it were.
     #[must_use]
@@ -876,8 +876,8 @@ impl Core {
     }
 
     /// The loop's space where it has got to (`space::Drawn::at`): the draw
-    /// itself but for widePad's late kind, which opens over the loop (queue
-    /// item 101c).
+    /// itself but for widePad's late kind, which opens over the loop
+    /// .
     fn drawn_now(&self) -> space::Drawn {
         #[allow(clippy::cast_precision_loss)] // a frame count, exact for millennia
         let seconds = self.next.saturating_sub(self.space_from) as f64 / self.rate.max(1.0);
@@ -887,14 +887,14 @@ impl Core {
     /// Set the space recipe's setting `which` (`space::n`, `space::SETTINGS`)
     /// to draw from `lo` to `hi` (the same number pins it), from the next
     /// loop's `SPACE_START`: a request, a slider or a game narrowing the
-    /// approved baseline (queue item 65; `docs/CORE.md`, promise 9). False,
+    /// approved baseline (`docs/CORE.md`, promise 9). False,
     /// and nothing changes, for no such setting or a range that isn't one.
     pub fn space_range(&mut self, which: usize, lo: f64, hi: f64) -> bool {
         self.space.range(which, lo, hi)
     }
 
-    /// Set the bass layer's level for the loop, in dB over today's (queue
-    /// item 76c): every bass voice alike, the same for every note that
+    /// Set the bass layer's level for the loop, in dB over today's:
+    /// every bass voice alike, the same for every note that
     /// arrives from now on (a note already waiting keeps the lift it
     /// arrived with, so a loop handed over keeps its own). The host sends it
     /// at each load: `BASS_LIFT_KICK` in `js/choices.js` for a loop that
@@ -1087,8 +1087,8 @@ impl Core {
 
     /// Drop every note still waiting for its start time, and leave the ones
     /// sounding as they are: the host handed notes over ahead of their time
-    /// and the music has jumped since (Pause, Next or Previous, queue item
-    /// 39). The events still waiting for their time go with them (they
+    /// and the music has jumped since (Pause, Next or Previous).
+    /// The events still waiting for their time go with them (they
     /// belong to the music that jumped); settings and routes stay, as the
     /// loop's.
     pub fn cancel(&mut self) {
@@ -1117,7 +1117,7 @@ impl Core {
     /// Drop the notes still waiting whose time is `time` (seconds) or later,
     /// and keep the rest, waiting or sounding: a change that must be heard
     /// at once while notes are handed over seconds ahead (mute, re-roll,
-    /// tempo; queue item 40). The host decides again from `time` on, so the
+    /// tempo). The host decides again from `time` on, so the
     /// two halves meet exactly, by the time each note was asked for. The
     /// events waiting from `time` on go the same way.
     pub fn cancel_from(&mut self, time: f64) {
@@ -1221,7 +1221,7 @@ impl Core {
             extra,
             draws: Draws::new(self.key, channel),
         };
-        // The loop's bass lift rides on each bass note (item 76c).
+        // The loop's bass lift rides on each bass note.
         if voice == BASS {
             note.extra[blocks::bass::LIFT_SLOT] = self.bass_lift;
         }
@@ -1270,7 +1270,7 @@ impl Core {
         taken
     }
 
-    /// Let a note go early (queue item 85c: the voice budget taking room
+    /// Let a note go early (the voice budget taking room
     /// from a layer's oldest notes for a new one): every note in `channel`
     /// the host keyed `key` (`Core::key`), sounding or still waiting, falls
     /// linearly from its level at `from` to nothing at `to` (seconds on the
@@ -1303,7 +1303,7 @@ impl Core {
         n
     }
 
-    /// Let every note go (queue item 86: a loop handing over to the next by
+    /// Let every note go (a loop handing over to the next by
     /// a crossfade): every note sounding or still waiting, in every channel,
     /// falls linearly from its level at `from` to nothing at `to` and ends
     /// there, as `steal` lets one go (a time already rendered is the next
@@ -1343,7 +1343,7 @@ impl Core {
         self.event(channel, Event::new(event::DAMP, time, 0.0));
     }
 
-    /// Send `event` to `channel` (queue items 46b and 46c). Its kind says
+    /// Send `event` to `channel`. Its kind says
     /// how far it reaches the channel's notes (`event::reach`):
     ///
     /// - **once** (a damp, a release): every note in the channel still held
@@ -1413,8 +1413,8 @@ impl Core {
     }
 
     /// Set setting number `setting` (`Block::SETTINGS`) of `channel`'s own
-    /// block number `block` (`blocks::own`) to `value` at `time` seconds
-    /// (queue item 46c): a loop's sweep period, duck depth or registration,
+    /// block number `block` (`blocks::own`) to `value` at `time` seconds:
+    /// a loop's sweep period, duck depth or registration,
     /// as `param` sets the mix's. The block hears it when its time comes,
     /// before the block holding that time renders; a time already rendered
     /// is the next block's start. False for no such channel, block or
@@ -1427,8 +1427,8 @@ impl Core {
     }
 
     /// Route a signal into setting number `setting` (`Block::MODS`) of
-    /// `channel`'s own block number `block`, from `time` seconds on (queue
-    /// item 46c): the kick's channel into the bass's duck, the other layers
+    /// `channel`'s own block number `block`, from `time` seconds on:
+    /// the kick's channel into the bass's duck, the other layers
     /// into the wash's follower. `from` is where it is taken (`Tap`): a
     /// channel as it goes into the mix, or one of its own blocks' bus; `None`
     /// undoes the route. One signal a setting: a second route into it takes
@@ -1636,7 +1636,7 @@ impl Core {
                 self.master.set_width(0, start.ceiling);
             }
         } else if self.spaced && self.drawn.open > 0.0 {
-            // widePad's late kind (queue item 101c): the chords' spread and
+            // widePad's late kind: the chords' spread and
             // the ceiling open block by block, until a second past the end
             // (and once where a jump moved where it counts from).
             #[allow(clippy::cast_precision_loss)] // a frame count, exact for millennia
@@ -1743,7 +1743,7 @@ impl Core {
                 }
             }
             // The channel's level as its own blocks leave it, then the notes
-            // that follow it (queue item 101g), added only where any
+            // that follow it, added only where any
             // sounded, so a channel without one is the samples it was.
             let ms = out.iter().map(|&x| f64::from(x) * f64::from(x)).sum::<f64>() / frames;
             *heard += follow * (ms - *heard);
@@ -1771,7 +1771,7 @@ impl Core {
             r.drive = *tap;
         }
         // The mix: the mono mix, and in a stereo render with a space its
-        // side (queue item 65), left = mid + side and right = mid - side.
+        // side, left = mid + side and right = mid - side.
         // With no space both lanes are the mid.
         let lift = self.master.arc_lift(block);
         let side_in = SideIn { placed: &self.placed, own: &self.own_side, space: &self.drawn };
@@ -1835,7 +1835,7 @@ fn render_fading(
 ) {
     // One buffer for the note's sound, added where it plays through: the
     // channel's signal or the one bus (`blocks::through`), not a buffer for
-    // every bus (queue item 85e: full quality lets notes go too).
+    // every bus (full quality lets notes go too).
     let mut own_out: Signal = [0.0; QUANTUM];
     let mut own_sends: Sends = [[0.0; QUANTUM]; 2];
     let mut own_sent = false;
@@ -1907,7 +1907,7 @@ mod tests {
             .expect("core")
     }
 
-    // Queue item 85c: a note let go early sounds as it would have up to its
+    // A note let go early sounds as it would have up to its
     // fade's start, bit for bit; falls to nothing across the fade with no
     // step larger than its own; is silent from its end, its voice let go;
     // and a note not yet started when it is let go never sounds.
@@ -1968,7 +1968,7 @@ mod tests {
         fn part<B: block::Block + Default>(&mut self, _: &'static str) {}
     }
 
-    // Queue item 85c: every voice of the registry, at each of the kit's
+    // Every voice of the registry, at each of the kit's
     // probes, let go at the budget's fade (0.05 s) while it sounds: bit for
     // bit until the fade, no step from it on beyond the note's own (and what
     // the fall itself adds, a 2,400th of its level a sample), and silent
@@ -2483,7 +2483,7 @@ mod tests {
         assert_eq!(core.start(48_000.0, 3), Err(Error::Layout(3)));
         assert!(core.mixing());
         assert_eq!(core.layout(), 1);
-        // Stereo (queue item 64).
+        // Stereo.
         assert_eq!(core.start(48_000.0, 2), Ok(()));
         assert_eq!(core.layout(), 2);
         assert!(!core.set_layout(3));
@@ -2491,7 +2491,7 @@ mod tests {
     }
 
     /// With nothing placed or widened, each side of the stereo render is the
-    /// mono render, bit for bit (queue item 64): the mix's mid is the mono
+    /// mono render, bit for bit: the mix's mid is the mono
     /// mix, the saturator and filters run on each side alike, and the
     /// compressors, keyed by the mid, press as mono's do. A loud loop, so
     /// both compressors are pressing, with the arc on, at full and lite
@@ -2527,7 +2527,7 @@ mod tests {
         }
     }
 
-    /// padSweep (queue item 72): the chords' channel through a lowpass that
+    /// padSweep: the chords' channel through a lowpass that
     /// starts closed and is open half a period later; a new sweep glides from
     /// where the cutoff was (no jump); with its octaves set to 0 it glides
     /// open and then passes the channel as it is.
@@ -2587,7 +2587,7 @@ mod tests {
         assert!(then < -3.0, "and closed a period on: {then:.1} dB");
     }
 
-    /// padWow (queue item 101b): the chords' channel bent by its two swings
+    /// padWow: the chords' channel bent by its two swings
     /// (14 cents at 0.5 Hz, a third of it at 0.185) from the time it is set
     /// and not before; never more than 20 cents off together, however deep
     /// and fast it is asked; a new loop's wow glides on and an ending one
@@ -2653,7 +2653,7 @@ mod tests {
         assert!(most(&cents(&next, 4.6, 7.9)) > 8.0, "the new loop's wow plays");
     }
 
-    /// The bass lift (queue item 76c): a loop's setting raises every bass
+    /// The bass lift: a loop's setting raises every bass
     /// voice by that many dB, a note that arrives before the next setting
     /// keeps the lift it arrived with, a note with none is today's level to
     /// the bit, and a number that isn't one is refused.
@@ -2684,7 +2684,7 @@ mod tests {
         assert!(core.bass_lift(3.0) && core.bass_lift(-BASS_LIFT_MAX));
     }
 
-    /// subDuck (queue item 68): the bass channel dips at each kick of the
+    /// subDuck: the bass channel dips at each kick of the
     /// drums' channel routed into it, by its depth (scaled by the kick's
     /// velocity, full at 0.8), within 10-50 ms of the kick, and is back
     /// within 1 dB by a quarter second; the drums are untouched, and with no
@@ -2755,7 +2755,7 @@ mod tests {
         assert!(off == plain && off_drums == plain_drums);
     }
 
-    /// A tuned kick's next hit chokes it (queue item 67): a `CHOKE` sent to
+    /// A tuned kick's next hit chokes it: a `CHOKE` sent to
     /// the drums' channel reaches a boom still ringing, which falls away in
     /// a few ms, and never the hit it was sent with.
     #[test]
@@ -2795,7 +2795,7 @@ mod tests {
         assert!(diff < 1e-6 && peak(&both[at(0.7)..]) > 0.005, "the new hit is untouched: {diff}");
     }
 
-    /// widePad (queue item 101c), as the core plays it: a held chord's side
+    /// widePad, as the core plays it: a held chord's side
     /// far wider (here 5 dB and more, the room's side beside it) with the mid as it was, and the late
     /// kind starting at the baseline's width and opening to the wide one
     /// over its time (pinned to 4 s here, 60 to 120 in a loop), then holding.
@@ -2852,7 +2852,7 @@ mod tests {
         assert!(held.abs() < 0.5, "late, open: {held:.2} dB from the wide one");
     }
 
-    /// The listener's Mono switch (queue item 66), flipped while a chord
+    /// The listener's Mono switch, flipped while a chord
     /// plays: until then the render is the mono one bit for bit; into stereo
     /// the side starts from silence and fades in; back into mono it fades
     /// out, then the master goes to one lane. Neither way clicks: a step
@@ -3421,14 +3421,14 @@ mod tests {
     }
 }
 
-// FLAC, the lossless export (queue item 104a): natively always, and in a web
+// FLAC, the lossless export: natively always, and in a web
 // build only with the `flac` feature, so the app's module stays the bytes it
-// was until the app exports (session 20). At the file's end, so no line of
+// was until the app exports. At the file's end, so no line of
 // shipped code moves (`core/AGENTS.md`).
 #[cfg(any(not(feature = "web"), feature = "flac"))]
 pub mod flac;
 
-// What each note that took a voice was (session 30b, queue item 110): the
+// What each note that took a voice was: the
 // measuring tools' record of what each layer's channel sounds, note by note
 // (`tools/heard.mjs`), against what the layers draw. The tools build only,
 // at the file's end, so no line of shipped code moves (`core/AGENTS.md`).

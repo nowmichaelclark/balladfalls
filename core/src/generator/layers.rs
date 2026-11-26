@@ -1,5 +1,5 @@
-//! The bass, drums and texture layers (queue item 80): `genBass` with item
-//! 56's register and item 71's pedal (`pedalBass`, `pedalOf`), `genDrums`
+//! The bass, drums and texture layers: `genBass` with its
+//! register and its pedal (`pedalBass`, `pedalOf`), `genDrums`
 //! with wayfare's travelling grooves (`travelGroove`), and `genTexture`,
 //! from `js/generator.js` and `js/choices.js`.
 
@@ -82,7 +82,7 @@ pub fn gen_bass(cx: &Cx, bars: f64, slots: &[Slot], out: &mut Bass) -> BassOut {
     let spb = cx.spb;
     let scale = spec.steps();
     let total = bars * spb;
-    // A bass re-rolled (queue item 94a) is not the sparse style, unless
+    // A bass re-rolled is not the sparse style, unless
     // that is all there is.
     let styles = c.bass_styles.as_ref().map_or(&[][..], |p| &p[..]);
     let mut style = if spec.forced(Layer::Bass) {
@@ -368,8 +368,8 @@ pub type Drums = List<DrumEvent, DRUMS_MAX>;
 #[derive(Clone, Copy)]
 pub struct DrumsOut {
     pub kit: Word,
-    /// Where the hits a kit choice wrote begin in the kit's list (queue item
-    /// 101d, `kit`), after the loop's own; 0 where it wrote none. The
+    /// Where the hits a kit choice wrote begin in the kit's list
+    /// (`kit`), after the loop's own; 0 where it wrote none. The
     /// wander draws for the loop's own hits on its own stream, as it always
     /// has, and for these on another, so nothing it draws moves.
     pub written: usize,
@@ -423,7 +423,7 @@ pub fn gen_drums(cx: &Cx, bars: f64, out: &mut Drums) -> DrumsOut {
         return DrumsOut { kit: Word::new("none"), written: 0 };
     }
     // A profile with no kits of its own draws the core's, those that had
-    // joined by the loop's version (queue item 105).
+    // joined by the loop's version.
     let fallback = super::character::kept(&KITS, data::CODE_VOICES[0], spec.version);
     let pool = c.kits.as_ref().map_or(&fallback[..], |p| &p[..]);
     let kit = r.weighted(pool);
@@ -733,13 +733,13 @@ pub fn gen_texture(cx: &Cx, bars: f64, slots: &[Slot], cycle_steps: f64, out: &m
         Some(p) => &p[..],
         None => &fallback[..],
     };
-    // A texture re-rolled (queue item 94a) never draws none.
+    // A texture re-rolled never draws none.
     let kept = asked::without(all, "none");
     let pool = if spec.forced(Layer::Texture) { &kept[..] } else { all };
     let kind = r.weighted(pool);
     let mut kind = kind.unwrap_or("none");
     // A texture asked on is not the one that is no texture; one asked a voice
-    // keeps its rest unless it is asked on too (queue item 91).
+    // keeps its rest unless it is asked on too.
     if kind == "none" && asked::on(spec, Layer::Texture) {
         kind = asked::on_pick(spec, Layer::Texture, pool, "none");
     }

@@ -1,14 +1,14 @@
-//! Share codes, version 2 (queue item 105; `dlcore::code`): every name a
+//! Share codes, version 2 (`dlcore::code`): every name a
 //! code carries has its id and version (`data/codes.txt`); every part of a
 //! request, every length, journey and edit round-trips, text and sound (a
 //! walk of the request's whole list, as the pins' test walks them, and a few
 //! thousand random requests); every generation golden's case written as a
 //! code and read back generates its same hashes; codes from a newer build,
 //! or naming what no build gave, are refused plainly; one naming what was
-//! taken out plays something close (item 105e); and corrupt or
+//! taken out plays something close; and corrupt or
 //! truncated codes never panic. A name travels with its code in any script
-//! and with emoji, capped in bytes, and what a name refuses is refused
-//! (session 23). The dummy build's test (`tests/dummy.rs`) holds the
+//! and with emoji, capped in bytes, and what a name refuses is refused.
+//! The dummy build's test (`tests/dummy.rs`) holds the
 //! version rule: what joins later moves no older code.
 
 use dlcore::code::{self, ALPHABET, Album, BAD_NAME, BAD_PACE, Kind, Loop, MARKS_MOST, NAME_MOST, NEEDS_NEWER, NOT_A_CODE, Name, PACE_MOST, Pace};
@@ -608,7 +608,7 @@ fn an_album_from_one_seed_is_one_short_code() {
     let mut out = [0u8; 256];
     let n = code::write_seed_album(424_242, 12, &picks, &Name::NONE, &mut out).expect("an album");
     let album = String::from_utf8(out[..n].to_vec()).expect("ASCII");
-    // A 24-hour, 12-track album in under 20 characters (Painter, item 4).
+    // A 24-hour, 12-track album in under 20 characters (Painter).
     assert!(album.len() < 20, "{album}");
     let a = code::read_album(album.as_bytes()).expect("an album");
     assert_eq!((a.count, a.seed), (12, Some(424_242)));
@@ -669,7 +669,7 @@ fn time(seconds: u32, f: u32) -> Pace {
 #[test]
 fn every_pace_round_trips() {
     // Every time a listener's Track length view gives, to the second (to a
-    // day: session 30c), with each pair of fades, and on and on with and
+    // day), with each pair of fades, and on and on with and
     // without a fade in; on a track alone and beside tracks of another pace
     // (where it writes its own) and of the same (where the album writes it
     // once).
@@ -696,7 +696,7 @@ fn every_pace_round_trips() {
     pace_round_trip(&tracks, &[Pace::On; 3], &Name::NONE);
     assert!(walked > 4000);
     // What no view gives is no pace: refused as it is written (whole passes
-    // and bars among them since session 30c, and a fade out with no end).
+    // and bars among them, and a fade out with no end).
     for (kind, count) in [(1, 2), (2, 8), (0, 1), (3, 0), (8, 0), (3, PACE_MOST + 1), (16 | 3, 5), (3, u32::MAX)] {
         assert_eq!(Pace::of(kind, count), None, "{kind} {count}");
     }
@@ -718,10 +718,10 @@ fn every_pace_round_trips() {
 
 #[test]
 fn an_album_code_from_before_times_still_reads() {
-    // Session 30c (Mikey, 2026-11-18: "it's okay if those codes aren't
+    // (Mikey, 2026-11-18: "it's okay if those codes aren't
     // exact"): a pace was whole passes or bars before, and its numbers now
     // read as times of a few seconds; every such album still reads, its
-    // tracks as they were. The fixtures as they stood (session 24b), and
+    // tracks as they were. The fixtures as they stood, and
     // every album code in core/golden/old-albums.txt (the albums that were
     // out in docs/ALBUMS.md until it started fresh at 1.0).
     let old = [
@@ -920,7 +920,7 @@ fn a_newer_builds_code_is_refused_plainly() {
     // An id with no row (a vibe, a choice, an option, a setting, a word, a
     // voice, a journey): a newer build's at the version still open, which it
     // shares, and no code's at a released one, whose ids are all here
-    // (item 105e; tests/dummy.rs reads both).
+    // (tests/dummy.rs reads both).
     let open = data::CODE_NEWEST > data::CODE_RELEASED;
     let head = &plain[..7];
     for fields in [
@@ -946,8 +946,8 @@ fn a_newer_builds_code_is_refused_plainly() {
 
 #[test]
 fn twangs_slow_and_bright_play_soft() {
-    // Written by main at v193, before slow and bright were taken out (item
-    // 105e): corpus 20261009's first loop that plays twang, pinned to each.
+    // Written by main at v193, before slow and bright were taken out:
+    // corpus 20261009's first loop that plays twang, pinned to each.
     roomy(|| {
         let (soft, slow, bright) = ("ENqAy3DQWBWo", "ENqAy3DQWCXo", "ENqAy3DQWDYo");
         let mut g = Box::new(Generator::new());
@@ -974,7 +974,7 @@ fn twangs_slow_and_bright_play_soft() {
 #[test]
 fn every_field_ever_written_is_still_read() {
     // A tag this build stops writing is read and set aside, never refused
-    // and never given again (item 105e): one of each, as version 2 wrote it.
+    // and never given again: one of each, as version 2 wrote it.
     let seed = "NBAAAA";
     let one = uv(1);
     let fields = [
@@ -1450,7 +1450,7 @@ fn a_request_reads_back_from_its_text() {
 
 #[test]
 fn a_drawn_long_piece_writes_no_length_and_comes_back_the_same() {
-    // Queue item 117: with no length asked the seed sometimes draws a long
+    // With no length asked the seed sometimes draws a long
     // piece. Its code writes no length (the request has none): read back, the
     // seed draws the same piece, every part's hash the same (`round_trip`).
     roomy(|| {

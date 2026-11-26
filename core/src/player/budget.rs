@@ -1,5 +1,5 @@
 //! The voice budget (`_budget`, `_room` and `_release` in `js/synth.js`),
-//! as the player asks it (queue item 82): in cost units, not a count of
+//! as the player asks it: in cost units, not a count of
 //! voices; each note that plays holds its cost until it is over, and a note
 //! that would take the budget past its ceiling is refused. The softer
 //! accompaniment (pads, textures, a chord voice) asks against a lower cap,
@@ -7,7 +7,7 @@
 //! for room and holds nothing. The figures and the order of every sum are
 //! the JavaScript's, so the player refuses exactly the notes the page does.
 //!
-//! **Taking room from old notes** (queue item 85c; `_steal` in synth.js): a
+//! **Taking room from old notes** (`_steal` in synth.js): a
 //! note that doesn't fit lets go of its own layer's oldest voice calls still
 //! holding the budget, from other steps, until it fits, and is refused only
 //! if that can't make room. Each call let go falls to nothing over
@@ -40,12 +40,12 @@ const TAIL: f64 = 0.12;
 /// seconds, ending as the new note starts (`STEAL_FADE`; for Mikey's ears).
 pub const STEAL_FADE: f64 = 0.05;
 /// Whether the budget takes room from old notes on lite, and at full
-/// quality (`STEAL_QUALITIES`): both since queue item 85e (Mikey heard
+/// quality (`STEAL_QUALITIES`): both (Mikey heard
 /// lite's and asked for the same at full).
 pub const STEAL_LITE: bool = true;
 pub const STEAL_FULL: bool = true;
 /// Whether the calls already past their end go before the ones still held,
-/// on lite and at full (`RELEASED_FIRST`, queue item 85e): the field's order
+/// on lite and at full (`RELEASED_FIRST`): the field's order
 /// (a sampler lets a releasing voice go before a held one), oldest first
 /// within each.
 pub const RELEASED_FIRST_LITE: bool = true;
@@ -93,8 +93,8 @@ pub struct Budget {
     head: usize,
     len: usize,
     lite: bool,
-    /// Whether the calls asking now are a long piece's landing (queue item
-    /// 102c, `set_firm`): they may take the whole ceiling, and let go any
+    /// Whether the calls asking now are a long piece's landing
+    /// (`set_firm`): they may take the whole ceiling, and let go any
     /// older call, whatever its layer.
     firm: bool,
     full: u32,
@@ -107,7 +107,7 @@ pub struct Budget {
     /// `_steal`'s working list: the calls it could let go.
     older: [Older; HOLDS],
     /// Every hold's cost times how long it holds, summed since the start
-    /// (`held`; queue item 87): the work the voices asked for.
+    /// (`held`): the work the voices asked for.
     held: f64, #[cfg(feature = "tools")] counts: Counts,
 }
 
@@ -136,8 +136,8 @@ impl Budget {
         }
     }
 
-    /// A long piece's landing asks from now (`firm` true) until it is done
-    /// (queue item 102c): its few notes play alone, every layer's own left
+    /// A long piece's landing asks from now (`firm` true) until it is done:
+    /// its few notes play alone, every layer's own left
     /// out, so they may use the whole ceiling and let go any older tail
     /// that still holds it.
     pub fn set_firm(&mut self, firm: bool) {
@@ -163,8 +163,8 @@ impl Budget {
         self.current = layer.map(|layer| Group { id: self.calls, layer, key, channels: 0, kept: false }).into(); #[cfg(feature = "tools")] self.counts.begin();
     }
 
-    /// The voice call being made is never let go for a newer note (queue
-    /// item 85e): a held instrument's, the drone's (`keep` in synth.js).
+    /// The voice call being made is never let go for a newer note:
+    /// a held instrument's, the drone's (`keep` in synth.js).
     /// The organ, the wash and padSweep's bed are the channels' own blocks
     /// and hold no budget.
     pub fn keep(&mut self) {
@@ -174,7 +174,7 @@ impl Budget {
     }
 
     /// The voice call is over: true if it handed the core a note (none was
-    /// refused room), so the layers draw what it played (session 30b).
+    /// refused room), so the layers draw what it played.
     pub fn end(&mut self) -> bool {
         #[cfg(feature = "tools")] self.counts.end(self.current.get().map(|g| g.layer)); let sent = self.current.get().is_some_and(|g| g.channels != 0); self.current = Maybe::NONE;
         sent
@@ -210,7 +210,7 @@ impl Budget {
     }
 
     /// The cost units held times the seconds they were held, summed over
-    /// every note that played since the start (queue item 87): a hold of
+    /// every note that played since the start: a hold of
     /// `cost` from `time` to its end adds `cost` times that span, when it
     /// is made. The player reads it a pass at a time for its estimate of
     /// what a chunk costs to render (`Player::units`). A note let go early
@@ -342,7 +342,7 @@ impl Budget {
         true
     }
 
-    /// Every hold over by `time` at the latest (queue item 86): the notes a
+    /// Every hold over by `time` at the latest: the notes a
     /// loop handed over before a crossfade let go of the budget at the
     /// boundary, so the next loop's notes are not refused for room the old
     /// ones only fade in. The
@@ -417,7 +417,7 @@ impl Empty for Group {
     const EMPTY: Self = NO_GROUP;
 }
 
-/// What the measuring tools read of the budget (queue item 96; the tools
+/// What the measuring tools read of the budget (the tools
 /// build only): each layer's voice calls and how many were refused room,
 /// in `Layer`'s order. Its lines in `Budget` share a line with the code
 /// they sit beside, as the sketch build's do in the sequencer: a line added
@@ -560,7 +560,7 @@ mod tests {
         assert!(!b.ask(&mut host, 1.5, false, 90.0));
         b.end();
         assert_eq!(host.0, Vec::new());
-        // At full quality it takes room too (queue item 85e).
+        // At full quality it takes room too.
         let mut full = Budget::new();
         full.reset(false);
         full.begin(Some(Layer::Melody), at(0, 0));

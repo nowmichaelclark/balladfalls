@@ -1,7 +1,7 @@
-//! Forceable generator levers that are not in the data (queue item 99), in
+//! Forceable generator levers that are not in the data, in
 //! the `sketch` build only.
 //!
-//! Item 83's `--force` forces one of `data/choices.txt`'s choices. A choice
+//! `--force` forces one of `data/choices.txt`'s choices. A choice
 //! added there changes the app (its draws, its golden hashes, its bytes),
 //! and these are for hearing before anything is approved. So the levers
 //! live here, beside [`tuning`](crate::tuning)'s constants, and `Render::force`
@@ -16,11 +16,11 @@
 //! Tests that force one hold a lock of their own for as long as they do
 //! (`tests/sketch.rs`).
 //!
-//! - tripletKit and dottedPulse were levers until queue item 101d made them
+//! - tripletKit and dottedPulse were levers until they were made
 //!   choices of the data (`generator::kit`), which `--force tripletKit=on`
 //!   and `--force dottedPulse=kick332` force as any other.
-//! - **planingSevenths** (`on`): the loop planes as if it drew it (queue item
-//!   101f made it the progression's per-loop draw, `generator::planing`; a
+//! - **planingSevenths** (`on`): the loop planes as if it drew it (it is
+//!   now the progression's per-loop draw, `generator::planing`; a
 //!   request pins it with `progression.kind`). The lever stays so that Ears
 //!   13b's job lists render again, now with the tune following the chords.
 

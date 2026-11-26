@@ -1,29 +1,29 @@
-//! The generator, in Rust (phase 2, queue items 79 to 82): a loop from its
-//! seed and the generation data, with no JavaScript.
+//! The generator: a loop from its seed and the generation data.
 //!
-//! It is `js/generator.js` ported note for note, and proven so: for every
-//! case of the generation goldens (`core/golden/generation.hashes`, queue
-//! item 77) it makes the same decisions, hashed over the same canonical
-//! text, on every target. Until the player (item 82) is in the app, the
-//! JavaScript generator plays and this one is held to it; a change to one
-//! is made in both, or waits (`docs/QUEUE.md`, phase 2's rules).
+//! It was ported note for note from the old JavaScript generator, and the
+//! generation goldens (`core/golden/generation.hashes`) held it so on every
+//! target. It is now the only generator. The goldens hold it where it is:
+//! nothing that is generated moves unless a PR means it to.
 //!
-//! **What is here.** Item 79: the spec (`spec::new_spec`: the vibes' draw,
-//! drive, the profile mix, the feel, bars, tempo and gait, key and mode) and
-//! what `render` plans before any layer plays (`plan`: the development's
-//! sections, the harmony and its progression, the entry schedules and the
-//! gaps). Item 80: the layers (`layers`: the bass with its register and the
-//! pedal, the drums and wayfare's grooves, the texture; `melody`: motifs,
-//! cells, phrases and development) and the rest of `render` (`render`: the
-//! repairs, the gaps, the per-loop choices the pedal needs, the register
-//! work, the spellings, the long chords' octave, the slurs, strums,
-//! ornaments and the harmony line). Item 81: each choice's own draws
-//! (`choices`: the arc, the tuned kick, subDuck, lateFloor, the floor
-//! drop's shapes, padSweep, the echo time, the bass's level), what the
-//! engine decides at load (`load`: dubStab, the organ, the wash, the
-//! space, and the rest), and "Let the loop wander" (`wander`: each pass's
-//! `drift`, its floor drop and its kick). With these, every decision the
-//! JavaScript makes before scheduling has its twin here.
+//! **What is here:**
+//! - The spec (`spec::new_spec`): the vibes' draw, drive, the profile mix,
+//!   the feel, bars, tempo and gait, key and mode.
+//! - What `render` plans before any layer plays (`plan`): the development's
+//!   sections, the harmony and its progression, the entry schedules and the
+//!   gaps.
+//! - The layers (`layers`): the bass with its register and the pedal, the
+//!   drums and wayfare's grooves, the texture. `melody` makes the motifs,
+//!   cells, phrases and development.
+//! - The rest of `render`: the repairs, the gaps, the per-loop choices that
+//!   the pedal needs, the register work, the spellings, the long chords'
+//!   octave, the slurs, strums, ornaments and the harmony line.
+//! - Each choice's own draws (`choices`): the arc, the tuned kick, subDuck,
+//!   lateFloor, the floor drop's shapes, padSweep, the echo time, the
+//!   bass's level.
+//! - What the engine decides at load (`load`): dubStab, the organ, the
+//!   wash, the space, and the rest.
+//! - "Let the loop wander" (`wander`): each pass's `drift`, its floor drop
+//!   and its kick.
 //!
 //! **The data** (`data/*.txt`) is compiled in by `core/build.rs`, into
 //! read-only tables (`data`): the core reads nothing at run time and a host
@@ -195,8 +195,8 @@ pub struct Generator {
     request: request::Request,
     today: Option<f64>,
     kick: choices::KickFit,
-    /// The tunes a long piece plays beside the loop's own (session 14,
-    /// `heard::Tune`): the one the section playing uses and the next's,
+    /// The tunes a long piece plays beside the loop's own
+    /// (`heard::Tune`): the one the section playing uses and the next's,
     /// each made a stage at a time (`prepare`).
     seconds: [Second; 2],
     making: Making,
@@ -204,7 +204,7 @@ pub struct Generator {
 
 /// A tune beside the loop's own, made (`Generator::prepare`): which it is,
 /// whether its making is done, and its notes (none: the theme rests, and
-/// stays resting, queue item 85f). All zero bytes is an empty slot.
+/// stays resting). All zero bytes is an empty slot.
 pub struct Second {
     tune: heard::Tune,
     ready: bool,
@@ -240,7 +240,7 @@ fn held_chords(plan: &plan::Plan) -> bool {
 
 /// The stages of a load, in order (`Generator::step`): each a part of
 /// `load` that runs whole, so a host on an audio thread can spread a load
-/// across its blocks (the player, queue item 82; promise 1).
+/// across its blocks (the player; promise 1).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Stage {
     /// Nothing loaded, or loading.
@@ -250,7 +250,7 @@ pub enum Stage {
     /// The plan.
     Plan,
     /// A loop with held chords is planned again on today's chord lengths,
-    /// for the chords' octave (queue item 84).
+    /// for the chords' octave.
     PlanToday,
     /// The harmony of that plan and the melody over it, for the same.
     RenderToday,
@@ -313,7 +313,7 @@ impl Generator {
         self.begin_with(seed, &request);
     }
 
-    /// Generate the loop of `seed` as `request` asks (queue item 85: the
+    /// Generate the loop of `seed` as `request` asks (the
     /// vibes, with or without weights, and the tempo), every stage at once.
     pub fn load_with(&mut self, seed: u32, request: &request::Request) {
         self.begin_with(seed, request);
@@ -334,7 +334,7 @@ impl Generator {
         // Each stage is a function of its own, never inlined: the stages
         // build big values on the stack (a spec, a plan's context, the
         // settings), and in one frame they are all held at once. That frame
-        // (31 KB after item 101a) took the player's calls past Emscripten's
+        // (31 KB, once) took the player's calls past Emscripten's
         // 64 KB default stack (`include/dlcore.h`); apart, a call holds one
         // stage's.
         match self.stage {
@@ -425,7 +425,7 @@ impl Generator {
     }
 
     /// Force a choice for the loops made from now on
-    /// (`render::Render::force`; queue item 83): the sketch build only.
+    /// (`render::Render::force`): the sketch build only.
     ///
     /// # Errors
     /// The choice or the option is not in the data.
@@ -440,8 +440,8 @@ impl Generator {
         &self.request
     }
 
-    /// The tone the listener set on the loop made (the Sound panel; queue
-    /// item 94a, `Player::set_tone`), as the app sets `spec.tone`: it is what
+    /// The tone the listener set on the loop made (the Sound panel;
+    /// `Player::set_tone`), as the app sets `spec.tone`: it is what
     /// the loop reports. Nothing made moves.
     pub fn set_tone(&mut self, tone: [f64; 3]) {
         self.spec.tone = tone;
@@ -490,7 +490,7 @@ impl Generator {
         &self.pass
     }
 
-    /// Section `n` of the loop's piece (queue item 88; `piece` says what a
+    /// Section `n` of the loop's piece (`piece` says what a
     /// piece is), as the player plays it with the wander at `amount`: the
     /// loop's pass numbered as the section, drawn now from the seed and the
     /// number alone, without making the sections before it. The same pass
@@ -507,10 +507,10 @@ impl Generator {
     }
 
     /// Make ready what section `n` of the loop's piece plays beside the
-    /// loop's own tune (session 14: a second theme, another seed's tune
+    /// loop's own tune (a second theme, another seed's tune
     /// bent into this loop, or the loop's own answered), a stage a call:
     /// the theme's figure (its own loop's spec, nothing asked, and the tune
-    /// drawn from it: the request's theme machinery, queue item 85d), the
+    /// drawn from it: the request's theme machinery), the
     /// notes (the loop's melody made again around that figure), their
     /// finish. True once it is ready (at once where the section needs
     /// none, or has it). The player calls it in the blocks before the
@@ -591,8 +591,8 @@ impl Generator {
         self.seconds.iter().find(|s| s.ready && s.tune == tune && tune != heard::Tune::NONE).map(|s| &s.melody)
     }
 
-    /// The pass drawn last, heard as section `n` of the loop's piece (queue
-    /// item 102b, `heard`): a wander's plan on its events, nothing for an
+    /// The pass drawn last, heard as section `n` of the loop's piece
+    /// (`heard`): a wander's plan on its events, nothing for an
     /// arc's or a loop that is no piece.
     fn hear(&mut self, n: u64) {
         while !self.prepare(n) {}
@@ -602,7 +602,7 @@ impl Generator {
         self.pass.heard.hear(form.as_ref(), &plan::Cx::new(&self.spec), &self.render, second, n);
     }
 
-    /// The plan of the loop's piece (queue item 102; `longform`): what each
+    /// The plan of the loop's piece (`longform`): what each
     /// of its sections is, from the spec, the request's edits and the
     /// layers the loop plays; none for a loop that is no long piece. Made
     /// now, from numbers alone: nothing is kept, and no section is walked.

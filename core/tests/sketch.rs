@@ -1,4 +1,4 @@
-//! The sketch build's levers (queue item 83): choices forced, constants
+//! The sketch build's levers: choices forced, constants
 //! moved, the sketch slot. Only with `--features sketch`; the app's build
 //! has none of it (`tools/build-core.sh --check` holds the bytes).
 #![cfg(feature = "sketch")]
@@ -55,7 +55,7 @@ fn a_constant_moves_only_when_named_and_finite() {
 }
 
 // ---------------------------------------------------------------------
-// The levers of queue item 99: forceable in a sketch build, off bit for
+// The levers: forceable in a sketch build, off bit for
 // bit today. They are process-wide like the constants, so a test that
 // forces one holds this lock.
 
@@ -143,7 +143,7 @@ fn planing_sevenths_are_major_sevenths_a_whole_step_or_a_minor_third_apart() {
 }
 
 // ---------------------------------------------------------------------
-// The constants of queue item 99: slowOpening's wait and fade, and the
+// The constants: slowOpening's wait and fade, and the
 // loop's tuning.
 
 use dlcore::Core;
@@ -253,7 +253,7 @@ fn the_tuning_offset_moves_a_note_by_its_cents_and_zero_is_a_440() {
 }
 
 // ---------------------------------------------------------------------
-// A retune at every chord (queue item 99, `chords.RETUNE`).
+// A retune at every chord (`chords.RETUNE`).
 
 use dlcore::block::{Event, event};
 use dlcore::player::host::Host;

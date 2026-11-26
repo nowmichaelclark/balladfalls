@@ -1,4 +1,4 @@
-//! The bass voices (queue item 27): `sub`, `round`, `fifths`, `pluckbass`
+//! The bass voices: `sub`, `round`, `fifths`, `pluckbass`
 //! and `moogbass`, each its JavaScript twin in `Synth.bass`, call for call.
 //! (`rhodesbass` is an `fm()` call, and the FM voice plays it.)
 //!
@@ -9,7 +9,7 @@
 //! just two sines. The only draws are the click's two, which the voice
 //! settles from the note's key (`Voice::settle`).
 //!
-//! Every one adds its soft harmonics (`harmonics`, queue item 56's
+//! Every one adds its soft harmonics (`harmonics`,
 //! roundBass): the 2nd, 3rd and 4th partials under a 900 Hz lowpass, so the
 //! note reads on a phone.
 //!
@@ -61,7 +61,7 @@ pub const GLIDE: u32 = 8;
 /// The flag for a chug.
 pub const CHUG: u32 = 16;
 
-/// The note's extra value that holds the loop's bass lift, in dB (item 76c).
+/// The note's extra value that holds the loop's bass lift, in dB.
 /// The core stamps it on each bass note as the note arrives (`Core::note`),
 /// from the setting the host sent for the loop; a note without one (the kit's
 /// probe, a golden list) reads it as 0 dB, today's level.
@@ -77,15 +77,15 @@ fn trim(kind: u32) -> f64 {
     }
 }
 
-/// roundBass's trims (queue item 56), in dB, each voice's: the harmonics
+/// roundBass's trims, in dB, each voice's: the harmonics
 /// add 3 to 7 dB by ear (K-weighted, across the register), so the whole
 /// note, harmonics and all, comes down by that much and the bass layer
 /// keeps today's level; `REGISTER_DB` takes back what the higher register
 /// adds on top, and the loop's lift (`LIFT_SLOT`) lifts them all. The harmonics keep the
 /// prototype's balance against the note, so the timbre is what Mikey heard;
 /// the prototype played the bass about 6 dB louder by ear than today. Mikey
-/// heard the two side by side (Session 26's album) and chose +3 dB in loops
-/// with a kick, today's level in loops without (item 76c); the host decides
+/// heard the two side by side (a listening album) and chose +3 dB in loops
+/// with a kick, today's level in loops without; the host decides
 /// which, per loop.
 fn round_trim(kind: u32, lift_db: f64) -> f64 {
     let db = match kind {
@@ -236,7 +236,7 @@ impl Bass {
         if self.main {
             self.triangle = kind == ROUND || kind == PLUCKBASS;
             // The pitch, gliding in from two thirds if asked. It rests at
-            // its first frequency, not Web Audio's 440 Hz (queue item 56):
+            // its first frequency, not Web Audio's 440 Hz:
             // in the block a note starts in its moving pitch is read from
             // the block's start (Chromium's rule, see `osc`), so the note
             // began with a blip of 440 Hz as long as it happened to fall
@@ -356,7 +356,7 @@ impl Bass {
             self.click_filter
                 .set(Kind::Bandpass, 900.0, Q_DEFAULT, 0.0, rate as f32);
             // Its gain is already at its first value when the noise begins:
-            // a source can start a frame ahead of the event (item 26b).
+            // a source can start a frame ahead of the event.
             let g = &mut self.click_gain;
             g.reset_at((vel * 0.1) as f32, rate);
             g.set_value_at_time((vel * 0.1) as f32, time);
@@ -364,7 +364,7 @@ impl Bass {
             starts = starts.min(self.src.start_frame());
             ends = ends.max(self.src.end_frame() + frame_at(FILTER_TAIL, rate));
         }
-        // The harmonics, softly, under every voice (queue item 56).
+        // The harmonics, softly, under every voice.
         self.harmonics.set(
             &harmonics::Settings { midi, time, dur, vel, release: let_go(0.09), stop },
             rate,

@@ -1,4 +1,4 @@
-//! `dlrender --flac` (queue item 104a): a render written as FLAC by the
+//! `dlrender --flac`: a render written as FLAC by the
 //! core's own encoder (`dlcore::flac`), as an export in the app will write
 //! one, from a seed or a note list.
 //!

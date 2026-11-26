@@ -9,7 +9,7 @@
 
 use core::ops::{Deref, DerefMut};
 
-/// A type with an empty value that is all zero bytes (queue item 93).
+/// A type with an empty value that is all zero bytes.
 ///
 /// A `List` fills its slots with it, and a `Maybe` holds it while empty, so a
 /// list or a maybe, and everything that holds one, starts as zero bytes: the
@@ -203,7 +203,7 @@ impl Default for Name {
     }
 }
 
-/// A static string whose empty state is all zero bytes (queue item 93).
+/// A static string whose empty state is all zero bytes.
 ///
 /// A bare `&'static str` can never be zero (a reference is not null), so a
 /// struct holding one cannot start as zeros, and the player that holds
@@ -252,7 +252,7 @@ impl PartialEq<&str> for Word {
     }
 }
 
-/// An `Option` whose `None` is all zero bytes (queue item 93).
+/// An `Option` whose `None` is all zero bytes.
 ///
 /// Rust writes the `None` of an `Option<T>` into a spare value of one of
 /// `T`'s fields (a flag's 2, say), so a struct holding one is not all zeros
@@ -341,7 +341,7 @@ impl Empty for Word {
 }
 
 /// A number whose stored bits are its bits XOR `BITS`: all zero bytes while it
-/// holds the default `BITS` is the bits of (queue item 93).
+/// holds the default `BITS` is the bits of.
 ///
 /// A state that starts at 0.75 or 1.0 is not zeros, and the player that holds
 /// dozens would be stored in the module instead of left in `.bss`. Stored

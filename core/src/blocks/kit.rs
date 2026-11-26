@@ -1,4 +1,4 @@
-//! The test kit (queue item 46): every block in the registry, played alone
+//! The test kit: every block in the registry, played alone
 //! and checked, with no test written for any one of them.
 //!
 //! For each of a block's probes (`Block::PROBES`) the kit renders the block
@@ -6,7 +6,7 @@
 //! processor fed one second of the core's noise), twice, and checks:
 //!
 //! - **level:** every sample finite, not silent, and not running away (its
-//!   peak under `CEILING`; a voice's under `VOICE_CEILING`, queue item 55);
+//!   peak under `CEILING`; a voice's under `VOICE_CEILING`);
 //!   RMS and peak are reported in dBFS;
 //! - **tone:** the share of its A-weighted energy between 2 and 5 kHz, as
 //!   `tools/measure.mjs` reckons it (the coffee-shop test), reported;
@@ -21,7 +21,7 @@
 //!   new, for an A/B (`dlrender --block NAME/PROBE --wav` renders either
 //!   version, and `--compare` gives the residual).
 //!
-//! And, from what a block declares (queue item 46b):
+//! And, from what a block declares:
 //!
 //! - **modulation:** for each setting in its `MODS`, each probe again with
 //!   that setting driven by a 3 Hz sine of the setting's `swing`
@@ -71,10 +71,10 @@ const COST_LIMIT: f64 = 0.02;
 /// full scale: a raw oscillator sits at it and the noise above it. Past
 /// this, a block is running away.
 const CEILING: f64 = 6.0;
-/// The loudest a voice may peak alone at its probe, in dBFS (queue item 55):
+/// The loudest a voice may peak alone at its probe, in dBFS:
 /// a game or a host that plays one voice alone, and every new voice of the
 /// sound batch, may not lean on the mix and the master's ceiling to catch
-/// it. The frame drum was the one over it (+1.0 dBFS), until item 55.
+/// it. The frame drum was the one over it (+1.0 dBFS), until it was lowered.
 const VOICE_CEILING: f64 = -1.0;
 /// Where the stored renders are kept.
 const STORED: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/golden/blocks.txt");
@@ -427,7 +427,7 @@ fn fft(re: &mut [f64], im: &mut [f64]) {
     }
 }
 
-/// Whether a row is the sketch slot's (`blocks::sketch`, queue item 83): a
+/// Whether a row is the sketch slot's (`blocks::sketch`): a
 /// sketch is checked like any block but has no stored render, since it
 /// changes whenever its session does and the stored renders are the app's.
 fn is_sketch(name: &str) -> bool {
@@ -560,11 +560,11 @@ fn named(name: &str) -> Vec<String> {
 }
 
 /// A new block is one new file plus one line in the registry (the charter's
-/// measure, promise 5). Each demonstration block -- the tremolo (item 46),
-/// the amplifier whose gain a signal drives and the stereo panner (item
-/// 46b), and a channel's own swell whose rate a host sets for the loop, held
-/// chorale retuned chord by chord and duck keyed by another channel (item
-/// 46c) -- is named in exactly those two places in the whole core, its own
+/// measure, promise 5). Each demonstration block -- the tremolo,
+/// the amplifier whose gain a signal drives and the stereo panner,
+/// and a channel's own swell whose rate a host sets for the loop, held
+/// chorale retuned chord by chord and duck keyed by another channel
+///  -- is named in exactly those two places in the whole core, its own
 /// file and one line of `blocks/mod.rs`, and the kit plays it all the same:
 /// the amplifier's modulation probe, the panner's stereo render, the swell's
 /// settings, the chorale's retunes and the duck's key too. (The core's own

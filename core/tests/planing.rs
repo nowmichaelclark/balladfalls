@@ -1,4 +1,4 @@
-//! planingSevenths (queue item 101f; batch 6's #10): an option of the
+//! planingSevenths (batch 6's #10): an option of the
 //! progression's per-loop draw (`generator::planing`). What it holds to: about
 //! the data's share of loops plane, leaned by the vibes as the batch's table
 //! says; a planed loop's every chord is a major seventh, the first on the

@@ -1,5 +1,5 @@
 //! Additions leave old codes as they sound, and what was taken out plays
-//! something close (queue items 105 and 105e; Mikey, 2026-11-10 and
+//! something close (Mikey, 2026-11-10 and
 //! 2026-11-17). Built with the `dummy` feature only (`cargo test --features
 //! dummy --test dummy`, in the gate's core part): `build.rs` lays
 //! `tests/dummy/*.txt` over `data/` (its README says what): a member of

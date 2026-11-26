@@ -1,4 +1,4 @@
-//! Named constants a clip can move (queue item 83), in the `sketch` build
+//! Named constants a clip can move, in the `sketch` build
 //! only.
 //!
 //! The brain's and the ears' A/B clips change one number and nothing else:
@@ -21,10 +21,10 @@ use core::sync::atomic::{AtomicU64, Ordering};
 /// The constants that can move: their names, as `--set` spells them. A
 /// constant is in this list or it cannot be set.
 ///
-/// - `bass.LIFT_DB`: the bass layer's lift (item 83).
+/// - `bass.LIFT_DB`: the bass layer's lift.
 /// - `latefloor.SECONDS_MAX`: the longest wait lateFloor draws, in seconds
-///   (the data's is 30); lets the wait run past it, as a slow opening's does
-///   (queue item 99). The draw stays what it is for the same seed, spread
+///   (the data's is 30); lets the wait run past it, as a slow opening's does.
+///   The draw stays what it is for the same seed, spread
 ///   over the wider range (`choices::late_floor_of`).
 /// - `latefloor.FADE`: seconds the kit and the bass take to rise to their
 ///   level after they arrive (0, the data's, is at once); a velocity ramp on

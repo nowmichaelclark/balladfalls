@@ -1,4 +1,4 @@
-//! A loop from its seed, on the player (queue item 82): `dlrender --seed`
+//! A loop from its seed, on the player: `dlrender --seed`
 //! and `--corpus`. No note list: the core's own generator makes the loop,
 //! its own sequencer plays it, pass after pass, wandering as the app's
 //! does. Each render prints one line: the loop, how it was rendered, and
@@ -31,14 +31,14 @@ pub struct Way {
     pub full: bool,
     pub layout: u32,
     pub wander: f64,
-    /// The wander's salt (`--salt`, queue item 92; `Player::set_wander_salt`):
+    /// The wander's salt (`--salt`; `Player::set_wander_salt`):
     /// 0, every code's own wander.
     pub salt: u32,
     pub vibes: Vec<String>,
     /// The request as text (`--request`; `Request::parse`), the vibes of
     /// `--vibes` added to it.
     pub request: Option<String>,
-    /// The sketch build's levers (queue item 83, `--force`, `--set`,
+    /// The sketch build's levers (`--force`, `--set`,
     /// `--sketch`, `--pin`; `clip.rs`): choices forced, named constants
     /// moved, the sketch block's layer, settings pinned.
     pub clip: crate::clip::Clip,
@@ -225,7 +225,7 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
     {
         let mut host = Tracer { core: &mut core, lines: &mut lines, pins: &way.clip.pins };
         player.attach(&mut host, way.rate, way.full);
-        // The track's end handed over as the app's is (queue item 95): the
+        // The track's end handed over as the app's is: the
         // core makes its own next loop there, from seeds of its own.
         if let Some(track) = way.track {
             player.set_track(&host, track);
@@ -287,8 +287,8 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
     h.samples(&samples);
     let _ = write!(line, " hash={}", h.hex());
     if way.choices {
-        // The options the loop drew other than today's, as the brain's
-        // Session 26 index listed them: `lateFloor`, or `kick:soft`.
+        // The options the loop drew other than today's, as the old
+        // index listed them: `lateFloor`, or `kick:soft`.
         let mut drawn: Vec<String> = dlcore::generator::data::CHOICES
             .iter()
             .filter_map(|c| {
@@ -296,19 +296,19 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
                 (Some(option) != c.options.first().map(|o| o.0)).then(|| if option == "on" { c.id.to_string() } else { format!("{}:{option}", c.id) })
             })
             .collect();
-        // The sketch levers that are no choice (queue item 99), where a clip
+        // The sketch levers that are no choice, where a clip
         // forced one.
         #[cfg(feature = "sketch")]
         drawn.extend(dlcore::levers::LEVERS.iter().filter_map(|l| {
             let option = dlcore::levers::named(l.id)?;
             (option != "today").then(|| if option == "on" { l.id.to_string() } else { format!("{}:{option}", l.id) })
         }));
-        // The progression's kind (queue item 101f), drawn outside the
+        // The progression's kind, drawn outside the
         // choices: `planingSevenths` where the loop planes.
         if dlcore::generator::planing::planes(player.generator().spec()) && !drawn.iter().any(|d| d == "planingSevenths") {
             drawn.push("planingSevenths".to_string());
         }
-        // The low bell (queue item 101g), drawn outside the choices:
+        // The low bell, drawn outside the choices:
         // `lowBell`, or `lowBell:swell`.
         match player.generator().settings().low_bell {
             1 => drawn.push("lowBell".to_string()),
@@ -319,7 +319,7 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
         if player.generator().settings().spotlight {
             drawn.push("dropSpotlight".to_string());
         }
-        // twang (queue item 101h), drawn outside the choices: `twang:soft`.
+        // twang, drawn outside the choices: `twang:soft`.
         if let Some(kind) = dlcore::generator::choices::TWANG_KINDS.get(usize::from(player.generator().settings().twang)).filter(|_| player.generator().settings().twang != 0) {
             drawn.push(format!("twang:{}", kind.0));
         }
@@ -332,7 +332,7 @@ fn render_on(seed: u32, way: &Way, request: &Request, frames: usize, calls: bool
 #[must_use]
 pub fn wav_of(r: &Rendered, way: &Way) -> Vec<u8> {
     // `--from` trims the head of the clip: rendered from the start, written
-    // from there (as Session 26's renderer did), so a loop's state is the
+    // from there (as the old renderer did), so a loop's state is the
     // one it has by then.
     let layout = if way.clip.stem.is_some() { 1 } else { way.layout };
     let skip = ((way.clip.from * way.rate) as usize * layout as usize).min(r.samples.len());

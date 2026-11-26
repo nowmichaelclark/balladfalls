@@ -1,4 +1,4 @@
-//! The building blocks, and the one list of them (queue item 46).
+//! The building blocks, and the one list of them.
 //!
 //! Every block is one file in this directory behind the interface in
 //! `block` ([`Block`], and [`Voice`] for a block a host plays by number),
@@ -82,7 +82,7 @@ pub trait Visit {
 /// - `pooled`: `file::Type [size] = NAME number, ...;` -- a voice too big for
 ///   a slot, held in a pool of its own of `size`.
 /// - `channel`: `file::Type = NAME (settings), ...;` -- a channel's own
-///   block (queue items 46b and 46c, `block::Channel`): one of each name in
+///   block (`block::Channel`): one of each name in
 ///   every channel, started with its settings, outside the voice pool. It
 ///   runs on a bus its voices sum into (the bodies; a voice plays through
 ///   one by naming it, `Voice::THROUGH = Some(own::NAME)`), or on the whole
@@ -459,7 +459,7 @@ macro_rules! registry {
         /// `render`, the voice's sound into `to` whatever it plays through
         /// (`through` says where it belongs): a note the core fades renders
         /// into a buffer of its own this way, one buffer, not one a bus
-        /// (queue item 85e).
+        ///.
         #[allow(clippy::too_many_arguments)]
         pub(crate) fn render_to(
             held: &mut Held,

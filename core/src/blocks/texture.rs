@@ -1,4 +1,4 @@
-//! The textures that are not `fm()` calls (queue item 27): `swell`, `drop`,
+//! The textures that are not `fm()` calls: `swell`, `drop`,
 //! `wind` and `waves`, each its JavaScript twin in `Synth.texture`, call
 //! for call. (`bell` and `chime` are `fm()` calls, and the FM voice plays
 //! them.) The budget is asked in JavaScript, note by note; the draws (the
@@ -129,7 +129,7 @@ impl Texture {
                 c.reset(CUTOFF_DEFAULT);
                 c.set_value_at_time((2400.0 + draws[2] * 3000.0) as f32, time);
                 self.filter.set(swept(Kind::Bandpass, DROP_Q), r);
-                // Its gain holds its first value ahead of the event (item 26b).
+                // Its gain holds its first value ahead of the event.
                 g.reset_at(0.0001, rate);
                 g.set_value_at_time(0.0001, time);
                 g.exponential_ramp_to_value_at_time((vel * 0.3) as f32, time + 0.004, time);

@@ -1,7 +1,7 @@
-//! The space recipe (queue item 65; `docs/CORE.md`, promise 9): where each
+//! The space recipe (`docs/CORE.md`, promise 9): where each
 //! part sits in the stereo render, as data. Mikey's approved stereo baseline
-//! (`docs/ears/batch-4.md`, round 4) is the blend of two recipes from round
-//! 3, held still: the **room** (every dry part centered, the width in the
+//! (the ears' batch 4, round 4, readable at commit 72b13f0) is the blend
+//! of two recipes from round 3, held still: the **room** (every dry part centered, the width in the
 //! reverb) weighted 0.64, and the **ensemble** (the chords and the texture
 //! widened, the light kit and a light texture placed) weighted 0.5, all
 //! scaled by how busy and how wet the loop is, under the width ceiling
@@ -118,7 +118,7 @@ pub mod n {
     pub const WASH: usize = 29;
     pub const WASH_FOLLOWS: usize = 30;
     pub const WASH_CUTOFF: usize = 31;
-    /// widePad (queue item 101c; batch 6's #4): the loop's kind, which its
+    /// widePad (batch 6's #4): the loop's kind, which its
     /// choice sets (`load::Space::pins`): 0 the baseline, 1 the chords wide
     /// from the start, 2 the chords opening to it late, over `WIDE_OPEN`.
     pub const WIDE: usize = 32;
@@ -180,7 +180,7 @@ pub const SETTINGS: [Setting; n::COUNT] = [
     // which put a sparse loop's lows on the side).
     s("wash-follows-width", 1.0, 1.0),
     s("wash-cutoff", 200.0, 200.0),
-    // widePad (queue item 101c; batch 6's #4, approved by Mikey 2026-11-09):
+    // widePad (batch 6's #4, approved by Mikey 2026-11-09):
     // the Ears 13b sketch's space, the chords' alone. Appended, so no setting
     // before it moves and no draw does (`Space::draw`'s draw numbers).
     s("wide", 0.0, 0.0),
@@ -238,9 +238,9 @@ pub struct Drawn {
     pub spread_sway: f64,
     pub spread_rate: [f64; 3],
     /// The chords' spread's highpass (Hz): `spread_cutoff` but in a widePad
-    /// loop (queue item 101c).
+    /// loop.
     pub chords_cutoff: f64,
-    /// widePad's late kind (queue item 101c): how long the chords take to
+    /// widePad's late kind: how long the chords take to
     /// open, in seconds from the space's start (0: as drawn from the start),
     /// and where they open from, the baseline's chords' spread and ceiling.
     /// `spread` and `ceiling` are where they open to; `at` is the way there.
@@ -298,7 +298,7 @@ pub const CENTERED: Drawn = Drawn {
 };
 
 impl Drawn {
-    /// The space `seconds` after it started (queue item 101c): itself, but
+    /// The space `seconds` after it started: itself, but
     /// for widePad's late kind, whose chords' spread and width ceiling open
     /// from the baseline's to the wide ones over `open` seconds, on a smooth
     /// curve (slow at both ends), the spread evenly in dB and the ceiling in
@@ -414,7 +414,7 @@ impl Space {
         let place = -side * width * pick(n::TEXTURE_PLACE) * ens_w;
         let rate = self.fixed(n::SPREAD_RATE);
         let step = self.fixed(n::SPREAD_RATE_STEP);
-        // widePad (queue item 101c): the chords' spread past the baseline's
+        // widePad: the chords' spread past the baseline's
         // range and the most, the ceiling raised and the chords' side kept
         // above 250 Hz, all scaled by the loop's width as the baseline's are,
         // so a sparse loop stays at the narrow end. The late kind starts at
@@ -499,7 +499,7 @@ mod tests {
         assert!((at(9.0, 0.8) - 0.75).abs() < 1e-12);
     }
 
-    /// widePad (queue item 101c): the chords alone wider, by the loop's
+    /// widePad: the chords alone wider, by the loop's
     /// width (a sparse loop at the narrow end), the ceiling raised and the
     /// chords' side above 250 Hz; every other amount as the baseline draws
     /// it. The late kind opens from the baseline's to the same over 60-120 s,

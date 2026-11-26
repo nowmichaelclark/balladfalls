@@ -1,4 +1,4 @@
-//! The levers a clip pulls (queue item 83): `dlrender --seed` with choices
+//! The levers a clip pulls: `dlrender --seed` with choices
 //! forced, a constant moved, the sketch block on, a setting pinned, the head
 //! of the clip trimmed. `tools/clips.mjs` drives them from a job list.
 //!
@@ -14,12 +14,11 @@
 //!   --space NAME=V|LO:HI     a space setting (`src/space.rs`, `spread-chords`)
 //!                            pinned to V, or drawn from LO to HI, whatever
 //!                            its range is: past it, for a width the approved
-//!                            baseline never draws (queue item 99, widePad)
+//!                            baseline never draws (widePad)
 //!   --route sketch[.N]=LAYER the sketch block's mod N (0 if none is named)
 //!                            driven by the layer's signal as it goes into the
 //!                            mix (melody, chords, bass, texture, drums): a
-//!                            sketch that hears the floor drop (queue item 99,
-//!                            dropSpotlight). The sketch declares `MODS`
+//!                            sketch that hears the floor drop (dropSpotlight). The sketch declares `MODS`
 //!                            (`core/sketch/README.md`).
 //!   --from S                 the clip starts S seconds in (rendered from
 //!                            the start, written from S)
@@ -28,7 +27,7 @@
 //!                            instead of the speakers: a stem with its own
 //!                            channel blocks on it (subDuck on the bass,
 //!                            padSweep on the chords), as `tools/ears/`
-//!                            reads a record's stems (queue item 101a)
+//!                            reads a record's stems
 //!
 //! The first six need a build with `--features sketch`; without it they
 //! say so. `--from` and `--stem` work in any build.

@@ -1,4 +1,4 @@
-//! The sequencer (queue item 82): what `Engine` in `js/engine.js` does
+//! The sequencer: what `Engine` in `js/engine.js` does
 //! between the generator's events and the synth's notes, step by step:
 //! where each layer is in its own cycle, the swing, the drums' timing
 //! jitter and the ensemble's slip, the strums, the chord's spread, the
@@ -34,11 +34,11 @@ use super::synth::{Fm, KickHit, LOW_BELL_RING, Opts, StabOpts, Synth};
 
 /// A chord's level spread across its voicing (`CHORD_SPREAD`).
 const CHORD_SPREAD: f64 = 0.8;
-/// How far apart a landing's rolled chord's notes start, in seconds (queue item
-/// 102c: a loop that plays its chords a note at a time lands on a roll).
+/// How far apart a landing's rolled chord's notes start, in seconds
+/// (a loop that plays its chords a note at a time lands on a roll).
 const LAND_ROLL: f64 = 0.12;
 /// The budget's room a long piece's doubled tune needs to spare before it
-/// plays (queue item 102c): its own cost and as much again, so it yields to
+/// plays: its own cost and as much again, so it yields to
 /// any note that comes after it.
 const DOUBLE_ROOM: f64 = 24.0;
 /// Grace notes: each this long, running straight into the note, lighter
@@ -63,8 +63,8 @@ const GLASS_CHORD_VEL: f64 = 0.5;
 /// (`GLASS_ORD`, `STAB_ORD`): past any place the layer's own notes take.
 const GLASS_ORD: u32 = 256;
 const STAB_ORD: u32 = 256;
-/// Where the low bell's strike sits among the chords' notes at a step
-/// (queue item 101g): past glass's and the stab's.
+/// Where the low bell's strike sits among the chords' notes at a step:
+/// past glass's and the stab's.
 const BELL_ORD: u32 = 512;
 /// The low bell's register: the lowest note it strikes (D2, 73 Hz, so its
 /// fundamental stays above the 60 Hz guard); it strikes up to 11 above.
@@ -74,8 +74,8 @@ const BELL_DAMP: f64 = 0.25;
 /// dropSpotlight's damp as the floor comes back, in seconds to -60 dB (the
 /// Ears 13b sketch's): the bell belongs to the drop.
 const SPOT_DAMP: f64 = 1.5;
-/// Where twang's picks sit among the chords' notes at a step (queue item
-/// 101h): past the low bell's.
+/// Where twang's picks sit among the chords' notes at a step:
+/// past the low bell's.
 const TWANG_ORD: u32 = 768;
 /// twang's register: the lowest root it picks (E2, 82 Hz, above the 60 Hz
 /// guard); it picks roots up to 11 above, and their fifths and tenths.
@@ -181,10 +181,10 @@ pub struct Loop<'a> {
     /// What the engine decided at load.
     pub settings: &'a Load,
     /// The step of the section being decided (a long piece's plan reads its
-    /// unit from it, queue item 102b; 0 where no step is).
+    /// unit from it; 0 where no step is).
     pub step: f64,
-    /// The tune the section plays beside the loop's own (session 14:
-    /// `Generator::second`), where it plays one.
+    /// The tune the section plays beside the loop's own
+    /// (`Generator::second`), where it plays one.
     pub second: Option<&'a crate::generator::melody::Melody>,
 }
 
@@ -265,7 +265,7 @@ impl Loop<'_> {
 
     /// Every note of `layer` as the pass plays it: its step and velocity
     /// (`p.tracks[layer]`, the drums' ghost hit among them), for the layers'
-    /// grid (queue item 94a).
+    /// grid.
     pub fn each_velocity(&self, layer: Layer, mut f: impl FnMut(f64, f64)) {
         match layer {
             // Each hit at its own step, as the bass and the tune are below
@@ -297,8 +297,8 @@ impl Loop<'_> {
         }
     }
 
-    /// Every note of `layer` as the pass will have it heard (session 30b,
-    /// the layers' grid): `each_velocity`'s, with a long piece's second tune
+    /// Every note of `layer` as the pass will have it heard
+    /// (the layers' grid): `each_velocity`'s, with a long piece's second tune
     /// where its section plays one and its texture's rests, each times the
     /// plan's level at its step (a layer on a cycle of its own keeps its
     /// own: its steps are not the section's); the kit and the bass silent
@@ -370,11 +370,11 @@ pub struct Sequencer {
     /// The step from the load: it never resets, as layers with their own
     /// cycles index off it.
     pub abs_step: u64,
-    /// The pass, from the load's first (0): in a piece (queue item 88), the
+    /// The pass, from the load's first (0): in a piece, the
     /// section playing.
     pub loop_count: u32,
     /// The steps the pass playing takes: the loop's, or fewer in a piece's
-    /// section cut short (queue item 88).
+    /// section cut short.
     pub pass_steps: f64,
     /// The step from the load the piece's round playing began on (0 in a
     /// loop with no length, and in a piece no section of which is cut): the
@@ -405,19 +405,19 @@ pub struct Sequencer {
     had_sub_duck: bool,
     had_pad_sweep: bool,
     had_pad_wow: bool,
-    /// colorTone (queue item 101e): its setup still to send, whether the
+    /// colorTone: its setup still to send, whether the
     /// loop plays colors, and until when (seconds on the core's clock) the
     /// last color sent may sound.
     color_change: bool,
     had_color: bool,
     color_until: f64,
-    /// lowBell (queue item 101g): the pitch class of the last root struck
+    /// lowBell: the pitch class of the last root struck
     /// and one (0: none yet), when it was struck, and until when (seconds
     /// on the core's clock) a ring may sound.
     bell_pc: u8,
     bell_at: f64,
     bell_until: f64,
-    /// dropSpotlight (queue item 101g): the step from the load (`abs_step`)
+    /// dropSpotlight: the step from the load (`abs_step`)
     /// at which the floor drop the bell strikes in ends (0: none).
     bell_drop: f64,
     /// Whether the floor has played since the load: a loop that opens
@@ -426,7 +426,7 @@ pub struct Sequencer {
     /// Whether the floor was out in the bar before (a drop starts where it
     /// played there, in the pass before at a pass's first bar).
     bell_was_out: bool,
-    /// twang (queue item 101h): the pitch class of the last root picked and
+    /// twang: the pitch class of the last root picked and
     /// one (0: none yet), and when; the chord's picks still to come (the
     /// next's number, 0 none, its step from the load, and the step its
     /// chord ends), its root's note and its tenth's offset over the octave;
@@ -448,8 +448,8 @@ pub struct Sequencer {
     twang_until: f64,
     twang_zero: f64,
     /// How long the last loop's organ takes to let go at this one's first
-    /// step, in seconds (the engine's 0.15; a crossfade's length, queue item
-    /// 86).
+    /// step, in seconds (the engine's 0.15; a crossfade's length)
+    /// .
     organ_fall: Biased<{ ORGAN_FALL.to_bits() }>,
     /// The loop's: glass on, a choir's ensemble, and the tuned kick's kind
     /// this pass plays.
@@ -459,12 +459,12 @@ pub struct Sequencer {
     /// Whether the listener set the tone while the loop plays (the Sound
     /// panel): a long piece's plan no longer moves it.
     pub tone_held: bool,
-    /// Whether the next step is a jump's first (session 17): a long piece's
+    /// Whether the next step is a jump's first: a long piece's
     /// plan sends its levels and tone there, wherever in its unit it is.
     replan: bool,
     /// The loudest note of its own each layer sounded on the step being
-    /// decided, at the velocity it was composed and played at (session
-    /// 30b): none refused, none muted or left out.
+    /// decided, at the velocity it was composed and played at:
+    /// none refused, none muted or left out.
     sounded: [f64; 5],
     /// What each layer sounded on the last step decided, as heard: its
     /// loudest note times the share of its level the plan left its channel
@@ -556,7 +556,7 @@ impl Sequencer {
         self.load_at(host, synth, lp, now, now, ORGAN_FALL);
     }
 
-    /// `load`, for a loop that starts at a moment (queue item 86): its tone,
+    /// `load`, for a loop that starts at a moment: its tone,
     /// level and echo glide in at `at` (its first step) rather than `now`,
     /// the mutes are sent again at `now` (as they stand), and the last
     /// loop's organ lets go over `organ_fall` seconds at the first step.
@@ -582,12 +582,12 @@ impl Sequencer {
         self.color_change = colors || self.had_color;
         self.had_color = colors;
         // A new loop's bell strikes its first chord, and its floor has yet to
-        // play (queue item 101g).
+        // play.
         self.bell_pc = 0;
         self.bell_drop = 0.0;
         self.bell_floor = false;
         // A new loop's twang picks its first chord afresh, its tremolo from
-        // the loop's first step (queue item 101h); the strings still ringing
+        // the loop's first step; the strings still ringing
         // from the last loop are the first a new pick takes.
         self.twang_pc = 0;
         self.twang_next = 0;
@@ -595,7 +595,7 @@ impl Sequencer {
         self.glass = on("glass");
         self.choir = lp.spec.choir().is_some();
         self.bpm = lp.spec.bpm;
-        // A new loop has no plan on its levels or its tone (queue item 102b).
+        // A new loop has no plan on its levels or its tone.
         synth.clear_plan();
         synth.let_go_aim(host, at);
         self.tone_held = false;
@@ -603,7 +603,7 @@ impl Sequencer {
         synth.set_level(host, s.level.get(), at);
         Synth::set_echo(host, (60.0 / self.bpm) * s.echo_beats.get(), at);
         // A layer the request asked off is muted, as the listener's mute
-        // would (queue item 91), one asked on is not; the others stay as the
+        // would, one asked on is not; the others stay as the
         // host left them (a mute holds across loads until brought back).
         for layer in LAYERS {
             let bit = 1u8 << layer as usize;
@@ -626,8 +626,8 @@ impl Sequencer {
         self.kick_kind = s.kick.map(|k| k.kind);
     }
 
-    /// `Engine.load(spec, { keepPosition: true })`, a re-roll (queue item
-    /// 94a, `Player::revise`): the loop made again keeps its place (the step,
+    /// `Engine.load(spec, { keepPosition: true })`, a re-roll
+    /// (`Player::revise`): the loop made again keeps its place (the step,
     /// the pass, the round, the organ's hold) and the tempo it plays at
     /// (`bpm`, which the caller sets first); each per-loop setup is sent
     /// again at its first step only where it differs from `was`, the loop's
@@ -679,8 +679,8 @@ impl Sequencer {
         self.kick_kind = s.kick.map(|k| k.kind);
     }
 
-    /// What a long piece's plan has heard at section step `step` (queue item
-    /// 102b, `heard::Unit`), sent at `time`: each layer's level and the
+    /// What a long piece's plan has heard at section step `step`
+    /// (`heard::Unit`), sent at `time`: each layer's level and the
     /// tone, on the unit's first step and, where something glides in it, on
     /// each beat, gliding to where the unit will be a beat on. Nothing is
     /// sent where nothing moved (`Synth::set_plan_level`, `glide_tone`).
@@ -701,14 +701,14 @@ impl Sequencer {
             let own = lp.spec.tone;
             synth.glide_tone(host, [own[0] + moved[0], own[1] + moved[1]], moved, time, tau);
         }
-        // An arc's energy aims the loop's own slow filter (queue item 102c).
+        // An arc's energy aims the loop's own slow filter.
         if lp.pass.is_some_and(|p| p.heard.arc) {
             let e = &crate::generator::data::ENERGY;
             synth.glide_aim(host, u.aim_at(ahead), e.dark, e.open, time, tau);
         }
     }
 
-    /// A finite arc's landing (queue item 102c, `heard::Landing`), on its
+    /// A finite arc's landing (`heard::Landing`), on its
     /// first step: the loop's tonic chord, in the chords' voice as the plan
     /// has it, and the tune on the tonic, held for `hold` steps and ringing
     /// out; nothing else sounds after it (the pass leaves every layer's
@@ -751,7 +751,7 @@ impl Sequencer {
         synth.budget.set_firm(false);
     }
 
-    /// A pivot (session 15, `heard::Unit::pivot`): the chord both keys
+    /// A pivot (`heard::Unit::pivot`): the chord both keys
     /// share, in the chords' voice as the plan has it there, held across
     /// the line. A muted layer stays silent.
     #[allow(clippy::too_many_arguments)] // the step's own place and times
@@ -784,8 +784,8 @@ impl Sequencer {
         }
     }
 
-    /// Where step `target` from the load falls in the loop of `spec` (session
-    /// 17): its pass (a piece's section, from the piece's first), the step in
+    /// Where step `target` from the load falls in the loop of `spec`:
+    /// its pass (a piece's section, from the piece's first), the step in
     /// it, the step the round it is in began on (`origin`: 0 but in a piece
     /// with a section cut short), and the steps that pass takes; as playing
     /// from the load would count them, straight from the number.
@@ -809,7 +809,7 @@ impl Sequencer {
         }
     }
 
-    /// Move to step `target` from the load (session 17, a jump), as playing
+    /// Move to step `target` from the load (a jump), as playing
     /// would have reached it (`place_of`): the step, the pass, the round's
     /// origin and the pass's steps. Its time is the caller's.
     pub fn move_to(&mut self, spec: &Spec, target: u64) {
@@ -821,7 +821,7 @@ impl Sequencer {
         self.pass_steps = steps;
     }
 
-    /// A jump within the loop playing lands (session 17, `Player::jump`), its
+    /// A jump within the loop playing lands (`Player::jump`), its
     /// first step at `start` (the sequencer `move_to`'d it): what rang
     /// before it lets go over `fade`, as at a new loop (the organ's chord,
     /// the color, the low bell and its spotlight's drop, twang's strings:
@@ -858,7 +858,7 @@ impl Sequencer {
         }
         self.twang_until = 0.0;
         // What the bell and twang decided before it, from the pass's first
-        // step (session 30h: a jump lands on any step): the roots struck
+        // step (a jump lands on any step): the roots struck
         // last, twang's picks still to come, a floor drop under way (its
         // first strike rang before the jump: the drop goes on without it).
         self.walk_to(lp, start);
@@ -898,7 +898,7 @@ impl Sequencer {
 
     /// `_advance`: the next step's time and place. True at the top of a
     /// new pass (the caller hands the sequencer the pass it plays). In a
-    /// piece (queue item 88) a pass is a section: a round's last may be cut
+    /// piece a pass is a section: a round's last may be cut
     /// short, and the round after it counts its bars from where it begins.
     pub fn advance(&mut self, lp: &Loop) -> bool {
         self.next_step_time += self.step_dur();
@@ -934,7 +934,7 @@ impl Sequencer {
         let Some(form) = lp.base.form.as_ref() else { return false };
         for layer in LAYERS {
             let sched = &form[layer as usize];
-            // A layer re-rolled plays throughout (queue item 94a).
+            // A layer re-rolled plays throughout.
             if sched.is_empty() {
                 return false;
             }
@@ -964,10 +964,10 @@ impl Sequencer {
         #[allow(clippy::cast_precision_loss)]
         let stepf = step as f64;
 
-        // The loop's tuning, on every note this step sends (queue item 101b).
+        // The loop's tuning, on every note this step sends.
         synth.set_tuning(s.tuning);
-        // A long piece's plan at this step: its levels and its tone (queue
-        // item 102b).
+        // A long piece's plan at this step: its levels and its tone
+        // .
         let first = core::mem::take(&mut self.replan);
         if let Some(u) = lp.pass.and_then(|p| p.heard.unit(stepf)) {
             self.hear(host, synth, lp, u, [stepf, time, self.step_dur()], first);
@@ -1080,7 +1080,7 @@ impl Sequencer {
                 if late.is_some_and(|l| abs < l.drums) {
                     continue;
                 }
-                // slowOpening (queue item 101a): the kit rises to its level
+                // slowOpening: the kit rises to its level
                 // over the fade from its arrival (none: exactly as it was),
                 // and a hit faded to nothing is not played.
                 let vel = vel * late.map_or(1.0, |l| l.rise(abs - l.drums, sd)); #[cfg(feature = "sketch")] let vel = vel * late.map_or(1.0, |l| crate::levers::late_fade(abs - l.drums, sd));
@@ -1105,7 +1105,7 @@ impl Sequencer {
                     Synth::duck(host, t + micro, pump * vel);
                 }
             }
-            // A fill into a long piece's line (session 15): the kit's own
+            // A fill into a long piece's line: the kit's own
             // instrument on the steps of the last beat where the loop has
             // no hit of it, rising; where the kit sits out, so does it.
             if let Some((inst, vel)) = lp.pass.and_then(|p| p.fill_at(stepf))
@@ -1124,7 +1124,7 @@ impl Sequencer {
         if !mutes[Layer::Bass as usize] {
             let s_at = at(Layer::Bass);
             // A drone's notes are a held instrument's: never let go for a
-            // newer note (queue item 85e; `meta.bassStyle`, the pedal's
+            // newer note (`meta.bassStyle`, the pedal's
             // when it has one).
             let drone = lp.base.bass_out.style == "drone" && lp.base.pedal.is_none();
             for (i, e) in lp.base.bass.iter().enumerate() {
@@ -1156,7 +1156,7 @@ impl Sequencer {
             if choir { (unit(Key { seed, pass, step: step32, ord: 0 }, channel, salt::HOST_ENSEMBLE, 0) - 0.5) * 0.016 } else { 0.0 }
         };
 
-        // dropSpotlight (queue item 101g): in a loop that strikes the bell in
+        // dropSpotlight: in a loop that strikes the bell in
         // its floor drops alone, at each bar line whether one starts (and so
         // this step is its first) or the floor comes back (the bell damped).
         let mut spot_first = false;
@@ -1252,13 +1252,13 @@ impl Sequencer {
         if !mutes[Layer::Melody as usize] {
             let s_at = at(Layer::Melody);
             let slip = ensemble(MELODY);
-            // Every pitch is made in the home key and moved to the plan's
-            // (queue items 102b and 102d): a fifth away the two are the same
+            // Every pitch is made in the home key and moved to the plan's:
+            // a fifth away the two are the same
             // thing, and in another mode a grace or a third under the note
             // stays in the key.
             let root = lp.spec.root;
             let mv = |x: f64| x + lp.moved(Layer::Melody, x);
-            // Whose tune this step plays (session 14): the loop's own, the
+            // Whose tune this step plays: the loop's own, the
             // section's second, or a rest; one voice, never two tunes.
             let which = lp.pass.map_or(tune::OWN, |p| p.heard.tune_at(stepf));
             let second = which == tune::SECOND;
@@ -1292,7 +1292,7 @@ impl Sequencer {
                 let mode = e.steps.as_ref().map_or(lp.spec.steps(), |s| &s[..]);
                 let line = Opts { vowel, detune: e.detune, ..Opts::default() };
                 // Toward an arc's peak: the tune doubled an octave up,
-                // softly, swelling in (queue item 102c).
+                // softly, swelling in.
                 // It yields to everything: played only where the budget has
                 // room to spare (as a dub stab), so it never keeps another
                 // layer's note out.
@@ -1319,11 +1319,11 @@ impl Sequencer {
                 }
             }
         }
-        // A finite arc lands, on its landing's first step (queue item 102c).
+        // A finite arc lands, on its landing's first step.
         if let Some(l) = lp.pass.map(|p| &p.heard.landing).filter(|l| l.on && l.strikes && l.at == stepf) {
             Self::land(host, synth, lp, l, mutes, &mut self.sounded, t, sd, &mut key_of);
         }
-        // A long piece's key changes across a line (session 15): a chord
+        // A long piece's key changes across a line: a chord
         // both keys share, held across it.
         if let Some(u) = lp.pass.and_then(|p| p.pivot_at(stepf)) {
             Self::pivot(host, synth, lp, u, mutes, &mut self.sounded, t, sd, &mut key_of);
@@ -1349,7 +1349,7 @@ impl Sequencer {
                 sound(&mut self.sounded, Layer::Texture, e.vel, synth.budget.end());
             }
         }
-        // What each layer sounded on this step, as heard (session 30b): its
+        // What each layer sounded on this step, as heard: its
         // loudest note of its own (a part of no layer's, a glass or a bell,
         // where it played none), as loud as the plan leaves its channel.
         // And the share of its level it was left: the plan's, and the late
@@ -1437,7 +1437,7 @@ impl Sequencer {
         hold
     }
 
-    /// What the organ holds at the step playing (session 17, a jump), as
+    /// What the organ holds at the step playing (a jump), as
     /// playing the pass from its first step would have left it (`organ`'s
     /// moves, a bar the loop leaves silent letting it go), and whether it
     /// still sounds there; nothing where it has let go. The pass before is
@@ -1465,7 +1465,7 @@ impl Sequencer {
         if hold.on && (self.abs_step as f64) < off_at { hold } else { NO_HOLD }
     }
 
-    /// colorTone's colors that start at chords step `s` (queue item 101e):
+    /// colorTone's colors that start at chords step `s`:
     /// each where the chord it sounds with is played this pass (not in a
     /// gap, a rest or a breath), in the plan's key, held its length.
     fn colors<H: Host>(&mut self, host: &mut H, synth: &Synth, lp: &Loop, s: f64, t: f64, sd: f64) {
@@ -1482,7 +1482,7 @@ impl Sequencer {
         }
     }
 
-    /// lowBell (queue item 101g): at the first step `s` of a chord of the
+    /// lowBell: at the first step `s` of a chord of the
     /// progression (a slot of the harmony) that plays this pass (an event of
     /// the slot sounds: not all of it in a gap, a rest or a breath), the low
     /// bell strikes the slot's root, in the plan's key, as its pitch class
@@ -1565,7 +1565,7 @@ impl Sequencer {
         (first, back)
     }
 
-    /// A jump's landing (`jumped`, session 30h): what the low bell and twang
+    /// A jump's landing (`jumped`): what the low bell and twang
     /// decided across the steps of the pass before the step it lands on, as
     /// playing the pass from its first step at the tempo playing would have
     /// left them (the root each struck last and when, twang's picks still
@@ -1624,7 +1624,7 @@ impl Sequencer {
         }
     }
 
-    /// dropSpotlight (queue item 101g): how many steps from loop step `from`
+    /// dropSpotlight: how many steps from loop step `from`
     /// (a bar line, `abs` from the load) to the end of this pass the floor
     /// stays out, bar by bar: none of the kit's kicks, soft kicks or frame
     /// hits and no bass note sounding in the bar, as this pass plays them
@@ -1667,7 +1667,7 @@ impl Sequencer {
         at - from
     }
 
-    /// twang (queue item 101h): at the first step of a chord of the
+    /// twang: at the first step of a chord of the
     /// progression (a slot of the harmony, `at[0]` the chords' step) that
     /// plays this pass, twang picks the lowest note the chords sound in the
     /// slot (in the plan's key) as its pitch class between E2 and D#3 (the
@@ -1968,7 +1968,7 @@ impl Default for Sequencer {
     }
 }
 
-/// How the low bell is struck at a step (queue item 101g): its swelling kind,
+/// How the low bell is struck at a step: its swelling kind,
 /// in a floor drop (dropSpotlight), and on a drop's first step.
 #[derive(Clone, Copy)]
 struct Bell {
@@ -1979,7 +1979,7 @@ struct Bell {
 
 /// A voice call for `layer` at `vel` is over (`sent`: it handed the core a
 /// note, `Budget::end`): the step's loudest note of the layer, for the
-/// layers to draw (session 30b).
+/// layers to draw.
 fn sound(into: &mut [f64; 5], layer: Layer, vel: f64, sent: bool) {
     if let Some(x) = into.get_mut(layer as usize)
         && sent
@@ -2022,7 +2022,7 @@ fn graces_of(orn: Option<&str>, midi: f64, root: f64, steps: &[f64]) -> ([f64; 2
     if orn == "turn" { ([above, neighbour_in_scale(midi, root, steps, -1.0)], 2) } else { ([above, 0.0], 1) }
 }
 
-// The sketch levers' hooks (queue item 99), after the code the app runs so
+// The sketch levers' hooks, after the code the app runs so
 // that the lines of that code do not move (`tools/build-core.sh --check`
 // holds the player's module to its panic locations).
 #[cfg(feature = "sketch")]

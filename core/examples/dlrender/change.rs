@@ -1,4 +1,4 @@
-//! Changes of loop at a musical moment (queue item 86): `dlrender --changes
+//! Changes of loop at a musical moment: `dlrender --changes
 //! N`. Each change plays a corpus loop, asks for the next one at a moment
 //! (`Player::change`; the five kinds in turn, every other one bending the
 //! old loop's seed as a theme, a friend's mood changing), and renders past

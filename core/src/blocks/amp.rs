@@ -1,6 +1,6 @@
 //! An amplifier whose gain a signal can drive.
 //!
-//! The first of queue item 46b's two demonstration blocks, in the tests only
+//! The first of two demonstration blocks for modulation, in the tests only
 //! (its line in the registry carries `#[cfg(test)]`). It proves that a
 //! block taking a modulation input is still one new file -- this one --
 //! plus one line in the registry: it says which of its settings a signal

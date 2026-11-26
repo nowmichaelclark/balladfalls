@@ -1,6 +1,6 @@
 //! A panner: the signal placed between the left and the right.
 //!
-//! The second of queue item 46b's two demonstration blocks, in the tests
+//! The second of two demonstration blocks for modulation, in the tests
 //! only (its line in the registry carries `#[cfg(test)]`). It proves that a
 //! block with a stereo render of its own is still one new file -- this one
 //! -- plus one line in the registry: it says `STEREO` and writes

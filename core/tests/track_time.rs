@@ -1,4 +1,4 @@
-//! Session 30c (queue item 111): a track set to a time ends on its second.
+//! A track set to a time ends on its second.
 //! A track of 1:23:45 is done at 1:23:45 on the core's clock, to the sample,
 //! at full and at lite, on a loop, a long piece and Endless, with a tempo
 //! change halfway, with each fade on and off: nothing of the loop is decided

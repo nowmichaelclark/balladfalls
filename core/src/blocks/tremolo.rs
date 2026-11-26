@@ -1,6 +1,6 @@
 //! A tremolo: the signal's level swung up and down by a slow sine.
 //!
-//! The demonstration block (queue item 46). It is in the tests only (its
+//! The demonstration block. It is in the tests only (its
 //! line in the registry carries `#[cfg(test)]`), and it proves that a new
 //! building block is one new file -- this one -- plus one line in the
 //! registry: the test kit finds it there and checks its level, tone, cost,

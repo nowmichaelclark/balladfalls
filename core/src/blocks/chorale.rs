@@ -1,13 +1,13 @@
 //! A held instrument of four voices, retuned chord by chord.
 //!
-//! The second of queue item 46c's demonstration blocks, in the tests only
+//! The second of three demonstration blocks for a channel's own block, in the tests only
 //! (its line in the registry carries `#[cfg(test)]`). It proves that a held
 //! instrument a channel keeps for the loop is one new file -- this one --
 //! plus one line in the registry: it hears retunes (`HEARS`), which reach it
 //! every time they are sent, and moves by the shared rule (`retune`): a note
 //! two chords share sounds on, untouched, and only the changed notes are let
 //! go and spoken again. The test kit sends it five chords with no test
-//! written for it. The chapel organ (item 61) is this, with pipes for sines.
+//! written for it. The chapel organ is this, with pipes for sines.
 //! `core/README.md` walks through it.
 
 use core::f64::consts::TAU;

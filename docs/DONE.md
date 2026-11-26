@@ -123,3 +123,8 @@ repository.
   them are reworded. Stale lines fixed (gate.sh's "until 1.0",
   build-core.sh's second module). Only comment lines change. Nothing to
   hear.
+- balladfalls #22, the plain style, the comments in core/ (v225): the
+  history tags leave the comments of 123 files. Lines that said a retired
+  JavaScript file still runs are fixed, and `core/AGENTS.md` says where the
+  retired files are. Only comments change; the rebuilt wasm differs only in
+  the line numbers that it carries for panics (23 bytes). Nothing to hear.

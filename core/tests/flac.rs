@@ -1,4 +1,4 @@
-//! The FLAC writer (queue item 104a): what it writes decodes to exactly the
+//! The FLAC writer: what it writes decodes to exactly the
 //! samples it was given, for every shape of stream it takes, whatever the
 //! host's call sizes, and the header it finishes says what the stream is.
 //!

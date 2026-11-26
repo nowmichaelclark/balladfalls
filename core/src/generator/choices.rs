@@ -1,4 +1,4 @@
-//! The per-loop choices' own draws (queue items 63 to 76d, ported in item
+//! The per-loop choices' own draws (ported in item
 //! 81): what each choice a loop drew plays, from `js/choices.js`. The arc's
 //! shape, period, start and floor, and whether a glacial loop plays it
 //! outside its choices; the tuned kick's note, falls and levels by ear, and
@@ -11,7 +11,7 @@
 //! Each draws from the loop's seed on a stream of its own (a salt each, the
 //! sketch's), so no other draw moves and a loop replays the same way, and
 //! every number it draws by is `data/choices.txt`'s (`data`). A request's
-//! pins (queue item 85b; `request::Pins`) overrule a drawn value once every
+//! pins (`request::Pins`) overrule a drawn value once every
 //! draw is made, so a pin moves nothing else.
 
 use super::character::Vibes;
@@ -39,7 +39,7 @@ pub fn lean_of(table: Option<Table>, v: Option<&Vibes>) -> f64 {
 }
 
 /// A pinned value held to the range the option playing draws it from: a
-/// pin's own range is every option's together (queue item 101a), and a
+/// pin's own range is every option's together, and a
 /// loop plays only what its option could draw.
 fn held(x: f64, [lo, hi]: [f64; 2]) -> f64 {
     js::clamp(x, lo, hi)
@@ -105,7 +105,7 @@ fn arc_draws(seed: u32, v: Option<&Vibes>, version: u32) -> (f64, f64, &'static 
     let [lo, hi] = arc_period(v);
     let period = r.range(lo, hi);
     let at = r.f();
-    // The shapes that had joined by the loop's version (queue item 105e).
+    // The shapes that had joined by the loop's version.
     let shapes = data::words_at(ARC.shapes, "arc.shape", version);
     let shape = r
         .weighted_index(shapes.iter().map(|&(id, w)| w * lean_of(data::table_named(ARC.shape_vibes, id), v)))
@@ -115,7 +115,7 @@ fn arc_draws(seed: u32, v: Option<&Vibes>, version: u32) -> (f64, f64, &'static 
 }
 
 /// `arcOf(seed, vibes, pins)`: a loop's arc, drawn on its own stream. The
-/// period and the start are drawn first, as item 63 drew them, so a loop
+/// period and the start are drawn first, as they were first drawn, so a loop
 /// without vibes that draws the deep swing plays the swing it always did.
 /// `p` may pin the shape (the start is then placed by the pinned shape),
 /// the period, the start and the floor.
@@ -138,9 +138,9 @@ pub fn arc_of(seed: u32, v: Option<&Vibes>, p: &Pins, version: u32) -> Arc {
 /// `arcPlays(seed, choices, vibes)`: whether a loop plays the arc. When it
 /// drew it among its choices (`chosen`), or, with glacial among its vibes,
 /// with the glacial chance times glacial's weight, drawn on the arc's own
-/// stream after `arc_of`'s draws (queue item 76b): not one of the loop's
-/// changes, so nothing else moves. `pinned`: the request pinned the arc
-/// (queue item 85b); pinned to today, a glacial loop plays none either.
+/// stream after `arc_of`'s draws: not one of the loop's
+/// changes, so nothing else moves. `pinned`: the request pinned the arc;
+/// pinned to today, a glacial loop plays none either.
 #[must_use]
 pub fn arc_plays(seed: u32, chosen: bool, v: Option<&Vibes>, pinned: bool, version: u32) -> bool {
     if chosen {
@@ -570,9 +570,9 @@ pub fn kick_of(seed: u32, root: f64, p: &Pins) -> TunedKick {
 
 /// `kickKindOf(seed, kind, pass)`: the kick a wandering loop plays on pass
 /// `pass`. Its own (`kind`) on the first pass and most others; now and
-/// then one of the other two, half and half, drawn from the pass alone
-/// (queue item 67), so any pass can be reached without the ones before it.
-/// `held`: the request pinned the kick (queue item 85b), and a pick holds
+/// then one of the other two, half and half, drawn from the pass alone,
+/// so any pass can be reached without the ones before it.
+/// `held`: the request pinned the kick, and a pick holds
 /// through wandering, so it never swaps.
 #[must_use]
 pub fn kick_kind_of(seed: u32, kind: &'static str, pass: u32, held: bool, version: u32) -> &'static str {
@@ -603,7 +603,7 @@ pub struct SubDuck {
 
 /// `subDuckOf(seed, bpm)`: drawn on its own stream, after the draw the
 /// sketch spent on whether the loop ducked; the recovery never longer
-/// than the setting's share of a beat. `deep` (queue item 101a, deepDuck):
+/// than the setting's share of a beat. `deep` (deepDuck):
 /// the loop plays the deep kind, its kick spacing in seconds; its depth and
 /// recovery are drawn from its own ranges in the same two draws, and the
 /// recovery is never longer than the spacing, so the bass is back by the
@@ -627,7 +627,7 @@ pub fn sub_duck_of(seed: u32, bpm: f64, deep: Option<f64>, p: &Pins) -> SubDuck 
     }
 }
 
-/// The loop's kick spacing in seconds (deepDuck's guard, queue item 101a):
+/// The loop's kick spacing in seconds (deepDuck's guard):
 /// the median gap between one kick and the next around the drums' own
 /// cycle (`cycle` steps of `step` seconds), as `kick_check.py duck` reads a
 /// record's; a kit with one kick a cycle has the cycle. None without a kick.
@@ -658,7 +658,7 @@ const LATEFLOOR_SALT: u32 = 0x1a7e;
 /// A loop's lateFloor (`lateFloorOf`): in what order the kit and the bass
 /// arrive, the wait in bars, the gap between the two arrivals in bars, the
 /// steps from the load each sits out, and the seconds each takes to rise to
-/// its level once it arrives (slowOpening's fade, queue item 101a; 0, the
+/// its level once it arrives (slowOpening's fade; 0, the
 /// approved kind, arrives at once).
 #[derive(Clone, Copy, Debug)]
 pub struct LateFloor {
@@ -684,11 +684,11 @@ impl LateFloor {
 /// `lateFloorOf(seed, spb, stepDur, {}, vibes, loopBars)`: drawn on its own
 /// stream, after the draw the sketch spent on whether the loop waited. The
 /// vibes bend the wait's one draw toward the long end (`u^(1/lean)`) and
-/// lean the gap's long end; the gap is drawn last (queue item 76d), so
+/// lean the gap's long end; the gap is drawn last, so
 /// nothing before it moves, and the second arrival stays inside the loop's
 /// first pass when the first is (`loop_bars` its length in bars), else
-/// within one loop's length of the first. `slow` (queue item 101a,
-/// slowOpening): the long kind, its wait drawn from its own seconds by the
+/// within one loop's length of the first. `slow`
+/// (slowOpening): the long kind, its wait drawn from its own seconds by the
 /// same draws, and its fade drawn after every other. `p` may pin the order,
 /// the wait in seconds (held to the kind's range), the gap (still held
 /// inside the loop as above) and a slow kind's fade.
@@ -748,7 +748,7 @@ pub struct PadSweep {
 }
 
 /// The ranges padSweep's option `kind` draws from: the approved sweep's
-/// (`on`), or wideSweep's `wide` or `fast` (queue item 101a).
+/// (`on`), or wideSweep's `wide` or `fast`.
 #[must_use]
 pub fn sweep_ranges(kind: &str) -> SweepRanges {
     match kind {
@@ -781,7 +781,7 @@ pub fn pad_sweep_of(seed: u32, kind: &str, p: &Pins) -> PadSweep {
 
 const PADWOW_SALT: u32 = 0x3a0e;
 
-/// padWow (queue item 101b; batch 6's #3): the wow a loop that plays it
+/// padWow (batch 6's #3): the wow a loop that plays it
 /// sets on its chords channel (`blocks::pad_wow`), the main swing's depth
 /// in cents and its rate in Hz.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -803,7 +803,7 @@ pub fn pad_wow_of(seed: u32) -> PadWow {
 const ECHO_SALT: u32 = 0xec40;
 
 /// `echoTimeOf(seed, vibes)`: a loop's echo time in beats, the sketch's one
-/// draw on its own stream, leaned by the vibes (queue item 73). Every loop
+/// draw on its own stream, leaned by the vibes. Every loop
 /// draws it, outside the choices.
 #[must_use]
 pub fn echo_time_of(seed: u32, v: Option<&Vibes>) -> f64 {
@@ -813,7 +813,7 @@ pub fn echo_time_of(seed: u32, v: Option<&Vibes>) -> f64 {
 
 const TUNING_SALT: u32 = 0x7c3e;
 
-/// tuningOffset (queue item 101b; batch 6's #12): how far the whole loop
+/// tuningOffset (batch 6's #12): how far the whole loop
 /// plays off A440, in cents, 0 for most loops. Drawn at load on its own
 /// stream, outside the choices, as `echo_time_of` is: whether it is off
 /// (`[setting tuning]`'s share, leaned by the vibes, never to 0), how far
@@ -851,7 +851,7 @@ pub const LOW_BELL_KINDS: data::Pool = &[
     ("dummybell", 1.0),
 ];
 
-/// lowBell (queue item 101g; batch 6's #2): which kind of low bell the loop
+/// lowBell (batch 6's #2): which kind of low bell the loop
 /// plays, by its place in [`LOW_BELL_KINDS`] (0: none, for most loops).
 /// Drawn at load on its own stream, outside the choices, as `tuning_of` is:
 /// one draw across today's `1 - share` and each kind's `share` split by the
@@ -864,7 +864,7 @@ pub fn low_bell_of(seed: u32, plays: bool, v: Option<&Vibes>, p: &Pins, version:
     let mut r = Rng::new(js::salted(seed, LOW_BELL_SALT, 1));
     let x = r.f();
     // The kinds that had joined by the loop's version, and none below the
-    // setting's own (queue item 105e).
+    // setting's own.
     let kinds = data::words_at(LOWBELL.kinds, "lowBell.kind", version);
     let share = if data::drawn_at("lowBell.kind", version) { LOWBELL.share } else { 0.0 };
     let total: f64 = kinds.iter().map(|k| k.1).sum();
@@ -896,7 +896,7 @@ const SPOTLIGHT_SALT: u32 = 0x7370_6f74;
 /// request's `lowBell.drops` pin (`js/pins.js`).
 pub const SPOTLIGHT_KINDS: data::Pool = &[("today", 1.0), ("on", 1.0)];
 
-/// dropSpotlight (queue item 101g; batch 6's #11): whether a loop that plays
+/// dropSpotlight (batch 6's #11): whether a loop that plays
 /// the low bell (`bell`, `low_bell_of`'s) strikes it in its floor drops
 /// alone, stepping forward as the kit and the bass leave. Only where the
 /// floor can drop (`drops`: 4 bars or more, with a kick or a bass); drawn at
@@ -919,12 +919,12 @@ const TWANG_SALT: u32 = 0x7477_6e67;
 
 /// twang's versions, today's first: the words the request's `twang.kind` pin
 /// takes (`js/pins.js`), and a loop's version by its place here (0, none).
-/// Soft alone: slow and bright were taken out (queue item 105e; Mikey,
+/// Soft alone: slow and bright were taken out (Mikey,
 /// 2026-11-17: "they sounded off"), and a code pinning either plays soft
 /// (`data/codes.txt`).
 pub const TWANG_KINDS: data::Pool = &[("today", 1.0), ("soft", 1.0)];
 
-/// twang (queue item 101h; batch 6's #13): which version of twang the loop
+/// twang (batch 6's #13): which version of twang the loop
 /// plays, by its place in [`TWANG_KINDS`] (0: none, for most loops). Drawn
 /// at load on its own stream, outside the choices, as `low_bell_of` is: one
 /// draw across today's `1 - share` and each drawn version's `share` split by
@@ -933,7 +933,7 @@ pub const TWANG_KINDS: data::Pool = &[("today", 1.0), ("soft", 1.0)];
 /// batch's, kept whole so the loops that play twang stay the same: it still
 /// weighs slow and bright, which are gone, and plays what it lands on as
 /// [`played_twang`] says. It weighs only what had joined by the loop's
-/// `version`, and nothing below the setting's own (queue item 105e). Only
+/// `version`, and nothing below the setting's own. Only
 /// for a loop that may play it (`may`: a chord, and no kit busier than a
 /// soft one); a request's `twang.kind` pin plays that version instead, where
 /// the loop may (today's keeps it off).
@@ -975,7 +975,7 @@ fn played_twang(id: &str, version: u32) -> usize {
     plays.and_then(|k| TWANG_KINDS.iter().position(|x| x.0 == k.0)).unwrap_or(0)
 }
 
-/// `bassLiftOf(tracks)`: the bass layer's level in dB (queue item 76c), the
+/// `bassLiftOf(tracks)`: the bass layer's level in dB, the
 /// kick's for a loop that plays a kick, a soft kick or the hand kit's frame
 /// drum anywhere in it, else the other.
 #[must_use]
@@ -998,8 +998,8 @@ impl Empty for Fitting {
 pub const DUMMY_KINDS: data::Pool = &[("today", 1.0), ("on", 1.0)];
 
 /// The dummy build's setting drawn per loop outside the list of choices and
-/// counted against a loop's changes, that joins at version 3 (queue item
-/// 105e; `tests/dummy.rs`): the shape a new one takes (`data::drawn_at`).
+/// counted against a loop's changes, that joins at version 3
+/// (`tests/dummy.rs`): the shape a new one takes (`data::drawn_at`).
 #[cfg(feature = "dummy")]
 #[must_use]
 pub fn dummy_of(seed: u32, p: &Pins, version: u32) -> bool {

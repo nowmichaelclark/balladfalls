@@ -1,4 +1,4 @@
-//! Rendering ahead (queue item 87): what a host with no audio thread needs
+//! Rendering ahead: what a host with no audio thread needs
 //! to render a loop before it plays it. Godot's web build is one: music fed
 //! frame by frame crackled on a phone, so Broken Friends renders passes
 //! ahead and plays each as one sound.
@@ -73,8 +73,8 @@ impl Player {
         if !(total >= 1.0 && sd.is_finite() && sd > 0.0) {
             return None;
         }
-        // A piece's pass is its section, a round's last maybe cut short
-        // (queue item 88): the pass playing's steps, and each next one's.
+        // A piece's pass is its section, a round's last maybe cut short:
+        // the pass playing's steps, and each next one's.
         let piece = Piece::of(g.spec());
         let steps = |n: u32| piece.map_or(total, |p| p.bars_of(u64::from(n)) * spb) as u64;
         let mine = steps(self.seq.loop_count);

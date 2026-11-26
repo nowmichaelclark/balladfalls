@@ -1,4 +1,4 @@
-//! colorTone (queue item 101e; `generator::color`): a held 13th over the
+//! colorTone (`generator::color`): a held 13th over the
 //! major chords and an 11th over the minor ones, a choice drawn by itself
 //! (`alone`), not among the changes, on a stream of its own. What it holds
 //! to: it goes only to loops with a chord that can take a color, for about

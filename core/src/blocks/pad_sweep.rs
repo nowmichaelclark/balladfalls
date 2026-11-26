@@ -1,10 +1,10 @@
-//! padSweep (queue item 72; Ears 8, approved by Mikey 2026-10-18): a
+//! padSweep (Ears 8, approved by Mikey 2026-10-18): a
 //! lowpass on the chord layer swinging open and shut every 12-28 s while the
 //! rest stays as bright as it was.
 //!
 //! A channel's own block on the whole chords channel (`Channel::WHOLE`): its
-//! own `Lfo` into its own `Filter`'s frequency, as the swell (queue item 46c's
-//! demonstration) carries an `Lfo` into a gain. The sketch
+//! own `Lfo` into its own `Filter`'s frequency, as the swell (a
+//! demonstration block) carries an `Lfo` into a gain. The sketch
 //! (`ears8-sketch.patch`, `e8Sweep`) set a `BiquadFilterNode` at `lo` times
 //! 2^(oct / 2) and drove its detune with an oscillator of wave -cos, by oct / 2
 //! octaves, so the cutoff is lo * 2^(oct * (1 - cos) / 2): `lo` when closed,
@@ -53,7 +53,7 @@ pub const OCT: usize = 1;
 pub const PERIOD: usize = 2;
 /// Its Q.
 pub const Q: usize = 3;
-/// Where its swing is (session 17, a jump within a piece): the seconds it
+/// Where its swing is (a jump within a piece): the seconds it
 /// has swung at the setting's time, as playing from the loop's first step
 /// would have it. The sweep starts again there (gliding from where it was,
 /// as a change does), that far into its swing.

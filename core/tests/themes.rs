@@ -1,5 +1,5 @@
-//! An arc's themes, variations and keys (queue item 102d, session 14;
-//! `docs/LONGFORM.md`): the second tune's making (another seed's tune bent
+//! An arc's themes, variations and keys
+//! (`docs/LONGFORM.md`): the second tune's making (another seed's tune bent
 //! into the loop, through the request's theme machinery; made the same
 //! however a section is reached; a theme that rests stays resting; nothing
 //! of the loop moved by it), each variation alone as the marks it puts on
@@ -281,7 +281,7 @@ fn a_piece_plays_its_plan_theme_by_theme() {
                         assert!(u.pedal > 0 && (u.pedal.rem_euclid(12) - fifth).abs() <= 1 && u.pedal_from >= u.from && u.pedal_from < u.to, "{what}: {u:?}");
                     } else if u.join == Join::Pivot {
                         // (A pivot holds the bass, where the loop has one, on
-                        // its chord's root for its bar: session 15.)
+                        // its chord's root for its bar.)
                         assert!(u.pedal == 0 || u.pedal_from == u.join_from, "{what}: {u:?}");
                     } else {
                         assert_eq!(u.pedal, 0, "{what}");

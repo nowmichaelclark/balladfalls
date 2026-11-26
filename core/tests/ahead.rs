@@ -1,4 +1,4 @@
-//! Rendering ahead (queue item 87): a loop rendered in chunks a host asks
+//! Rendering ahead: a loop rendered in chunks a host asks
 //! for is the same samples as one rendered straight through, wandering pass
 //! after pass and with a change of loop waiting at a boundary; a pass at a
 //! time (`Player::pass_frames`) lands each chunk on the pass's end; and the

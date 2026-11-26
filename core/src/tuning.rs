@@ -24,7 +24,7 @@ use core::sync::atomic::{AtomicU64, Ordering};
 /// - `bass.LIFT_DB`: the bass layer's lift.
 /// - `latefloor.SECONDS_MAX`: the longest wait lateFloor draws, in seconds
 ///   (the data's is 30); lets the wait run past it, as a slow opening's does.
-///  The draw stays what it is for the same seed, spread
+///   The draw stays what it is for the same seed, spread
 ///   over the wider range (`choices::late_floor_of`).
 /// - `latefloor.FADE`: seconds the kit and the bass take to rise to their
 ///   level after they arrive (0, the data's, is at once); a velocity ramp on

@@ -336,11 +336,13 @@ F-Droid builds the app itself from the tagged commit, with its own tools,
 and signs it. (With a reproducible build, it can publish the APK that you
 signed instead.)
 
-**Status:** submitted on 2026-11-25 as
+**Status:** the first request,
 [fdroid/fdroiddata!59136](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/59136),
-and waiting for review. Its recipe builds commit 8b9750c, because F-Droid
-reads the listing from the commit that it builds. That commit has the
-retaken screenshots, and the same app as `v1.0` (d723b80).
+was closed on 2026-11-26. F-Droid wants an app maintained for more than three
+months first, so a new request goes in at about the end of February 2027.
+F-Droid reads the listing from the commit that it builds. So point the new
+recipe at a commit of the new history that has the listing's files. The old
+recipe's commit, 8b9750c, is in the old history (`docs/archived.txt`).
 
 - **The listing** is `fastlane/metadata/android/en-US/`: the title (the
   app's name; the listing holds it only here), the short and full

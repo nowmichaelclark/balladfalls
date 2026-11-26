@@ -8,6 +8,12 @@
 # - Everything before 1.0 is also in the archived driftloom repository:
 #   https://github.com/nowmichaelclark/driftloom
 #
+# The history started fresh on 2026-11-26: main begins at one commit,
+# 108e4c5, with the same files. A short hash in a doc (72b13f0, f040b5b,
+# 8b9750c, d723b80) names a commit of the old history. GitHub keeps it under
+# refs/archive/main-before-fresh-start, so its links still work. To read it
+# in a clone, run: git fetch origin refs/archive/main-before-fresh-start
+#
 # A pointer in a doc, a comment or a workflow to a path below (or to a file
 # under a folder below, which ends in "/") is not broken: it names that old
 # text. `node tools/check-docs.mjs` fails on a pointer into docs/ or design/

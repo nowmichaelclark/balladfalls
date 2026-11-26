@@ -266,24 +266,24 @@ The full toolbox is `tools/README.md`. The brain uses these most:
 
 ### Start here
 
-- **1.0 is out** (2026-11-25). The `v1.0` tag is on d723b80, and its release
-  "Ballad Falls 1.0" has `balladfalls-1.0.apk`, signed by the release
+- **1.0 is out** (2026-11-25). The history started fresh on 2026-11-26:
+  `main` begins at one commit (108e4c5), and the old history is under
+  `refs/archive/main-before-fresh-start` (`docs/archived.txt`). The `v1.0` tag
+  is on 108e4c5, and its release "Ballad Falls 1.0" has `balladfalls-1.0.apk`, signed by the release
   workflow with the key in the repository's secrets. balladfalls.com serves
   `main`. The old address (`driftloom.nowmichaelclark.workers.dev`) answers
   every path with a 301 to the new one. The driftloom repository is archived,
   read-only, with its PRs.
-- **F-Droid:** the merge request
+- **F-Droid:** F-Droid closed the merge request
   [fdroid/fdroiddata!59136](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/59136)
-  ("New app: Ballad Falls", 2026-11-25) waits for F-Droid's reviewers. Its
-  recipe names commit 8b9750c (the same app as d723b80, with the listing's
-  screenshots retaken). Answer questions in the merge request; the recipe's
-  comments hold the reasons.
+  on 2026-11-26, because an app must be maintained for more than three months
+  first. Mikey sends a new request at about the end of February 2027, with a
+  recipe on a commit of the new history.
 - **The order of work after 1.0** (`docs/QUEUE.md`, "Status"):
   1. K1, the known issue "The app drops a code's version", before any new
      sound;
   2. item 107's `APP_LINK`, once F-Droid lists the app;
-  3. item H1, the history's fresh start, after that;
-  4. item 75 (the reverb, rate-true) is ready, at low priority; item 37 is on
+  3. item 75 (the reverb, rate-true) is ready, at low priority; item 37 is on
      hold.
 - **Phone checks** in `docs/notes/for-mikey.md` wait for Mikey. None of them
   holds any work, because each checks something that shipped and can be

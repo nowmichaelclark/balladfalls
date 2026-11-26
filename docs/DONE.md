@@ -91,3 +91,6 @@ repository.
   `core/README.md` is now a short guide with a table of the parts, and the
   detail moves to `core/docs/` (`blocks.md`, `player.md`, `codes.md`).
   Nothing to hear.
+- balladfalls #16, the plain style, the Android guide (docs only):
+  `android/README.md` rewritten, with a short "How it works" first. Nothing
+  to hear.

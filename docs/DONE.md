@@ -778,3 +778,10 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   `docs/archived.txt`, still readable at 72b13f0 and in driftloom);
   `tools/check-docs.mjs` fails on a broken pointer into `docs/` or `design/`;
   `fastlane/` no longer deploys with the site. Nothing to hear.
+- balladfalls #10, the slim after 1.0, part 2 (Mikey, 2026-11-26; docs only):
+  the ears' batch reports, album cards, prompts, first sketches and raw
+  archives (21 MB) and item 82's note for Broken Friends leave the tree, now
+  that the wiki's Ballad Falls pages tell what they found (listed in
+  `docs/archived.txt`); F-Droid's recipe no longer deletes `docs/ears/raw`.
+  `docs/ears/plan.md`, `sessions.md`, `data.csv` and `tools/ears/` stay
+  until Mikey says whether the ears go on. Nothing to hear.

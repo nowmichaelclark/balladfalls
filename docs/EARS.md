@@ -6,7 +6,11 @@ measures both the same way, and reports where they differ, each
 difference with a yardstick a hands session can test against. Mikey is
 still the one who decides whether anything sounds good.
 
-The full reports are in `docs/ears/` (index: `docs/ears/README.md`):
+The batch reports and album cards this page cites left the tree after 1.0
+(`docs/archived.txt`); the wiki's "Ballad Falls/What the ears found" tells
+the story for a newcomer.
+
+The full reports were in `docs/ears/` (index: `docs/ears/README.md`):
 `batch-1.md` (20 albums), `batch-2.md` (12 more), `batch-3.md` and
 `batch-4.md` (the sketches and stereo, by round), `batch-5.md` (the first
 synthesis of the album cards), `batch-6.md` (the second, sketched on the core), `sessions.md` (how to run an ears session,

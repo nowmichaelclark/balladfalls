@@ -1,20 +1,41 @@
-# dlcore: Ballad Falls' audio core
+# dlcore: the Ballad Falls audio core
 
-The engine under Ballad Falls: the code that makes the sound. It is the same
-code in the website (as WebAssembly), in a native build, and in someone's
-game. It is plain Rust with `no_std`, no dependencies and no threads, and
-it allocates nothing after `Core::new`. The same notes make the same samples,
-bit for bit, on every target. Its promises and how each is measured are in
-[`docs/CORE.md`](../docs/CORE.md).
+The core is the engine under Ballad Falls: the code that decides the notes
+and makes the sound. The same code runs in the website (as WebAssembly), in
+the Android app (natively), and in any other host, such as a game.
 
-This guide is for developers and AI agents. It covers how a host drives the
-core, how the sound is built, and how to add to it. The rules for changing
-the core (what every PR must hold, and the rules for new sounds) are in
-[`AGENTS.md`](AGENTS.md) beside this file.
+- It is plain Rust with `no_std`, with no dependencies and no threads.
+- It allocates no memory after `Core::new`.
+- The same notes make the same samples, bit for bit, on every target.
 
-## Hosting it
+`docs/CORE.md` lists the core's promises and how each one is measured. The
+rules for a change to the core are in `AGENTS.md`, next to this file. This
+guide is for developers and AI agents. It says how a host drives the core,
+how the sound is built, and how to add to it.
 
-A host owns one `Core` and makes a handful of calls:
+## The parts
+
+| Part | Where | What it does |
+|---|---|---|
+| The core | `src/lib.rs`, `src/mix.rs`, `src/master.rs` | Plays notes through voices and blocks, mixes the layers, and renders samples. |
+| The blocks | `src/blocks/` | Each sound source or sound shaper is one file. |
+| The generator | `src/generator/` | Makes a loop from its seed and its request: the plan, the layers and every choice. |
+| The player | `src/player/` | Plays a loop step by step, pass after pass, and sends each note to the core. |
+| Share codes | `src/code.rs`, `src/code/` | Writes and reads the short codes that carry a loop or an album. |
+| FLAC | `src/flac/` | The encoder for the lossless export. |
+| Hosts | `src/wasm.rs`, `src/capi.rs`, `include/dlcore.h`, `examples/` | The web exports, the C interface, and two command-line hosts (`dlrender`, `dlgen`). |
+| The data | `../data/*.txt` | The generation tables. `build.rs` compiles them in. |
+| Tests | `tests/`, `golden/` | The tests, and the stored results that they compare with. |
+
+More detail is in `core/docs/`:
+
+- `core/docs/blocks.md`: the blocks that the app plays, one paragraph each.
+- `core/docs/player.md`: the player, the generator and the request, in full.
+- `core/docs/codes.md`: the share code format, byte by byte.
+
+## Host the core
+
+A host owns one `Core` and makes a few calls:
 
 ```rust
 use dlcore::{Core, Key, MELODY, KALIMBA, EXTRA};
@@ -27,150 +48,214 @@ let mut out = vec![0.0f32; 441];               // any number of frames a call
 core.render(&mut [&mut out])?;
 ```
 
-- **`start(rate, channels)`** sets the rate and the output layout: mono (1) or stereo (2); anything else returns a plain error. The two are renders of their own (queue item 64; `docs/CORE.md`, promise 9). The mono render is the one the core has always made and pays nothing for stereo; in the stereo render the mix's mid is the mono mix, the master chain runs on each side (its compressors keyed by the mid, so they press as in mono), and the width ceiling (`blocks::width`) turns the side down where it gets wider than its target. With nothing placed or widened, each side is the mono render, bit for bit. `set_layout` switches between them: before the first block it is the render from the start; while the core plays (the app's Mono switch, queue item 66) it fades, so the sound goes on without a click: into stereo the master takes two lanes at once and the side fades in from silence over `LAYOUT_FADE` (0.25 s); into mono the side fades out, and once the two lanes agree the master takes one. `lanes()` says how many the last block rendered (two until then); a mono host is given the left lane meanwhile.
-- **`note(voice, channel, time, midi, dur, vel, parts, extra)`** queues a note. It answers whether the note is on time, late, missed or refused (`Taken`).
-- **`key(key)`** says where the notes that follow sit in their loop. Every chance a note leaves open is drawn from this key, so the same loop sounds the same everywhere.
-- **`render(out)`** fills the host's buffers with the next frames: one buffer a channel of the layout last asked for.
-- **`event(channel, event)`** sends a damp, a release, a bend, a retune or a choke (`Event::new`, `Event::retune`) to a channel. Each kind says how far it reaches the channel's notes (`event::reach`):
-  - **once** (a damp, a release): each note hears it at most once, the notes that arrived since the channel's last event of that kind;
-  - **every time** (a bend, a retune, a choke): every note held when its time comes hears every one.
+- **`start(rate, channels)`** sets the sample rate and the output: mono (1)
+  or stereo (2). Any other value returns a plain error.
+- **`note(voice, channel, time, midi, dur, vel, parts, extra)`** queues a
+  note. It returns whether the note is on time, late, missed or refused
+  (`Taken`).
+- **`key(key)`** says where the next notes sit in their loop. The core draws
+  every random detail of a note from this key, so the same loop sounds the
+  same everywhere.
+- **`render(out)`** fills the host's buffers with the next frames: one
+  buffer for each channel of the output.
+- **`event(channel, event)`** sends an event to a channel: a damp, a
+  release, a bend, a retune or a choke (`Event::new`, `Event::retune`).
+  - A damp or a release reaches each note at most once.
+  - A bend, a retune or a choke reaches every note that is held when its
+    time comes.
+  - The channel's own blocks hear every event. Each voice or block decides
+    what to do with an event. For example, a nylon string listens to a
+    damp, and the tuned kick listens to a choke.
+- **`set(channel, block, setting, value, time)`** sets a setting of one of a
+  channel's own blocks, such as a sweep's period or an organ's stops.
+- **`route(channel, block, setting, from, time)`** sends the signal of
+  another channel (`Tap`) into a setting of a channel's own block, such as
+  the kick into the bass's duck. `None` removes the route.
+- **Other calls:** `param` (the mix and the master chain), `damp`, `cancel`
+  and `cancel_from` (when the music jumps), `quality`, and the counts `late`,
+  `missed` and `dropped`.
 
-  The channel's own blocks hear every event when its time comes. A voice or a block decides what it does with one; today a strummed nylon string listens to a damp, the chords' organ (`blocks::organ`, the first channel block the app plays) to retunes and releases, and the tuned kick (`blocks::kick`) to a choke: the host sends one with every kick of a loop that plays it, and a kick still ringing falls away in a few ms (one kick at a time), while the hit it was sent with passes it by.
-- **`set(channel, block, setting, value, time)`** sets a setting of one of a channel's own blocks for the loop: a sweep's period, a duck's depth, an organ's registration.
-- **`route(channel, block, setting, from, time)`** routes another channel's signal (`Tap`) into a setting a signal can drive on one of a channel's own blocks: the kick into the bass's duck. `None` undoes it.
-- Also:
-  - `param` (the mix and the master chain);
-  - `damp` (a new strum: a damp event, the web host's call);
-  - `cancel` and `cancel_from` (the music jumped);
-  - `quality`;
-  - the counts: `late`, `missed`, `dropped`.
+### Mono and stereo
 
-`examples/dlrender` is a whole native host in a few hundred lines. It reads
-a note list and writes a WAV:
+The mono render and the stereo render are two separate renders. The mono
+render costs nothing for stereo. In the stereo render, the mid (left plus
+right) is the mono mix. The master chain runs on each side, and the width
+ceiling (`blocks::width`) turns the side down if it gets wider than its
+target. If nothing is placed or widened, each side is the mono render, bit
+for bit.
 
-```sh
-cargo run --release --example dlrender -- --wav out.wav golden/03-tide.dlnotes
-```
+`set_layout` switches between the two. While the core plays, the switch
+fades over `LAYOUT_FADE` (0.25 s), so there is no click. `lanes()` says how
+many lanes the last block rendered.
 
-The web host is `js/worklet.js`, through the exports in `src/wasm.rs`. The
-Android host is `android/native` (queue item 107b), a crate of its own that
-links this one: an AAudio stream whose callback renders the player, its
-commands through a lock-free queue (`android/native/src/engine.rs`).
+### The hosts
+
+- `examples/dlrender` is a full native host in a few hundred lines. It
+  reads a note list or a seed and writes a WAV file:
+
+  ```sh
+  cargo run --release --example dlrender -- --wav out.wav golden/03-tide.dlnotes
+  ```
+
+- The web host is `js/worklet.js`, through the exports in `src/wasm.rs`.
+- The Android host is `android/native`, a crate that links this one. An
+  AAudio stream's callback renders the player, and commands come through a
+  lock-free queue (`android/native/src/engine.rs`).
+- The C host is `examples/c/seed.c`, through `include/dlcore.h`.
 
 ## How the sound is built: blocks
 
 Everything that makes or shapes sound is a **block**: one file in
-`src/blocks/`, behind one small interface in `src/block.rs`. There are only
-three things to know.
+`src/blocks/`, behind one small interface in `src/block.rs`. You need to
+know three things.
 
-1. **`Block`**:
-   - `start(settings, cx)`: the block is set once by its `Settings`.
-   - `render(block, cx, signal)`: the block renders 128 frames at a time into one `Signal`, in place. A *source* (an oscillator, a voice) adds its sound into the signal. A *processor* (`INPUT = true`: a filter, a body) replaces the signal with its output.
-   - `span()`: the frames the block sounds in.
-   - `PROBES`: how the test kit plays it.
+1. **`Block`**, the interface:
+   - `start(settings, cx)` sets the block once, from its `Settings`.
+   - `render(block, cx, signal)` renders 128 frames at a time into one
+     `Signal`, in place. A *source* (an oscillator, a voice) adds its sound
+     to the signal. A *processor* (`INPUT = true`, such as a filter) replaces
+     the signal with its output.
+   - `span()` gives the frames that the block sounds in.
+   - `PROBES` says how the test kit plays the block.
+2. **`Context`** is everything that a block can read in addition to its own
+   state: the sample rate, the wavetables and the noise.
+3. **The registry** is the `registry!` list in `src/blocks/mod.rs`, one line
+   for each block. The core finds every voice through it, with no `dyn`, and
+   the test kit finds every block through it.
 
-   A **`Voice`** is a block whose settings are a `Note`. It is the kind a host plays by number. It may also settle the note's chances (`settle`), say that it plays the noise (`uses_noise`), play through one of its channel's own blocks (`THROUGH`), send some of itself past its channel straight into the reverb and the echo (`SENDS`, `render_sends`: dubStab's throw), and hear channel events (`event`).
+A **voice** is a block whose settings are a `Note`. A host plays a voice by
+its number. A voice can also:
 
-   Three seams are optional parts of `Block`, each with a default, so a block that doesn't use one writes nothing for it:
-   - **Modulation:** `MODS` names the settings a signal can drive, and `render_mod(block, cx, signal, mods)` renders with them driven. At every frame a driven setting is its own value plus the signal, as Web Audio sums an `AudioParam` and the node connected into it. A vibrato is an `Lfo` into an `Oscillator`'s `DETUNE`; FM is an `Lfo` at audio rate into its `FREQ`; a filter sweep is an envelope into a `Filter`'s `FREQ`.
-   - **Stereo:** `render_stereo(block, cx, &mut [left, right])`. The core's mono render never calls it, so mono pays nothing. By default a mono source plays centered (its mono render on each side, bit for bit), and a mono processor hears the two sides folded to one; `Pair` runs one copy of a processor on each side. A block with a stereo render of its own (a panner, a room) says `STEREO = true`.
-   - **Channel events:** `HEARS` lists the kinds a block listens to, and `event(&Event)` hears them.
-   - **Settings for the loop:** `SETTINGS` names the numbers a host sets on a channel's own block, and `set(setting, value, time, cx)` takes them when their time comes.
-2. **`Context`**: everything a block may read besides its own state: the sample rate, the wavetables and the noise.
-3. **The registry**, the `registry!` list in `src/blocks/mod.rs`: one line a block. The line declares the block's file, and the core finds every voice through it, with no `dyn`. The kit finds everything there too. Its `channel` list names a channel's own blocks (`Channel`): blocks each channel keeps for as long as the core runs, outside the voice pool. One runs on a bus its voices sum into (the fiddle, nylon and accordion bodies), on the whole channel (`Channel::WHOLE`: a sweep, a duck), or adds its own sound (a held organ, a wash). A shared resonance, space or held instrument is one file and one line there.
+- settle the random details of its note (`settle`);
+- say that it uses the noise source (`uses_noise`);
+- play through one of its channel's own blocks (`THROUGH`);
+- send part of its sound straight to the reverb and the echo (`SENDS`,
+  `render_sends`);
+- hear channel events (`event`);
+- follow its channel (`FOLLOWS`): its notes sound after the channel's own
+  blocks, and each note starts with the channel's level so far.
 
-Every block keeps all of its state inline, in a plain struct whose
-`const fn new()` is all zeros. Nothing in a block allocates or panics.
-Inside a voice, a setting that moves over time is a `param::Param`, the
-core's AudioParam, and a setting another block drives is one of the part's
-`MODS`. The voices are built from the parts in the same directory (`osc`,
-`lfo`, `filter`, `noise_source`) and call them directly, by type.
+A block can also use four optional parts of `Block`. Each part has a
+default, so a block that does not use it writes nothing for it.
 
-## Adding a building block
+- **Modulation:** `MODS` names the settings that a signal can drive, and
+  `render_mod` renders with them driven. At each frame, a driven setting is
+  its own value plus the signal, as in Web Audio. For example, a vibrato is
+  an `Lfo` into an `Oscillator`'s `DETUNE`.
+- **Stereo:** `render_stereo(block, cx, &mut [left, right])`. The mono
+  render never calls it. By default, a mono source plays in the center, and
+  a mono processor hears the two sides folded to one. `Pair` runs one copy
+  of a processor on each side. A block with its own stereo render says
+  `STEREO = true`.
+- **Channel events:** `HEARS` lists the kinds of event that a block listens
+  to, and `event(&Event)` receives them.
+- **Settings for the loop:** `SETTINGS` names the numbers that a host sets
+  on a channel's own block, and `set(setting, value, time, cx)` takes each
+  one at its time.
 
-`src/blocks/tremolo.rs` is a demonstration: a tremolo, in the tests only.
-It is the whole recipe:
+**A channel's own blocks** are in the registry's `channel` list. Each
+channel keeps them for as long as the core runs, outside the voice pool. A
+channel block can work on a bus that the channel's voices sum into (the
+fiddle's body), on the whole channel (`Channel::WHOLE`: a sweep, a duck), or
+add its own sound (a held organ, the wash).
 
-1. **One new file**, `src/blocks/NAME.rs`, with:
-   - a struct holding the block's state;
+Each block keeps all of its state inline, in a plain struct whose
+`const fn new()` is all zeros. Nothing in a block allocates or panics. Inside
+a voice, a setting that moves over time is a `param::Param`, the core's
+version of an AudioParam. The voices are built from the parts in the same
+folder (`osc`, `lfo`, `filter`, `noise_source`) and call them directly.
+
+**A caution on modulation:** an oscillator's start follows Chromium's rule.
+If you connect any signal to its frequency, even a signal of zero, the pitch
+counts as "moving", and the note's first block starts in a different way.
+The goldens depend on this. So do not connect a modulator "just in case":
+it changes the sound.
+
+`core/docs/blocks.md` describes each block that the app plays.
+
+## Add a block
+
+`src/blocks/tremolo.rs` is a demonstration: a tremolo that only the tests
+use. It shows the whole recipe.
+
+1. Add **one new file**, `src/blocks/NAME.rs`, with:
+   - a struct that holds the block's state;
    - a `const fn new()` (all zeros) and `Default`;
    - its `Settings`;
    - `impl Block`, with at least one probe.
-2. **One line** in the registry's `parts` list in `src/blocks/mod.rs`, for example `tremolo::Tremolo;`. The tremolo's line also carries `#[cfg(test)]`, which keeps it out of the app.
-3. **Store its renders** for the kit: `KIT=update cargo test --lib kit`. This adds lines to `golden/blocks.txt`; commit them.
+2. Add **one line** to the registry's `parts` list in `src/blocks/mod.rs`,
+   for example `tremolo::Tremolo;`. The tremolo's line also has
+   `#[cfg(test)]`, which keeps it out of the app.
+3. **Store its renders** for the kit: run `KIT=update cargo test --lib kit`.
+   This adds lines to `golden/blocks.txt`. Commit them.
 
-That is all; the kit's test (`each_demonstration_block_is_one_file_and_one_line`)
-checks that the tremolo is named nowhere else.
+The kit's test `each_demonstration_block_is_one_file_and_one_line` checks
+that the tremolo is named nowhere else.
 
-Two more demonstrations show the seams are one file and one line too:
+Five more demonstrations show the optional parts, each with one file and
+one line:
 
-- `src/blocks/amp.rs`, an amplifier whose gain a signal can drive. It lists its setting in `MODS` (with the swing the kit should probe it at) and writes `render_mod`. The kit probes the input with no test written for it.
-- `src/blocks/pan.rs`, a stereo panner. It says `STEREO = true` and writes `render_stereo`. The kit checks and stores its two sides.
+- `src/blocks/amp.rs`: an amplifier whose gain a signal can drive (`MODS`,
+  `render_mod`).
+- `src/blocks/pan.rs`: a stereo panner (`STEREO = true`, `render_stereo`).
+- `src/blocks/swell.rs`: settings for the loop. A host calls
+  `core.set(MELODY, own::SWELL, 0, 1.5, time)`.
+- `src/blocks/chorale.rs`: a held instrument that is retuned at each chord.
+  A host calls `core.event(CHORDS, Event::retune(time, &[60.0, 64.0, 67.0]))`.
+  A note that two chords share sounds on; only the changed notes stop and
+  start again (`blocks::retune`).
+- `src/blocks/duck.rs`: the signal of one channel into the block of
+  another. A routed signal is its source's previous block (one block late),
+  so the channels can render in any order, with the same result everywhere.
 
-Three more show a channel's own blocks are one file and one line too (queue item 46c). Each line in the registry's `channel` list carries `#[cfg(test)]`:
+The last three are in the registry's `channel` list, each with
+`#[cfg(test)]`.
 
-- `src/blocks/swell.rs`, **settings for the loop.** A swell on a whole channel (`Channel::WHOLE`) carries its own `Lfo`, and lists the rate and depth a host sets in `SETTINGS`. `set` starts the swing again from the setting's time. A host calls `core.set(MELODY, own::SWELL, 0, 1.5, time)`. The kit probes each setting (`swell/slow=rate`).
-- `src/blocks/chorale.rs`, **a held instrument retuned many times.** Four voices a channel holds. It lists `RETUNE` in `HEARS` and, in `event`, moves by the shared rule `blocks::retune`: a note two chords share sounds on untouched, and only the changed notes are let go and spoken again. A host calls `core.event(CHORDS, Event::retune(time, &[60.0, 64.0, 67.0]))` at each chord. The kit sends five chords (`chorale/triad@retune`).
-- `src/blocks/duck.rs`, **one channel's signal into another's block.** A gain on a whole channel with a `key` in `MODS`. A host routes the drums into it: `core.route(BASS_CHANNEL, own::DUCK, 0, Some(Tap { channel: DRUMS_CHANNEL, block: None }), time)`. A routed signal is its source's previous block (one block's delay), so channels render in any order and the result is the same on every target and block size. The kit keys it with a sine (`duck/half~key`).
+**To add a voice,** follow the same steps, with three differences:
 
-The chapel organ (`src/blocks/organ.rs`, queue item 61) is the chorale grown up, and the first of these the app plays: one line in the `channel` list (`organ::Organ = ORGAN (organ::REST)`), silent at rest, with its registration and the rest in `SETTINGS` (the host sets all 21 at a loop's first step), `RETUNE` at each chord and `RELEASE` to let go. It sends some of itself into the room past the channel's own sends (`Channel::SENDS`, `render_sends`, as a voice's `SENDS` does). Two things it shows: a channel's own block lives in the core's static memory in every channel, so its `new()` must be all zeros (a NaN or a 110 Hz default there puts the whole core into the `.wasm`, 14 MB) and it sets its real starting values in `start`; and an idle one returns at once from `render`, so a channel that never plays it costs nothing and renders bit for bit as before.
+- The voice implements `Voice` as well as `Block`.
+- Its line goes in the `voices` list, with the number that a host plays it
+  by: `kalimba::Kalimba = KALIMBA 0;`. The numbers are fixed for good, so
+  take the next free one.
+- The page needs the number too (`CORE_VOICES` in `js/core.js`).
 
-subDuck (`src/blocks/sub_duck.rs`, queue item 68) is the duck the app plays: on the whole bass channel, keyed by the drums routed in, it hears a kick as its key's low band (under 150 Hz) rising, and dips the bass by its depth (a setting, scaled by how loud the kick rose) in 8 ms and back over its recovery (a setting), as the sketch's gain did at each kick's time. Its depth at 0 costs nothing.
+If a voice is too big for a slot of the pool, put it in `pooled`, with the
+size of its own pool.
 
-padSweep (`src/blocks/pad_sweep.rs`, queue item 72) is the swell's way with a filter: on the whole chords channel, its own `Lfo` drives its own `Filter`'s frequency (`Mods`), so the cutoff swings from its closed point (a setting) up by its octaves (a setting) and back once a period (a setting), with the Q a setting too. A new sweep starts closed at its time; across a load the cutoff glides onto the new loop's curve over half a second, and a loop without one glides it open and then stands still, costing nothing. `Filter::retarget` changes a running filter's settings and keeps its memory, so the change doesn't click.
-
-The wash (`src/blocks/wash.rs`, queue item 62) is the duck grown up: a source on the core's sixth channel (`WASH_CHANNEL`, which no host note plays into, set like the textures' in the mix), whose level follows the other five layers through five routes into its `MODS`, one a channel, each weighted by a setting (the channel's gain in the mix, 0 for a muted one, since a route taps a channel before its gain). A block may follow every channel at once: `MAX_MODS` is 6. Note lists carry the routes (`route`), and hash the sixth channel (`wash=`).
-
-The width ceiling (`src/blocks/width.rs`, queue item 64) is a stereo processor in the master chain, after the ceiling: it measures the mid and the side above 200 Hz over the last 2 s and turns the side down where it rises above its target against the mid (down in about half a second, back over about three), leaving the mid, and so the fold to mono, untouched. Its settings are named (`width::SETTINGS`; `Core::param`, `WIDTH_TARGET` to `WIDTH_UP`). The kit feeds a stereo processor two different sides too (`width/ceiling:wide`), since a side-only block has nothing to do with the same signal on both.
-
-The space (`src/space.rs`, queue item 65) is where each part sits in the stereo render, as data: a recipe of named settings, each with the range a loop draws it from (`space::SETTINGS`), drawn from the loop's seed, how busy and how wet it is, and whether its texture is light (`Core::param`, `SPACE_SEED` to `SPACE_START`). A host narrows or pins any setting (`Core::space_range`). The mix makes the side (`mix::Side`): the room (the reverb through four allpasses), the spreads (a swaying copy of the chords, texture and melody), the placements (the light kit, a light texture, glass) and the wash's own width (`Channel::render_side`), all highpassed so the low end stays centered, and riding the same gains, duck and tails as the mid, which is the mono mix bit for bit. The master gets left = mid + side and right = mid - side. With no space, or in a mono render, none of it runs.
-
-The bass layer's level is a setting of the loop (queue item 76c): `Core::bass_lift(db)`, sent by the host at each load (`dl_bass_lift`; `js/choices.js`, `BASS_LIFT`: +3 dB in a loop that plays a kick, 0 without). The core stamps it on each bass note as it arrives, so every bass voice but the FM `rhodesbass` is lifted alike, a loop handed over keeps its own, and a host that never sends one plays today's level.
-
-The arc (`src/blocks/arc.rs`, queue item 63) is a processor in the master chain rather than a channel's: a lowpass between the tone and the highpass, one in each of the master's lanes (`Pair`'s way, ready for stereo), breathing over minutes and lifting the echo's feedback as it opens (the mix takes the lift, frame by frame). A host starts it through `Core::param` (`ARC_FROM`, then `ARC_PERIOD` at the loop's start). With no arc it is no filter at all.
-
-**A caution on modulation:** an oscillator's start follows Chromium's rule. Connecting any signal into its frequency, even a zero one, makes the pitch "moving", which changes how the note's first block starts. That is exact, and the goldens depend on it, but a recipe that connects a modulator "just in case" changes the sound.
-
-A **voice** is the same, with three differences:
-- It implements `Voice` as well as `Block`.
-- Its line goes in the `voices` list with the numbers a host plays it by: `kalimba::Kalimba = KALIMBA 0;`. The numbers are the host's, fixed for good, so take the next free one.
-- The page needs to know the number too (`CORE_VOICES` in `js/core.js`).
-
-A voice too big for a slot of the pool goes in `pooled`, with the size of
-its own pool.
-
-A voice may follow its channel (`Voice::FOLLOWS`; the low bell,
-`src/blocks/low_bell.rs`, queue item 101g): its notes sound into the channel
-after the channel's own blocks (a sweep or a wow leaves them be), and each
-note is stamped as it starts with the channel's level so far
-(`block::HEARD`, its mean square over `block::FOLLOW` seconds), so its level
-can follow the layer's as a block on the whole channel would. A channel with
-no such note sounding renders bit for bit as before.
-
-twang (`src/blocks/twang.rs`, queue item 101h) follows its channel too, and
-hears the one event kind only it hears, a let-go (`event::LET_GO`): the
-strings picked at or before the event's value let go from its time, so the
-player can take the oldest of six strings as a seventh is picked, and damp
-them all at a full stop. It is soft alone since item 105e (slow and bright
-taken out; a code pinning either plays soft, "Share codes" below).
+**To add a channel's own block,** remember that it lives in the core's
+static memory in every channel. So its `new()` must be all zeros: a NaN or a
+non-zero default puts the whole core into the `.wasm` file (14 MB). Set the
+real starting values in `start`. An idle block must return at once from
+`render`, so that a channel that never plays it costs nothing.
 
 ## The test kit
 
-`cargo test` plays every block in the registry alone, at 48 kHz, through
-each of its probes. For each probe it checks:
-- **level:** the samples are finite, the block is not silent, and it is not running away;
-- **tone:** the 2-5 kHz share of the A-weighted energy (the coffee-shop test);
+`cargo test` plays each block in the registry alone, at 48 kHz, through each
+of its probes. For each probe it checks:
+
+- **level:** the samples are finite, the block is not silent, and it does
+  not run away;
+- **tone:** the share of 2-5 kHz in the A-weighted energy (the coffee-shop
+  test);
 - **determinism:** two renders are the same;
 - **cost:** a release build checks it against a ceiling;
 - **a null test:** a hash against the stored render in `golden/blocks.txt`;
-- **modulation:** each setting in `MODS`, driven on every probe by a slow sine (`osc/sine~freq`), checked the same way. A setting that changes nothing on any probe fails: it isn't wired;
-- **stereo:** a mono block in a stereo signal must put its mono render on each side, bit for bit (a source centered, a processor fed the same on both sides, and as a `Pair`). A `STEREO` block's two sides are checked and stored (`pan/left:stereo`), and must differ on at least one probe;
-- **events:** each kind in `HEARS`, sent on every probe (`block::probe_events`: a damp, a release, three bends, five chords), checked the same way (`nylon/strum@damp`). A kind that changes nothing on any probe fails;
-- **settings:** each of `SETTINGS`, set to its probe value at the start (`swell/slow=rate`). A setting that changes nothing on any probe fails.
+- **modulation:** each setting in `MODS`, driven by a slow sine on every
+  probe. If a setting changes nothing on any probe, the test fails: the
+  setting is not connected;
+- **stereo:** a mono block in a stereo signal puts its mono render on each
+  side, bit for bit. A `STEREO` block's two sides are stored, and must differ
+  on at least one probe;
+- **events:** each kind in `HEARS`, sent on every probe. A kind that changes
+  nothing on any probe fails;
+- **settings:** each of `SETTINGS`, set to its probe value at the start. A
+  setting that changes nothing on any probe fails.
 
-An equal hash proves a change identical. Any other hash is a sound change.
-The test fails with the stored and new level and tone. A change on purpose
-is stored with `KIT=update`, and its PR says what moved and why, for an A/B.
+An equal hash proves that a change is identical. Any other hash is a change
+in the sound. The test fails and shows the stored and the new level and
+tone. To store a change that you made on purpose, use `KIT=update`, and say
+in the PR what moved and why.
+
 To hear a probe from two versions:
 
 ```sh
@@ -182,42 +267,18 @@ cargo run --release --example dlrender -- --compare old.wav new.wav
 `KIT=report cargo test --release --lib every_block -- --nocapture` prints
 the whole table.
 
-## The generator (phase 2)
+## The generator and the player
 
-`src/generator/` is the generator, ported note for note from the app's old
-JavaScript one (`js/generator.js`, retired in item 97; queue items 79 to 81): a loop's spec, the plan `render` draws before the layers,
-the layers themselves and `render`'s choices, each choice's own draws
-(`js/choices.js`), what the engine decides at load (`Engine.load`: the
-per-loop settings the host sends the core) and each wandered pass
-(`drift`), from its seed, its vibes and the generation data: every decision
-the JavaScript makes before scheduling. The data, `data/*.txt`, is compiled
-in by `build.rs` as read-only tables, so a host hands nothing over and an
-edit to a data file rebuilds the core. A host keeps one
-`generator::Generator` (fixed lists, 1,406,840 bytes on 64-bit targets,
-1,090,016 on 32-bit; nothing allocates) and calls `load(seed, vibes)`, then
-`settings()` for the load's decisions and `wander(pass)` for a pass as it
-wanders (any pass, without the ones before it: a pass is the loop's own
-events with what it changed marked on them, a few bytes an event); `hash`
-and `write` give each part's canonical text (`tools/gen-golden.mjs`
-documents it). A load takes about 0.5 ms on a laptop, 11 ms at most: a loop
-with a tuned kick works out the kick's level by ear there (`kickOf`'s fit,
-about 10 ms, a tenth of the JavaScript's), and that is nearly all of it;
-the player spreads it across blocks (`Generator::begin`, then `step` a stage
-at a time; the fit itself resumes in slices, `choices::KickFit`). The app's
-`.wasm` leaves the generator out until the app plays the player (phase 3);
-the `generator` feature builds its exports (`dl_gen_load`, `dl_spec`, ...)
-for the checks.
+The **generator** (`src/generator/`) makes a loop from its seed and its
+request: the spec, the plan, the layers, every choice, the settings that the
+player sends at load, and each pass as it wanders. It reads the data in
+`data/*.txt`, which `build.rs` compiles in as read-only tables. A host keeps
+one `generator::Generator` and calls `load(seed, vibes)`. A load takes about
+0.5 ms on a laptop, and 11 ms at most.
 
-## The player (phase 2)
-
-`src/player/` plays a loop from its seed with no JavaScript (queue item 82):
-the generator makes it, the sequencer (`sequencer.rs`, once the page's
-`Engine`) walks it step by step, pass after pass, wandering as the
-app's does, and the synth's note calls (`synth.rs`, with the voice budget,
-`budget.rs`, and the sung voices' trims, `formant.rs`) hand each note to the
-core with everything it carries. The baseline's 40 loops, full and lite,
-mono and stereo, 45 s with the wander on, make the same samples as the app's
-own engine in Chromium, bit for bit (below).
+The **player** (`src/player/`) plays a loop from its seed. The generator
+makes the loop, the sequencer (`sequencer.rs`) walks it step by step and
+pass after pass, and the synth (`synth.rs`) gives each note to the core.
 
 ```rust
 use dlcore::Core;
@@ -232,466 +293,94 @@ player.render(&mut core, &mut [&mut left, &mut right])?;  // again and again, an
 player.set_mute(&mut *core, Layer::Drums, true);          // and set_wander, set_tempo, set_volume
 ```
 
-- **`set_wander_salt(salt)`** (queue item 92; `dl_player_wander_salt`,
-  `dl_play_wander_salt`, `dlrender --salt`): the wander's stream salted from
-  the next pass, so a host that sends a new salt each play hears a loop
-  wander differently each time (the app does across its wander slider's
-  upper range, `UNREPEATABLE_FROM` in `js/player.js`). 0, the default, is
-  the wander every code has always had; the same seed, request and salt
-  make the same samples.
+The player does everything that the app does, so a host needs no generator
+of its own: loads and changes at a musical moment, re-rolls, the edits from
+a code, the track length, the core's own next loops, events and reports.
+The request asks for vibes, a tempo, a length, keys, modes, styles, voices
+and layers. `core/docs/player.md` describes all of it.
 
-- **`load(seed, request)`** asks for a loop; it is made a stage a block over
-  the blocks rendered next (a few, up to about a hundred: the spec, the plan,
-  the render in five parts, the load's decisions, the kick's fit in slices,
-  the first pass), then starts, its first step `START` (0.05 s) on. A loop
-  playing stops being decided at once and what it handed over plays out.
-  `load_at` starts it at a time on the core's clock instead (the page's
-  cursor keeps in step that way), and `ready` makes it at once for a host
-  with no deadline (an offline render, `dlrender --seed`).
-- **`change(seed, request, moment, handover)`** (queue item 86,
-  `player/change.rs`) changes loops at a musical moment of the loop playing:
-  `Moment::Now` (as soon as made, `load`'s moment), or its next `Beat`
-  (six steps in 6/8, else four), `Bar`, `Phrase` (a four-bar line from the
-  pass's start, two where four doesn't divide the loop) or `Pass`. The old
-  loop hands over by `Handover::Crossfade(seconds)` (its notes fall to
-  nothing from the boundary, `Core::fade_all`, its organ letting go over the
-  same; `CROSSFADE`, 1 s, by default) or `RingOut`. No reset, no second core:
-  a change waits until its boundary is `lead()` away (the lookahead and 160
-  blocks, the longest load with room), the old loop decides its steps up to
-  the boundary then, and the new loop is made in the blocks before it and
-  takes its first step on it, its tone, level and echo gliding in there. A
-  nearer boundary is passed for the next of its kind. A `Now` change (or a
-  load while playing) starts on the old loop's next step, or, if the new loop
-  took longer to make than the old had decided ahead, on the first of its
-  steps still to come (queue item 86b). Changes wait one for
-  each kind of moment, a later one in place of an earlier for the same kind
-  or boundary; `next_change()` says when the next starts. A change's loop
-  plays its own first pass (a load's wanders at the pass count the last loop
-  reached, the page's way). `dlrender --changes N` makes N across the corpus
-  and measures each join; `tools/player-wasm.mjs --changes N` times them.
-- **Everything the app does** (queue item 94a), so a host needs no
-  generator of its own:
-  - *A code's edits* (`Request::with_layer_seed`, `with_tone`, `with_bpm`;
-    as text `edit.roll.drums=N`, `edit.seed.bass=N`, `edit.warmth=0.6`,
-    `edit.space`, `edit.wobble`, `edit.bpm=88`): what a listener changed
-    after the loop was made, overwritten on the spec after every draw, as
-    the app overwrites its own (a re-rolled layer always plays, the port of
-    `forceLayers`). The generation goldens' `edit` cases hold it to the
-    page's.
-  - *`revise(seed, request)`*: the loop playing made again in its place (a
-    re-roll): it takes the old loop's next step and goes on from that step
-    and pass, its setups sent again only where they differ.
-  - *`set_tone`*, and *`set_track(Track)`*: the length slider, whole passes
-    or bars to the next phrase line, counted from the step heard;
-    `Moment::End` is a change that waits for it (ringing out at a pass's
-    end, the crossfade inside one); `change_with_track` also says how long
-    that loop's own track plays, and `drop_change(moment)` drops one.
-  - *The picks and the core's own loops* (queue item 95): `set_picks(request,
-    tag)` holds the host's picks, `set_draws(seed)` gives the core a seed to
-    draw its own loops' seeds from. `next(moment, handover)` changes to a
-    loop of its own, and a track that ends with nothing waiting for it hands
-    over to one by itself (`END_FADE` inside a pass), so the page may sleep
-    through it; each plays on until the host sets its track. A pick never
-    changes the loop playing. Its `Loop` event comes after an `Own` carrying
-    the picks' tag, so the host knows which loop it is.
-  - *Events* (`player/events.rs`, `event()`): a loop's first step, a pass, a
-    piece's section, a phrase line, each step, a re-roll, the track's end and
-    a loop of the core's own, each at the time it is heard, decided up to a lookahead ahead.
-  - *Reports* (`player/about.rs`): `grid(layer)`, the layers' grid of the pass
-    being decided; `notes`/`note`, the loop as composed note by note (the
-    MIDI export's); `describe`, plain ASCII lines of what a card, a cover
-    and a share code show. `test/player.test.mjs` holds them to the page's
-    generator in `js/dlplayer.wasm`; `examples/c/report.c` calls them through
-    the header.
-- **Rendering ahead** (queue item 87, `player/ahead.rs`), for a host with no
-  audio thread (Godot's web build): `render` any number of frames a call,
-  and each call carries on exactly where the last stopped, the same samples
-  as straight through (wandering, endless, a change waiting at a boundary).
-  `pass_frames(&core)` is the chunk to the end of the pass playing (the
-  first takes the lead-in with it); `Core::served` is where the host stands.
-  `estimate(&core, frames)` is how long a chunk will take, in microseconds
-  on the reference host (wasm in Node on the hands' machine), from the
-  units the loop's voices held over the last pass (`units`; the budget's
-  costs times how long each held); a host scales it by what its last chunk
-  took against its estimate. `tools/ahead.mjs` sweeps chunk sizes
-  (`--sweep`), checks the estimate (`--estimate`) and times render speed per
-  loop in Node and Chromium; `speed.html` does it on a phone. The C header
-  has `dl_player_pass_frames` and `dl_player_estimate`; `seed.c --ahead`
-  renders a pass a call. The Emscripten build (`wasm32-unknown-emscripten`,
-  CI's `emscripten` job) makes wasm32's golden hashes.
-- **Before each block** the player decides every step due within
-  `LOOKAHEAD` (0.25 s) and hands its notes over (`decide`; `render` calls it
-  for a host, `Core::render_with`). Each pass's wandering is drawn a pass
-  ahead, in a block where no step is decided.
-- **The request** (`Request`, promise 11; queue item 85) is what the load
-  asks for beside the seed: vibes, by name or number, with a weight each
-  (`with_weight`: the share of the loop it steers) or without (`with`, as a
-  listener picks them), and the tempo (`with_tempo(lo, hi)`, equal to pin
-  it, 32 to 190 bpm). `Request::parse("glacial=0.7,misty=0.3,bpm=70-85")`
-  reads it as text, as `dlrender --request` and `dl_player_ask` do. What it
-  leaves out is drawn from the seed; a request of nothing is the seed's own
-  loop. A request that can't be met is refused as it is built, with a short
-  plain line (`request::TEMPO_OUT` and the rest), never played as
-  something else.
-- **The theme** (`Request::with_theme`, queue item 85d; `theme=1234` as
-  text, `dl_player_theme`) bends another seed's loop: the loop made keeps
-  that loop's profile mix, key and mode, metre and tune (the melody's figure
-  and rhythmic cell), and the vibes, the tempo, the pins and the load's own
-  seed bend the rest. A friend's theme is its seed, loaded with itself as
-  the theme and the day's vibes: the same tune in the same key, a new mood.
-- **The pins** (`request::Pins`, queue item 85b) fix the named settings: any
-  of item 54's choices to one of its options (`organ=on`, `tunedKick=long`,
-  `arc=today`), the settings each draws by (`arc.period=240`,
-  `kick.note=33`, `lateFloor.order=kitFirst`, `padSweep.q=0.9`), the echo's
-  time (`echo.beats=1`) and the space recipe's 32 (`space.room=0.8`), by
-  name in the text or by number (`with_pin`, `dl_player_pin`). Each is held
-  to what the loop could draw (`request::SETTING_OUT` past it). Every draw
-  is made as ever and the pin overrules one value, so nothing else moves; a
-  choice pinned on plays where its eligibility test allows, today's where
-  not; a setting pinned shapes its choice when the loop plays it, and does
-  not turn it on. `js/pins.js` is the table and says why.
-- **The length** (`Request::with_length`, queue item 88; `bars=1024` or
-  `bars=endless` as text, `dl_player_length`; `generator/piece.rs`): any
-  whole number of bars from 1 up, or `Length::Endless`. Up to 32 bars (the
-  longest any profile draws) it is the loop's own length, honored where the
-  tables never draw it (the table's draw made, then overruled). Past that,
-  and for Endless, the loop keeps the length it drew and the piece is that
-  loop played section after section, section `n` its pass `n` as the wander
-  draws it, from the seed and the number alone (`Generator::section`): the
-  memory and a section's cost are the same at 4 bars, 32,768 or Endless,
-  and any section is reached straight from its number. A round's last
-  section is cut short at a bar line where the loop's length doesn't divide
-  the piece's (`Piece::bars_of`), the next round counting its bars from
-  where it begins; at its end a piece comes round, its sections numbered on.
-  A piece's first section is section 0 (a load's first pass otherwise wanders
-  at the count the last loop reached). `player.piece()` says how a round
-  ends; `position()`'s pass is the section. `dlrender --endless 24` renders
-  a day of Endless at speed (CI's `endless` job: no drift, no growth), and
-  `tests/length.rs` holds the rest (every profile, 1 to 32,768 bars, a
-  section reached straight or through). `piece::time` is the play time the
-  app's Bars picker shows (`pieceTime` in `js/request.js`). The length is
-  how many bars the loop is, never when it ends (queue item 88b): the player
-  plays round after round and hands the host no end; the app's length slider
-  decides when a track hands over, and one that ends inside a pass lets the
-  core's notes go at a phrase line (`dl_fade_all`, `Core::fade_all`).
-- **The key and the mode** (`Request::with_keys`, `Request::with_scales`,
-  queue item 89; `key=D`, `key=D|G`, `scale=dorian` and `scale=dorian|aeolian`
-  as text, `dl_player_keys` and `dl_player_scales` with a bit for each home
-  note, C the lowest, and each mode, by its place in `theory::SCALES`): one
-  note or mode is a pin, a set is chosen from ("D or G", the minor-ish
-  modes). Every draw is made as ever and the request then overrules two
-  values: a key or mode the seed drew that is already inside the set stands,
-  else one of the set is drawn from a stream of the seed's own (the keys
-  alike; the modes weighted by how far this profile mix and these vibes lean
-  toward each, a mode the profiles never draw at a floor of 0.25, so no pair
-  is forbidden and the vibes still lean what they can). A key and mode asked
-  overrule a theme's own. The generator is already written over any mode, so
-  a profile's progressions written for other modes fall back to the
-  seven-note shapes, and the ones spelled for a mode (cinder's added F over
-  E, wayfare's minor v) play where that mode allows them.
-- **The style** (`Request::with_styles`, queue item 90; `style=tide` or
-  `style=tide|shrine` as text, `dl_player_styles` with a bit for each profile
-  by place in `request::PROFILE_ORDER`, the order a share code numbers them
-  in): a profile or a set of them. Every draw is made as ever and the
-  request then overrules the loop's profile mix: a mix whose every profile
-  is inside the set stands; else each profile outside it, in the order the
-  mix was drawn, is replaced by one of the set (a stream of the seed's own,
-  weighted as the mix's own draw weighed the profiles: their weight, the
-  loop's drive, the vibes and the tempo asked), a member two land on taking
-  both weights. A pinned style is that profile whole (weight 1); a set keeps
-  the loop's blend across its members. A style asked overrules a theme's
-  mix (its key, mode, metre and tune hold). Each profile keeps its own
-  character, instruments and drums, and the vibes bend it as ever
-  (`generator::spec::ask_mix`).
-- **The voices and the layers** (`Request::with_voices`,
-  `Request::with_layer`, queue item 91; `voice.melody=kalimba|marimba` and
-  `layer.drums=off` as text, `dl_player_voices` and `dl_player_layer`, the
-  layer 0 to 4 in the core's order: drums, bass, chords, melody, texture):
-  for each layer a voice or a set of them (`request::VOICE_ORDER`: the names
-  the layer's pools draw from, less the choir's, which is a rarity and is not
-  offered; the drums' voice is the kit, the texture's its kind), and each
-  layer left to chance, on or off. Every draw is made as ever and the request
-  overrules one value (`generator::asked`): a voice the loop drew inside the
-  set stands, else one of the set is drawn from the layer's own seed,
-  weighted by the profiles' pool (a voice it lacks at a floor of 0.25, so no
-  pair is forbidden). A voice asked of the melody or the chords is the voice
-  they play: the loop is not a choir, and an arpeggio is that voice, not the
-  keys. A layer on is never left out by its own chances (the drums that
-  sometimes aren't there, the melody that rests, the bass that plays
-  nothing, no texture) and plays throughout, its entry schedule all in; the
-  loop's own notes stay where it already played. A layer off is the layer
-  muted, as the listener's mute would be (`Spec::layers_off`; the sequencer
-  mutes it at the load, a layer asked on is unmuted, the others stay as the
-  host left them) and the same unmute brings it back. All five off is the
-  one request that cannot be met (`request::ALL_LAYERS_OFF`).
-- **The controls** are the app's: `set_wander` (0 plays the loop as
-  composed), `set_mute`, `set_tempo`, `set_volume`, `stop` and `resume`.
-- **The C header**, `include/dlcore.h` (promise 4), has the same calls
-  (`dl_player_start`, `dl_player_load`, `dl_player_change` and
-  `dl_player_next_change`, `dl_player_render`, ...; the
-  request's `dl_player_vibe`, `dl_player_weight`, `dl_player_ask_tempo`,
-  `dl_player_theme`, `dl_player_pin`, `dl_player_length`,
-  `dl_player_keys`, `dl_player_scales`, `dl_player_styles`,
-  `dl_player_voices`, `dl_player_layer` and
-  `dl_player_ask`, each refusal its
-  line): build the
-  library with `cargo rustc --release --lib --features capi --crate-type
-  staticlib`; the host gives each player its memory. `examples/c/seed.c` is
-  a whole C host, a seed to a WAV.
-- **On the web** the `player` feature builds `js/dlplayer.wasm` with the
-  `dl_play_*` exports; the app plays it by default since queue item 94b
-  (`js/player.js` sends the commands and draws the events), and it is the
-  app's only module since item 97. The module was
-  665 KB (226 KB gzipped) against the core alone's 252 KB (91 KB gzipped): the
-  generator and the player's code, 547 KB of the module before gzip; with the
-  FLAC encoder (item 104b) and the share codes (`codes`, session 23: 124 KB,
-  48 KB gzipped) it is 1,059 KB (365 KB gzipped). The player is all
-  zero bytes when new (`a_new_player_is_all_zeros`), so its 1.5 MB is `.bss`,
-  not bytes in the file (the module was 1.9 MB when it was stored).
+On the web, the `player` feature builds `js/dlplayer.wasm` with the
+`dl_play_*` exports. `js/player.js` sends the commands and draws the
+events. The module is about 1.1 MB (about 380 KB with gzip). A new player is all
+zero bytes, so its 1.5 MB is in `.bss` (memory that starts empty), not in
+the file.
 
-Why a player's render depends on when it hands notes over: the core keeps its
-waiting notes in no fixed order (a note that starts takes the last one's
-place), so which voice a note takes, and the order the voices are summed in,
-depend on what is waiting. The player's way is fixed (a block at a time,
-`LOOKAHEAD` ahead), so its renders are the same everywhere; handing a whole
-render over before it starts, as the old measuring harness did, sums the same
-notes in another order (inaudibly: about 88 dB under the render).
+## FLAC export
 
-Nothing allocates (the generator's lists, two passes and the budget are
-fixed). What it costs (`dlrender --seed N --costs`, and
-`tools/player-wasm.mjs --costs` for the wasm), at 44.1 kHz, where a block's
-deadline is 2.9 ms: natively, the worst block is 0.45 ms (16%), all of it
-the core's audio; a load's worst stage is 0.14 ms (5%), a slice of the
-tuned kick's fit; making loops is 0.4% of a minute's render. In wasm (Node)
-the worst block while a loop is made is 0.28 ms (10%), its audio included.
-On every target, QEMU's included, a load's worst stage costs less than the
-same loop's worst audio block, so making a loop never makes a loop's worst
-block.
+`src/flac/` is the core's own FLAC encoder, for the lossless export. It has
+no dependencies, allocates nothing, and makes the same bytes on every
+target.
 
-## Exporting: FLAC (queue item 104a)
+1. Start one with `Flac::start(rate, channels, bits)`: mono or stereo, 16 or
+   24 bits.
+2. Give it what the player rendered, up to `flac::BLOCK` (4,096) frames for
+   each call (`write`), and append the bytes that each call returns.
+3. Call `finish` for the last frame. Then `header()` gives the finished
+   header, to write over the file's first 42 bytes if the host can seek.
 
-`src/flac/` is the lossless export's encoder, the core's own: no
-dependencies, nothing allocated, the same bytes on every target. A host
-starts one (`Flac::start(rate, channels, bits)`: mono or stereo, 16 or 24
-bits), hands it what the player rendered, up to `flac::BLOCK` (4,096) frames
-a call (`write`, the channels as `render` fills them), and appends the bytes
-each call gives back; `finish` gives the last frame. Its state is a fixed
-122,576 bytes, so a three-hour export takes the memory of a minute. The
-header `start` gives leaves the length and the MD5 unknown, which FLAC
-allows, so the file plays at every moment; after `finish`, `header()` is the
-finished one, written over the file's first 42 bytes by a host that seeks.
-Floats become integers by one rule (`flac::quantize`: rounded, halves away
-from zero, held to full scale, no dither). Each block is coded with the
-cheapest of a constant, the samples as they are, or a fixed predictor with
-partitioned Rice codes, and stereo as left and right or with the side: about
-a fifth of a WAV's size at 16 bits, a third at 24. The C header has
-`dl_flac_*`; the web's `dl_flac_*` (`src/wasm.rs`) are behind the `flac`
-feature, out of `js/dlplayer.wasm` until the app exports. `dlrender --flac
-OUT [--bits 16|24]` writes one from a seed (streamed) or a note list, and
-`node tools/flac.mjs` (CI's `flac` job) holds real renders to the reference
-decoder.
+Its state is a fixed 122,576 bytes, so a three-hour export uses the memory
+of a minute. The first header leaves the length and the MD5 unknown, which
+FLAC permits, so the file plays at every moment. Floats become integers by
+one rule (`flac::quantize`: rounded, halves away from zero, held to full
+scale, no dither). A file is about a fifth of a WAV's size at 16 bits, and a
+third at 24.
 
-## Share codes, version 2 (queue item 105)
+- The C header has `dl_flac_*`.
+- The web's `dl_flac_*` (`src/wasm.rs`) are behind the `flac` feature.
+- `dlrender --flac OUT [--bits 16|24]` writes one from a seed or a note list.
+- `node tools/flac.mjs` (CI's `flac` job) checks real renders with the
+  reference decoder.
 
-A loop or an album as a short run of the 64 link-safe characters, written and
-read by `src/code.rs` (natively; `dl_code_*` and `dl_album_*` in the C header;
-`dl_code_*` in the tools' wasm and in `js/dlplayer.wasm`, which the app
-drives through `js/gen.js` and `js/share.js` since session 23;
-`node tools/codes.mjs` from the command line). **Frozen from 1.0:**
-`golden/share-codes.txt` holds it to its bytes, natively and on the web, and
-`golden/frozen-codes.txt` holds what 1.0's codes play: 561 loops and 11
-albums made on 1.0's build, each with what it decodes to (its seed, mutes,
-salt, name and request, and a hash of everything the generator draws from
-it), which `test/frozen-codes.test.mjs` reads back in the gate. That file is
-written once and never again.
+## Share codes
 
-**Characters.** `A`-`Z` `a`-`z` `0`-`9` `-` `_` are the values 0 to 63, a
-*sextet* each. Spaces around a code are let be; anything else outside the
-alphabet is no code. A code is at least 9 characters.
+A share code is a loop or an album as a short run of 64 characters that are
+safe in a link. `src/code.rs` writes and reads it, natively, through the C
+header (`dl_code_*`, `dl_album_*`) and in `js/dlplayer.wasm`. From the
+command line, use `node tools/codes.mjs`.
 
-**Numbers.** A *number* is five bits a character, the lowest first, 32 added to
-every character but the last, in as few characters as it needs (a last
-character of 0 after another is refused): 0 to 31 one character, to 1,023 two,
-to 32,767 three. A *seed* is a 32-bit number in exactly six characters, the
-lowest six bits first. A *decimal* is the shortest decimal that reads back to
-the double exactly (Rust's `{:e}`): its digits as a whole number with no
-trailing zero, zigzagged (`2m` for `m >= 0`, `-2m - 1` below), then its power of
-ten, zigzagged; zero is `0 0` and minus zero `0 1`. A *set* of ids is how many
-(at least one), the first, then each gap less one, ascending.
+**The format is frozen from 1.0.** `golden/share-codes.txt` holds it to its
+bytes, and `golden/frozen-codes.txt` holds what 1.0's codes play: 561 loops
+and 11 albums, each with what it decodes to. `test/frozen-codes.test.mjs`
+reads them back in the gate. Nobody writes that file again.
 
-**A loop:** *head* (a number, `2 * version`), *seed*, *fields*, *check*.
+A plain loop is 9 characters. A new vibe, profile, voice or option takes the
+next free id in `data/codes.txt`, at a new version, so an old code never
+draws it. `core/docs/codes.md` is the full format: the characters, the
+numbers, the fields, names, albums and paces, and how to add to it or take
+from it.
 
-**The check:** two characters, `h & 63` then `h >> 6`, where `h` starts at 0 and
-for each character before it becomes `(h * 64 + value + 1) mod 4093`. Any one
-character changed, or two side by side swapped, is caught.
+## Sketches
 
-**Versions.** Codes start at 2, and **version 2 is 1.0's** (session 31,
-2026-11-25: `released = newest = 2`). One version a release (`data/codes.txt`,
-`released` and `newest`): what joins after a release shares `released + 1`,
-so the head stays a character to version 15, and a code made between two
-releases may change as another addition joins. A version past the build's is
-refused, "needs a newer version" (the host adds its app's name). A code's
-loop is drawn at its version: every pool, every word of a setting drawn per
-loop and every such setting itself is filtered first to what had joined by
-then (`data::there`, `data::joined_of`, `data::drawn_at`), so a member added
-later never moves an older code's picks; a deliberate change to a sound that
-exists still moves them, and the release notes say so.
+`core/sketch/` is where a session puts a new sound before it is in the app:
+one block file and one line of data (`core/sketch/README.md`). The `sketch`
+feature builds it in as a channel's own block (`src/blocks/sketch.rs`), and
+the kit probes it with no test written.
 
-**What was taken out** (item 105e; Mikey, 2026-11-17: no code rot, so no
-longer codes). A member's row stays when it goes, marked `gone`, with a
-stand-in where one fits. An id with a row is this build's, gone or not: a
-gone one plays its stand-in (never over what the code itself asks), an
-option with none its choice's today, anything else with none is left out of
-the request (a journey to the piece's own draw, its length kept). An id with
-no row is "needs a newer version" in a code of the version still open (past
-`released`, which newer builds share), and "not a code" at a released
-version, whose ids are all here. A number a field has ever taken
-(`[code numbers]`) plays the nearest it takes today; one no build wrote is
-"not a code". A code read so is written again in what is here now.
-
-**Fields:** each a *tag* (a number) and what follows it, the tags ascending; a
-tag marked *keyed* may repeat with its key (the number after it) ascending.
-Every name is its *id* in `data/codes.txt`, never its place in a list. A tag
-this build never had is "needs a newer version" and one it stopped writing
-is read and set aside; an id is read as "What was taken out" says; anything
-else out of place is "not a code".
-
-| Tag | Field | What follows |
-|---|---|---|
-| 0 | the track's own version (album tracks only, first) | number |
-| 1 | a vibe, keyed | its id |
-| 2 | a vibe with a weight, keyed | its id, decimal |
-| 3 | the tempo pinned | bpm - 32 |
-| 4 | a tempo range | low - 32, high - low - 1 |
-| 5 | the length | bars - 1 (to 2^53 - 2) |
-| 6 | Endless | nothing |
-| 7 | the journey | its id |
-| 8 | the keys | a set of notes, C 0 to B 11 |
-| 9 | the modes | a set of ids |
-| 10 | the styles | a set of profile ids |
-| 11 | a layer's voices, keyed | layer id, a set of voice ids |
-| 12, 13 | the layers asked on, off | a set of layer ids |
-| 14 | the theme | seed |
-| 15 | a choice pinned, keyed | choice id, option id |
-| 16 | a setting pinned, keyed | setting id, word id or decimal |
-| 17 | a layer's seed (an edit), keyed | `2 * layer id + re-rolled`, seed |
-| 18 | a part of the tone (an edit), keyed | part id, decimal |
-| 19 | the tempo the slider set (an edit) | decimal |
-| 20 | the layers muted | a set of layer ids |
-| 21 | the wander's salt (item 92) | seed, not 0 |
-| 22 | a track's pace (album tracks, and an album's own, only) | a number: 0 on and on, 1 on and on fading in, `2 + 4 (s - 1) + f` for a time of `s` seconds (1 to 86,400) with fades `f` (1 a fade in, 2 a fade out, 3 both; session 30c) |
-| 30 | a name of its own (a loop's, a track's, an album's) | how many bytes of UTF-8 (1 to 60), then the bytes, eight bits each packed six to a sextet, highest first, the last sextet's spare bits 0 (base64url, no padding) |
-
-**A name** (session 23; Mikey, 2026-11-17: a renamed loop's name travels
-with its code, "all characters and emojis"): a loop's own name, written only
-when it was renamed, so a loop with none costs nothing; an album track's
-own, in its body; an album's, after its tracks or in its picks. The core
-carries it as the host gave it (UTF-8 in, UTF-8 out: the listener's text,
-not the core's, which stays ASCII); the code stays the 64 characters. At most
-**60 bytes** (`code::NAME_MOST`: sixty letters of English, twenty of Thai,
-fifteen emoji; in a code about 1.3 characters an English letter, 4 a Thai
-one). `code::Name::new` refuses ("a name a code can't carry"), and a code
-holding such a name is no code: bytes that are no UTF-8; a space at either
-end or two in a row; any control, format character (the direction overrides
-and isolates, the zero-width and invisible characters), separator but the
-plain space, private use, noncharacter or default-ignorable; a combining mark
-or variation selector not after a visible character, or more than four in a
-row (Thai's vowel and tone pass, piled-up marks don't); ZWNJ or ZWJ not
-between two visible characters (an emoji's sequence and a Persian word pass);
-tag letters outside a black flag's run ended by its cancel tag (England's and
-Scotland's flags pass). The classes are `src/code/classes.rs`, Unicode 17.0,
-written by `node tools/name-table.mjs` and frozen with the format. A host's
-rename box asks the same rule (`dl_code_name_ok`), so a name a listener can
-type is one a code can carry.
-
-**A code's request as text.** `code::request_text` (`dl_code_request` after
-`dl_code_read`) writes what a loop's code asks as the text `Request::parse`
-reads: its asks, its edits (`edit.seed.drums=…`, `edit.warmth=…`) and its
-version. A host that keeps a loop as a record of its request, as the app's
-Library does, reads a code back into that record from it.
-
-**An album:** *head* (`2 * version + 1`), a number for its kind, then:
-
-- **0, a list of loops:** how many (1 to 1,024); each track as how many
-  characters it takes, then its *seed* and *fields* (a loop's code less head
-  and check; tag 0 first where its version is older than the album's, which is
-  its newest track's; its own pace where it is not the album's; its name
-  last, if it has one); then the album's pace field or nothing, its name
-  field or nothing; *check*.
-- **1, drawn from one seed:** the album's *seed*, how many tracks, the picks
-  they share (fields 1 to 16) and the album's name field or nothing;
-  *check*. Track `i`
-  (from 0) is the loop of the `i + 1`th `seed32` of the generator's stream of
-  the album's seed (`code::track_seed`), asked the picks, at the album's
-  version.
-
-**A track's pace** (session 24b; Mikey, 2026-11-18: "an album's code
-should carry track lengths and all necessary info"): how long it plays
-before the next, as the album's maker had the app's length slider, which is
-how the player takes it (`code::Pace`, `player::Track`): on and on (until
-the listener moves on), or a time to the second, each with its fades (session
-30c, the Track length view: a fade in, and a time's fade out; passes and
-bars before it, whose numbers now read as times of a few seconds).
-The pace most of an album's tracks share (the smaller number on a tie) is
-written once, after the tracks; each track whose pace is another writes its
-own (0 for one that plays on beside paced ones). An album whose tracks all
-play on writes none, so its code is as it was before paces; twelve tracks
-of two minutes each, fading out, cost three characters. Anything else saying the same (the
-album's pace 0, a track's own the album's, the album's not the one most
-share) is no code, so each album has one code. A loop's own code carries
-none (one loop sounds the same however long it plays; when the listener's
-app moves on is the listener's), and neither does an album from one seed
-(its maker set no track's length). A host writes a track and its pace as
-text, `ENBAAAAEmBO_7:t5025` (1:23:45), with `i` and `o` after the seconds
-for its fades (`:t120o`), `:i` for on and on fading in, the code alone on
-and on (`code::paced`: `dl_album_write`, `dl_code_album_write`,
-`node tools/codes.mjs album`), and reads it back with `code::album_pace`
-(`dl_album_pace`, `dl_code_pace`).
-
-A plain loop is 9 characters; with a few picks (two vibes, 64 bars, a tempo)
-19; eight plain loops as an album 61; twelve tracks of 3,072 bars drawn from
-one seed with two vibes, 19; a plain loop renamed "Rainy Sunday" 27, renamed
-"ฝนตกที่กรุงเทพ" 68.
-
-**Adding to it.** A new vibe, profile, voice, choice, option, setting or word
-takes the next free id of its list in `data/codes.txt`, `since` the last
-release's version plus one, and `newest` is that (a release sets
-`released = newest`). A pool the core writes in Rust (a fallback kit, a
-setting's kinds) filters by `data::there` or `data::joined_of` where it
-draws; a new setting drawn per loop outside the list of choices asks
-`data::drawn_at` first, draws nothing below its version, and is counted in
-`Render::settings_changes` only where it plays. A number's range widened
-widens its `[code numbers]` row. A new field takes a new tag, with the
-version raised.
-
-**Taking out of it.** The member leaves the core and the data; its row stays,
-`gone` after it, then a stand-in that had joined by then, if one fits. A
-range narrowed leaves its row. A field no longer written keeps its tag and
-its reading. `data/codes.txt`'s header is the rule in full.
-
-`tests/dummy.rs` (the `dummy` feature, in the gate) adds a member of each
-kind at version 3 and takes one of each out, and shows every generation
-golden drawn at version 2 bit for bit as it was, and every removed one read.
-
-## Sketches (queue item 83)
-
-`core/sketch/` is where an ears or brain session drops one block file and one
-line of data (`core/sketch/README.md`); the `sketch` feature builds it in as a
-channel's own block (`src/blocks/sketch.rs`), probed by the kit with no test
-written. The same feature carries the clips' levers: a choice forced
-(`Generator::force`), a named constant moved (`src/tuning.rs`), a setting
-pinned. `dlrender --seed|--corpus` takes them (`--sketch`, `--force`,
-`--set`, `--pin`, `--from`, `--pick`, `--choices`), and `tools/clips.mjs` drives
-them from a job list to WAV and Opus clips with an index of what each loop
-drew. The feature is never in the app's `.wasm`, the player's or the C
-library: with it off, every file that matters is the same bytes, and with it
-on and the sketch off, every loop renders bit for bit as before.
+The same feature carries the levers for listening clips: a forced choice
+(`Generator::force`), a moved constant (`src/tuning.rs`), and a pinned
+setting. `dlrender --seed|--corpus` takes them (`--sketch`, `--force`,
+`--set`, `--pin`, `--from`, `--pick`, `--choices`), and `tools/clips.mjs`
+makes WAV and Opus clips from a job list. The app, the player and the C
+library never include the feature. With the feature on and no sketch, every
+loop renders bit for bit as before.
 
 ## The other checks
 
-- **`golden/`:** whole loops as the app plays them. Each must hash the same on wasm32, x86-64, aarch64, 32-bit ARM and big-endian PowerPC, at every block size and at other rates (`golden/README.md`).
-- **`tools/gen-core.sh [TARGET]`:** the Rust generator against the generation goldens (`golden/generation.hashes`): every case, every part (the load and the eight wandered passes too) equal to the JavaScript's hash, on every target CI renders (`examples/dlgen`; wasm32 through a `generator` build in Node). `node tools/stats.mjs --check --core` draws the balance lock's corpus from that build and fails unless every loop's figures equal the JavaScript's.
-- **`tools/seeds.sh [TARGET]`:** the corpus's first 80 loops from their seeds, each to a WAV, against `golden/seeds.hashes`, the same on every target (the first few under QEMU); `--browser` holds the baseline's 40 loops in the four ways to the browser's renders (`tools/baseline.mjs`'s `player` part), natively and in `js/dlplayer.wasm`; `--c` builds the C host against the header alone and holds it to the same hashes.
-- **`tools/baseline.mjs`:** the core in the real app, in Chromium: every voice, 40 loops, the refusals, and the 40 loops played from their seeds as the player plays them.
-- **`tools/build-core.sh --check`:** the committed `js/dlplayer.wasm` is exactly what this source builds. Run `tools/build-core.sh` after any change here.
-- **Clippy, pedantic:** run `cargo clippy --all-targets -- -W clippy::pedantic`; it reports zero, and CI fails on any warning (queue item 74). Every public item has a doc comment that gives the reason, not only the what.
+- **`golden/`:** whole loops as the app plays them. Each must hash the same
+  on wasm32, x86-64, aarch64, 32-bit ARM and big-endian PowerPC, at every
+  block size and at other rates (`golden/README.md`).
+- **`tools/gen-core.sh [TARGET]`:** the generator against the generation
+  goldens (`golden/generation.hashes`): every case and every part, on every
+  target that CI renders.
+- **`tools/seeds.sh [TARGET]`:** the first 80 loops of the corpus from their
+  seeds, each to a WAV, against `golden/seeds.hashes`. `--browser` checks
+  the baseline's 40 loops against the browser's renders. `--c` builds the C
+  host against the header alone.
+- **`tools/baseline.mjs`:** the core in the app: every voice, 40 loops, the
+  refusals, and 40 loops played from their seeds.
+- **`tools/build-core.sh --check`:** the committed `js/dlplayer.wasm` is
+  exactly what this source builds. Run `tools/build-core.sh` after each
+  change here.
+- **Clippy, pedantic:** `cargo clippy --all-targets -- -W clippy::pedantic`
+  reports zero, and CI fails on any warning. Each public item has a doc
+  comment that gives the reason, not only the what.

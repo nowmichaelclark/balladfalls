@@ -87,3 +87,7 @@ repository.
 - balladfalls #15, the plain style, the entry docs (docs only): `docs/README.md`
   and `core/AGENTS.md` rewritten, and small fixes in `tools/README.md`.
   Nothing to hear.
+- balladfalls #16, the plain style, the core's guide (docs only):
+  `core/README.md` is now a short guide with a table of the parts, and the
+  detail moves to `core/docs/` (`blocks.md`, `player.md`, `codes.md`).
+  Nothing to hear.

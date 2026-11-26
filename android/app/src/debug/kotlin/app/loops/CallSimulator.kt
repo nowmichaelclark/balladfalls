@@ -8,7 +8,7 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 
 /**
- * Debug builds only (session 28): stands in for a phone call on the emulator,
+ * Debug builds only: stands in for a phone call on the emulator,
  * which has no call to take. A call takes the audio focus for a while (a
  * transient loss for whatever plays) and gives it back when it ends:
  *

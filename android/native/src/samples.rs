@@ -1,4 +1,4 @@
-//! What the samples say (session 30g, queue item 115, steps 1 and 4): the
+//! What the samples say (steps 1 and 4): the
 //! crackles Mikey heard were in the samples or in playback. These render
 //! the loop that crackled (E9T-ZxDxj) and the Batch 6 album (`docs/ALBUMS.md`)
 //! through the engine's own path, the commands through its queue and `fill`
@@ -346,7 +346,7 @@ const HOLD: u32 = 4;
 /// How a quality switch goes over, as the page sends it.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Switch {
-    /// The listener's switch before session 30g's step 4 (js/main.js's
+    /// The listener's switch before it faded (js/main.js's
     /// `buildAudio` at once): the old player let go in the same callback
     /// that the transport's 60 ms silence was asked in, so it never fades.
     AtOnce,

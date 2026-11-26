@@ -1,5 +1,5 @@
 /* The numbers and shapes src/jni.rs and src/aaudio.rs write by hand, held to
- * the NDK's own headers (queue item 107b). build.sh compiles this before
+ * the NDK's own headers. build.sh compiles this before
  * every build, for each ABI; nothing is linked or run. A slot or a constant
  * that differs fails the build here, never on a device. */
 

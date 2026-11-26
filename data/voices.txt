@@ -1,8 +1,8 @@
-# The voice table (queue items 32 and 78): the layers, what each voice costs
-# the JavaScript synth's voice budget, and the levels the folk and hand-kit
-# voices sit at. The format is in js/data.js. The costs and levels here are
-# the JavaScript fallback's (js/synth.js); the core has its own voices and
-# levels (core/src/blocks/).
+# The voice table: the layers, what each voice costs the voice budget, and
+# the levels the folk and hand-kit voices sat at. The format is in
+# js/data.js. The core's player reads the layers and the costs (core/build.rs
+# builds them in). The levels were the retired JavaScript synth's; the
+# core's voices have their own levels (core/src/blocks/).
 
 # The layers, in the order the app lists them and the generator draws them,
 # and the label each shows.

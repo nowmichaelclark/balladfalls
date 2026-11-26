@@ -32,7 +32,7 @@ import kotlin.math.roundToInt
 
 /**
  * The whole app for now: one WebView with the page in it, its player on the
- * core's native audio (session 27, [PageBridge]): the page sends the commands
+ * core's native audio ([PageBridge]): the page sends the commands
  * and draws what the core reports, and plays no audio of its own. A WebView
  * too old for the bridge plays the page as a browser does.
  */
@@ -108,7 +108,7 @@ class MainActivity : Activity() {
         }
         view.setBackgroundColor(Color.parseColor("#160830"))
         // With the screen off and the app in the background the page goes on (its export, the next loop's
-        // choice): the renderer keeps its priority when the window is not shown (session 28).
+        // choice): the renderer keeps its priority when the window is not shown.
         view.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
         val bridge = AppBridge(this, view) { paintBars(root, view, it) }
         app = bridge

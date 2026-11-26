@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds the app the way F-Droid's buildserver does (queue item 107e): inside
+# Builds the app the way F-Droid's buildserver does: inside
 # F-Droid's own buildserver container, with fdroidserver's `fdroid build
 # --on-server`, from the recipe render.mjs made, from a clean clone of the
 # commit. Modelled on the `fdroid build` job of fdroiddata's CI

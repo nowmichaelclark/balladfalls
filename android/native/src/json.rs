@@ -1,4 +1,4 @@
-//! The page's messages as text (session 27, queue item 107c): a small JSON
+//! The page's messages as text: a small JSON
 //! reader for what `js/core.js`'s `CoreHost` posts, and the few helpers the
 //! bridge writes its answers with. No crate: the app's thread reads a
 //! message a few times a second, so this is plain and short, never fast.

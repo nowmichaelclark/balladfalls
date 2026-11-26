@@ -128,3 +128,7 @@ repository.
   JavaScript file still runs are fixed, and `core/AGENTS.md` says where the
   retired files are. Only comments change; the rebuilt wasm differs only in
   the line numbers that it carries for panics (23 bytes). Nothing to hear.
+- balladfalls #23, the plain style, the comments in android/: the history
+  tags leave the comments of 43 files (Kotlin, Rust, scripts, XML). The
+  F-Droid recipe template stays as it is. Only comments change. Nothing to
+  hear.

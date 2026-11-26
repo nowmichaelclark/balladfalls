@@ -1,6 +1,6 @@
 #!/bin/sh
 # The "lighter on processor" rule on the native core, measured on a headless
-# emulator (session 30g, step 6): android/burn.mjs's sweep of a slower phone
+# emulator (step 6): android/burn.mjs's sweep of a slower phone
 # (`?burn=`). What CI's `burn` job runs, by hand only (only=burn). The
 # emulator plays into the host's sound server (CI's is a null sink).
 #

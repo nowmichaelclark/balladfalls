@@ -1,5 +1,5 @@
 #!/bin/sh
-# The core for Android (queue item 107b): libdriftloom.so for each ABI asked,
+# The core for Android: libdriftloom.so for each ABI asked,
 # built by cargo from this crate (and the core beside it, the same source as
 # the web's module) with the NDK's linkers. What the app's Gradle build runs
 # (android/app/build.gradle.kts, task buildNative); it runs alone too.

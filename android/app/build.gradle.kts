@@ -6,12 +6,12 @@ plugins {
 }
 
 // Test builds (debug) keep the working id; release builds take the release id
-// (session 31a: android/gradle.properties).
+// (android/gradle.properties).
 val appId = providers.gradleProperty("driftloom.applicationId").get()
 val releaseId = providers.gradleProperty("driftloom.releaseApplicationId").get()
 val appName = providers.gradleProperty("driftloom.appName").get()
 
-// The ABIs the core is built for (session 26): phones and tablets (arm64-v8a,
+// The ABIs the core is built for: phones and tablets (arm64-v8a,
 // armeabi-v7a) and the emulator (x86_64). -Pdriftloom.abis=x86_64 builds one,
 // for a quicker local build.
 val abis = providers.gradleProperty("driftloom.abis").get().split(',').map { it.trim() }.filter { it.isNotEmpty() }
@@ -22,7 +22,7 @@ base.archivesName.set(appName.lowercase().filter { it.isLetterOrDigit() })
 
 android {
     // The Kotlin package of the code, not the app's id: it stays when the
-    // id changes at the rename (session 31a).
+    // id changes at the rename.
     namespace = "app.loops"
     compileSdk = 36
     // The NDK the core's libraries are linked with (android/native/build.sh),
@@ -31,7 +31,7 @@ android {
 
     defaultConfig {
         applicationId = appId
-        // 27 (Android 8.1): AAudio, the native audio path (session 26), came
+        // 27 (Android 8.1): AAudio, the native audio path, came
         // in 26 but is only dependable from 27 (it is where Oboe itself
         // starts using it), and a WebView that current runs on 8.1 and up.
         // Below that the page would need a fallback the project has retired.
@@ -41,7 +41,7 @@ android {
         versionName = providers.gradleProperty("driftloom.versionName").get()
 
         // The instrumented tests (src/androidTest): the core native, on the
-        // emulator (session 26).
+        // emulator.
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The golden loop the debug screen and the tests render again: the
         // first line of core/golden/seeds.hashes, which every target makes
@@ -89,8 +89,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
-            // The release is built the same on any machine (session 29, item
-            // 107e: docs/notes/107-reproducible.md). AGP 8.3 and later stamp the
+            // The release is built the same on any machine
+            // (docs/notes/107-reproducible.md). AGP 8.3 and later stamp the
             // git commit into the APK unless told not to.
             vcsInfo.include = false
         }
@@ -204,7 +204,7 @@ tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.con
 
 // ---- The core, native, from the same source as the web's module ----------
 //
-// Session 26 (queue item 107b): android/native is a small crate over the core
+// android/native is a small crate over the core
 // (core/, as a path dependency) that holds what Android needs: the AAudio
 // stream, the lock-free queue and the JNI bridge. build.sh builds it with
 // cargo for each ABI with the pinned NDK's linkers, into generated/native,

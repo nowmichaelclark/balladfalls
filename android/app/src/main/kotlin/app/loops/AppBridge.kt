@@ -22,8 +22,8 @@ import java.io.IOException
 import java.util.concurrent.Executors
 
 /**
- * What the page asks of the app that a browser would do itself (session 28,
- * queue item 107d): a second bridge beside the core's ([PageBridge]), the
+ * What the page asks of the app that a browser would do itself: a
+ * second bridge beside the core's ([PageBridge]), the
  * object `DriftloomApp` in the page (js/app.js is its end). Plain text both
  * ways, JSON:
  *
@@ -39,8 +39,8 @@ import java.util.concurrent.Executors
  *    file; then `save-write`, `save-header` (its `at`, 0 if none), `save-close`
  *    and `save-abort` { id, data } (base64), `save-view` and `save-share` for
  *    the file saved;
- *  - `save-folder` { id }: Android's own folder picker (an album exported a
- *    file a track, item 121); then `save-in` { id, name, mime, need, seek } a
+ *  - `save-folder` { id }: Android's own folder picker (an album exported as
+ *    one file for each track); then `save-in` { id, name, mime, need, seek } a
  *    new file in it, written as `save` writes one.
  *
  * To the page: `action` { action } (play, pause, next, previous: what a
@@ -102,7 +102,7 @@ class AppBridge(
             } else {
                 main.post {
                     // Paused in the background, the page's timers are slowed or stopped: it is shown as if in
-                    // front for a moment, so it takes the action now (session 30g, step 7), then as it is.
+                    // front for a moment, so it takes the action now (step 7), then as it is.
                     if (!Playback.busy) {
                         Playback.wakeUntil = SystemClock.elapsedRealtime() + WAKE_MS
                         view.refreshVisibility()

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// What the listing's files and the version must be (queue item 107e), checked
+// What the listing's files and the version must be, checked
 // without F-Droid's tooling (CI also runs fdroidserver's lint on the recipe):
 //
 //   node android/fdroid/check-metadata.mjs            the files and the version
@@ -11,7 +11,7 @@
 //    code and under 500 characters, the icon (512 x 512), the feature graphic
 //    (1024 x 500) and at least two phone screenshots, all PNG.
 // 2. The app's name is written once, in title.txt (and in gradle.properties
-//    and strings.xml: session 31a's three lines): no other listing file holds it.
+//    and strings.xml): no other listing file holds it.
 // 3. The version scheme (android/README.md): versionCode = major * 10000 +
 //    minor * 100 + patch, for the versionName "major.minor" or
 //    "major.minor.patch". A release (a versionName without "-test") has its

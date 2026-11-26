@@ -13,7 +13,7 @@ import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
 
 /**
- * The core, native, on the device (session 26's yardsticks; CI runs these on
+ * The core, native, on the device (CI runs these on
  * its emulator, android/emulator-native.sh). In name order: the samples
  * first, then a device change, then five minutes of play.
  *

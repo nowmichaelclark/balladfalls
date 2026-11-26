@@ -1,5 +1,10 @@
 # The sessions to 1.0
 
+**All done (2026-11-26): 1.0 was released on 2026-11-25.** Every row below is
+ticked but F-Droid's review of the submission, which is F-Droid's to finish
+(`docs/QUEUE.md`, item 107). This folder is the record of how 1.0 was made;
+work after 1.0 starts at `docs/QUEUE.md`, not here.
+
 Written by the hands (Fable 5.2) on 2026-11-10, at Mikey's request, after
 items 97 and 100 merged; reviewed by brain B1 on 2026-11-11 (each file it
 changed says what and why at its top; here: sessions 11 and 14 on Fable,
@@ -123,7 +128,8 @@ Diagnostics), `js/library.js` (18, 23), `js/gen.js` (17's map, 23's codes),
 | | **you** | Your signing key (chosen 2026-11-22: your own; the steps are in `docs/notes/for-mikey.md`); buy the new name's domain and attach it to the Worker, if not done. **31a waits for this.** | | 29 | | yes, 2026-11-25 (the key made; the new repository and its Worker `balladfalls`, balladfalls.com attached) |
 | 31a | `31a-new-name.md` | The new name, built and left open (you paste the name, the domain and the id) | Opus 5.5, high | B5, the row above | none | yes, 2026-11-25 (#2, open on purpose, v219; 31 merges it) |
 | 31 | `31-one-point-oh.md` | 108: 1.0 (merges 30l and 31a first) | Sonnet 5.5, medium | B5, 31a open and green | none | yes, 2026-11-25 (balladfalls #1, #2, #3, v220 to v222; the tag by Mikey's Releases page if refused here) |
-| | **you** | Launch day: the old address's Worker, archive driftloom; the F-Droid submission (its merge request is public, so after 1.0) | | 31 | | |
+| 31+ | (no file: the 1.0 thread, at Mikey's asks) | After 1.0: the release signed in GitHub Actions from the repository's secrets; the old address's Worker connected and its page fixed; the F-Droid listing's screenshots retaken | as 31 | 31 | none | yes, 2026-11-25 (balladfalls #4, #5, #6, #7; no app change) |
+| | **you** | Launch day: the `v1.0` tag, the release key's secrets, the old address's Worker, archive driftloom; the F-Droid submission (its merge request is public, so after 1.0) | | 31 | | yes, 2026-11-25 (the tag on the Releases page; the signed APK on the release; driftloom archived; F-Droid merge request !59136 open, waiting for its review) |
 
 **Mikey's seven** (2026-11-18, queue items 109 to 114): his list for 1.0,
 as six sessions before the polish. The two fixes and the card start as soon

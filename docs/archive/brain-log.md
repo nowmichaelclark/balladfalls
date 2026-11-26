@@ -1454,3 +1454,150 @@ Done list.
   limits stop sessions (a message resumes them); a timing test in
   `tests/longform.rs` (a section's cost at 1 and 10^9) flaked once on a
   docs-only PR (#434): one re-run.
+
+## Start here before 1.0's release
+
+The "Start here" bullets of brains B2 to B-parallel 4, as they stood in
+`docs/BRAIN.md` on 2026-11-25 (moved 2026-11-26, after 1.0).
+
+- **Brain B-parallel 4 (Opus 5.5, 2026-11-23 to 24, in Claude Code; the
+  next brain is B-parallel 5, `brain-parallel-5.md`, in a cloud session on
+  Mikey's other account).** Found #458 and #459 merged, main and the nightly
+  green on v201. Mikey's list of 2026-11-23 became items 116 to 122,
+  sessions 30h to 30n, his answers in `docs/DECISIONS.md`. **Merged:** #462
+  (30i, v203: any bars sometimes a long piece, 10.25% of 10,000,
+  `tools/unasked.mjs`; the longform references now the loop's own bars,
+  checked sample for sample), #461 (30h, v204: the timeline a slider, a jump
+  held while paused, the way back gone; ten rows 10 of 10), #463 (30j, v205:
+  the four pickers; ten rows 10 of 10 on 2d0b00f, merged on the gate after
+  docs-only commits). v202 unused. Nightly green on v204 (45262224098).
+  #466 (30m, v206: a seed album saved; ten rows 10 of 10, 45307309847).
+  **Stopped at Mikey's word (his usage low), each with a "Left" list at the
+  top of its file:** 30m (#467, v207, the album exported whole and tagged:
+  ten rows done on 7117922, three checks to see green on 0fd6bc9); 30k
+  (draft #468, the look: Mikey picked B, the bead, then
+  its LED take "B3 diffused"; the list says what is built); 30l (draft #465, the
+  icon: 3f built as a placeholder, round 9 of the drawing on `s30l-shots`
+  waiting for him, more changes wanted; left open for 31). **Not started:**
+  30n (after 30k and 30m), 30g's Left list. **Learned:** two
+  export dispatches on one ref a second apart cancel the first while
+  pending; ask for a failing row's cause before it listens longer (a random
+  loop silent for 6 s; pinned to a busy loop); the app starts no session on
+  an automated turn, so a session the brain wants next waits as a card for
+  Mikey.
+- **Brain B-parallel 3 (Opus 5.5, 2026-11-22 to 23, in Claude Code; ended
+  at Mikey's word, the next brain to take his list: `brain-parallel-4.md`).**
+  **Merged:** 30d (#446, v192), 30c (#448, v193), 24c (#450, v194), 30e
+  (#449, v195); 30f (#452 to #455, #457, v196 to v200, live: sideways
+  swapped and centered, the address bar put away by a scroll, 400% zoom
+  scrolls, the keyboard on Spotify's and a DAW's keys); the docs (#451,
+  #456). **Open:** #458 (30g, v201), the crackles' fix: the stream on
+  AAudio's power-saving path, as Chrome's. Mikey heard v201 clean on the
+  Moto, on headphones, where v195 crackled; the 222 ms latency "Didn't
+  notice". CI ran on 17cdcfa; merge it, then 30g's "Left" list to a new
+  session with its prompt. **Nightlies:** green on v195 (45012032493) and
+  v196 (45027671732); none yet on v197 to v200. **Checked here:** each
+  PR's yardsticks from CI's logs (ten rows 10 of 10, by count) and live
+  versions read from the site; Mikey's Diagnostics read against the code
+  (`docs/notes/115-crackles.md`). **Not checked:** 30f's work on a phone
+  (DuckDuckGo's insets and bar), a Mac, screen readers. **Next:**
+  B-parallel 4 (Mikey's remaining changes, before 30), then 30, then B5.
+  **Learned:** read PR bodies and logs back from GitHub (30c and 30f each
+  had a test that tested nothing); Auto-fix wakes only on red, so a green
+  PR waits for a message; say which commit an APK is from; downloads need
+  Mikey's OK each time; ask Mikey early for a short phone test, which found
+  item 115 in minutes.
+- **Brain B4 (Opus 5.5, 2026-11-18, a cloud thread of the project): export,
+  the screens and the codes checked; the albums again.** On main (c5b2862,
+  v189), measured here: `cargo test --test codes` 26 of 26 and `--features
+  dummy --test dummy` 4 of 4; the jump heard 0.059 to 0.060 s after asked on
+  32,768 bars and Endless, three hours in, lite and full
+  (`test/jump.test.mjs`); `node tools/export.mjs`: 12 of 12 exports decode
+  (ffmpeg) and null against a straight render, lossless and the small
+  format's samples; `--hours 1`, Endless: memory flat (238.2 to
+  238.4 MB resident, the core 17.7 MB throughout; the tool wrote 0.75 h,
+  158.8 MB, at 14.8x); a long piece from a link in Chromium at phone size: the
+  piece line, "bar 3 of 256 - the opening", nothing scrolls but the
+  Library, Advanced and the Vibes list (the last is older than 106, the
+  Painter's), no page error. 102's tuning: B3 checked #385 against his
+  notes; nothing has moved it since. Cancel and a full disk are
+  `tools/rows.mjs`'s rows in CI's export workflow (green on #438's last
+  commit, de59304).
+  **The code format** (105, the dummy test read closely): the bytes are
+  right and stay; four gaps, all fixed without a longer code, written as
+  **session 24c** (105e, after 30c, before 30): removal has no path (an id
+  gone reads as "needs newer"; the test forbids a row naming nothing), so a
+  gone member keeps its row and plays a stand-in, and no row means newer;
+  a drawn setting's words (twang, lowBell, progression) and a new drawn
+  setting escape the version filter; the dummy build lacks scales, bass
+  styles, other layers' voices, words and removals; the head is one
+  character only to version 15 and `newest` rises per change, so one
+  version a release (Mikey agreed, 2026-11-18). Twang's slow and bright
+  (only a pin reaches them) are 24c's first removal. **Albums:** batch 6
+  (15), the nearer chords (6), the long pieces (10) as app links
+  (`docs/ALBUMS.md`); every older album code there still reads. **Android:**
+  25 to 29 all merged; no Android prompt is left before 31a; Google's
+  developer verification (Thailand since 2026-09-30, not F-Droid, worldwide
+  2027) noted in for-mikey. **Next:** 24c when 30c merges (B-par2 starts
+  it); B5 after 30.
+- **Brain B2 (Opus 5.5, 2026-11-17): batch 6 and 84b checked, the album
+  out.** On `main` at v177 (686543d), measured, not taken from the reports:
+  the module matches its source (886,209 bytes); goldens 5,139 of 5,139; the
+  balance lock's 22 figures; CI green on main (the nightly last ran before
+  #400). **Every album loop** `docs/DONE.md` names (35, corpus 20261009)
+  still draws its sound at v177. **The change counts**, my own count over
+  10,000 loops (the list's changes, plus tuning, planing, lowBell and twang
+  read from `parts()`): 4.7% none, 39.3% one, 39.4% two, 15.2% three, 1.3%
+  four or more, 78.7% one or two (#402: 78.5%). **84b** reproduces exactly
+  (`octave.mjs --seed 20261009`: median gap 9.2, 100 over 12.5, 88 of them
+  moved down; no flips). **Spot checks, part = with minus without:** twang
+  bright on he-rosk 16.4 LU under the loop (yardstick 14 to 19); lowBell
+  struck on weith-yo 20.8 (14 to 22); colorTone on luir-wo **23.5, 1.5 under
+  the band** (its PR found grove 0.4 under; on the album as "quiet, say Tune
+  if you can't hear it"); widePad on loa-yer the fold within 0.001 LU, the
+  mix's side under 120 Hz -39 dB, correlation p5 0.81, its side above 250 Hz
+  -21.7 to -14.0 dB; deepDuck on vor-the's bass stem against the same stem
+  without, 13 dB at its deepest, 9 at 50 ms, back within 1 dB by 0.5 s (the
+  approved sketch's shape). 101c and 101f left no stop notes: both built
+  whole (widePad's late kind in #387; the tune follows the planed chords in
+  #397). **Decided by the brain:** 84b's 88 far-off loops stay (the only way
+  nearer flipped 6 octaves with the tempo); after the album, if nearer
+  clearly wins, ask Mikey whether they matter (a new flip-free read, a later
+  item). **The page:** "Batch 6 Album" (`docs/ALBUMS.md`; verdicts in its db
+  `verdicts`, the key in `brain/key`): 15 labeled cards with a With /
+  Without switch, and 84b's six movers plus a null control as blind pairs,
+  v176 against v177, level-matched. **Learned:** under way A, pinning a
+  batch 6 draw to today frees a change the list fills (wen-glui gains the
+  arc), so a Without pins that one off too. **Prompts:** 17 (what a jump
+  must do with batch 6's time and memory) and 22 (what version 2 carries
+  from batch 6, and the two couplings) adjusted; the rest read and right.
+  **Recorded:** #402's two calls and #405's checks in CI. **Next:** hands
+  session 17, then 18; when Mikey's verdicts are in, a brain session (or
+  the next hands session's first PR, for data lines) turns Tune and Drop
+  into `data/choices.txt` changes. Scratch renders were local
+  (`core/target/b2`), not kept; the method is `tools/clips.mjs` with request
+  pins, and `dlrender --stem` for a part's stem.
+- **Brain B3 (Opus 5.5, 2026-11-14): item 102 checked, heard, and briefed.** On `main` at v164 (88c98be), measured, not taken
+  from the reports: module matches (801,267 bytes); goldens 5,135; balance
+  lock; 15 short loops bit for bit as at dfe78c3; 27 Rust tests (straight or
+  played, 32,768 bars); `longform.mjs --plan` all, a played run all but the
+  arc's darker ends (81% of 16, batch 6's slow openings); a section's making
+  flat at 1, 1,000 and 10^9. **Three bugs** (to session 16's first PR):
+  silent pivots, "alone" over a silent varied tune, developments stuttering
+  with a join a unit. **The arc's energy** is 1.5 to 2 LU against the loop;
+  its shape is carried by the key a fourth or fifth up from B to the
+  release. **Endless's wander** is the old app for its first minutes (the
+  old pair 2 was a null: kept as the control). All in
+  `docs/notes/102-b3-measured.md`. **The page:** "Long Pieces Album"
+  (`docs/ALBUMS.md`; verdicts in its db `verdicts`, the key in `brain/key`).
+  **Mikey heard it the same night:** every piece Keep, composed chosen over
+  before, joins welcome (so the development's breaths stay), the arc "good
+  enough for now" (`docs/notes/102-mikey.md`, `docs/DECISIONS.md`). Session
+  16 now retunes nothing: it fixes the two holes and adds a yardstick.
+  **Session 16 done (#385, v165), checked by B3:** short loops bit for bit as
+  v164; the pivot struck and the breath in place (fei-no 5:25 and 8:09);
+  the yardstick at 25 dB, not 20 (the kept breaths reach 21.8). Left for his
+  ears: about 2 s of variation's quiet before fei-no's breath, and vath-sei's
+  (for-mikey). **Next:** 04 onward; brain B2 after batch 6. B3's
+  scratch scripts were not kept; the method (Methods): render the same span
+  at dfe78c3 and now, compare unit by unit and join by join.

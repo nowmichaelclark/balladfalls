@@ -7,19 +7,20 @@ Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
 map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-25: 1.0 is merged (session 31).** In the new repository
-(`nowmichaelclark/balladfalls`; driftloom is the frozen archive): the icon (#1,
-item 120), the new name (#2, session 31a) and 1.0 itself (#3, item 108, v222:
-the version 1.0 in the app and the APK, codes frozen). What is left of 108 is
-Mikey's: the `v1.0` tag if the session's push was refused, signing the APK,
-the old address's Worker, archiving driftloom and the F-Droid submission, in
-that order (`docs/notes/for-mikey.md`, "Launch day, in order"). Done: every
-item to 122, and the sessions before them (`docs/sessions/README.md` is the
-order; every merge has its line in `docs/DONE.md`; the longer status
-paragraphs, as they stood, are in `docs/archive/queue-items.md`, "Old status
-notes"). Open: 108's launch-day steps, 75 (low priority), 37 (on hold) and the
-known issues below; the first item after 1.0 is the known issue "The app drops
-a code's version", before any new sound. A new Claude Code session starts
+**Status, 2026-11-26: 1.0 is out.** Ballad Falls 1.0 is released (the
+`v1.0` tag on d723b80, 2026-11-25) at <https://balladfalls.com/>, with its
+APK signed by GitHub from the repository's secrets (#4) and attached to the
+release. The old address forwards every link to the new one (the
+`driftloom` Worker from `old-address/`, #5 and #6), and the driftloom
+repository is archived. The F-Droid merge request
+([fdroid/fdroiddata!59136](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/59136))
+waits for review, its recipe on #7's merge (the listing's screenshots). Done:
+every item to 122, and the sessions before them (`docs/sessions/README.md`;
+every merge has its line in `docs/DONE.md`; the older status paragraphs are in
+`docs/archive/queue-items.md`, "Old status notes"). Open: the F-Droid review
+and then `APP_LINK` (item 107 below), 75 (low priority), 37 (on hold) and the
+known issues; **the first item after 1.0 is the known issue "The app drops a
+code's version", before any new sound.** A new Claude Code session starts
 here: read the standing rules and the merge policy, then take the next item.
 
 **Two tracks:** app work (fixes, redesigns, vibe tuning, new controls) goes
@@ -95,44 +96,31 @@ send, is the first sound it shows in: golden 16-grove (5 s, the organ) reads
 list back inside 0.2 dB, so the 0.4 dB tolerance (and the `steady` line) can be
 removed. If 48 kHz must move, stop and leave a note for a decision.
 
-## The road to 1.0 (Mikey, 2026-11-10)
+## After 1.0
 
 Done and archived (`docs/archive/queue-items.md`, by number): phase 3 (93 to
-100), 101 (batch 6), 102 (long pieces), 103 (the fast gate), 104 (export), 105
-(codes), 106 (long pieces on screen), 107 (the Android app, but for the
-submission below), 109 to 122 (Mikey's seven and last changes, and the icon).
+100), 101 to 106, 107 but for its listing, 108 (1.0, balladfalls #3, with
+#4 to #7 after it) and 109 to 122. The games (Broken Friends and the others)
+waited for the music app's 1.0, the Android app on F-Droid included (Mikey,
+2026-11-10). What needs Mikey's ears, phone or accounts is in
+`docs/notes/for-mikey.md`, and the work moves on.
 
-**The app's 1.0 comes before the game** (Mikey, 2026-11-10): Broken Friends and
-the other games wait (the core already works in Broken Friends); the music app
-is finished first, and **1.0 includes the Android app on F-Droid**. What is
-left, in order: the polish (session 30), the release check (brain B5), the new
-name (31a), then 108. Screens: the hands build plain ones in the app's style,
-keeping `docs/PAINTER.md`'s rules (one screen, no new settings, scrolling in
-its two places). What needs Mikey's ears, phone or accounts is in
-`docs/notes/for-mikey.md`, and the work moves on. Sessions and their order:
-`docs/sessions/README.md`.
-
-## 107. The Android app, on F-Droid (built; the submission is open)
+## 107. The Android app, on F-Droid (submitted; the review is open)
 
 Sessions 25 to 29 built it (the brief and what came of it are archived with
 item 107): the core native on Android's audio, the page's screens in a
 WebView, the screen off, F-Droid's listing and recipe, reproducible builds
-(`android/README.md`, `docs/notes/107-reproducible.md`). **Open, Mikey's:** his
-signing key, and the submission to F-Droid after 31 (the merge request is
-public and carries the new name): `docs/notes/for-mikey.md`, "Accounts". Then
-`APP_LINK` in `js/main.js` points at the listing (item 100's link).
+(`android/README.md`, `docs/notes/107-reproducible.md`). Mikey's key signs
+each release in GitHub Actions (#4). **Open:** the merge request
+[fdroid/fdroiddata!59136](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/59136)
+("New app: Ballad Falls", 2026-11-25), its recipe on 8b9750c (#7's merge, the
+same app as d723b80). Reviewers answer there, usually within a few weeks; a
+change they ask of the recipe is a docs-and-recipe PR here and a new commit in
+the merge request. Once it merges and the listing is up, `APP_LINK` in
+`js/main.js` points at <https://f-droid.org/packages/com.balladfalls.app/>
+(item 100's link), with `BUILD` and `CACHE`.
 
-## 108. 1.0
-
-**Hands:** then Mikey. **Merged by session 31 (2026-11-25, balladfalls #3);
-Mikey's launch-day steps are left** (`docs/notes/for-mikey.md`). First the new
-name (session 31a, built and left open until this moment, since a merge
-deploys). The version named 1.0 in the app and the APK, a short
-changelog, codes frozen (105), and `docs/notes/for-mikey.md` empty or
-answered. (The nightly's checks stay nightly, Mikey, 2026-11-25: "Merge
-policy".)
-
-**Also noted, not on the road to 1.0:**
+**Also noted, not queued:**
 
 - **The player's stack** (item 94a, PR #337; the generator's stages apart
   since 101a's frame passed it): its calls take 45 to 47 KB of the caller's

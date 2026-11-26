@@ -246,7 +246,7 @@ and its version code is `major * 10000 + minor * 100 + patch`: 1.0 is 10000,
 `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` (F-Droid shows it
 as "what's new"). A test build's name ends in `-test` and CI numbers its code by
 run, so each installs over the last. `fdroid/check-metadata.mjs` holds all of
-this (CI runs it; the release workflow runs it on the tag). Session 31 sets 1.0.
+this (CI runs it; the release workflow runs it on the tag). Session 31 set 1.0.
 Room is left for per-ABI codes later (a factor of ten, F-Droid's `VercodeOperation`),
 should the universal APK ever be too big.
 
@@ -264,13 +264,33 @@ it signs the universal one with the release key from the repository's secrets
 (apksigner from build-tools 34), checks the certificate's SHA-256 is the
 release key's, and attaches it to the tag's release as
 `balladfalls-<version>.apk`, the file F-Droid's recipe names. Run by hand with
-a tag, it signs and attaches that release again. The secrets and how to add
-them: `docs/notes/for-mikey.md`, "Your release key".
+a tag, it signs and attaches that release again (as `v1.0` was, tagged
+before the secrets were in).
+
+**The secrets** (added 2026-11-25; again only if the key or a password ever
+changes), on a Linux machine and GitHub's website, no Android tools needed:
+
+1. `base64 -w0 ~/release.jks > ~/release-b64.txt`, then `xdg-open
+   ~/release-b64.txt`; in the editor that opens, Ctrl+A, Ctrl+C.
+2. Signed in to GitHub as the repository's owner, open
+   <https://github.com/nowmichaelclark/balladfalls/settings/secrets/actions>,
+   **New repository secret**: `RELEASE_KEYSTORE_BASE64`, paste, **Add secret**.
+3. `RELEASE_KEYSTORE_PASSWORD`, the keystore's password.
+4. `RELEASE_KEY_ALIAS`, the word `release`.
+5. Only if the key has a password of its own that differs:
+   `RELEASE_KEY_PASSWORD`.
+6. `rm ~/release-b64.txt`. Keep `release.jks` and its backup as they are.
 
 ## F-Droid
 
 F-Droid builds the app itself, from the tagged commit, with its own tooling, and
 signs it (or, with a reproducible build, publishes the APK you signed).
+
+**Submitted** 2026-11-25 as
+[fdroid/fdroiddata!59136](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/59136),
+waiting for review. Its recipe builds 8b9750c (balladfalls #7's merge, the
+listing's screenshots retaken; the app the same as `v1.0`'s d723b80), since
+F-Droid reads the listing from the commit it builds.
 
 - **The listing** is `fastlane/metadata/android/en-US/`: the title (the app's
   name: the one place a listing holds it, so the rename is one file and the

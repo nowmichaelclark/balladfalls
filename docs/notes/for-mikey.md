@@ -3,86 +3,59 @@
 What the long hands run toward 1.0 left for Mikey: his phone, his computer,
 his eyes and ears, his accounts. One line each: what, which PR, what to look
 for. The hands add lines as they go and never wait on them; an answered line
-is removed (or moved to `docs/DECISIONS.md` by the brain). Empty or answered
-at 1.0 (queue item 108). Cleaned by session 30 (2026-11-24): what you had
-answered or replaced is gone, the rest shorter; the words table of item 113 is
-in `docs/archive/notes/113-words-table.md`.
+is removed (or moved to `docs/DECISIONS.md` by the brain). Cleaned by session
+30 (2026-11-24) and after 1.0 (2026-11-26): what you had answered, replaced or
+done is gone; the words table of item 113 is in
+`docs/archive/notes/113-words-table.md`.
 
-**Nothing here holds 1.0 now (session 31, 2026-11-25).** 1.0 is merged:
-the icon (#1), the new name (#2) and 1.0 itself. What is yours from here is
-"Launch day, in order", the last section; everything else is a check that
-closes with your phone or your ears, and a revert follows if you find trouble.
+**1.0 is out (2026-11-25; this list brought up to date 2026-11-26).** The
+`v1.0` release with its signed APK, balladfalls.com, the old address sending
+every link on, and driftloom archived are all done. What is yours from here is
+F-Droid's review (under Accounts) and then one line of code once the listing is
+up; everything else is a check that closes with your phone or your ears, and a
+revert follows if you find trouble.
 
 ## Accounts
 
-- **The new name** (session 31a's #2, merged by session 31 with the icon's #1
-  at 1.0). The new repository and its Worker `balladfalls`, with
-  balladfalls.com attached, are made (2026-11-25); the steps left are in
-  "Launch day, in order", at the end.
-- **Your release key** is made (2026-11-25; SHA-256 in `docs/DECISIONS.md`).
-  Keep `release.jks` and its password safe for good: lose either and the app
-  can never be updated.
-  - **GitHub signs each release** (you, 2026-11-25: "I don't want to have to
-    sign releases via my linux machine"). The key is in this repository's
-    secrets, and the release workflow signs the APK with apksigner 34, checks
-    that the certificate's SHA-256 is the release key's, and attaches
-    `balladfalls-<version>.apk` to the tag's release, the file F-Droid
-    compares its own build with. Adding the secrets, once, on your Linux
-    machine and GitHub's website (no Android tools needed):
-    1. In a terminal: `base64 -w0 ~/release.jks > ~/release-b64.txt`, then
-       `xdg-open ~/release-b64.txt`; in the editor that opens, Ctrl+A, Ctrl+C.
-    2. Signed in to GitHub as the repository's owner, open
-       <https://github.com/nowmichaelclark/balladfalls/settings/secrets/actions>
-       and press **New repository secret**: name `RELEASE_KEYSTORE_BASE64`,
-       paste into Secret, **Add secret**.
-    3. Again: `RELEASE_KEYSTORE_PASSWORD`, the keystore's password.
-    4. Again: `RELEASE_KEY_ALIAS`, the word `release`.
-    5. Only if keytool asked you for a separate key password and you gave a
-       different one: `RELEASE_KEY_PASSWORD`, that one.
-    6. `rm ~/release-b64.txt`. Keep `release.jks` and its backup as they are.
-    Then a release signs itself; to sign one again (as v1.0, tagged before
-    this), Actions, android-release, **Run workflow** on `main` with its tag.
-  - Rendering the recipe (below) takes `--signed-by <that SHA-256>`.
-- **Submit to F-Droid after 31** (the merge request is public and carries the
-  new name):
-  1. A free GitLab account; fork <https://gitlab.com/fdroid/fdroiddata>.
-  2. In a checkout of the `v1.0` tag: `node android/fdroid/render.mjs
-     --repo-url https://github.com/nowmichaelclark/balladfalls --signed-by
-     <SHA-256> > /tmp/recipe.yml` (the id, name, version and tag's commit
-     filled in).
-  3. In your fork, create `metadata/com.balladfalls.app.yml` with that text;
-     open a merge request to `fdroid/fdroiddata` titled "New app: Ballad Falls" with its
-     "New app" template. Its CI runs F-Droid's build and lint, as
-     `.github/workflows/fdroid.yml` does here.
-  4. Reviewers answer in the merge request, usually within a few weeks. Likely
+- **Your release key:** keep `release.jks` and its password safe for good
+  (its SHA-256 is in `docs/DECISIONS.md`): lose either and the app can never
+  be updated. **GitHub signs each release** from the repository's secrets
+  (added 2026-11-25; #4): a new tag's release gets
+  `balladfalls-<version>.apk` by itself, signed with apksigner 34, its
+  certificate checked against the key's SHA-256. `v1.0`'s is attached. To sign
+  a release again: Actions, android-release, **Run workflow** on `main` with
+  its tag. The steps for adding the secrets, if they ever need adding again,
+  are in `android/README.md`, "Versions and releases".
+- **F-Droid: submitted, waiting for review.** Your merge request
+  <https://gitlab.com/fdroid/fdroiddata/-/merge_requests/59136> ("New app:
+  Ballad Falls", 2026-11-25, from your GitLab fork `nowmichaelclark/fdroiddata`,
+  branch `com.balladfalls.app`). Its recipe builds 8b9750c, #7's merge, since
+  F-Droid reads the listing's screenshots from the commit it builds (the app
+  is the same as `v1.0`'s).
+  1. Reviewers answer in the merge request, usually within a few weeks. Likely
      questions: the NDK (r28c), why the app deletes the committed wasm and
      rebuilds it, and the WebView (no network permission); the recipe's
-     comments hold the reasons.
-  5. Once merged, the listing appears in a few days. Then set `APP_LINK` in
-     `js/main.js` to `https://f-droid.org/packages/com.balladfalls.app/`, bump
-     `BUILD` and `CACHE`, and merge.
-
-  The other way in, a "Request for Packaging" issue at
-  <https://gitlab.com/fdroid/rfp/-/issues>, is slower and F-Droid writes the
-  recipe its own way.
-- **Google's developer verification** (read before submitting): since
-  2026-09-30 certified phones in Thailand, Brazil, Indonesia and Singapore need
-  apps from seven big stores to come from a verified developer. F-Droid is not
-  one, and a hand-installed APK isn't checked yet, so nothing changes for 1.0.
-  Google plans to cover every install in 2027 (an unregistered app then needs a
-  one-time "advanced" setting on the phone). Nothing to do now.
+     comments hold the reasons. Paste a question into a session if you want
+     help with the answer or a change to the recipe.
+  2. Once merged, the listing appears in a few days. Then `APP_LINK` in
+     `js/main.js` becomes `https://f-droid.org/packages/com.balladfalls.app/`,
+     with `BUILD` and `CACHE` bumped: ask a session for it.
+- **Google's developer verification** (nothing to do now): since 2026-09-30
+  certified phones in Thailand, Brazil, Indonesia and Singapore need apps from
+  seven big stores to come from a verified developer. F-Droid is not one, and
+  a hand-installed APK isn't checked yet, so nothing changes for 1.0. Google
+  plans to cover every install in 2027 (an unregistered app then needs a
+  one-time "advanced" setting on the phone).
 
 ## On your Moto, in order
 
 Each is a few minutes. Say a step's number if something is wrong.
 
-1. **The latest APK, ten minutes with the screen off: after 1.0** (you,
-   2026-11-25; promise 1 on a phone; #473 to #475, and v218; download the
-   `driftloom-debug-apk` artifact of
-   <https://github.com/nowmichaelclark/driftloom/actions/runs/45550549271>,
-   built from commit 4ddf186, the same code as main's v218; it needs a GitHub
-   sign-in). Play E9T-ZxDxj, then the Batch 6 album (Library, `docs/ALBUMS.md`):
-   screen off for ten minutes, then a few minutes behind the home screen. No
+1. **The 1.0 APK, ten minutes with the screen off** (after 1.0, you said,
+   2026-11-25; promise 1 on a phone): install `balladfalls-1.0.apk` from
+   <https://github.com/nowmichaelclark/balladfalls/releases/tag/v1.0> (no
+   sign-in needed; it installs beside a test build, as its own app). Play
+   E9T-ZxDxj, then the Batch 6 album (its link in `docs/ALBUMS.md`): screen off for ten minutes, then a few minutes behind the home screen. No
    gap, no crackle, the loops changing on their time. Then Diagnostics,
    refresh, copy, send it with the phone's name (it now has "screen off: N s"
    and "lite by itself").
@@ -294,46 +267,14 @@ Each is a few minutes. Say a step's number if something is wrong.
 - **The words of item 113** are yours to approve; the rule you gave is in
   `docs/DECISIONS.md`.
 
-## Launch day, in order
+## The old address, on your phone
 
-1. **The site:** open <https://balladfalls.com/>: it plays, its title Ballad
-   Falls, and Advanced ends with "Ballad Falls 1.0" (Diagnostics' first line is
-   `version: 1.0`). Workers Builds deploys `main` there by itself; this cloud
-   session couldn't reach the address to look (its proxy refuses it).
-2. **The tag:** done (2026-11-25, on the Releases page: `v1.0` on d723b80;
-   its run built the unsigned APKs).
-3. **The signed APK:** add the secrets once ("Your release key", above).
-   Then the release workflow, run on `main` with the tag `v1.0`, signs the APK
-   and attaches `balladfalls-1.0.apk` to the v1.0 release; a later tag does it
-   by itself.
-4. **The old address and driftloom:**
-   - **The old address's Worker** (connected 2026-11-25): in Cloudflare,
-     Workers & Pages, `driftloom`, Settings, Build: the repository
-     `nowmichaelclark/balladfalls`, branch `main`, no build command, deploy
-     command `cd old-address && npx wrangler deploy` (Cloudflare's form has no
-     root directory field). Its first build starts with the next commit to
-     `main`. Cloudflare's yellow box suggesting `"name": "driftloom"` for
-     `wrangler.jsonc` means the repository's root file: leave it, since the
-     root is the `balladfalls` Worker and `old-address/wrangler.jsonc` already
-     says `driftloom`. Close, don't merge, any pull request Cloudflare opens to
-     change it. Or by hand on your computer, in a checkout of this repository:
-     `cd old-address && npx wrangler login && npx wrangler deploy`. Either way
-     the Worker keeps its name and address.
-   - **Check the old address:** open
-     <https://driftloom.nowmichaelclark.workers.dev/#c=ELAAAAAF_DHAbt>: it
-     lands on balladfalls.com with that loop. `curl -sI
-     https://driftloom.nowmichaelclark.workers.dev/any/path?x=1` says `301`
-     and `location: https://balladfalls.com/any/path?x=1`. Then open the app
-     you installed from the old address on your phone: it says "Driftloom is
-     Ballad Falls now" and offers your Library; Bring it, and your loops and
-     albums are at balladfalls.com (install the app again from there, then
-     remove the old one). If a tester ever wants the offer again,
-     <https://driftloom.nowmichaelclark.workers.dev/library> makes it.
-   - **Archive driftloom on GitHub:** its Settings, General, Danger Zone,
-     Archive this repository. It stays online, read-only, with its PRs.
-5. **F-Droid:** "Submit to F-Droid after 31", under Accounts, with this
-   repository's address and the `v1.0` tag. Testers with a test APK (the
-   working id) keep it apart: Ballad Falls from F-Droid is a new app; a backup
-   moves their Library.
-6. **Once the listing is up:** `APP_LINK` in `js/main.js` (step 5 of the
-   F-Droid steps).
+The old address's Worker answers every path with a 301 to balladfalls.com
+(seen 2026-11-25, a shared loop playing). Once, on your phone: open the app you
+installed from the old address. It says "Driftloom is Ballad Falls now" and
+offers your Library; Bring it, and your loops and albums are at
+balladfalls.com (install the app again from there, then remove the old one).
+If a tester ever wants the offer again,
+<https://driftloom.nowmichaelclark.workers.dev/library> makes it. Testers with
+a test APK (the working id) keep it apart: Ballad Falls from F-Droid is a new
+app; a backup moves their Library.

@@ -9,6 +9,11 @@ written and played in your browser (or in the Android app) from a seed.
 Live at <https://balladfalls.com/>. Open it, press Play, and press Next for
 another.
 
+On Android, the app is on the
+[latest release](https://github.com/nowmichaelclark/balladfalls/releases/latest)
+as an APK (Ballad Falls 1.0, 2026-11-25), and on F-Droid once its review there
+is done.
+
 It was called Driftloom until 1.0. Its history up to then is in this
 repository too; the old repository,
 <https://github.com/nowmichaelclark/driftloom>, is the archive with its pull

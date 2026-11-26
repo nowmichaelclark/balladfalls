@@ -16,7 +16,7 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v222';
+const BUILD = 'v223';
 // The version the listener reads (1.0 since session 31, 2026-11-25): the last
 // line of Advanced and the first of Diagnostics. The APK's versionName
 // (android/gradle.properties) is the same, and android/fdroid/check-metadata.mjs

@@ -1,49 +1,57 @@
-// The app's engine on the core's player (queue item 94b): the default since
-// then. The core decides every note itself, on the audio thread
-// (core/src/player/, through js/dlplayer.wasm in js/worklet.js); this engine
-// keeps no lookahead and decides no notes. It sends the core commands (a
-// loop's seed, its request and a code's edits; a change, a re-roll, the
-// controls) and draws what the core reports as events: the cursor from each
-// step, the layers' grid of each pass, the pass and the track's end. The page
-// is free to stall, hide or freeze: the worklet has what it needs.
+// The engine: the page's link to the core's player.
 //
-// The picks (queue item 95) are the core's too: the New loops panel's
-// request is sent as a command (`setPicks`) and held there, and every new
-// loop is one the core makes itself with them, at Next (`next`) and when the
-// track length's time runs out with nothing of the page's armed: the page
-// learns its seed from the core's events (`onOwn`) and draws nothing.
+// The core (core/src/player/, built into js/dlplayer.wasm) runs in an
+// AudioWorklet (js/worklet.js). An AudioWorklet is code that the browser
+// runs on its audio thread. The core decides every note there and makes
+// every sound. This file decides no notes and keeps no notes in advance.
 //
-// It is the only engine since queue item 97 (the page's own, which decided
-// the notes and handed them over, is gone). js/main.js drives it: load,
-// start, stop, the controls (setMute, setTempo, setTone, setWander,
-// trackChanged), the cursor (visualStep), Now Playing's clock
-// (audibleSteps, endStep, roundSteps) and Diagnostics (report).
+// This file does two jobs:
+// 1. It sends commands to the core: a loop to play (its seed, its request
+//    and the edits from a code), a change, a re-roll, the controls and the
+//    picks.
+// 2. It reads the events that the core sends back, and keeps them for the
+//    page to draw: the step that plays, the grid of each pass, the start of
+//    each pass and the end of the track.
 //
-// What the page shows before the core's own events arrive (the info card,
-// the first grid) it asks of the core's generator on the page (js/gen.js):
-// the same module, so the same loop. The spec is the page's record of a
-// loop (history, saves, share codes; js/request.js); what the core plays is
-// that record's seed, request and edits.
+// The core does not need the page while it plays. If the page stalls, hides
+// or freezes, the music goes on.
+//
+// The picks are the Vibe panel's choices (mood, tempo, key and the rest).
+// The page sends them once (`setPicks`), and the core keeps them. When the
+// core makes a new loop itself, it uses the picks. That happens at Next past
+// the newest loop (`next`), and when the track ends with no loop of the
+// page's waiting. The core then reports the new loop's seed (`onOwn`), and
+// the page catches up.
+//
+// The page can show a loop before the core starts to play it (the info card,
+// the first grid). For that, it asks js/gen.js, which uses the same core
+// module, so it gets the same loop. The spec is the page's record of a loop
+// (js/request.js). The history, the saves and the share codes keep specs.
+// The core plays only the spec's seed, request and edits.
+//
+// js/main.js uses this engine. It calls load, start, stop and next; the
+// controls (setMute, setTempo, setTone, setWander, trackChanged); the
+// playhead (visualStep); the Now playing clock (audibleSteps, endStep,
+// roundSteps); and Diagnostics (report).
 
 import { render } from './gen.js';
 import { HeardSteps } from './heard.js';
 import { coreTrack } from './tracklen.js';
 import { LAYERS, askOf, picksAsk, pieceOf, loopBars } from './request.js';
 
-// The core's numbers for a record and for the picks, for the modules that
-// took them from here.
+// Other modules import these two from here.
 export { askOf, picksAsk };
 
-// Where "Let the loop wander" stops repeating itself (queue item 92; Mikey,
-// 2026-10-18: all the way to the right it should feel experimental, not
-// repeatable). From this amount up (the slider runs 0 to 2.4) each play of
-// a loop draws its own salt for the wander's stream (`wanderSalt`), so the
-// same code wanders another way every time it is played; below it, every
-// play wanders as every play of that code always has. The conservative
-// first point: only the slider's top sixth. For Mikey's ears.
+// The "Let the loop wander" slider goes from 0 to 2.4. Below this value, a
+// code wanders the same way each time it plays. At this value and above,
+// each play gets a new salt (a random number added to the wander's seed),
+// so the same code wanders a new way each time. Mikey asked for the top of
+// the slider to feel experimental, not repeatable (DECISIONS.md, 2026-10-18).
+// This value is the conservative start: only the top sixth of the slider.
+// For Mikey's ears.
 export const UNREPEATABLE_FROM = 2.0;
 
-// A new salt for a play (never 0, which is no salt).
+// Make a new salt for a play. The salt is never 0, because 0 means "no salt".
 export function freshSalt() {
   try {
     const x = new Uint32Array(1);
@@ -53,29 +61,32 @@ export function freshSalt() {
   return (Math.floor(Math.random() * 0xffffffff) >>> 0) || 1;
 }
 
-// The moments a change waits for, as the core numbers them (`Moment::ALL`).
+// The moment that a change waits for. The numbers are the core's
+// (`Moment::ALL` in core/src/player/).
 export const MOMENT = { now: 0, beat: 1, bar: 2, phrase: 3, pass: 4, end: 5 };
-// The kinds of event the player reports (`Kind::ALL`).
+// The kinds of event that the core reports (`Kind::ALL`).
 export const KIND = { step: 0, pass: 1, section: 2, phrase: 3, loop: 4, revised: 5, end: 6, own: 7, jump: 8, heard: 9 };
-// Where a jump goes (session 17, item 106a; `Player::jump`): a section, a bar
-// or a time in seconds, each from the piece's start; or a step from the load,
-// exactly (session 30h: a short loop's rail, `Jump::Step`).
+// Where a jump goes (`Player::jump`). A section, a bar or a time in seconds
+// counts from the start of the piece. A step counts from the load, and the
+// jump lands on that exact step (the rail of a short loop uses it).
 export const JUMP = { section: 0, bar: 1, time: 2, step: 3 };
-// How long the old loop takes to fall to nothing at Next, Previous or a loop
-// picked while one plays, in seconds: the core's own crossfade for a change
+// At Next, Previous, or a loop picked while one plays, the old loop fades
+// out over this many seconds. It is the core's crossfade for a change
 // (`player::change::CROSSFADE`). For Mikey's ears.
 export const CHANGE_FADE = 1.0;
-// And when a track's count of passes or bars ends it inside a pass, at a
-// phrase line (queue item 88b's END_FADE; at a pass's end the old loop rings
-// out; a time's end rings out on its second, or falls by its fade out).
+// The fade, in seconds, when a count of passes or bars ends the track in the
+// middle of a pass. The core ends it at a phrase line. If the track ends at
+// the end of a pass, the old loop rings out. If a time ends it, the loop
+// rings out on its last second, or fades by the track's fade out.
 export const END_FADE = 1.0;
 
-// The cursor's and the grids' queues, at most.
+// The most entries that the playhead queue and the grid queue keep.
 const QUEUE_MOST = 512;
 const GRIDS_MOST = 16;
 
-// The track as the core takes it (`Player::set_track_with`): [kind, count]
-// from the Track length view's time and fades (js/tracklen.js, session 30c).
+// The track length as the core takes it (`Player::set_track_with`):
+// [kind, count], from the length and fades in the Vibe panel
+// (js/tracklen.js).
 export const trackOf = coreTrack;
 
 export class PlayerEngine {
@@ -83,73 +94,89 @@ export class PlayerEngine {
     this.ctx = ctx;
     this.output = output;
     this.spec = null;
-    // The loop as composed (the page's render, for the card and the first
-    // grid) and the grid shown: the pass heard, as the core reports it.
+    // `base` is the loop as js/gen.js renders it, for the card and the first
+    // grid. `live` is the grid on the screen: the pass that the listener
+    // hears, as the core reports it.
     this.base = null;
     this.live = null;
     this.playing = false;
     this.driftOn = true;
     this.driftAmount = 1;
-    // This play's wander salt (queue item 92).
+    // The wander salt of this play (see UNREPEATABLE_FROM).
     this.salt = 0;
     this.onStep = null;
     this.onLoop = null;
     this.onTrackEnd = null;
-    // A loop the core made itself has started (queue item 95): (seed, tag),
-    // the picks numbered `tag` its request. And the core's answer to the
-    // picks: ({ tag, met, why }).
+    // onOwn(seed, tag): a loop that the core made itself has started. `tag`
+    // is the number of the picks that it used.
     this.onOwn = null;
-    // A place the core said while paused (session 30h), for the page to draw.
+    // onPlace(place): the core reported a place while paused (a jump), for
+    // the page to draw.
     this.onPlace = null;
+    // onPicks({ tag, met, why }): the core's answer to the picks.
     this.onPicks = null;
-    // The picks sent ({ ask, tag }), the core they were sent to, the core
-    // given a seed to draw from, an own loop asked while no core could take
-    // it, and the picks' number of an own loop whose Loop event comes next.
+    // The state of the picks:
+    // - `picks`: the picks sent ({ ask, tag }).
+    // - `picksFor`: the core that has them.
+    // - `drawsFor`: the core that has a seed for its own loops.
+    // - `wantOwn`: Next asked for a loop of the core's own, and no core could
+    //   take the request yet.
+    // - `ownTag`: the tag of the core's own loop whose Loop event comes next.
     this.picks = null;
     this.picksFor = null;
     this.drawsFor = null;
     this.wantOwn = false;
     this.ownTag = null;
     this.visualQueue = [];
+    // The playhead trim in seconds (Diagnostics, "Playhead trim"; main.js
+    // sets it).
     this.visualOffset = 0;
     this.latency = null;
-    // What Play must ask the core: 'load' (a loop not yet given it),
-    // 'resumed' (the same loop again on a new core: the quality switch), or
-    // null (the loop it has stopped, to go on with).
+    // What Play must ask the core for:
+    // - 'load': a loop that the core does not have yet.
+    // - 'resumed': the same loop again on a new core (after a switch to or
+    //   from Lite).
+    // - null: the loop that the core stopped, to go on from where it stood.
     this.needs = 'load';
-    // The last step decided (an event: { time, number, step }), the last
-    // heard ({ time, step, abs }), the grids waiting for their time, the
-    // passes heard, and the track's end (a step from the load, or null) as
-    // the core says, with the step the page counts it from.
+    // What the core reported:
+    // - `decided`: the last step decided ({ time, number, step }).
+    // - `heard`: the last step heard ({ time, step, abs }).
+    // - `gridQueue`: the grids that wait for their time.
+    // - `loopCount`: the passes heard.
+    // - `trackEnd`: the step where the track ends (from the load), or null.
+    // - `countFrom`: the step that the page counts the track from.
     this.decided = null;
     this.heard = null;
     this.gridQueue = [];
-    // What the layers draw (session 30b, js/heard.js): each step as heard,
-    // the pass ahead as its plan will have it heard.
+    // What the Layers view draws (js/heard.js): each step as the listener
+    // heard it, and the pass ahead as its plan says it will sound.
     this.heardSteps = new HeardSteps();
     this.loopCount = 0;
     this.trackEnd = null;
     this.countFrom = 0;
-    // The track last sent ([kind, count]), the loop that follows when it
-    // ends (a spec, armed in the core as a change at its end), and the seed
-    // the core took there, until the page catches up with it.
+    // The track length:
+    // - `track`: the last one sent ([kind, count]).
+    // - `armed`: the spec of the loop that plays when the track ends. The
+    //   core holds it as a change at the end.
+    // - `taken`: the seed that the core started there, until the page
+    //   catches up.
     this.track = null;
     this.armed = null;
     this.taken = null;
-    // What the core has reported, for Diagnostics.
+    // The count of loops that the core started, for Diagnostics.
     this.loops = 0;
     this._hooked = null;
     this._hook();
   }
 
-  // The core's node, when it is the one playing.
+  // Return the core's node if it is the one that plays, else null.
   _core() {
     const c = this.output.core;
     return c && !c.failed ? c : null;
   }
 
-  // Listen to the core's events (once a node: a core that arrives later is
-  // hooked as it does).
+  // Listen to the core's events. Each node is hooked once. If a core
+  // arrives later, it is hooked when it arrives.
   _hook() {
     const c = this._core();
     if (!c || this._hooked === c) return;
@@ -158,9 +185,9 @@ export class PlayerEngine {
     c.onpicks = (m) => { if (this.onPicks) this.onPicks(m); };
   }
 
-  // The New loops panel's request (`picksAsk(request).ask`), numbered `tag`:
-  // held by the core for the loops it makes itself. Sent again to a new core
-  // (a reload, the quality switch).
+  // Send the picks (`picksAsk(request).ask`) with the number `tag`. The core
+  // keeps them for the loops that it makes itself. If the core is new (a
+  // reload, or a switch to or from Lite), the picks are sent again.
   setPicks(ask, tag) {
     this.picks = { ask, tag };
     this.picksFor = null;
@@ -171,8 +198,8 @@ export class PlayerEngine {
     const core = this._core();
     if (!core || !this.picks || this.picksFor === core) return;
     if (this.drawsFor !== core) {
-      // A seed to draw from for this core, fresh each time one starts: the
-      // core's own loops are a pure function of it and the picks.
+      // Give each new core a new seed to draw from. The core's own loops
+      // come only from this seed and the picks.
       core.playDraws(freshSalt());
       this.drawsFor = core;
     }
@@ -180,9 +207,10 @@ export class PlayerEngine {
     this.picksFor = core;
   }
 
-  // Next at the end of the history: a new loop of the core's own, with the
-  // picks, crossfading as any change does. The page hears which in `onOwn`.
-  // From Pause it starts playing; before the core has arrived, it waits.
+  // Next past the newest loop: ask the core for a new loop of its own, made
+  // with the picks. It crossfades like any change. The page learns which
+  // loop it is from `onOwn`. If paused, Next starts to play. If the core is
+  // not loaded yet, the request waits for it.
   next() {
     this.salt = freshSalt();
     this.wantOwn = true;
@@ -208,25 +236,27 @@ export class PlayerEngine {
     this.countFrom = 0;
   }
 
-  // The core has arrived (after Play, on a slow first visit): it is given the
+  // The core has loaded (after Play, on a slow first visit). Give it the
   // loop now.
   coreArrived() {
     this._hook();
     if (this.playing) this._begin();
   }
 
+  // The length of one step in seconds (a step is a sixteenth note).
   get stepDur() {
     return 60 / this.spec.bpm / 4;
   }
 
-  // The salt the wander's stream takes now: this play's, across the
-  // slider's upper range; else 0.
+  // The salt that the wander uses now: the salt of this play at the top of
+  // the slider (UNREPEATABLE_FROM and up), else 0.
   get wanderSalt() {
     return this.driftOn && this.driftAmount >= UNREPEATABLE_FROM ? this.salt : 0;
   }
 
-  // Where the next step falls, for js/quality.js's boundary: the step in its
-  // pass after the last decided, and its time.
+  // The next step to decide (its number in the pass) and its time.
+  // js/quality.js uses them to find the next boundary for a switch to or
+  // from Lite.
   get step() {
     return this.decided ? this.decided.number + 1 : 0;
   }
@@ -235,21 +265,25 @@ export class PlayerEngine {
     return this.decided ? this.decided.time + this.stepDur : this.ctx.currentTime + 0.3;
   }
 
-  // `keepPosition`: a re-roll, made again in its place. `resume`: the same
-  // loop again under a rebuilt engine (the quality switch), started from its
-  // top without its lateFloor's wait.
+  // Give the engine a loop to play, and return its render.
+  // - `keepPosition`: a re-roll. The core makes the loop again and keeps
+  //   its place.
+  // - `resume`: the same loop again on a new core (a switch to or from
+  //   Lite). It starts from its top. The lateFloor (the drums and the bass
+  //   wait a while after a load, then come in) does not wait again.
   load(spec, { keepPosition = false, resume = false } = {}) {
     this.spec = spec;
     this.base = render(spec);
     this.live = this.base;
-    // A new play draws a new salt; a loop the core already took (at the
-    // track's end, or its own) keeps the one it was drawn with.
+    // A new play gets a new salt. If the core already started this loop
+    // (at the end of the track, or as its own), the loop keeps the salt
+    // that it started with.
     const caught = !keepPosition && this.taken != null && this.taken === spec.seed >>> 0;
     if (!keepPosition && !resume && !caught) this.salt = freshSalt();
     if (!keepPosition) {
       this.gridQueue = [];
       this.countFrom = 0;
-      // The last loop's place is not this one's.
+      // The place of the last loop does not apply to this one.
       this.placeHeard = null;
     }
     const core = this._core();
@@ -261,7 +295,8 @@ export class PlayerEngine {
     if (keepPosition) {
       core.playRevise(seed, askOf(spec));
     } else if (this.taken === seed) {
-      // The core took it at the track's end already: the page catches up.
+      // The core started this loop at the end of the track. The page only
+      // catches up.
       this.taken = null;
     } else {
       this.taken = null;
@@ -272,8 +307,8 @@ export class PlayerEngine {
     return this.base;
   }
 
-  // The controls that hold across loops, as the spec and the sliders have
-  // them: each layer's mute, the wander and its salt, the track's length.
+  // Send the controls that stay the same from loop to loop: the mute of each
+  // layer, the wander and its salt, and the track length.
   _controls() {
     const core = this._core();
     if (!core || !this.spec || this.wantOwn) return;
@@ -291,17 +326,17 @@ export class PlayerEngine {
     core.playTrack(t[0], t[1], this._arm());
   }
 
-  // The armed loop as the core takes it, with the track it plays (its own
-  // track length and fades), or null.
+  // The armed loop in the form that the core takes, with its own track
+  // length and fades. Null if no loop is armed.
   _arm() {
     const s = this.armed;
     return s ? { seed: s.seed >>> 0, ask: askOf(s), fade: END_FADE, track: trackOf(s) } : null;
   }
 
-  // The loop that follows when the track ends (`spec`): armed in the core,
-  // so it starts there with the page asleep. Null for none of the page's:
-  // the one waiting is dropped, and a loop of the core's own follows, with
-  // the picks (queue item 95).
+  // Arm the loop that plays when the track ends (`spec`). The core holds it,
+  // so it starts on time even if the page sleeps. If `spec` is null, the
+  // armed loop is dropped, and the core makes a loop of its own with the
+  // picks.
   arm(spec) {
     this.armed = spec || null;
     const core = this._core();
@@ -316,21 +351,21 @@ export class PlayerEngine {
     this._begin();
   }
 
-  // Play: the loop to the core (or the one it has, from where it stood), the
-  // controls, the track and the loop armed for its end. Waits for a core
-  // still on its way.
+  // Play. Send the core the loop (or tell it to go on from where it
+  // stopped), the controls, the track length and the armed loop. If the
+  // core is not loaded yet, wait for it (`coreArrived`).
   _begin() {
     this._hook();
     const core = this._core();
     if (!core || !this.playing) return;
     if (this.output.userVolume != null) core.playVolume(this.output.userVolume);
-    // The picks, held by this core for the loops it makes itself.
+    // Send the picks, for the loops that this core makes itself.
     this._sendPicks();
-    // The wander and its salt before the loop: its first pass is drawn with them.
+    // Send the wander and its salt before the loop: the first pass uses them.
     core.playWander(this.driftOn ? this.driftAmount : 0, this.wanderSalt);
     if (this.wantOwn) {
-      // Next asked from Pause or before the core arrived: the core's own
-      // loop is the one it plays; the page catches up at its Loop event.
+      // Next came while paused, or before the core loaded. The core plays a
+      // loop of its own, and the page catches up at its Loop event.
       this._askOwn();
       this.track = null;
       this.needs = null;
@@ -341,22 +376,22 @@ export class PlayerEngine {
       core.playLoad(this.spec.seed >>> 0, askOf(this.spec), 0, this.needs === 'resumed');
       this.taken = null;
       this.visualQueue = [];
-      // A new loop's track counts from its first step: sent again, with the
-      // loop armed for its end (a load drops the change waiting there).
+      // The track of a new loop counts from its first step. A load drops the
+      // armed loop, so send the track and the armed loop again.
       this.track = null;
       this.needs = null;
       this._controls();
       return;
     }
-    // Going on where it stood: the track's count goes on too, and only the
-    // loop armed for its end, which Pause dropped, is sent again.
+    // Go on from where it stopped. The track count goes on too. Pause
+    // dropped the armed loop, so send only that again.
     core.playResume(0);
     this._controls();
     if (this.armed) core.playArm(this._arm());
   }
 
-  // Pause: the core stops deciding, what it handed over and has not started
-  // is dropped, and the output falls silent. Play goes on where it stood.
+  // Pause. The core stops deciding, drops the sound that it made but did
+  // not play yet, and the output goes silent. Play goes on from here.
   stop() {
     if (!this.playing) return;
     this.playing = false;
@@ -378,8 +413,9 @@ export class PlayerEngine {
     if (core && i >= 0) core.playMute(i, !!muted);
   }
 
-  // The tempo slider: from the next step the core decides (the spec holds
-  // it already, and a change or a re-roll sends it as an edit).
+  // The tempo slider. The core uses the new tempo from the next step that it
+  // decides. The spec holds the tempo already, and a change or a re-roll
+  // sends it as an edit.
   setTempo(bpm) {
     const core = this._core();
     if (core) core.playTempo(bpm);
@@ -390,7 +426,8 @@ export class PlayerEngine {
     if (core) core.playTone(tone);
   }
 
-  // "Let the loop wander": 0 is off, else how far (from the next pass).
+  // "Let the loop wander": 0 is off, more is further. It starts at the next
+  // pass.
   setWander(amount) {
     this.driftOn = amount > 0;
     if (this.driftOn) this.driftAmount = amount;
@@ -398,8 +435,8 @@ export class PlayerEngine {
     if (core) core.playWander(this.driftOn ? this.driftAmount : 0, this.wanderSalt);
   }
 
-  // The track length set (the spec holds it; the Track length view's done):
-  // the core counts from now, and the loop armed for its end goes with it.
+  // The listener set a new track length (the spec holds it already). The
+  // core counts from now, and the armed loop goes with it.
   trackChanged(next = this.armed) {
     this.armed = next || null;
     this.countFrom = this.heard ? this.heard.abs : 0;
@@ -407,18 +444,18 @@ export class PlayerEngine {
     if (this.playing) this._sendTrack();
   }
 
-  // Kept for main.js, which asks either engine: the core hears a change at
-  // once on its own.
+  // Nothing calls this now. It is from the time when there were two engines.
+  // The core hears a change at once.
   redecide() {
     return false;
   }
 
-  // Diagnostics' Reset: the page keeps no counts of its own to clear (the
-  // core's are the core's).
+  // Diagnostics' Reset. The page keeps no counts of its own, so there is
+  // nothing to clear. The core keeps its own counts.
   clearMetrics() {}
 
-  // What the core reports (CoreHost.onevents): its events, in order, and
-  // the grids read with them.
+  // Read a message from the core (CoreHost.onevents). Each event is four
+  // numbers: time, kind, number, step. A grid can come with an event.
   _receive(m) {
     const ev = m.events || [];
     const grids = new Map((m.grids || []).map((g) => [g.at, g.grid]));
@@ -436,31 +473,32 @@ export class PlayerEngine {
         this.loopCount = number;
         if (kind === KIND.pass && this.onLoop) this.onLoop(number);
       } else if (kind === KIND.jump) {
-        // A jump landed (session 17): the step it goes on from, from the
-        // load; its section is the place's.
+        // A jump landed. `step` is the step it goes on from, counted from the
+        // load. The place says its section.
         this.jumped = { time, step };
         if (m.place) this.loopCount = m.place.section;
       } else if (kind === KIND.own) {
-        // The loop whose Loop event comes next is the core's own.
+        // The next Loop event is a loop that the core made itself.
         this.ownTag = number;
       } else if (kind === KIND.loop) {
         this.loops++;
         this.countFrom = 0;
         this.loopCount = 0;
         if (this.ownTag != null) {
-          // The core made it with the picks numbered `ownTag`: the page
-          // catches up (main.js's onOwn draws the same spec for its card and
-          // history and loads it, and `load` sees the core has it).
+          // The core made this loop with the picks numbered `ownTag`. The
+          // page catches up: main.js's onOwn makes the same spec for the
+          // card and the history, and loads it. `load` then sees that the
+          // core has it already.
           const tag = this.ownTag;
           this.ownTag = null;
           this.taken = number >>> 0;
           if (this.onOwn) this.onOwn(number >>> 0, tag);
         }
       } else if (kind === KIND.end) {
-        // The track has run: the core has started the loop armed for it, if
-        // one was, and the page catches up (main.js's onTrackEnd loads that
-        // loop, and `load` sees it is the one the core took). With none of
-        // the page's armed, the core makes one of its own (KIND.own).
+        // The track ended. If a loop was armed, the core started it, and the
+        // page catches up: main.js's onTrackEnd loads that loop, and `load`
+        // sees that the core took it. If no loop was armed, the core makes
+        // one of its own (KIND.own).
         if (this.armed) {
           this.taken = this.armed.seed >>> 0;
           if (this.onTrackEnd) this.onTrackEnd();
@@ -474,19 +512,20 @@ export class PlayerEngine {
     }
     if (m.trackEnd != null) this.trackEnd = m.trackEnd >= 0 ? m.trackEnd : null;
     if (m.place !== undefined) this.placeHeard = m.place;
-    // Paused, the frames are not drawn: a place the core says (a jump held,
-    // session 30h) is drawn when it comes.
+    // While paused, the page draws no frames. So draw a place that the core
+    // reports (a jump held for Play) when it comes.
     if (!this.playing && m.place && this.onPlace) this.onPlace(m.place);
   }
 
-  // Go on from somewhere else in the loop (session 17, item 106a): `kind` a
-  // JUMP, `at` from the piece's start (a step: from the load). The core lands
-  // on the phrase line at or before it (a step: on it), heard a few blocks
-  // on; what was queued to draw from the old place is dropped, and the core's
-  // events say the rest (`jump`, then the steps from there). Paused (session
-  // 30h), the core holds it and Play goes on from there; its place comes as
-  // it is said (`onPlace`). False with no loop in the core to move in: none
-  // yet, or another waiting for Play (`load` while paused) or for the core.
+  // Jump to another place in the loop. `kind` is a JUMP. `at` counts from
+  // the start of the piece (a step counts from the load). The core lands on
+  // the phrase line at or before `at` (a step: on it exactly), and the
+  // listener hears it a few blocks later. The queued steps and grids of the
+  // old place are dropped, and the core's events give the new ones.
+  // While paused, the core holds the jump, and Play goes on from there. The
+  // new place comes through `onPlace`.
+  // Returns false if the core has no loop to move in: no loop yet, a loop
+  // that waits for Play (a load while paused), or no core yet.
   jumpTo(kind, at) {
     const core = this._core();
     if (!core || !this.spec || this.needs || this.wantOwn || !Number.isFinite(at) || at < 0) return false;
@@ -494,21 +533,22 @@ export class PlayerEngine {
     this.visualQueue = [];
     this.gridQueue = [];
     this.heardSteps.dropGrids();
-    // The old place is not where it is now: the core's next word is.
+    // The old place is wrong now. Wait for the core's next report.
     if (!this.playing) this.placeHeard = null;
     return true;
   }
 
-  // Where the listener is in the piece, as the core last said (session 17,
-  // `Player::place`): { bar, bars, played, left, section } (bars and left
-  // null for Endless), or null before it has said; paused, where it stood
-  // (or a jump held, where Play goes on from).
+  // Where the listener is in the piece, as the core last reported it
+  // (`Player::place`): { bar, bars, played, left, section }. `bars` and
+  // `left` are null for Endless. Null before the first report. While paused,
+  // it is where the loop stopped, or where a held jump goes on from.
   place() {
     return this.placeHeard || null;
   }
 
-  // The layers' grid as a pattern js/ui.js draws (`renderGrids`): each
-  // layer's loudest note on each step of its cycle.
+  // Turn the core's grid into the pattern that js/ui.js draws
+  // (`renderGrids`): the loudest note of each layer on each step of its
+  // cycle.
   _gridPattern(grid) {
     const base = this.base;
     const tracks = {};
@@ -522,8 +562,9 @@ export class PlayerEngine {
     return { stepsPerBar: base.stepsPerBar, totalSteps: base.totalSteps, cycles, tracks };
   }
 
-  // What the listener is hearing now, on the audio clock (Engine.heardTime:
-  // the output timestamp, or the declared latency, smoothed).
+  // The time on the audio clock that the listener hears now. It uses the
+  // browser's output timestamp if there is one, else the latency that the
+  // browser declares. The latency is smoothed so the playhead does not jump.
   heardTime() {
     const ctx = this.ctx;
     let heard = null;
@@ -540,8 +581,8 @@ export class PlayerEngine {
     return ctx.currentTime - this.latency;
   }
 
-  // The step that should be lit now, or null if nothing has changed; and the
-  // grid of the pass heard, from its time.
+  // Return the step to light now, or null if it did not change. Also move
+  // `live` to the grid of the pass that the listener hears.
   visualStep() {
     const now = this.heardTime() + this.visualOffset;
     let found = null;
@@ -555,10 +596,10 @@ export class PlayerEngine {
     return found;
   }
 
-  // What the layers show of bar `bar` now (js/heard.js, HeardSteps.bar):
-  // each layer's loudness and share on each step of the bar holding the
-  // step heard last, as heard where it is decided; a muted layer as its
-  // plan has it. Null before the first step is heard, or for another bar.
+  // What the Layers view shows for bar `bar` now (HeardSteps.bar in
+  // js/heard.js): the loudness and share of each layer on each step of the
+  // bar that holds the last step heard. A muted layer shows its plan.
+  // Returns null before the first step is heard, or for another bar.
   barRows(bar) {
     const h = this.heard;
     const spb = this.base && this.base.stepsPerBar;
@@ -567,7 +608,7 @@ export class PlayerEngine {
     return this.heardSteps.bar(bar, spb, h.abs - (h.step % spb), h.run, LAYERS.map((l) => !!mutes[l]));
   }
 
-  // A number that moves whenever what `barRows` gives may have moved.
+  // A number that changes when the result of `barRows` can change.
   get rowsVersion() {
     return this.heardSteps.version;
   }
@@ -579,18 +620,19 @@ export class PlayerEngine {
     return this.heard.abs + Math.max(0, Math.min(1, into));
   }
 
-  // The step the track ends at, from the loop's load, as the core says; null
-  // while it plays on.
+  // The step where the track ends, from the load, as the core reports it.
+  // Null while the loop plays on with no end.
   endStep() {
     return this.trackEnd;
   }
 
-  // The steps a pass of the whole loop takes (Engine.roundSteps).
+  // The number of steps in one pass of the whole loop.
   roundSteps() {
     const spb = this.base.stepsPerBar || 16;
     return pieceOf(this.spec) ? loopBars(this.spec) * spb : this.base.totalSteps;
   }
 
+  // The engine's lines for Diagnostics.
   report() {
     const c = this._core();
     const p = c && c.playerAt;

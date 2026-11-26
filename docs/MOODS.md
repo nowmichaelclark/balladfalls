@@ -8,11 +8,12 @@ ever-changing" -- and it's up to the listener to hold them wholesomely.
 Near-synonyms are allowed to mean different things: "a happy song isn't
 the same as a merry song."
 
-This is the pool (178 words), not yet the app's labels. The eight moods the
-app shows today -- joyful, happy, enthusiastic, refreshing, soothing,
-peaceful, comforting, reflective -- are all from it, and since queue item 16
-(#107) they steer the mode. The labels change once the words are tested by
-ear (roadmap 19).
+This page keeps the list, the ten dials and Mikey's decisions. The words
+reach the app as **vibes**: 88 recipes in `data/vibes.txt`, explained in
+`docs/VIBES.md`. The story of how the words were sorted, ranked and made
+into vibes is in the wiki, "Ballad Falls/Mood words and vibes/How the
+words were tested". The pool-3 ranking (181 trials, v85) is the base for
+the dial fits.
 
 ## The list
 
@@ -41,180 +42,36 @@ Tingling, Trickling, Tumbling, Turning, Twinkling, Twisting, Unbothered,
 Unhurried, Velvety, Vibrant, Vibrating, Wandering, Warm, Wavy, Weird,
 Welcoming, Wet, Whimsical, Whispering, Wholesome, Wild, Worry-free, Zany.
 
-## A first sorting (brain's proposal, for discussion)
+## How words combine
 
-The words describe different *kinds* of thing, and the kinds map onto
-different parts of the music -- which is what could make the labels
-honest.
-
-- **Heart** (the feel; from mood, lift, energy, warmth): affectionate,
-  blissful, carefree, charming, cheerful, confident, content, curious,
-  delightful, earnest, easygoing, enthusiastic, friendly, glad, gleeful,
-  happy, heartfelt, heartwarming, jolly, joyful, jubilant, lighthearted,
-  merry, playful, pleasant, reflective, reminiscent, resilient, satisfying,
-  sincere, tender, unbothered, welcoming, wholesome, worry-free; calming,
-  comforting, cozy, embracing, gentle, intimate, mellow, nourishing,
-  nurturing, peaceful, relaxing, restful, serene, soothing, chill,
-  laid-back.
-- **Strangeness** (odd scales, harmony, timbres): bizarre, dreamy,
-  ethereal, otherworldly, quirky, strange, surreal, weird, whimsical, zany.
-- **Light** (brightness, register, shimmer): beaming, gleaming, glistening,
-  glowing, golden, luminous, radiant, shining, shimmering, sparkling,
-  sparking, twinkling, flickering, pastel, pristine, clear.
-- **Texture and taste** (tone, filtering, reverb, warmth): airy, buttery,
-  creamy, crisp, cool, dewy, earthy, fluffy, frosty, fuzzy, misty, plush,
-  salty, smooth, soft, sour, spicy, squishy, sweet, velvety, warm, wet,
-  decadent.
-- **Motion** (tempo, rhythm, swing, density, drift): billowing, bouncy,
-  bubbling, coasting, cruising, drifting, floating, flowing, fluttering,
-  flying, gliding, groovy, meandering, oscillating, rippling, rocking,
-  rolling, sailing, soaring, springy, surging, swaying, sweeping, swelling,
-  swirling, swishing, trickling, tumbling, turning, twisting, wandering,
-  wavy, pulsing, lingering, leisurely, unhurried, steady, still.
-- **Energy** (overall intensity): bursting, energetic, effervescent,
-  fizzing, vibrant, wild, awake, lively; balanced, spacious, expansive,
-  ambient.
-- **Sound** (named for what the instruments do): booming, buzzing,
-  chirping, droning, humming, puffing, purring, resonant, resonating,
-  reverberating, rubbing, rumbling, rustling, showering, sizzling,
-  sprinkling, strumming, thundering, tingling, vibrating, whispering.
-- **Air and weather**: breezy, cleansing, clearing, freeing, refreshing,
-  light, buoyant.
-
-The idea to test: instead of one mood word, each loop gets two or three
-words from different kinds -- a heart word, a texture or light word, a
-motion word, say "merry, crisp, bouncy" -- each chosen from what the loop
-actually does. Many of these words describe measurable things (a strummed
-nylon *is* strumming, a drone *is* droning, a fast shaker *is* fizzing),
-so the label can be true.
-
-## Pilot recipes (draft, 2026-09-27, for Mikey to react to)
-
-The pilot dozen, agreed: merry, tender, serene, golden, twinkling, crisp,
-velvety, sour, bouncy, floating, swaying, quirky.
-
-Each recipe says what the word means musically, which dials it pushes,
-and where it gets interesting against a profile. The dials are the
-generator's own: tempo, feel (lift, energy, warmth), tone (warmth, space,
-wobble), swing, drums and hat density, rests (`restBar`, `airy`), chord
-size, scale color, register, and which instruments are drawn. "Pushes"
-means leans the profile's own ranges, never leaves them: a word bends a
-profile, it doesn't replace it.
-
-**merry** -- company, dancing, a smile shared. Lift and energy up, warmth
-mid-high; brighter modes (ionian, mixolydian, major pentatonic); bouncing
-dotted or jig rhythms, a steady beat, drums likely; plucked and bowed
-leads (fiddle, whistle, marimba, pluck); a tune that moves by step with
-little skips. On cinder: a village fiesta rather than a duende. Differs
-from *happy* by being more social and rhythmic.
-
-**tender** -- close, careful, kind. Energy low, warmth high, lift mid;
-soft attacks and low velocities, small chord voicings, a narrow tune
-near the middle register, more rests; warm voices (rhodes, softpad,
-flute, harp, nylon), light or no drums, little wobble, a close room. On
-shatter: its brightness pulled back to a hush.
-
-**serene** -- still water, nothing asked for. Energy very low, lift mid,
-tone space high; slow tempo within the profile, long held chords
-(pad-like rhythms), the drone bass welcome, sparse or no drums; a slow,
-few-note tune with long notes; texture swells or waves. Differs from
-*tender* by being spacious rather than close.
-
-**golden** -- late light, warm glow. Warmth very high, lift mid-high,
-brightness mid (not sparkling); major and lydian color, rich chords
-(sevenths and added ninths); warm sustaining voices (rhodes, keys, pad,
-ocarina), gentle swing, the tape-worn sound up a little. A color more
-than a mood, so it pairs with almost any heart word.
-
-**twinkling** -- small lights, high and scattered. High register for the
-tune or a texture of bells, chime, musicbox, celeste, kalimba; short
-notes with space between; bright tone, a little reverb; arpeggiated
-chords welcome. Pairs with *serene* (a night sky) as easily as with
-*merry* (fairy lights).
-
-**crisp** -- clean edges, cool air. Tone warmth down, wobble low, space
-modest; short, defined attacks (pluck, marimba, nylon, rim, shaker);
-straight rather than swung; clear, uncluttered chords; clean drums on
-the tape or brush kit. Differs from *twinkling* in weight: crisp is
-about edges, not height.
-
-**velvety** -- deep, soft, smooth to the touch. Tone warmth high, wobble
-low, brightness low; sustained, smooth voices (softpad, analogpad, rhodes,
-choir, moogpad), legato, soft attacks; a lower register, full chords, a
-round bass (sub, round). The opposite corner from *crisp*.
-
-**sour** -- a tart twist, like tamarind or green mango: puckering but
-pleasant, never unpleasant. Harmony color: added seconds, the b9 over a
-major chord, close clusters, a lydian or dorian tang; a touch of detune;
-a thinner, brighter tone. Used lightly -- a flavor on a loop, not the
-whole meal -- unless it's the one word. On cinder: its flamenco note
-leaning in. On glade: a sherbet edge on the folk tune.
-
-**bouncy** -- springs underfoot. Energy mid-high; short notes, dotted and
-syncopated rhythms, a tune that leaps a little; plucky voices; drums
-likely with a light, springing kick; walking or pulse bass. Meets *floating*
-in the balloon (below).
-
-**floating** -- no ground under it. Energy low; the downbeat softened
-(fewer kicks, the bass held or sparse), long notes and ties across the
-bar, more space and reverb, a higher tune; sustained voices and swells;
-drift up a little. On cinder: the slowed, suspended siesta; on wayfare:
-the train seen from far off.
-
-**swaying** -- a slow rock from side to side. The waltz and the 6/8 lilt,
-or a strong swing in 4/4; moderate tempo; a clear strong-weak pulse in
-bass and chords, the tune following it; drums gentle if any. Tide's
-waltz is the model.
-
-**quirky** -- a happy oddness. A lydian #4 or whole-tone step now and then,
-unexpected intervals in the tune, off-beat accents, an unusual pairing
-of voices (musicbox over moogbass, say), stab and prepared piano
-welcome; still pleasant, still a tune. The strangeness word for the
-pilot; *bizarre* and *zany* would push further later.
-
-**How words combine:** each word's pushes add up, weighted; where they
-conflict, the heart word wins on feel and the motion word wins on rhythm.
-
-**No pair is forbidden** (Mikey, 2026-09-28). Words that pull against
-each other find their in-between. His example: *bouncy* and *floating* is
-a helium balloon -- it floats by default, children bat it and it bounces
-around the room, then it drifts back to floating. Musically: a floating
-base (soft downbeat, long notes, space, a high line) with bounces as
-events -- a springy figure, a pickup, a leap, a few plucked notes -- that
-settle back into the float. So a conflict becomes a *shape over time*
-(a default state and excursions from it) rather than a cancellation.
-Every conflicting pair gets its own image like this, worked out by ear.
+- **A word bends a profile, but does not replace it.** A word leans the
+  profile's own ranges, and never leaves them.
+- **No pair is forbidden** (Mikey, 2026-09-28). Words that pull against
+  each other find their in-between. His example: *bouncy* and *floating*
+  is a helium balloon. It floats by default, bounces when children bat
+  it, and then drifts back. So a conflict becomes a shape over time: a
+  home state, with excursions from it.
+- **A share on a label must be honest.** Measure it from the rendered
+  loop. Do not take it from the draw.
 
 ## Decided (Mikey, 2026-09-28)
 
-- **Lively** joins the list (it had crept into the sorting above).
+- **Lively** joins the list.
 - **Near neighbors, told apart:** *tender* is close (a small room, a soft
   touch, a narrow tune); *soothing* is settling (slow, long chords).
   *Serene* is still and wide; *peaceful* is content and moving gently. On
   the three feeling dials these pairs sit almost on top of each other, so
-  what separates them has to live in the recipe.
-- **Heart words replace the eight moods**, eventually: the eight become
-  heart words with recipes like the rest, not a second system beside
-  them. Their share-code numbers stay frozen (`js/moods.js`).
-- **The percentages stay, if they are honest.** A word's share on a loop
-  is only worth showing if it represents what actually comes through. So
-  the share should be measured from the rendered loop, not taken from the
-  draw.
-- **The pilot recipes:** "love most of" the approach -- words as leans on
-  the draw, heart words as points, the honest-label check, the first build
-  dormant (random loops don't draw words until they're tuned).
-- **Open: more dials than three** (proposal below), and more words
-  (candidates below).
+  the recipe must separate them.
+- **Heart words replace the eight moods.** The eight became vibes like
+  the rest, not a second system. Their share-code numbers stay frozen.
+- **The ten dials, and option B for the maps** (below).
 
-## Dials (brain's proposal, 2026-09-28, open)
+## Dials
 
-Three dials (lift, energy, warmth) can't tell tender from soothing. The
-proposal: about ten, each with two wholesome ends, each something the
-generator can steer *and* something a rendered loop can be measured on.
-A word is a point on only the dials it cares about and leaves the rest
-free (*golden* sets warmth and tang, and doesn't care about bounce). The
-measured position of a loop then gives every word an honest share: how
-close the loop landed to that word's point.
+Three feeling dials (lift, energy, warmth) can't tell tender from
+soothing. So there are ten. Each dial has two wholesome ends. The
+generator can steer it, and a rendered loop can be measured on it
+(`tools/dials.mjs`). A word is a point on only the dials it cares about.
 
 | dial | one end -- other end | steers / measures |
 |---|---|---|
@@ -229,172 +86,15 @@ close the loop landed to that word's point.
 | tang | sweet -- tart | added seconds, b9, clusters over plain triads |
 | oddness | familiar -- strange | unexpected intervals, whole-tone steps, odd pairings |
 
-Some things stay leans rather than dials: instrument families (strumming,
-humming, chirping), meter (swaying's lilt), shapes over time (the balloon).
-Separate dials also dissolve some conflicts: *bouncy* is bounce up,
-*floating* is ground down -- different dials, so the balloon is a loop
-that is both, not an average of the two.
+Instrument families (strumming, humming), meter (swaying's lilt) and
+shapes over time (the balloon) stay leans, not dials. Separate dials also
+remove some conflicts: *bouncy* is bounce up, *floating* is ground down.
 
-## Maps and clouds (brain's proposal, 2026-09-28, open)
-
-Mikey: the ten dials are okay; could x-y graphs describe loops better,
-while still letting words that contrast sit on one loop?
-
-1. **Maps:** the ten dials paired into five x-y maps, words drawn on them
-   as *regions* (some wide, some narrow), not points.
-   - heart: lift x energy (the plane music-emotion research uses)
-   - touch: warmth x edge (velvety, buttery, crisp, frosty)
-   - space: room x height (tender, twinkling, booming, serene)
-   - motion: ground x bounce (floating, bouncy, steady, rocking)
-   - flavor: tang x oddness (sweet, cozy, sour, quirky, zany)
-2. **A loop is a cloud, not a point.** Measure it bar by bar and layer by
-   layer; each moment is a dot, weighted by how much it's heard. Words that
-   pull apart stop canceling, because they can hold in three ways, all
-   visible in the one cloud: *in between* (dots in the middle), *in
-   different layers* (crisp drums under velvety pads), *over time* (the
-   helium balloon: a floating home with excursions to bouncy).
-3. **Honest percentages:** a word's share is the share of the cloud inside
-   its region. "Floating 70%" means seventy percent of what you hear sits
-   there.
-4. **Steering:** a label becomes a plan -- home words, and words carried
-   by one layer or by excursions -- and the generator aims the cloud.
-
-**Pairings: option B** (Mikey, 2026-09-28). It puts more of
-the pilot words on a single map: color (warmth x lift: golden, sunny,
-tender, misty), shimmer (edge x height: twinkling, sparkling, velvety,
-booming), air (room x ground: floating, airy, cozy, serene), motion
-(energy x bounce: still, flowing, bouncy, bursting), flavor (tang x
-oddness). The pairs are views for placing words by ear; the engine can
-measure on all ten dials, so a word may use any dials it needs.
-
-**Better than hand-drawn regions:** fit each word's region from Mikey's
-listening answers (the word-ranking test, queue item 19), so the words are defined by what he
-hears rather than by the brain's guesses.
-
-Unproven: whether every dial can be measured per bar and per layer
-(height, bounce, ground and edge look easy; room and tang may be
-loop-wide). First test, no code: plot the clouds of the "Moods" album
-loops and see whether Mikey's own words land where the clouds say.
-
-## Candidate words (brain's suggestions, 2026-09-28, for Mikey to pick)
-
-Mikey likes about half of these; picking is for later.
-
-Not in the list, grouped by the gap they'd fill. Take, drop or change.
-
-- **Light and time of day:** bright, sunny, sunlit, moonlit, starry,
-  twilight, dusky, hazy.
-- **Close and sleepy** (the close end of room): hushed, snug, homey,
-  sleepy, drowsy, lulling, tranquil.
-- **Dance and step** (Ocarina-style whimsy): lilting, jaunty, sprightly,
-  nimble, skipping, tiptoeing, mischievous, cheeky, plucky.
-- **Taste** (tang): tangy, zesty, tart.
-- **Wonder:** magical, enchanted, wondrous, adventurous, hopeful,
-  triumphant (used rarely).
-- **Stillness:** reverent, meditative, hypnotic.
-- **Sound:** tinkling, chiming.
-- **Near the line** -- gentle, but they lean toward longing; only if they
-  read as textures to you: wistful, nostalgic, bittersweet, mysterious.
-
-## Ranking results
-
-Mikey (2026-09-28): "don't take my answers as the only truth. I'm just
-one person, and I might have selected different options on a different
-day or while in a different mood." So answers are votes, not verdicts:
-regions are fitted softly over many trials and days, never from one
-answer, and the hidden repeats measure how much a day's mood moves them.
-
-**Batch 1 (20 trials, seeds 19000-19019, v65, full quality).** Too few to
-fit anything; first impressions only.
-- 8 of 20 had no word fit. Five random words from 22 often miss a loop.
-- He reached most for motion and texture words (bouncy, crisp, airy) and
-  seldom for the heart words.
-- The app's mood label and his ear often disagreed: loops labeled
-  joyful (79%, 100%) got reflective/velvety/airy and misty/lively/
-  peaceful, and two bright-labeled loops in major modes took neither
-  happy nor joyful when offered. A loop labeled reflective 100% got
-  bouncy and crisp. Hints that lift alone doesn't make a loop sound
-  happy -- what the dials and clouds are for.
-- Sour was tapped on harmonic minor (shatter) and mixolydian (tide).
-
-**Pool 3 (v85, 2026-10-11).** Mikey's picks from the candidate words, 39 new
-on top of pool 2's 32 (71 in all), one group per map:
-- color: bright, sunny, starry, wondrous, triumphant, wistful, warm, cool,
-  heartwarming, comforting
-- shimmer: chiming, hazy, intricate
-- air: hushed, foggy, comfy, restful, soothing, reverent, meditative, minimal
-- motion: nimble, skipping, tiptoeing, hypnotic, adventurous, enthusiastic
-- flavor: tangy, zesty, tart, mischievous, cheeky, plucky, mysterious, silly,
-  strange, goofy, experimental, refreshing
-
-Words he named that were already in the pool (happy, joyful, peaceful,
-reflective) were not added twice. Groups for words outside the brain's list
-are the hands' call: warm, cool, heartwarming and comforting by warmth;
-comfy, restful, soothing, foggy and minimal by room; intricate by edge;
-enthusiastic by energy; silly, strange, goofy, experimental and refreshing
-by tang and oddness. Move any that sit wrong.
-
-**Pool 3, 181 trials (seeds 19000-19173, v85, full quality,
-2026-10-11).** 173 answered, 1 skip, 7 hidden repeats; median 34 s a
-trial. Every word shown 8-23 times (shimmer's eight words twice as often
-as color's nineteen). Votes, not verdicts.
-- **Nothing fit on 5 of 173 (3%)**, against 8 of 20 in batch 1.
-- **Words that fit nearly every loop:** steady (12 of 12, first 10
-  times), cool (10/10), zany (10/10), wistful (9/9), strange (9/10),
-  minimal (7/8), hypnotic (12/14), soft (18/23). They can't tell one loop
-  from another: they describe Ballad Falls itself.
-- **Words that almost never fit:** heartwarming (0/8), joyful (1/10),
-  booming (2/21), warm (2/10), starry (2/10), spicy (2/11), goofy (2/10),
-  chiming (4/23), twinkling (4/21), intricate (5/22). Joyful is one of
-  the eight mood labels the app shows today.
-- **Where the signal is already clear** (the brain's scratch check against
-  what a song code carries, not the dials): the energy words line up with
-  tempo, notes per second and drums -- energetic, bouncy, lively,
-  enthusiastic, adventurous and nimble up; cozy, tiptoeing, meditative,
-  peaceful, soothing and foggy down. Happy and sunny go with bright modes
-  and high lift; reflective with darker modes and few major chords; tender
-  with brighter modes and warmth; serene with long notes and no drums.
-- **But not yet enough to predict him:** fitted word by word on those
-  features and tested on each trial left out, the top word matched his
-  first tap 32% of the time, while knowing only how often each word fits
-  in general gets 38% (chance is 20%). About ten answers per word, spread
-  over five words a trial, is too thin to place each word on ten dials.
-- **Repeats:** 7 pairs; 80% of fits / doesn't-fit answers agreed, the same
-  first word 4 times in 7. That is the ceiling any fit can reach: his own
-  day-to-day agreement.
-
-**A better test: word albums (Mikey, 2026-10-11).** "Maybe you make
-albums for me where you try to guess what different words are. E.g. 'Is
-this playlist heartwarming? Which songs are not?'" One word at a time, the
-brain guesses which loops fit it and mixes in a couple it expects not to,
-and Mikey says which don't fit. It asks him a much easier question than
-ordering five words, puts many answers on one word at once, and tests the
-brain's understanding directly: a guess that keeps missing means the
-brain hasn't heard the word yet. It also answers whether the catalog can
-make a word at all, which is what recipes are for (roadmap 19, steps 1-3).
-The five-word ranking rests; its 181 trials stay the base for the fit.
-Pilots: "Heartwarming?" and "Joyful?" (`docs/ALBUMS.md at commit f040b5b`), the two heart
-words that almost never fit.
-
-**The pilots worked.** Words that fit almost no random loop in the
-ranking test (heartwarming 0 of 8, joyful 1 of 10) fit about half of the
-brain's guesses: heartwarming 3 yes, 1 mixed and 2 no of 6 guesses, and
-one of its 2 decoys fit too; joyful 1 yes, 2 "kind of", 1 "a bit" and 2
-no of 6 guesses, its one answered decoy "not really". So the catalog can
-make these words, guessing finds them, and the misses say what the word
-is not (heartwarming isn't about major chords; joyful needs pace and a
-singing lead, not a stab).
-
-**Vibes (Mikey, 2026-10-11).** The words go into the app now, as
-**vibes**: a listener picks any number on the Now Playing screen, and every
-new loop leans toward up to five of them in shifting amounts (queue item
-38; recipes in `docs/VIBES.md`). Tuning moves there: Mikey picks vibes and
-sends the loops that fit well or badly.
-
-**The vibes to 88 (Mikey, 2026-10-29; queue item 76b, v125).** Soft,
-energetic, silly and comfy left the vibes and `/rank`'s pool (pool 4);
-twenty-one joined. The pool-3 lists above are the record of what was
-ranked then. The reasons and recipes are in `docs/VIBES.md`.
+**The maps, option B** (Mikey, 2026-09-28). The dials pair into five x-y
+views, for placing words by ear: color (warmth x lift), shimmer (edge x
+height), air (room x ground), motion (energy x bounce) and flavor (tang x
+oddness). The engine measures on all ten dials, so a word can use any
+dials it needs.
 
 ## Decided (Mikey, 2026-10-11)
 
@@ -402,4 +102,10 @@ ranked then. The reasons and recipes are in `docs/VIBES.md`.
   also be **neutral** (the middle of the mode axis), not only inward.
 - **Cinder and shatter may take a bright mode when a word calls for one**
   (borrowed modes their pools don't have, used only when the word is a
-  bright one). Queue item 36 builds both.
+  bright one). Queue item 36 built both.
+- **Answers are votes, not verdicts.** Mikey: "don't take my answers as
+  the only truth. I'm just one person." Fit regions softly, over many
+  answers and days.
+- **Word albums** ask about one word at a time ("Is this playlist
+  heartwarming? Which songs are not?"). They replace the five-word
+  ranking.

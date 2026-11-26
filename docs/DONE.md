@@ -104,3 +104,8 @@ repository.
   `docs/BRAIN.md` and `docs/QUEUE.md` rewritten. The brain's "State" keeps
   only where things stand now; the standing rules are grouped by topic; the
   known issue that session 30 fixed leaves. Nothing to hear.
+- balladfalls #18, the plain style, the sound docs (docs only):
+  `docs/MOODS.md` (22.7 to 5.9 KB), `docs/VIBES.md` (42.7 to 5.9 KB) and
+  `docs/LONGFORM.md` (41.4 to 25.2 KB) keep what is live. The research, the
+  tuning record and the build story move to three wiki pages, under "Mood
+  words and vibes" and "Long pieces". Nothing to hear.

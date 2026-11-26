@@ -16,8 +16,10 @@ entry.
   offers to bring your Library across: your loops and albums, as they are.
   Say not now and they stay where they were; a backup file restores at the new
   address as it always did. Install the app again from the new address.
-- **On Android,** Ballad Falls is a new app, from F-Droid. The test builds
-  stay apart; move a Library across with a backup.
+- **On Android,** Ballad Falls is a new app, from F-Droid once its review
+  there is done (submitted 2026-11-25); until then the APK is on the
+  [v1.0 release](https://github.com/nowmichaelclark/balladfalls/releases/tag/v1.0).
+  The test builds stay apart; move a Library across with a backup.
 
 ### New to hear
 
@@ -69,7 +71,7 @@ entry.
   the timeline to move the playhead on any loop, playing or paused.
 - **Albums:** Previous works in an album and goes round; a seed album can be
   saved to the Library; an album's code carries each track's time.
-- **The Android app** (the same engine; on F-Droid after 1.0): plays on with the screen
+- **The Android app** (the same engine): plays on with the screen
   off, with controls on the lock screen and in the notification, which show the
   loop's own cover; a call pauses it and it comes back; exports save through
   Android's picker.

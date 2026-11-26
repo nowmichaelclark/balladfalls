@@ -123,6 +123,7 @@ queue is `docs/QUEUE.md`. The notes the hands left on these items are in
 - [For phase 3 (from item 82; brain, Session 28)](#for-phase-3-from-item-82-brain-session-28)
 - [53. The picks through the core's commands (phase 3)](#53-the-picks-through-the-cores-commands-phase-3)
 - [115. No crackles in the Android app (done, hands, 2026-11-23 to 24)](#115-no-crackles-in-the-android-app-done-hands-2026-11-23-to-24)
+- [The road to 1.0, as it stood at 1.0 (2026-11-25), with 107 and 108](#the-road-to-10-as-it-stood-at-10-2026-11-25)
 
 ## Old status notes (until 2026-11-25)
 
@@ -5048,6 +5049,21 @@ are in `docs/archive/queue-items.md`, "Old status notes"). Open: 120 (the
 icon), 108 (1.0), 75 (low priority), 37 (on hold) and the known issues
 below.
 
+**Status, 2026-11-25: 1.0 is merged (session 31).** In the new repository
+(`nowmichaelclark/balladfalls`; driftloom is the frozen archive): the icon (#1,
+item 120), the new name (#2, session 31a) and 1.0 itself (#3, item 108, v222:
+the version 1.0 in the app and the APK, codes frozen). What is left of 108 is
+Mikey's: the `v1.0` tag if the session's push was refused, signing the APK,
+the old address's Worker, archiving driftloom and the F-Droid submission, in
+that order (`docs/notes/for-mikey.md`, "Launch day, in order"). Done: every
+item to 122, and the sessions before them (`docs/sessions/README.md` is the
+order; every merge has its line in `docs/DONE.md`; the longer status
+paragraphs, as they stood, are in `docs/archive/queue-items.md`, "Old status
+notes"). Open: 108's launch-day steps, 75 (low priority), 37 (on hold) and the
+known issues below; the first item after 1.0 is the known issue "The app drops
+a code's version", before any new sound. A new Claude Code session starts
+here: read the standing rules and the merge policy, then take the next item.
+
 ## 120. The new name's icon (Mikey, 2026-11-23; merged at 1.0, balladfalls #1)
 
 Session 30l: an SVG icon for the new name, drawn with Mikey over rounds; he
@@ -5056,3 +5072,40 @@ picked round 20 c on 2026-11-24. Built into draft #465
 `CACHE`), left open on purpose: it merges with 31a's rename at 1.0, so the
 testers' surprise holds. Nothing touches #465, `icons/` or anything that names
 the app until session 31.
+
+## The road to 1.0, as it stood at 1.0 (2026-11-25)
+
+Done and archived (`docs/archive/queue-items.md`, by number): phase 3 (93 to
+100), 101 (batch 6), 102 (long pieces), 103 (the fast gate), 104 (export), 105
+(codes), 106 (long pieces on screen), 107 (the Android app, but for the
+submission below), 109 to 122 (Mikey's seven and last changes, and the icon).
+
+**The app's 1.0 comes before the game** (Mikey, 2026-11-10): Broken Friends and
+the other games wait (the core already works in Broken Friends); the music app
+is finished first, and **1.0 includes the Android app on F-Droid**. What is
+left, in order: the polish (session 30), the release check (brain B5), the new
+name (31a), then 108. Screens: the hands build plain ones in the app's style,
+keeping `docs/PAINTER.md`'s rules (one screen, no new settings, scrolling in
+its two places). What needs Mikey's ears, phone or accounts is in
+`docs/notes/for-mikey.md`, and the work moves on. Sessions and their order:
+`docs/sessions/README.md`.
+
+## 107. The Android app, on F-Droid (built; the submission is open)
+
+Sessions 25 to 29 built it (the brief and what came of it are archived with
+item 107): the core native on Android's audio, the page's screens in a
+WebView, the screen off, F-Droid's listing and recipe, reproducible builds
+(`android/README.md`, `docs/notes/107-reproducible.md`). **Open, Mikey's:** his
+signing key, and the submission to F-Droid after 31 (the merge request is
+public and carries the new name): `docs/notes/for-mikey.md`, "Accounts". Then
+`APP_LINK` in `js/main.js` points at the listing (item 100's link).
+
+## 108. 1.0
+
+**Hands:** then Mikey. **Merged by session 31 (2026-11-25, balladfalls #3);
+Mikey's launch-day steps are left** (`docs/notes/for-mikey.md`). First the new
+name (session 31a, built and left open until this moment, since a merge
+deploys). The version named 1.0 in the app and the APK, a short
+changelog, codes frozen (105), and `docs/notes/for-mikey.md` empty or
+answered. (The nightly's checks stay nightly, Mikey, 2026-11-25: "Merge
+policy".)

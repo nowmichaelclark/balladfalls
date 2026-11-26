@@ -752,9 +752,23 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   repository's secrets (apksigner 34), checks its certificate, and attaches
   `balladfalls-<version>.apk` to the tag's release; by hand with a tag it signs
   that release again. Nothing to hear.
+- balladfalls #5, the old address's Worker as connected (Mikey, 2026-11-25;
+  docs only): `docs/notes/for-mikey.md` says how the `driftloom` Worker builds
+  from this repository's `main` (the deploy command's `cd old-address`; the
+  root `wrangler.jsonc` keeps its name). Nothing to hear.
+- balladfalls #6, the old address's page fixed (2026-11-25; the old-address
+  Worker only): wrangler's `keep_names` had put `__name` into the page script
+  the Worker sends as text, so the old address showed a blank page; now off,
+  with a shim and a test that runs the bundled script. The old link then
+  landed on balladfalls.com with its loop playing. Nothing to hear.
 - balladfalls #7, the F-Droid listing's screenshots retaken (Mikey,
   2026-11-25; no app change): seven screens, each with a loop and cover of its
   own and a theme of its own (Nocturne, Dawn, Tidal, Ember, Abyss, Night Light,
   AMOLED), by `android/screenshots.mjs` on CI's emulator. The F-Droid recipe
   names this merge for 1.0, since F-Droid reads the listing from the commit it
   builds. Nothing to hear.
+- balladfalls #8, the docs after 1.0 (Mikey, 2026-11-26; docs only): the
+  queue, the brain's Start here, for-mikey, the sessions' table, the README
+  and the changelog say 1.0 is out, the old address forwards, driftloom is
+  archived and F-Droid's review (!59136) is open; what was done is archived.
+  Nothing to hear.

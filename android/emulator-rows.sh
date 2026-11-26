@@ -1,6 +1,6 @@
 #!/bin/sh
 # Installs an APK on a headless emulator and runs tools/rows.mjs against the
-# app (session 27, queue item 107c): every row of item 94a's table that makes
+# app: every row of the controls table that makes
 # sense there, the page driving the native core, and the app's own rows
 # (`tools/rows.mjs --app`). What CI's `rows` job runs.
 #

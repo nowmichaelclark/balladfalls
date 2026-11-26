@@ -1,5 +1,5 @@
 // The app's page, driven from a computer through the WebView's DevTools
-// protocol (session 27): what android/smoke.mjs and `tools/rows.mjs --app`
+// protocol: what android/smoke.mjs and `tools/rows.mjs --app`
 // share. A debuggable (test) build offers the protocol over adb
 // (MainActivity turns it on). No test library: a few calls of the protocol,
 // shaped like the Playwright page tools/rows.mjs drives in a browser

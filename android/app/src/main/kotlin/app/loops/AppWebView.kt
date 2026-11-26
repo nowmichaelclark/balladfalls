@@ -7,7 +7,7 @@ import android.webkit.WebView
 
 /**
  * The app's WebView, which the page keeps running in while it has work to do
- * with the screen off (session 28, queue item 107d).
+ * with the screen off.
  *
  * The core plays on its own thread and needs nothing from the page, but the
  * lock screen's and the notification's buttons are the page's (Next and

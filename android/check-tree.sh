@@ -1,5 +1,5 @@
 #!/bin/sh
-# What the project's tree must be (queue item 107a; F-Droid refuses a
+# What the project's tree must be (F-Droid refuses a
 # repository with prebuilt binaries):
 #   1. Every file tracked under android/ is text, except the Gradle wrapper's
 #      jar.

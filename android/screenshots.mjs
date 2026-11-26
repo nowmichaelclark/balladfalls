@@ -1,4 +1,4 @@
-// The F-Droid listing's phone screenshots (queue item 107e), taken from the
+// The F-Droid listing's phone screenshots, taken from the
 // app itself on an emulator: the debug build's page is driven through the
 // WebView's DevTools port (android/cdp.mjs) to each screen a listener sees,
 // and the emulator's own screen is captured (`adb exec-out screencap`, so a
@@ -9,7 +9,7 @@
 // The numbers are the order the listing shows them in
 // (fastlane/metadata/android/en-US/images/phoneScreenshots/). Retake them with
 // the `screenshots` job of .github/workflows/android.yml whenever the screens
-// or the app's name change (session 31a), and commit the artifact's files.
+// or the app's name change, and commit the artifact's files.
 // Each screen is taken in a theme of its own (Mikey, 2026-11-25: show off the
 // themes), so the listing shows seven of the nine, and a loop of its own
 // (its name and cover), the next after the screen before it.

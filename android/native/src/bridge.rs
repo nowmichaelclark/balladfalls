@@ -1,4 +1,4 @@
-//! The page's side of the native player (session 27, queue item 107c).
+//! The page's side of the native player.
 //!
 //! In the app the page's player talks to this instead of a worklet:
 //! `js/core.js`'s `CoreHost` posts the same messages (`playLoad`, `param`,
@@ -38,7 +38,7 @@ const NATIVE_EVERY: Duration = Duration::from_millis(250);
 /// How busy the audio thread is, a window this many seconds of audio.
 const BUSY_WINDOW: f64 = 0.25;
 /// The kinds of event (`Kind::ALL`): a step's, and what the layers sounded
-/// on one (session 30b), which ride with the steps rather than post at once.
+/// on one, which ride with the steps rather than post at once.
 const STEP: u8 = 0;
 const HEARD: u8 = 9;
 
@@ -173,7 +173,7 @@ pub fn ask(a: &Value) -> Asked {
 }
 
 /// The track `kind` and `count` say (`dl_play_track`'s numbers, the core's
-/// `Track::of`: a time and its fades among them, session 30c), or none.
+/// `Track::of`: a time and its fades among them), or none.
 fn track_of(kind: u32, count: u32) -> Option<(Track, Fades)> {
     Track::of(kind, count)
 }
@@ -567,8 +567,8 @@ fn native_of(engine: &Engine, status: &[f64; at::WORDS], f: &Figures, level: f64
     number(&mut s, status[at::TIME]);
     let _ = write!(s, ",\"running\":{},\"rate\":", f.running);
     number(&mut s, f.rate);
-    // How long a frame the core renders now takes to reach the speaker
-    // (session 30b): as the stream measures it, or where it can't yet, what
+    // How long a frame the core renders now takes to reach the speaker:
+    // as the stream measures it, or where it can't yet, what
     // is queued ahead of the speaker, the stream's buffer. The layers'
     // playhead reads it (js/native.js, `outputLatency`).
     s.push_str(",\"latency\":");
@@ -596,7 +596,7 @@ fn native_of(engine: &Engine, status: &[f64; at::WORDS], f: &Figures, level: f64
     s
 }
 
-/// What a crackle leaves, for Diagnostics (session 30g, `watch.rs`): each
+/// What a crackle leaves, for Diagnostics (`watch.rs`): each
 /// "ago" is seconds before now.
 fn watch_of(s: &mut String, engine: &Engine, status: &[f64; at::WORDS], f: &Figures) {
     #[allow(clippy::cast_precision_loss, reason = "nanoseconds of a session, far under 2^53")]
@@ -822,7 +822,7 @@ mod tests {
         assert_eq!(ask(&Value::Null).refused, 0);
     }
 
-    /// Session 30g: the stream's runs of callbacks leave the level between
+    /// The stream's runs of callbacks leave the level between
     /// two runs as it was, and the figures of a crackle reach the page as
     /// JSON it can read.
     #[test]
@@ -870,7 +870,7 @@ mod tests {
         assert!(t > 4.9, "the clock went on: {t}");
     }
 
-    /// Session 30h (queue item 116): the page's rail through the same
+    /// The page's rail through the same
     /// messages as the web's. A step asked while paused is held: the page
     /// hears where Play goes on from, nothing lands while paused, and Play
     /// lands on that step; a step asked playing lands on it.

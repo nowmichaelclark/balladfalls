@@ -7,7 +7,7 @@
 # other emulator tests drive are not; a name it renamed that the native core
 # or the page's bridge looks up would show here). A release has no DevTools
 # port, so the page is read through Android's accessibility tree (uiautomator).
-# Queue item 107e; CI's `plays` job (.github/workflows/fdroid.yml).
+# CI's `plays` job (.github/workflows/fdroid.yml).
 #
 #   android/emulator-release.sh path/to/release-signed.apk [screenshot.png]
 
@@ -81,7 +81,7 @@ echo "ok   still playing, process alive, 20 s later"
 if [ -n "$shot" ]; then adb exec-out screencap -p >"$shot" && echo "screenshot: $shot"; fi
 # A crash is the app's own: "FATAL EXCEPTION" counts only where its "Process:"
 # line names the app (uiautomator, which reads the screen above, crashed now
-# and then and failed this check for it, twice; session 30).
+# and then and failed this check for it, twice).
 log=$(adb logcat -d || true)
 bad=$(printf '%s\n' "$log" | grep -E "UnsatisfiedLinkError|ClassNotFoundException|NoSuchMethodError|NoSuchFieldError|Process $pkg.* has died" || true)
 fatal=$(printf '%s\n' "$log" | grep -A3 "FATAL EXCEPTION" | grep -E "Process: $pkg(,| |\$)" || true)

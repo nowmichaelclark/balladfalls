@@ -7,7 +7,7 @@ import android.util.Log
 
 /**
  * What the page has told the app about what is playing and what is being
- * saved (session 28, queue item 107d): the one place the service, the bridge
+ * saved: the one place the service, the bridge
  * and the activity read it. The page sets it through [AppBridge]; the
  * service ([PlaybackService]) shows it (the notification, the lock screen's
  * session) and holds what the app needs to go on with the screen off (the
@@ -42,7 +42,7 @@ object Playback {
     /**
      * Until when (the clock's, in ms) the page is shown as if in front though nothing plays: a button pressed
      * while paused in the background, so the page, its timers slowed or stopped, takes it at once
-     * ([AppWebView], session 30g, step 7).
+     * ([AppWebView]).
      */
     @Volatile var wakeUntil = 0L
 
@@ -62,8 +62,8 @@ object Playback {
 }
 
 /**
- * Keeps the native stream running only while something needs it (session 28:
- * nothing runs when paused). It runs while the page is playing and for a
+ * Keeps the native stream running only while something needs it (nothing
+ * runs when paused). It runs while the page is playing and for a
  * ring-out after a pause (what was played rings out: the reverb's tail), and
  * a stream that was stopped starts again at the next Play, or at any message
  * the page sends the core in the meantime (a loop picked while paused, a

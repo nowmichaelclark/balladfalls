@@ -1,10 +1,10 @@
 #!/bin/sh
-# What is in the release APK (queue item 107e): the anti-features check and
+# What is in the release APK: the anti-features check and
 # the list of what ships.
 #
 #   android/fdroid/check-apk.sh APK DEPENDENCIES.txt
 #
-# 0. The release's id and name (session 31a): android/gradle.properties's
+# 0. The release's id and name: android/gradle.properties's
 #    driftloom.releaseApplicationId, and the launcher's label its appName.
 # 1. The permissions are exactly the ones AndroidManifest.xml declares and
 #    android/LICENSES.md names: no network, no location, no storage.

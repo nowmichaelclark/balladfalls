@@ -1,14 +1,14 @@
 package app.loops
 
 /**
- * The core, native, on Android's own audio (session 26, queue item 107b):
+ * The core, native, on Android's own audio:
  * the bridge to `libdriftloom.so` (android/native). One engine a process,
  * made at the first [start] at the device's rate; an AAudio stream at high
  * priority renders it. Every call here only queues a command or reads a
  * count: the audio thread takes the commands at its next callback, through a
  * lock-free queue, as the page's worklet takes its messages.
  *
- * The page drives it through [send] and [drain] (session 27, PageBridge);
+ * The page drives it through [send] and [drain] (PageBridge);
  * the debug screen (NativeTestActivity, debug builds) and the instrumented
  * tests through the rest.
  */
@@ -47,7 +47,7 @@ object NativeCore {
     /** Forget the busiest callback so far, the watch's figures and the time played with the screen off. */
     @JvmStatic external fun resetBusiest(): Boolean
 
-    /** The phone's screen went on or off (session 30g): the time played with it off is counted from here. */
+    /** The phone's screen went on or off: the time played with it off is counted from here. */
     @JvmStatic external fun screen(on: Boolean)
 
     /** The figures, in [Figures]'s order (android/native/src/lib.rs, COUNTS). */
@@ -120,7 +120,7 @@ class Figures(private val v: DoubleArray) {
     val refused get() = at(23).toLong()
     val collisions get() = at(24).toLong()
     val engine get() = at(25) != 0.0
-    /** Callbacks over their deadline, and times the speaker's playhead fell behind the clock (session 30g, watch.rs). */
+    /** Callbacks over their deadline, and times the speaker's playhead fell behind the clock (watch.rs). */
     val over get() = at(26).toLong()
     val behind get() = at(27).toLong()
     /** Seconds played with the screen off. */

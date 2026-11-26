@@ -1,5 +1,5 @@
 //! The engine: a core, the player on it, and the queues its commands come
-//! by and its reports go back by (queue items 107b and 107c).
+//! by and its reports go back by.
 //!
 //! The app's thread sends commands (`send`); the audio thread renders
 //! (`fill`), taking the commands waiting at the start of each callback, and
@@ -61,7 +61,7 @@ pub const ABOUT_MAX: usize = 4096;
 /// The probes that may wait for the one slot they are answered in.
 const PROBES: usize = 4;
 
-/// How busy the audio thread is (queue item 87b, `js/worklet.js`'s
+/// How busy the audio thread is (`js/worklet.js`'s
 /// `BUSY_WINDOW`): the render's time over each quarter-second of audio, as a
 /// share of it.
 const BUSY_WINDOW: f64 = 0.25;
@@ -114,17 +114,17 @@ pub enum Command {
     Wander(f64),
     /// The seed the core's own loops are drawn from (`Player::set_draws`).
     Draws(u32),
-    /// A test's slower phone (the page's `?burn=`, as the worklet's: queue
-    /// item 87b): this many microseconds of the audio thread's time added
+    /// A test's slower phone (the page's `?burn=`, as the worklet's): this
+    /// many microseconds of the audio thread's time added
     /// to every 128 frames, so the Lite rule can be measured on the native
-    /// stream (session 30g, step 6). 0 for none, as every listener's.
+    /// stream (step 6). 0 for none, as every listener's.
     Burn(u32),
     /// Forget the busiest callback so far, the watch's figures and the
     /// time played with the screen off (the debug screen's reset, and
     /// Diagnostics' "reset counters").
     ResetBusiest,
 
-    // The page's (session 27): js/worklet.js's messages, one each, in its
+    // The page's: js/worklet.js's messages, one each, in its
     // order there.
     /// A player for a page (the worklet's constructor): the core's mix built
     /// afresh at `full` or lite's, rendering `layout` lanes, and the player
@@ -232,7 +232,7 @@ pub struct ProbeAnswer {
     pub position: Position,
     pub track_end: f64,
     /// A time's track: the second it ends on, on the core's clock, or -1
-    /// (session 30c; the worklet's `trackAt`).
+    /// (the worklet's `trackAt`).
     pub track_at: f64,
     pub next_change: f64,
     pub lost: u32,
@@ -394,7 +394,7 @@ pub struct Counts {
     pub out_lost: AtomicU32,
     /// Frames rendered while the screen was off (`SCREEN_OFF`), since the
     /// start or "reset counters": the screen off is where Mikey's phone
-    /// crackled (session 30g, queue item 115), and Diagnostics says how long
+    /// crackled, and Diagnostics says how long
     /// a listen was there.
     pub off_frames: AtomicU64,
 }
@@ -1373,7 +1373,7 @@ mod tests {
         assert!(engine.send(&Command::Draws(20_261_117)));
         assert!(engine.send(&Command::Volume(0.8)));
         assert!(engine.send(&Command::Load { seed: 2_693_262_067, request }));
-        // The page's commands too (session 27): a probe, a ping, the track
+        // The page's commands too: a probe, a ping, the track
         // with the loop armed for its end, the picks, a jump, the controls.
         let arm = super::ArmEnd::Set(super::Arm { seed: 99, request, fade: 1.0, track: Some((dlcore::player::Track::Bars(8), dlcore::player::Fades::NONE)) });
         let page = vec![
@@ -1441,8 +1441,8 @@ mod tests {
         assert_eq!(w[at::WORST_AT + 4].to_bits(), f64::from(super::did::INIT | super::did::LOAD | super::did::MAKING).to_bits(), "what it did");
     }
 
-    /// The loop Mikey's phone crackled on with the screen off (session 30g,
-    /// queue item 115), as its code says it.
+    /// The loop Mikey's phone crackled on with the screen off,
+    /// as its code says it.
     fn e9t() -> dlcore::code::Loop {
         dlcore::code::read_loop(b"E9T-ZxDxj").expect("a loop's code")
     }
@@ -1501,7 +1501,7 @@ mod tests {
         all
     }
 
-    /// Promise 1 on the audio thread (`docs/CORE.md`; session 30g, step 3):
+    /// Promise 1 on the audio thread (`docs/CORE.md`; step 3):
     /// no command makes a callback do much more than render. Every command,
     /// taken by a callback of the app's stream (1,024 frames, 21.3 ms at 48
     /// kHz) on E9T-ZxDxj playing, against an engine that played the same
@@ -1580,7 +1580,7 @@ mod tests {
         assert!(over.is_empty(), "past {:.0}% of a mean callback: {over:?}", LINE * 100.0);
     }
 
-    /// Session 30g: the time played with the screen off counts the frames
+    /// The time played with the screen off counts the frames
     /// rendered while the app says it is off, and "reset counters"
     /// (`ResetBusiest`) forgets it with the watch's figures.
     #[test]

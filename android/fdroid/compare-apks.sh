@@ -1,12 +1,12 @@
 #!/bin/sh
-# The reproducibility check (queue item 107e; docs/notes/107-reproducible.md):
+# The reproducibility check (docs/notes/107-reproducible.md):
 # the same commit's release APKs, built on two machines (a/ and b/, the
 # release job's), must be the same bytes, and so must F-Droid's build of it
 # (f/, the build job's). What differs, if anything, is printed entry by entry
 # and with diffoscope, and written to the job's summary. Exits 1 when a and b
 # differ; F-Droid's build differing from a is reported and fails too (the
 # signature copying F-Droid verifies a signed APK with needs it identical).
-# No F-Droid build in f/ fails too (session 30: it used to pass, "the same
+# No F-Droid build in f/ fails too (it used to pass, "the same
 # bytes" having compared machines a and b alone); `--no-fdroid` says a run
 # is meant to compare a and b only.
 #

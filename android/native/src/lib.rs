@@ -1,4 +1,4 @@
-//! Ballad Falls' core on Android's own audio (queue item 107b): the library
+//! Ballad Falls' core on Android's own audio: the library
 //! the app loads (`libdriftloom.so`), one for each ABI, built from the same
 //! source as the web's module (`core/`, a path dependency: the core stays
 //! `no_std` with no dependencies, and everything Android needs is here).
@@ -7,17 +7,17 @@
 //!   commands come by, and the audio thread's `fill`.
 //! - `aaudio`: the `AAudio` stream that calls `fill` (Android only; elsewhere
 //!   a stand-in says there is no device, so the tests run on any machine).
-//! - `bridge`: the page's side (session 27): the worklet's messages from
+//! - `bridge`: the page's side: the worklet's messages from
 //!   `js/core.js` as the engine's commands, and the engine's reports back
 //!   as the worklet's messages, with `json`, the little reader they need.
-//! - `watch`: what a phone can say about a crackle (session 30g).
+//! - `watch`: what a phone can say about a crackle.
 //! - `jni`: the five JVM calls the bridge below makes.
 //!
 //! The bridge is `app.loops.NativeCore` (Kotlin), a function each:
 //! start and stop the stream, load a seed with a request, play, pause,
 //! next, volume, the counts, and an offline render through the same path
-//! that the tests hold to the web's hash (session 26's, for the debug
-//! screen and the tests); and the page's three (session 27): `send` a
+//! that the tests hold to the web's hash (for the debug
+//! screen and the tests); and the page's three: `send` a
 //! message from the page, `drain` what is due back to it, and `pageGone`
 //! when it goes.
 
@@ -346,7 +346,7 @@ pub unsafe extern "system" fn Java_app_loops_NativeCore_renderLine(env: Env, _cl
     unsafe { jni::new_string(env, &out) }
 }
 
-/// The page's side of the bridge (session 27): its refusals and what waits
+/// The page's side of the bridge: its refusals and what waits
 /// to be posted to it. Only the app's bridge thread calls in, one call at a
 /// time; the mutex is never the audio thread's.
 static BRIDGE: Mutex<Bridge> = Mutex::new(Bridge::new());
@@ -409,7 +409,7 @@ pub unsafe extern "system" fn Java_app_loops_NativeCore_send(env: Env, _class: O
         Ok(m) => {
             let mut b = BRIDGE.lock().unwrap_or_else(PoisonError::into_inner);
             if m.get("type").str() == Some("resetCounts") {
-                // Diagnostics' "reset counters" (session 30g): the engine's
+                // Diagnostics' "reset counters": the engine's
                 // figures by its command, the stream's here.
                 if let Some(e) = output::engine() {
                     e.send(&Command::ResetBusiest);

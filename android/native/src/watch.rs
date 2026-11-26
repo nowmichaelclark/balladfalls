@@ -1,4 +1,4 @@
-//! What a phone can say about a crackle (session 30g, queue item 115).
+//! What a phone can say about a crackle.
 //! AAudio's own underrun count read 0 through crackles Mikey heard, so it
 //! isn't the only one kept:
 //!

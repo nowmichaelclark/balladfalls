@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- The launcher's label, and the album on the lock screen: the app's
-         name, as android/gradle.properties's driftloom.appName (session 31a). -->
+         name, as android/gradle.properties's driftloom.appName. -->
     <string name="app_name">Ballad Falls</string>
 
-    <!-- The notification and the lock screen's controls (session 28). -->
+    <!-- The notification and the lock screen's controls. -->
     <string name="channel_playback">Playback</string>
     <string name="play">Play</string>
     <string name="pause">Pause</string>

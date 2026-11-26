@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Renders F-Droid's build recipe (recipe.yml.in) for the checkout it is run in
-// (queue item 107e). The id, the name and the version come from
+//. The id, the name and the version come from
 // android/gradle.properties (one value each; the id is the release's);
 // the commit and the repository's address from git.
 //

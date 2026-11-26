@@ -12,6 +12,6 @@ with it). One shared test key lets each build update the last.
 
 What it is not: a secret, or a thing to trust. Anyone can sign an APK with it.
 It signs test builds only. The release is signed by a different key (F-Droid's,
-or Mikey's: session 29 and `docs/notes/for-mikey.md`), which is never in the
+or Mikey's: `docs/notes/for-mikey.md`), which is never in the
 tree. To go back to a per-machine key, delete this folder's `.base64` and the
 `signingConfigs` block.

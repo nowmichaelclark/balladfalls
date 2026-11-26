@@ -8,7 +8,7 @@
 #   android/emulator-smoke.sh path/to/app-debug.apk [screenshot.png]
 #
 # The emulator is emulator-lib.sh's, with its audio into the host's sound
-# server (CI's is a null sink): since session 27 the page plays on the core's
+# server (CI's is a null sink): the page plays on the core's
 # native stream, which needs a device to play to.
 
 set -eu

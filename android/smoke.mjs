@@ -1,4 +1,4 @@
-// The Android app's smoke test (queue item 107a; since session 27, 107c, on
+// The Android app's smoke test (on
 // the native core): the installed app starts, its page loads, Play is
 // pressed, and the page's Diagnostics shows the core's player playing
 // natively, with no error; the page's main thread is then blocked for five
@@ -60,7 +60,7 @@ try {
 
   // A fixed busy loop, pasted (a paste plays): the opening loop is drawn at
   // random, and a quiet one gave the blocked-page check less sound than the
-  // time it waited (2 of 106 loops on main's own core, session 30).
+  // time it waited (2 of 106 loops on main's own core).
   const code = LOOPS.shatter.code;
   await ev(`(() => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText: async () => ${JSON.stringify(code)}, writeText: async () => {} } });
@@ -91,7 +91,7 @@ try {
   const shown = LOOPS.shatter.name.replace(/^[a-z]+-/, '');
   check('the pasted busy loop is the one playing', named === shown, `${named} for ${shown}`);
   if (!CDP && native) {
-    // Android's font size is the page's root size (session 30f), changed under the running app.
+    // Android's font size is the page's root size, changed under the running app.
     const scale = (v) => execFileSync('adb', ['shell', 'settings', 'put', 'system', 'font_scale', String(v)]);
     scale(1.5);
     let root = '';

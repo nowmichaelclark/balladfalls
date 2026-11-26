@@ -9,7 +9,7 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 
 /**
- * The page talks to the native core (session 27, queue item 107c). The page's
+ * The page talks to the native core. The page's
  * player (js/core.js's CoreHost) posts the worklet's messages to an object the
  * WebView puts in the page, `DriftloomNative` (js/native.js), and hears the
  * worklet's messages back from it: here they go to the core's bridge
@@ -42,7 +42,7 @@ class PageBridge(private val view: WebView) {
             if (!isMainFrame) return@addWebMessageListener
             proxy = reply
             val text = message.data ?: return@addWebMessageListener
-            // Anything sent to the core while paused finds the stream there to take it (session 28).
+            // Anything sent to the core while paused finds the stream there to take it.
             StreamKeeper.touched()
             bridge.post { NativeCore.send(text)?.let { post(it) } }
         }

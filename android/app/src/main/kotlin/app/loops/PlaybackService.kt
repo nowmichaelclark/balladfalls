@@ -29,7 +29,7 @@ import android.util.Log
 
 /**
  * The foreground service that lets the music play on with the screen off and
- * the app in the background (session 28, queue item 107d). The core plays on
+ * the app in the background. The core plays on
  * its own thread, natively, and needs nothing from the page to go on
  * (docs/CORE.md, promise 1); this holds what Android asks of an app that
  * plays in the background, and only while it plays:
@@ -57,7 +57,7 @@ import android.util.Log
  * Paused, it is a service in the background, which Android stops about a
  * minute after the app left the screen; and with it went the session, so the
  * lock screen's or a headset's Play, after a longer pause, reached nothing
- * (session 30g, step 7: the screen-off job found it). The service binds to
+ * (step 7: the screen-off job found it). The service binds to
  * itself ([keep]) so it stays until it ends itself ([shutdown]): Android
  * stops a started service it has idled only when nothing is bound to it.
  */
@@ -157,7 +157,7 @@ class PlaybackService : Service() {
         }
         main.postDelayed(heartbeat, HEARTBEAT_MS)
         kept = bindService(Intent(this, PlaybackService::class.java), keep, Context.BIND_AUTO_CREATE)
-        // The screen's state, for the time played with it off (session 30g, Diagnostics): as it is now, then as
+        // The screen's state, for the time played with it off (Diagnostics): as it is now, then as
         // Android says it changes.
         NativeCore.screen(power.isInteractive)
         registerReceiver(screen, IntentFilter().apply {

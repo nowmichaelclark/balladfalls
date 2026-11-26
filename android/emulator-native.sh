@@ -1,5 +1,5 @@
 #!/bin/sh
-# The core, native, on a headless emulator (session 26, queue item 107b):
+# The core, native, on a headless emulator:
 # installs the app and its instrumented tests and runs them
 # (app/src/androidTest/kotlin/app/loops/NativeCoreTest.kt): the golden loop's
 # samples (and the web's line, if given) rendered through the JNI, a device

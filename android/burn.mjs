@@ -1,5 +1,5 @@
-// The "lighter on processor" rule on the Android app's native core (session
-// 30g, step 6), measured on an emulator: a slower phone made with `?burn=`
+// The "lighter on processor" rule on the Android app's native core
+// (step 6), measured on an emulator: a slower phone made with `?burn=`
 // (microseconds of work added to every 128 frames the core renders, on the
 // audio thread, android/native/src/engine.rs's `burn`), swept from none to
 // more than the audio's own time. At each burn it reads, with "lighter on

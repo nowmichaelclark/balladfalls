@@ -12,7 +12,7 @@
 //!
 //! The stream: output, 32-bit float, stereo, the device's own rate (the
 //! core renders at whatever rate it is given), shared with other apps, and
-//! since session 30g (queue item 115) a music player's path: the
+//! a music player's path: the
 //! power-saving performance mode (Android's deep buffer: a mixer that wakes
 //! less often, with a far larger buffer) in callbacks of `CALLBACK_FRAMES`.
 //! It is what Chrome opens for the page's `latencyHint: 'playback'`
@@ -441,7 +441,7 @@ pub struct Stream {
     pub policy: i32,
     pub priority: i32,
     /// How long a frame written now takes to reach the speaker, in seconds,
-    /// as the stream measures it (session 30b, `latency_of`): 0 where it
+    /// as the stream measures it (`latency_of`): 0 where it
     /// can't say yet (the stream just started).
     pub latency: f64,
     /// Times the playhead fell behind the clock since the engine started,
@@ -518,7 +518,7 @@ struct Timing {
     latency: f64,
 }
 
-/// The open stream's timing now (session 30b, queue item 110): its latency
+/// The open stream's timing now: its latency
 /// to the speaker is the frames written to it less the frame the speaker
 /// plays now (its last timestamp, carried on to now on the same clock), at
 /// `rate`. None where the stream has no timestamp yet (the layers' playhead

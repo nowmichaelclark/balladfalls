@@ -14,8 +14,8 @@ import java.nio.ByteBuffer
 
 /**
  * A file the listener chose through Android's own picker (the Storage Access
- * Framework's ACTION_CREATE_DOCUMENT), written as it is made (session 28,
- * queue item 107d): the page's export sends its bytes a megabyte at a time
+ * Framework's ACTION_CREATE_DOCUMENT), written as it is made: the
+ * page's export sends its bytes a megabyte at a time
  * (js/export-worker.js's relay sink) and each goes straight to the file, so
  * memory stays the same for a minute or three hours and the file never exists
  * twice on the disk. The place may be anywhere a document provider offers:
@@ -65,7 +65,7 @@ class SaveFile(private val resolver: ContentResolver, val uri: Uri, val mime: St
 
     /**
      * Bytes written again at [at] (FLAC's header at 0, once the length and the checksum are known; an album's zip
-     * writes its tracks' headers again at their places, item 121). The file's own position stays at its end.
+     * writes its tracks' headers again at their places). The file's own position stays at its end.
      */
     fun header(data: ByteArray, at: Long = 0) {
         out.channel.write(ByteBuffer.wrap(data), at)
@@ -89,7 +89,7 @@ class SaveFile(private val resolver: ContentResolver, val uri: Uri, val mime: St
     companion object {
         /**
          * A new file named [name] in the folder [tree] the listener chose (Android's own folder picker, an album
-         * exported a file a track, item 121); the provider may change the name (`name (1)` where one is there).
+         * exported as one file for each track); the provider may change the name (`name (1)` where one is there).
          */
         fun createIn(resolver: ContentResolver, tree: Uri, name: String, mime: String): Uri {
             val folder = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))

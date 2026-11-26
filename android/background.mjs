@@ -1,4 +1,4 @@
-// The Android app with the screen off (session 28, queue item 107d), on an
+// The Android app with the screen off, on an
 // emulator: the music plays on in the background, the notification and the
 // lock screen's controls work, a call pauses it and gives it back, nothing
 // runs when it is paused, and an export finishes with the screen off, into a
@@ -9,11 +9,11 @@
 //
 //   node android/background.mjs [--minutes 10] [--paused 120] [--no-export] [--summary FILE] [--shots DIR]
 //
-// An album (item 121): pasted, played, and exported whole, as one zip
+// An album: pasted, played, and exported whole, as one zip
 // through the same picker and as a file a track into a folder chosen in
 // Android's own folder picker; each file found where it went.
 //
-// --shots (session 30f): the notification shade and the lock screen as they
+// --shots: the notification shade and the lock screen as they
 // are on the glass while it plays, and the loop's cover beside them
 // (cover-*.png), to see that the art is that cover.
 //
@@ -40,7 +40,7 @@ const EXPORT = !argv.includes('--no-export');
 const SUMMARY = opt('--summary', '');
 const SHOTS = opt('--shots', '');
 // How long the lock screen's Play waits, paused with the screen off: two
-// minutes (session 30g, step 7).
+// minutes (step 7).
 const PAUSED_MS = Number(opt('--paused', '120')) * 1000;
 const pkg = appId();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -113,7 +113,7 @@ const heartbeats = () => logcat('DriftloomService').filter((l) => l.includes('he
   dropped: Number((/dropped=(\d+)/.exec(l) || [])[1]),
   frames: Number((/frames=(\d+)/.exec(l) || [])[1]),
   rate: Number((/rate=(\d+)/.exec(l) || [])[1]),
-  // Session 30g's counts (android/native/src/watch.rs): callbacks over
+  // The stream's counts (android/native/src/watch.rs): callbacks over
   // their deadline, times the speaker's playhead fell behind the clock, and
   // the seconds played with the screen off.
   over: Number((/ over=(\d+)/.exec(l) || [])[1]),
@@ -180,7 +180,7 @@ async function pickerSave() {
   return false;
 }
 
-// The system's folder picker (an album a file a track, item 121): into a
+// The system's folder picker (an album a file a track): into a
 // folder it lets an app use (not the storage's root, not Downloads), then
 // "Use this folder" and Allow.
 async function pickerFolder() {
@@ -287,7 +287,7 @@ try {
   sh('pm', 'grant', pkg, 'android.permission.POST_NOTIFICATIONS');
   sh('logcat', '-c');
 
-  // One minute for the track (the Track length view, session 30c), so the
+  // One minute for the track (the Track length view), so the
   // core hands the music from loop to loop by itself while the page is
   // hidden.
   await ev(() => {
@@ -406,7 +406,7 @@ try {
   if (!check('Pause pauses the page', !(await playingNow()))) evidence('Pause');
   await waitFor('the session to say paused', () => sessionState() === 2, 15000).catch(() => null);
   check('the session says paused', sessionState() === 2, `state ${sessionState()}`);
-  // Two minutes paused with the screen off (session 30g, step 7): past the
+  // Two minutes paused with the screen off (step 7): past the
   // minute after which the system freezes a hidden page's timers, so the
   // lock screen's Play below is pressed on a frozen page, as a listener's
   // after a long pause is.
@@ -472,7 +472,7 @@ try {
   if (EXPORT) {
     log('\n-- an export into a file chosen in Android\'s picker, finishing with the screen off --');
     const exportOne = async (format, length) => {
-      // The export is as long as the track (session 30c): set in the Track
+      // The export is as long as the track: set in the Track
       // length view, to the second, as a listener sets it.
       await ev((t) => {
         document.getElementById('vibesBtn').click();
@@ -580,7 +580,7 @@ try {
     await exportOne('lossless', 1800);
     await exportOne('small', 600);
 
-    // An album exported whole (item 121): three tracks of 20 s, pasted and
+    // An album exported whole: three tracks of 20 s, pasted and
     // playing; one zip of FLACs through the picker, then a file a track
     // into a folder from the folder picker.
     const title = 'Moto Album';

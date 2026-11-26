@@ -19,14 +19,14 @@ import android.widget.TextView
 import kotlin.random.Random
 
 /**
- * The native audio test (session 26; debug builds only, its own launcher
+ * The native audio test (debug builds only, its own launcher
  * icon): the core played by the app's own library on an AAudio stream, no
  * page involved. "Play the test" starts the stream, loads the golden loop
  * and plays it; the two numbers to send back are at the top (underruns, and
  * the busiest callback as a share of its deadline). "Check the samples"
  * renders the golden loop offline through the same path and says whether its
  * hash is the web's. Plain views, no layout files: it goes when the page
- * plays the core itself (session 27).
+ * plays the core itself.
  */
 class NativeTestActivity : Activity() {
 

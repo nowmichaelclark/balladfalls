@@ -25,6 +25,7 @@ rules and the merge policy, then take the first ready line.
 |---|---|---|---|---|
 | K1 | The app keeps a code's version (known issue "The app drops a code's version") | Fix | not yet written | **first** after 1.0, before any new sound |
 | 107 | `APP_LINK` to the F-Droid listing | Build | any, low | waiting on F-Droid's review |
+| H1 | The history starts fresh at 1.0 | Hygiene | Opus 5.5, high | after F-Droid lists 1.0 (and 107's `APP_LINK`) |
 | 75 | The reverb, rate-true for steady tones | Build | Opus 5.5, high | ready, low priority |
 | 37 | Word albums on `/rank` | Build | not yet written | on hold |
 
@@ -158,7 +159,7 @@ same app as d723b80). Reviewers answer there, usually within a few weeks; a
 change they ask of the recipe is a docs-and-recipe PR here and a new commit in
 the merge request. Once it merges and the listing is up, `APP_LINK` in
 `js/main.js` points at <https://f-droid.org/packages/com.balladfalls.app/>
-(item 100's link), with `BUILD` and `CACHE`.
+(item 100's link), with `BUILD` and `CACHE`. Item H1 comes after it.
 
 **Also noted, not queued:**
 
@@ -170,6 +171,35 @@ the merge request. Once it merges and the listing is up, `APP_LINK` in
   charter's handhelds and consoles), an item trims the generator's frames
   with a measured aim; for Broken Friends' web build, the header's line is
   enough.
+
+## H1. The history starts fresh at 1.0 (after F-Droid lists 1.0)
+
+**Hands:** Opus 5.5, high, a Hygiene session. Mikey, 2026-11-26: rewrite the
+history, as "Fresh start, after F-Droid lists it". A full clone is 79 MB
+today; one commit of today's tree is about 10 MB (both measured
+2026-11-26). The history before 1.0 stays in the archived driftloom
+repository.
+
+**Wait for:** the listing at <https://f-droid.org/packages/com.balladfalls.app/>
+shows 1.0, and item 107's `APP_LINK` is merged. F-Droid's recipe for 1.0
+names commit 8b9750c, which this item removes from `main`.
+
+1. Make a git bundle of the whole history (`git bundle create --all`).
+   Attach it to the `v1.0` release, so every commit stays readable.
+2. Make the new history: a root commit with `v1.0`'s tree (d723b80), and
+   each change since 1.0 played again on it, one commit a PR.
+3. Check that the new `main`'s tree is the same as the old one's
+   (`git diff` is empty), and that `tools/build-core.sh --check` passes.
+4. Ask Mikey to allow the force-push to `main` if a rule blocks it. Then
+   push `main` and move the `v1.0` tag to the new root. The tree does not
+   change, so the site deploys the same files.
+5. Point `docs/archived.txt` and the queue's old-commit pointers (72b13f0,
+   f040b5b) at the bundle, and give F-Droid's recipe the new commit for
+   its next version. Say in `docs/notes/for-mikey.md` if his GitLab fork
+   needs a change.
+
+**Checks:** a fresh `git clone` is under 15 MB; every gate part is green on
+the new `main`; the `v1.0` release still has its APK and the bundle.
 
 ## 37. Word albums on `/rank`: one word, "does it fit?"
 

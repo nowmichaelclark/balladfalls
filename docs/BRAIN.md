@@ -404,11 +404,12 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   Mikey asked (2026-11-07) whether the ears must finish by a phase: no; Ears
   12-13 by the end of phase 3, for the batch after it; piles 7-18 have no
   deadline (phase 5's block catalogue, long-form composing, phase 8).
-- **Broken Friends:** `docs/notes/82-for-broken-friends.md` is for the game's
-  next session (repin the core from f654fdb, the calls, the hashes to
-  refresh). It stays in `docs/notes/` until the game's session has used it;
-  nothing for the brain to answer. As of 2026-11-01 the game still pins
-  f654fdb, and Mikey is not concerned (the game is early; it updates later).
+- **Broken Friends:** the game restarted in 3D in November 2026, and its
+  2D version's core extension is in its `archive/2d/`. The note for a game
+  that hosts the core (`docs/notes/82-for-broken-friends.md`: the calls, the
+  hashes) left the tree after 1.0 (`docs/archived.txt`); the wiki's
+  "Ballad Falls/In Broken Friends" explains the same calls. Nothing for the
+  brain to answer until the game brings the core back.
 - **Vibe edits since item 82** move the generation goldens and
   `js/dlplayer.wasm` too: `docs/VIBES.md`, "How to edit a vibe". This
   container runs Node, the pinned Rust (`rustup` installs it from

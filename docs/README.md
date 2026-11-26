@@ -34,7 +34,7 @@ parts work go to the Workshop Wiki's Ballad Falls pages
 | `docs/CORE.md` | The core's charter: ten promises, each with its measure, and the phases. | brain, hands (core) |
 | `docs/LONGFORM.md` | Long pieces (item 102): the design that stands, the piece map and how to read one, and the pieces to hear. | hands (sessions 12 to 16), brain |
 | `docs/PAINTER.md`, `design/` | What there is to paint; the design spec and the picks' brief. | Painter |
-| `docs/EARS.md`, `docs/ears/`, `tools/ears/` | What the ears sessions found and the yardsticks; their plan, reports, album cards and tools. `docs/ears/README.md` indexes the folder. | ears, brain |
+| `docs/EARS.md`, `docs/ears/`, `tools/ears/` | What the ears sessions found and the yardsticks; their plan, guide, data and tools (the reports and cards left the tree after 1.0: `docs/archived.txt`). `docs/ears/README.md` indexes the folder. | ears, brain |
 | `docs/MOODS.md`, `docs/VIBES.md` | The mood words, and the vibe recipes (the source is `data/vibes.txt`; `docs/VIBES.md` says how to edit one). | brain |
 | `android/` | The Android app (queue item 107): the project, its CI build and smoke test, and `android/README.md` (what is in it, how to build, the ids and the name, releases and their signing, F-Droid). | hands |
 | `data/` | The generation data as plain text, read by the core's generator (compiled in) and by the page for its labels and ranges: profiles, vibes, moods, the voice table and the choice tables. The format is in `js/data.js`'s header. | hands, brain (vibes) |

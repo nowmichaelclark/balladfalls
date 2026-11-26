@@ -4,6 +4,7 @@
 #
 # - Read it as it was at commit 72b13f0, the last commit before the slim:
 #   https://github.com/nowmichaelclark/balladfalls/tree/72b13f0/<path>
+#   (the paths of part 2, below, are there too)
 # - Everything before 1.0 is also in the archived driftloom repository:
 #   https://github.com/nowmichaelclark/driftloom
 #
@@ -25,3 +26,35 @@ docs/notes/102-b3-measured.md
 docs/notes/102c-arc-brightness.md
 docs/notes/102d-arc-brightness.md
 docs/notes/98-testers.md
+
+# Part 2 of the slim (the ears' material; its findings are on the wiki's
+# Ballad Falls/What the ears found page, and the game's note on its
+# Ballad Falls/In Broken Friends page).
+docs/ears/raw/
+docs/ears/batch-1.md
+docs/ears/batch-2.md
+docs/ears/batch-3.md
+docs/ears/batch-4.md
+docs/ears/batch-5.md
+docs/ears/batch-6.md
+docs/ears/cards-pile-1.md
+docs/ears/cards-pile-2.md
+docs/ears/cards-pile-3.md
+docs/ears/cards-pile-4.md
+docs/ears/cards-pile-5.md
+docs/ears/cards-pile-6.md
+docs/ears/cards-test.md
+docs/ears/prompt-ears-7.md
+docs/ears/prompt-ears-8.md
+docs/ears/prompt-ears-9.md
+docs/ears/prompt-ears-10.md
+docs/ears/prompt-ears-11.md
+docs/ears/prompt-ears-12.md
+docs/ears/prompt-ears-12b.md
+docs/ears/prompt-ears-13.md
+docs/ears/prompt-ears-13b.md
+docs/ears/prototypes.md
+docs/ears/space-sketch.md
+docs/ears/tools.md
+docs/ears/uploads.md
+docs/notes/82-for-broken-friends.md

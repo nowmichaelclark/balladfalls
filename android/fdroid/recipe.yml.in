@@ -32,10 +32,11 @@ Builds:
     # F-Droid builds everything from source and refuses what is prebuilt in the
     # tree: the committed js/dlplayer.wasm is deleted before its scan and built
     # again from core/ by tools/build-core.sh (which proves the committed file
-    # is its source on every PR: the same bytes); the research archives and a
-    # package.json without a lock file, which the app does not use, are deleted
-    # too. The native core (android/native, built by Gradle's buildNative task
-    # with the NDK below) is Rust as well: rustup's own script, from its source
+    # is its source on every PR: the same bytes); a package.json without a lock
+    # file, which the app does not use, is deleted too (the research archives,
+    # docs/ears/raw, left the repository after 1.0). The native core
+    # (android/native, built by Gradle's buildNative task with the NDK below)
+    # is Rust as well: rustup's own script, from its source
     # at a pinned release (the srclib), installs the compiler the repository
     # pins (core/rust-toolchain.toml and android/native/rust-toolchain.toml say
     # the same) with the targets of the web's module and Android's three. No
@@ -43,7 +44,6 @@ Builds:
     srclibs:
       - rustup@1.28.2
     scandelete:
-      - docs/ears/raw
       - design/test-kit/package.json
       - js/dlplayer.wasm
     build:

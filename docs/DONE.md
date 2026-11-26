@@ -767,3 +767,8 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   AMOLED), by `android/screenshots.mjs` on CI's emulator. The F-Droid recipe
   names this merge for 1.0, since F-Droid reads the listing from the commit it
   builds. Nothing to hear.
+- balladfalls #8, the docs after 1.0 (Mikey, 2026-11-26; docs only): the
+  queue, the brain's Start here, for-mikey, the sessions' table, the README
+  and the changelog say 1.0 is out, the old address forwards, driftloom is
+  archived and F-Droid's review (!59136) is open; what was done is archived.
+  Nothing to hear.

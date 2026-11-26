@@ -15,6 +15,20 @@ F-Droid's review (under Accounts) and then one line of code once the listing is
 up; everything else is a check that closes with your phone or your ears, and a
 revert follows if you find trouble.
 
+**At a glance** (as Broken Friends' play rows: one row for each sitting; the
+sections below hold the steps):
+
+| Sitting | Needs | How long | Waits on it |
+|---|---|---|---|
+| F-Droid's review | your GitLab account | when they answer | item 107's `APP_LINK` |
+| On your Moto, steps 1 to 14 | the Moto | a few minutes each | nothing |
+| On your tablet and in your browsers | the tablet, a friend's Pixel, Discord | a few minutes each | nothing |
+| On a computer | DuckDuckGo or Chrome, a keyboard | five minutes | nothing |
+| For your eyes | any device | a few minutes each | nothing |
+| For your ears | headphones | when you like | nothing |
+| Small calls | a few words | a minute each | nothing |
+| The old address | the phone with the old app | once | nothing |
+
 ## Accounts
 
 - **Your release key:** keep `release.jks` and its password safe for good

@@ -5,6 +5,95 @@ something without Mikey. Each tool's own header says how to run it and
 what it checks. `AGENTS.md`, "Build and test", names the ones that CI and
 the gate run.
 
+## The tools
+Each tool's header says more. "Limits" says what the tool cannot do, or what it needs.
+
+### The gate and the docs
+
+| Use it to | Run | Limits |
+|---|---|---|
+| Run what CI holds a merge to | `tools/gate.sh [core|sketch|node|baseline|docs]` | about 35 minutes locally for all; CI runs it in about ten. Never two heavy runs at once (about 7 GB) |
+| Check the docs' sizes, the queue's status lines and every pointer into `docs/` and `design/` | `node tools/check-docs.mjs [--list]` | checks only pointers that start with `docs/` or `design/`, not relative links |
+| See what the workflow costs a session, week by week | `python3 tools/workflow-cost.py [--weeks N]` | reads git history only; the read-before-work count is today's files |
+
+### The core and its builds
+
+| Use it to | Run | Limits |
+|---|---|---|
+| Build the core to `js/dlplayer.wasm`, or prove it matches the source | `tools/build-core.sh [--check|--tools]` | a line added above shipped code can change the bytes (`core/AGENTS.md`) |
+| Hold the core's sound to the stored baseline | `node tools/baseline.mjs [--update]` | 40 loops; a change meant to move the sound runs `--update` and says what moved |
+| Check the golden renders on one target | `tools/golden.sh --strict <target>`, `node tools/golden-wasm.mjs` | six targets; each needs its toolchain |
+| Check the generator against the generation goldens | `node tools/gen-golden.mjs [--check]`, `tools/gen-core.sh` | needs `tools/build-core.sh --tools` first |
+| Render loops from their seeds on one target | `tools/seeds.sh`, `node tools/player-wasm.mjs` | the corpus's first 80 loops |
+| Play the core at other sample rates | `node tools/rates.mjs` | promise 4 only |
+
+### What is generated
+
+| Use it to | Run | Limits |
+|---|---|---|
+| Read everything the generator decides, in Node | `tools/gen-lib.mjs` (a library) | needs `tools/build-core.sh --tools` first |
+| Hold the corpus's balance | `node tools/stats.mjs [--check] [--n 10000]` | needs `tools/build-core.sh --tools` first |
+| See what a loop with nothing picked draws, and what never comes | `node tools/unasked.mjs [--check]` | needs `tools/build-core.sh --tools` first |
+| Measure the ten dials, and fit the words to them | `node tools/dials.mjs`, `node tools/fit.mjs`, `node tools/fitreport.mjs` | needs `tools/build-core.sh --tools` first (dials) |
+| Check the chords' octave | `node tools/octave.mjs` | needs `tools/build-core.sh --tools` first |
+| Make and read share codes from the command line | `node tools/codes.mjs`, `node tools/name-table.mjs` | round-trip a code before you give it to anyone |
+| Sum up the word-ranking answers, and build a word album | `node tools/ranks.mjs`, `node tools/wordalbum.mjs` | reads exports from `/rank` |
+
+### The sound, measured
+
+| Use it to | Run | Limits |
+|---|---|---|
+| Measure loudness, a voice, refusals and endings on the player | `node tools/measure.mjs` (`--voice`, `--profile <id>`) | the player in Node, not a browser |
+| Hold each voice's loudness over a note's life | `node tools/voice-loudness.mjs [--check]` | a new voice needs its line in `[longform loudness]` |
+| Compare what the layers draw with what each layer sounds | `node tools/heard.mjs` | note by note |
+| Make listening clips with a sketch's levers | `node tools/clips.mjs` | clips are for Mikey's ears; the tool does not judge them |
+| Check the FLAC writer and the Ogg files | `node tools/flac.mjs`, `tools/ogg-read.mjs` (a library) | – |
+| Measure track length's fades and ends | `node tools/track-fades.mjs` | on renders, not the live app |
+
+### Long pieces
+
+| Use it to | Run | Limits |
+|---|---|---|
+| Play the corpus's long pieces and check what is played | `node tools/longform.mjs [--arcs 10] [--plan] [--shard]` | about an hour with its arcs; read the full run from CI, never locally |
+| Measure the themes as they are played | `node tools/longform-themes.mjs` | about eight minutes |
+| Read the wander as it is played | `node tools/longform-played.mjs` | needs `tools/build-core.sh --tools` first |
+| Find holes at the joins, wide | `node tools/longform-holes.mjs [--endless 20 --long 4]` | about 90 minutes on four cores (the nightly's `holes` job) |
+| Make the long pieces' listening set again | `node tools/longform-clips.mjs [--before <dlrender>]` | needs `tools/build-core.sh --tools` first |
+
+### The app, in a browser
+
+| Use it to | Run | Limits |
+|---|---|---|
+| Check every app control on the player | `node tools/rows.mjs [--long] [--app]` | about a minute, from a fixed first loop |
+| Measure the live app's speed, rendering ahead and the lite rule | `node tools/perf.mjs`, `node tools/ahead.mjs`, `node tools/autolite.mjs` | Chromium (Playwright); a container's timings are not a phone's |
+| Find glitches and stalls with the screen on or hidden | `node tools/views.mjs`, `node tools/stalls.mjs [--loops arc,arcs]` | Chromium (Playwright); a container's timings are not a phone's |
+| Measure how soon the core is ready | `node tools/core-start.mjs` | Chromium (Playwright); a container's timings are not a phone's |
+| Measure the info card in every view | `node tools/card.mjs` | Chromium (Playwright) |
+| Check accessibility and every control's name | `node tools/a11y.mjs`, `node tools/names.mjs` | Chromium (Playwright); takes minutes; not the gate |
+| Check the audio export, short and long | `node tools/export.mjs`, `node tools/export-long.mjs` | the long one is export's `long` job; it holds no merge |
+| Check the move from the old address | `node tools/old-address.mjs` | Chromium (Playwright) |
+
+### Files the app ships
+
+| Use it to | Run | Limits |
+|---|---|---|
+| Make every icon from `icons/icon.svg` | `node tools/icons.mjs [--check]` | ImageMagick 7 with librsvg |
+| Make the media session's keepalive audio | `python3 -P tools/keepalive.py [OUT_DIR]` | numpy and soundfile |
+
+## Rules
+
+- Look here first, before you check a thing by hand.
+- If you do a check the second time, make it a tool, and add its row here.
+- If a tool was wrong or weak, write that in its "Limits" cell. Fix it if
+  the fix is small.
+- If you want a tool that does not exist, write it under "Wishes".
+
+## Wishes
+
+- A tool that lists the libraries in `tools/` (`gen-lib.mjs`,
+  `play-lib.mjs`, `meter.mjs`, `golden-lib.mjs`, `gen-golden-lib.mjs`,
+  `ogg-read.mjs`) with what each gives, so a new tool reuses them.
+
 ## What earlier sessions learned
 
 These notes came from the sessions to 1.0 (`docs/sessions/README.md`,

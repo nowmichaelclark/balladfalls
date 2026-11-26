@@ -98,9 +98,15 @@ decisions.
   behind a decision goes in the PR too, leaving the decision itself as one
   dated line in `docs/DECISIONS.md`. Then run `node tools/check-docs.mjs`
   (it also fails on a pointer to a doc that is gone).
-- **The limits,** checked in CI by that script: `AGENTS.md` 6 KB,
+- **The bird's-eye pass** (the brain is Broken Friends' Bird's-eye lead):
+  sort `docs/inbox.md` (each line becomes an item, stays, or leaves), give
+  each new item a type from `docs/briefs/README.md` and a model and effort,
+  and write the queue's status table again. Each week, run `python3
+  tools/workflow-cost.py`; if a number climbs two weeks in a row, queue a
+  Hygiene session.
+- **The limits,** checked in CI by that script: `AGENTS.md` 9 KB,
   `core/AGENTS.md` 10 KB, `docs/QUEUE.md` 80 KB, `docs/BRAIN.md` 50 KB,
-  `docs/DECISIONS.md` 40 KB. Over one, CI fails with "take the finished
+  `docs/DECISIONS.md` 40 KB, and the queue's status 40 lines. Over one, CI fails with "take the finished
   parts out".
 - **Each new decision of Mikey's** is one dated line in `docs/DECISIONS.md`
   under its topic, written in his words, the day he made it.

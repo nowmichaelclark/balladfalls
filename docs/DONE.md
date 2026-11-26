@@ -785,3 +785,13 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   `docs/archived.txt`); F-Droid's recipe no longer deletes `docs/ears/raw`.
   `docs/ears/plan.md`, `sessions.md`, `data.csv` and `tools/ears/` stay
   until Mikey says whether the ears go on. Nothing to hear.
+- balladfalls #11, what Ballad Falls takes from Broken Friends (Mikey,
+  2026-11-26; docs and tools only): the queue's status is a table of one
+  line an item with its type, model and effort, held to 40 lines by
+  `tools/check-docs.mjs`; session briefs and the cycle in `docs/briefs/`;
+  `docs/inbox.md` for ideas (the queue's "Later, not queued" moved there);
+  `tools/README.md` lists every tool with its use, its command and its
+  limits; `AGENTS.md` has the voice rules shared with Broken Friends;
+  `docs/notes/for-mikey.md` opens with a table of sittings;
+  `tools/workflow-cost.py` reports the workflow's cost week by week.
+  Nothing to hear.

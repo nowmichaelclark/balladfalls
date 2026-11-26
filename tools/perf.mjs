@@ -14,7 +14,7 @@
 // Under CPU throttling (1x, 4x, 6x) and in both qualities, visible and
 // with the tab hidden.
 //
-// It is engine-agnostic on purpose (roadmap item 16): it drives the app
+// It is engine-agnostic on purpose: it drives the app
 // only from outside -- clicks, the Diagnostics panel, the page's own
 // controls -- and instruments the Web Audio API, not the app's code. A
 // replacement engine that keeps the page and reports the same Diagnostics
@@ -25,8 +25,7 @@
 //
 //   core notes        the core's own counts, read from Diagnostics'
 //                     `engine:` line: notes it took late, left out or
-//                     dropped (the page has no scheduler of its own since
-//                     queue item 97).
+//                     dropped (the page has no scheduler of its own).
 //   device fill-ins   AudioContext.playoutStats (Chromium, behind a Blink
 //                     feature this tool turns on): frames the audio device
 //                     had to fill because the graph did not deliver in time.
@@ -622,7 +621,7 @@ class Tab {
       const m = line.match(/^([A-Za-z]+):\s*(.*)$/);
       if (m) out[m[1]] = /^-?\d+(\.\d+)?$/.test(m[2]) ? Number(m[2]) : m[2];
     }
-    // The core's own counts (queue item 96): on the player no note passes
+    // The core's own counts: on the player no note passes
     // the page and the page has no scheduler, so "late" is what the core
     // says of itself: notes it took late, left out, or dropped.
     const engine = String(out.engine || '');
@@ -1468,7 +1467,7 @@ async function main() {
   const optsB = { ...opts, ...(opts.abQuery ? { query: [opts.query, opts.abQuery].filter(Boolean).join('&') } : {}), ...(optsA ? { side: 'B' } : {}) };
   // With an A side, each pair alternates which side runs first (unless
   // --ab-order ab): the sandbox's machine freezes now and then, and slot
-  // order showed in item 30's first A/Bs.
+  // order showed in the first A/Bs.
   let pairs = 0;
   const once = async (cfg) => {
     const sideA = async (first) => {

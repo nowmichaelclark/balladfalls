@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The move to the new address, in Chromium (session 31a's yardsticks): an
+// The move to the new address, in Chromium (the move's yardsticks): an
 // installed app at the old address, its Library saved, is sent on and its
 // Library moves across; a link to the old address opens its loop at the new
 // one; "Not now" leaves the Library where it was and stops asking; and a fresh

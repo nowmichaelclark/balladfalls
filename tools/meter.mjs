@@ -1,4 +1,4 @@
-// The meters the measuring tools share (queue item 96; they were inside
+// The meters the measuring tools share (they were inside
 // tools/measure.mjs, pasted into its pages): K-weighted loudness and
 // loudness range, the 2-5 kHz presence share, a render's fingerprint, and
 // the seed a probed note draws from.

@@ -1,5 +1,5 @@
-// A jump within a long piece in the app's module (session 17, queue item
-// 106a): js/dlplayer.wasm played block by block as the worklet plays it.
+// A jump within a long piece in the app's module:
+// js/dlplayer.wasm played block by block as the worklet plays it.
 // Run with:  node test/jump.test.mjs   (the tools' build first, for the map:
 // tools/build-core.sh --tools)
 //
@@ -112,7 +112,7 @@ for (const seed of LOOPS) {
   }
 }
 
-// Session 30h (queue item 116): a short loop's rail asks for a step
+// A short loop's rail asks for a step
 // (`JUMP.step`), playing or paused; it lands on that step, heard within the
 // jump's 0.06 s (of the ask, or of Play after a pause), nothing late, its
 // busiest block room for the slow case as a long piece's is.

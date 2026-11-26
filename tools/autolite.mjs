@@ -1,4 +1,4 @@
-// "Lighter on processor" chosen by the app (queue item 87b), live: the real
+// "Lighter on processor" chosen by the app, live: the real
 // app in headless Chromium, playing in real time, its audio thread made
 // slower with `?burn=` (microseconds of work added to every block the core
 // renders; the DevTools CPU throttle slows only the page's thread, not the
@@ -21,8 +21,8 @@
 //              850 us more at 44.1 kHz puts it near 50%), for --minutes: at
 //              most one move.
 //   stuck      a burn longer than a block's own time (--stuck: a block is
-//              2,902 us at 44.1 kHz), so lite too renders behind real time
-//              (queue item 100): the app moves to lite, and then says, in
+//              2,902 us at 44.1 kHz), so lite too renders behind real time:
+//              the app moves to lite, and then says, in
 //              the card's place, that this browser is too slow to play
 //              Ballad Falls smoothly; Play goes on; Diagnostics says
 //              `slow: lite past the line`. The other cases never show it.
@@ -115,7 +115,7 @@ const lateOf = (text) => {
   return m ? Number(m[1]) : null;
 };
 const line = (text, key) => (text.match(new RegExp(`^${key}: .*$`, 'm')) || [''])[0];
-// The plain line in the card's place, if it shows (queue item 100).
+// The plain line in the card's place, if it shows.
 const plain = (page) => page.evaluate(() => { const l = document.getElementById('plainLine'); return l && !l.hidden ? l.textContent.trim() : null; });
 const TOO_SLOW = 'Browser too slow.';
 async function neverSlow(page, text) {
@@ -151,7 +151,7 @@ async function slow() {
   check('no note late', lateOf(text) === 0, `${lateOf(text)}: ${line(text, 'engine')}`);
   const shown = await t.page.evaluate(() => { const h = document.getElementById('liteAuto'); return h && !h.hidden ? h.textContent : null; });
   check('the switch\'s line says it was set by itself', !!shown, shown);
-  // Busy on lite, never behind: not too slow (queue item 100).
+  // Busy on lite, never behind: not too slow.
   await sleep(30000);
   await neverSlow(t.page, await diag(t.page));
   await t.page.reload();

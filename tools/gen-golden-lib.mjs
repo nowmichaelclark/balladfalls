@@ -1,4 +1,4 @@
-// The generation goldens' text and hashes (queue item 77): the canonical
+// The generation goldens' text and hashes: the canonical
 // text the core's generator writes its parts in, read back here, the hash
 // taken over it, and the file's cases. tools/gen-golden.mjs documents the
 // file, the text and the cases; tools/gen-lib.mjs reads the parts from the

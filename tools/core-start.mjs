@@ -1,5 +1,5 @@
-// How soon the Rust core is ready, and what the first Play hears (queue item
-// 32): the real app in headless Chromium, with the CPU slowed through the
+// How soon the Rust core is ready, and what the first Play hears:
+// the real app in headless Chromium, with the CPU slowed through the
 // DevTools protocol.
 //
 // Run with:  node tools/core-start.mjs [--throttle 1,4,6] [--runs 5]

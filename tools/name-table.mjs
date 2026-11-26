@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// The table a share code's name is held to (queue item 105, session 23;
-// core/src/code/name.rs): every code point that is not an ordinary visible
+// The table a share code's name is held to
+// (core/src/code/name.rs): every code point that is not an ordinary visible
 // character, by class, as ranges. Written from Node's own Unicode tables
 // (its regular expressions' property escapes), so the core carries no
 // Unicode library and the page asks the core, not its browser.

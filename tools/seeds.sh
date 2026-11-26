@@ -1,5 +1,5 @@
 #!/bin/sh
-# Loops from their seeds on one target (queue item 82): the corpus's first 80
+# Loops from their seeds on one target: the corpus's first 80
 # loops (corpus seed 1, as tools/stats.mjs and tools/measure.mjs draw it)
 # played by the core's player, each to a WAV, and their hashes compared with
 # the ones kept in core/golden/seeds.hashes: every target must make them all.
@@ -13,16 +13,15 @@
 #                                       baseline's: test/core-baseline.json's `player`
 #                                       part, which tools/baseline.mjs renders on
 #                                       js/dlplayer.wasm, the module a browser plays
-#                                       (until queue item 96, in Chromium with the
-#                                       page's own engine: the same fingerprints)
+#                                       (once in Chromium with the page's own
+#                                       engine: the same fingerprints)
 #   tools/seeds.sh --c [--first N] [wasm32-unknown-emscripten]
 #                                       the C host (core/examples/c/seed.c, built
 #                                       against core/include/dlcore.h alone) against
 #                                       the same hashes, and its WAV against
 #                                       dlrender's, byte for byte, and
-#                                       core/examples/c/report.c's checks (queue
-#                                       item 94a); for Emscripten
-#                                       (queue item 87) built with emcc, run in Node
+#                                       core/examples/c/report.c's checks; for Emscripten
+#                                       built with emcc, run in Node
 #
 # Each loop plays 45 s at 44.1 kHz, full quality, mono, wandering as the app's
 # does (amount 1): dlrender --corpus 1:80, its lines kept as it prints them
@@ -106,7 +105,7 @@ if [ "$chost" = yes ]; then
   # dlrender's, and its WAV is dlrender's, byte for byte.
   cd "$root/core"
   if [ "$target" = wasm32-unknown-emscripten ]; then
-    # Emscripten (queue item 87): the library as Broken Friends' web build
+    # Emscripten: the library as Broken Friends' web build
     # links it, panic=abort and no threads, the host built with emcc and run
     # in Node with the machine's files.
     cargo rustc -q --release --locked --lib --features capi --crate-type staticlib --target "$target"
@@ -129,7 +128,7 @@ if [ "$chost" = yes ]; then
     diff "$tmp/kept" "$tmp/lines" | sed 's/^/  /' >&2
     exit 1
   fi
-  # The calls and events of queue item 94a, through the header alone.
+  # The C calls and events, through the header alone.
   if [ "$target" = wasm32-unknown-emscripten ]; then
     emcc -O2 -std=c11 -Wall -Wextra -Werror -pedantic -Iinclude examples/c/report.c "target/$target/release/libdlcore.a" \
       -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=1 -o "$tmp/report.js"
@@ -138,7 +137,7 @@ if [ "$chost" = yes ]; then
     cc -O2 -std=c11 -Wall -Wextra -Werror -pedantic -Iinclude examples/c/report.c target/release/libdlcore.a -lm -o "$tmp/report"
     "$tmp/report"
   fi
-  # Rendered ahead, a pass at a time in one call each (queue item 87): the
+  # Rendered ahead, a pass at a time in one call each: the
   # same lines.
   head -n 2 "$tmp/kept" > "$tmp/kept2"
   : > "$tmp/ahead"
@@ -155,12 +154,12 @@ if [ "$chost" = yes ]; then
   "$tmp/seed" "$s" --stereo --seconds 10 --wav "$tmp/c.wav" > /dev/null
   cargo run -q --release --locked --example dlrender -- --seed "$s" --stereo --seconds 10 --wav "$tmp/rust.wav" > /dev/null
   cmp "$tmp/c.wav" "$tmp/rust.wav"
-  # A request (queue item 85), asked through dl_player_ask: the same WAV.
+  # A request, asked through dl_player_ask: the same WAV.
   asked='glacial=0.7,misty=0.3,bpm=70-85'
   "$tmp/seed" "$s" --request "$asked" --seconds 10 --wav "$tmp/c.wav" > /dev/null
   cargo run -q --release --locked --example dlrender -- --seed "$s" --request "$asked" --seconds 10 --wav "$tmp/rust.wav" > /dev/null
   cmp "$tmp/c.wav" "$tmp/rust.wav"
-  # And one with pins (queue item 85b), stereo, so the space's reach the core.
+  # And one with pins, stereo, so the space's reach the core.
   pinned='organ=on,arc=on,arc.period=240,echo.beats=1,space.room=0.8'
   "$tmp/seed" "$s" --request "$pinned" --stereo --seconds 10 --wav "$tmp/c.wav" > /dev/null
   cargo run -q --release --locked --example dlrender -- --seed "$s" --request "$pinned" --stereo --seconds 10 --wav "$tmp/rust.wav" > /dev/null

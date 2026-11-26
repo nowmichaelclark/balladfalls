@@ -1,4 +1,4 @@
-// The core at other sample rates (queue item 45, charter promise 4).
+// The core at other sample rates (charter promise 4).
 //
 //   node tools/rates.mjs              check the figures below; exit 1 if any fails
 //   node tools/rates.mjs --json FILE  also write every figure out
@@ -15,7 +15,7 @@
 //             `steady`, one that holds a steady tone through the reverb (brain,
 //             2026-10-20): the reverb's combs catch a held tone differently at
 //             each rate (a held sine spreads 1.1 dB) while its channel is the
-//             same at every rate, until queue item 75 makes the reverb
+//             same at every rate, until the reverb is made
 //             rate-true for steady tones
 //   tone      the coffee-shop test of tools/measure.mjs, voice by voice: the
 //             share of a dry note's A-weighted energy in 2-5 kHz, for every

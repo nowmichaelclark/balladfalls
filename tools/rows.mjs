@@ -1,22 +1,22 @@
-// The app on the core's player (queue item 94b): a check for each row of
-// item 94a's table (every control and display against its command or
+// The app on the core's player: a check for each row of
+// the controls table (every control and display against its command or
 // event), in the real app, in headless Chromium, playing in real time.
 //
 //   node tools/rows.mjs [--long] [--port 8771]
 //   node tools/rows.mjs --app [--cdp URL] [--long]
 //
-// `--app` (session 27, queue item 107c): the same rows against the Android
+// `--app`: the same rows against the Android
 // app, its page driving the native core (android/cdp.mjs: the WebView's
 // DevTools port over adb, on the one device or emulator adb sees, the app
 // installed; `--cdp` an endpoint already up instead). The hooks sit on the
 // app's bridge (`DriftloomNative`) instead of a worklet's node, and "is
 // anything sounding" is the native output's own level. The rows that make no
-// sense there are left out (the export's, Android's own in session 28; the
+// sense there are left out (the export's, which has Android's own; the
 // plain lines: the app always has its core), and four are the app's own:
 // the WebView makes no audio of its own; Diagnostics says the native core,
 // with its counts and the stream's underruns; the page's main thread blocked
 // for five seconds and the music plays on (docs/CORE.md, promise 1); and
-// the too-slow line (item 100) can't show, however slow the reports read.
+// the too-slow line can't show, however slow the reports read.
 //
 // Nothing in js/ is touched. The page is read from outside, before its own
 // scripts run: every AudioWorkletNode it builds is kept, with what the core
@@ -35,11 +35,11 @@
 //   cover               drawn
 //   cursor              lit from the core's steps, moving
 //   Pause, Play again   the core idle and silent; then on from where it stood
-//   Next                the core's own loop (queue item 95), crossfading;
+//   Next                the core's own loop, crossfading;
 //                       the core's loop is the card's
 //   Previous            back to the loop before, by its seed, request and edits
 //   roll a layer        made again in place: its seed re-rolled, the steps go on
-//   the keyboard        (session 30n, item 122; `--only keys`) by the keys
+//   the keyboard        (`--only keys`) by the keys
 //                       alone, on a fixed short loop: play, next, previous,
 //                       K, a bar on and back, the volume, mute, a layer
 //                       rolled and turned off and on, every layer rolled;
@@ -58,14 +58,14 @@
 //   volume              0: silence; back: sound
 //   mono                the core renders one lane, then two
 //   layers' grid        the dots of the bar shown are the core's: each step as
-//                       heard where it is decided (queue item 110), the grid of
+//                       heard where it is decided, the grid of
 //                       the pass heard for the steps to come
-//   picks               a vibe picked: held by the core (queue item 95), the
+//   picks               a vibe picked: held by the core, the
 //                       loop playing left as it is, the next loop the
 //                       core's own and leaning on it; held again after a
 //                       reload
 //   export MIDI         a MIDI file
-//   export audio        (queue items 104b, 104c and 113) the Export view
+//   export audio        the Export view
 //                       behind Share's export audio: export flac and, where
 //                       the browser can encode Opus, export opus (hidden
 //                       where it can't: tested with the encoder taken
@@ -89,10 +89,10 @@
 //                       rendered, the browser decoding it to that length),
 //                       its size near the constant bit rate, Cancel, the
 //                       private file and a disk that fills
-//   share               (queue item 113) keys and no explainer; export
+//   share               keys and no explainer; export
 //                       audio and album from seed open their views and back
 //   share code          the code decodes to the loop the core plays
-//   album export        (item 121; `--only album`) a tab of its own, an album
+//   album export        (`--only album`) a tab of its own, an album
 //                       of four playing (three of 8 s, one that plays on):
 //                       loop or album offered; the album asks how long once
 //                       for the track that plays on; one zip of FLACs to the
@@ -104,11 +104,11 @@
 //                       cover; the space for the whole album checked first;
 //                       Cancel midway and a disk that fills midway leave no
 //                       zip; a single loop's file tagged too
-//   seed album save     (item 121) the seed album's save: named in the Name
+//   seed album save     the seed album's save: named in the Name
 //                       box, the album lands in the Library, its tracks the
 //                       ones its code plays, and plays from there; the box
 //                       closed saves nothing
-//   codes (session 23)  version 2 only, in a tab of its own: a version 1
+//   codes  version 2 only, in a tab of its own: a version 1
 //                       code pasted gets the "older" line, a newer build's
 //                       the "newer" one; an album's code pasted lands in the
 //                       Library, plays, and shared again is the same album;
@@ -118,17 +118,17 @@
 //                       copied, the Library cleared, and restored
 //   lighter on processor  a new core at the other quality, the same loop
 //   Diagnostics         the core's player, nothing late, nothing lost
-//   now playing art     (session 30f) the media session's artwork is the
+//   now playing art     the media session's artwork is the
 //                       playing loop's own cover: on first Play, Next,
 //                       Previous, an album track, a track's end, a rename
 //                       and out of an album
-//   sideways            (session 30f, Mikey's review) the panel at the
+//   sideways            (Mikey's review) the panel at the
 //                       left, centered with no insets, double-counted ones
 //                       and real ones; a scroll puts a browser's bar away
 //                       and nothing else moves the page
 //   plain line          a browser with no WebAssembly, and a module that
 //                       never arrives: one plain line each, nothing played
-//   long piece          (queue item 106b; a page of its own, opened on a
+//   long piece          (a page of its own, opened on a
 //                       32,768-bar arc) where you are: bar of how many,
 //                       time played and left, in the rail's place; the
 //                       markers on the line are the map's (a fresh call of
@@ -140,12 +140,12 @@
 //                       core with the picks and is held whole; Endless: time
 //                       played, no time left, and a wander's own markers;
 //                       the Library's line says each loop's length
-//   album pacing        (session 24b) an album made with each track's length
+//   album pacing        an album made with each track's length
 //                       set (passes, bars to a phrase line), shared from the
 //                       Library and opened by its link in a fresh profile:
 //                       each track plays as long as its maker set it, then
 //                       the next, the card following, round to the first
-//   previous in an album (session 30a, queue item 109; `--only previous`
+//   previous in an album (`--only previous`
 //                       runs just these) a tab of its own: from the first
 //                       track Previous is on and goes round to the last; from
 //                       a middle track, by the screen's key, the keyboard's
@@ -156,7 +156,7 @@
 //                       hands over again; an album of one; after a track was
 //                       deleted it goes to the track before that one; after
 //                       leaving the album it is as the history says
-//   timeline            (session 30h, queue item 116; `--only timeline`) a
+//   timeline            (`--only timeline`) a
 //                       tab of its own: a long piece's line pressed while
 //                       paused moves the playhead and its words, nothing
 //                       lands until Play, and Play starts there; a short
@@ -167,7 +167,7 @@
 //                       after the step); its keys; the album's way back gone
 //                       after Next and after the core's own next loop, and
 //                       back once another album is left
-//   pickers             (session 30j, queue item 118; `--only pickers`) the
+//   pickers             (`--only pickers`) the
 //                       tempo, key, style and voices views from the Vibe
 //                       panel: a pick, a range or a set, any, the pages,
 //                       cancel and done, the line each fills, sent and held;
@@ -176,8 +176,8 @@
 //                       all; never all five layers off; whole on short
 //                       phones and on its side
 //   length (--long)     a minute: the track ends on its line and the core's
-//                       own loop starts there, with the picks (queue item
-//                       95), the card following; Now Playing counts down
+//                       own loop starts there, with the picks, the card
+//                       following; Now Playing counts down
 //
 // Chromium from Playwright (npm install --no-save playwright@1.56.1).
 
@@ -295,7 +295,7 @@ const HOOK = `(() => {
   });
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
     writeText: async (t) => { R.clip = t; }, readText: async () => R.clip || '' } });
-  // The audio export's Worker (queue item 104b): what the page starts it
+  // The audio export's Worker: what the page starts it
   // with, and what it says (progress counted, the rest kept). The save
   // picker answers with a file in the site's private file system, unless a
   // tab takes the picker away (then the export writes there itself).
@@ -327,7 +327,7 @@ const HOOK = `(() => {
     R.picked = await d.getFileHandle(asked.endsWith('.opus') ? 'picked.opus' : asked.endsWith('.zip') ? 'picked.zip' : 'picked.flac', { create: true });
     return R.picked;
   };
-  // A folder chosen (item 121: an album a file a track): a folder in the
+  // A folder chosen (an album as one file for each track): a folder in the
   // site's private file system.
   window.showDirectoryPicker = async () => {
     const d = await navigator.storage.getDirectory();
@@ -400,7 +400,7 @@ const HOOK_APP = `(() => {
   };
   hook();
   document.addEventListener('readystatechange', hook);
-  // The app's second bridge (session 28): a file the page saves goes through
+  // The app's second bridge: a file the page saves goes through
   // Android's own picker, which a row can't answer. So the rows answer for it:
   // the page is told it was saved where it asked, and the bytes it sent are
   // the Blob a download would have been (the MIDI row reads it as ever).
@@ -474,10 +474,10 @@ function streaminfo(b) {
   };
 }
 
-// An exported Ogg Opus file's facts (queue item 104c): every page's checksum
+// An exported Ogg Opus file's facts: every page's checksum
 // is verified (the reader throws on one that fails); the headers, the end of
 // stream and the granule positions as RFC 7845 has them.
-// OpusTags may take several pages (item 121: the cover in it): the packets
+// OpusTags may take several pages (the cover in it): the packets
 // are read joined, and the audio's pages are those after it.
 function oggFacts(bytes) {
   const ps = pages(bytes);
@@ -500,7 +500,7 @@ function oggFacts(bytes) {
     ordered: ps.every((p, i) => p.sequence === i && (i <= audioFrom || p.granule >= ps[i - 1].granule)),
     frames: last.granule - preSkip,
     packets: all.length - 2,
-    // The header pages' bytes (the tags and the cover in them, item 121).
+    // The header pages' bytes (the tags and the cover in them).
     headerBytes: ps.slice(0, audioFrom).reduce((n, p) => n + p.size, 0),
   };
 }
@@ -522,7 +522,7 @@ function vorbisList(b, at = 0) {
   return out;
 }
 
-// A FLAC file's metadata blocks after STREAMINFO (item 121): its comments,
+// A FLAC file's metadata blocks after STREAMINFO: its comments,
 // and its picture's size and type.
 function flacTags(b) {
   if (String.fromCharCode(...b.slice(0, 4)) !== 'fLaC') return null;
@@ -549,7 +549,7 @@ function flacTags(b) {
   return out;
 }
 
-// The entries of a stored zip, from its central directory (item 121): name,
+// The entries of a stored zip, from its central directory: name,
 // its bytes' place and size, and whether its checksum is good.
 function zipEntries(b) {
   const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
@@ -574,7 +574,7 @@ function zipEntries(b) {
   return out;
 }
 
-// The Track length view (session 30c) set to `secs` seconds (null: on and
+// The Track length view set to `secs` seconds (null: on and
 // on) with its fades, as a listener sets it: the Vibe panel's pace key, the
 // time typed, the fade keys, done (back on the Vibe panel). `evf` evaluates
 // in the page; returns what the pace key then shows.
@@ -600,8 +600,8 @@ const trackTo = (evf, secs, fades = {}) => evf(([t, fadeIn, fadeOut]) => {
   return document.querySelector('#picksList .pk-track').textContent;
 }, [secs, fades.fadeIn, fades.fadeOut]);
 
-// The audio export's rows (queue item 104b), on the page playing. Since
-// session 30c an export is as long as the track length (`trackTo`); a loop
+// The audio export's rows, on the page playing. An
+// export is as long as the track length (`trackTo`); a loop
 // that plays on asks how long first.
 async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   const origin = `http://127.0.0.1:${PORT}`;
@@ -611,7 +611,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     document.querySelector('[data-stab="share"]').click();
     document.getElementById('goExport').click();
   });
-  // A format's key starts its export (session 30e).
+  // A format's key starts its export.
   const exportKey = (format) => ev((f) => document.querySelector(`[data-format="${f}"]`).click(), format);
   const sheet = () => ev(() => ({
     choose: !document.getElementById('exportChoose').hidden,
@@ -640,7 +640,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   const count = () => ev(() => window.__rows.exports.length);
   const lateLine = async () => (await diag()).split('\n').find((l) => l.startsWith('engine:')) || '';
   const nothingLate = (line) => /late: 0\s+missed: 0\s+dropped: 0/.test(line);
-  // Three seconds of listening (session 30h: 1.5 s fell in a quiet start once
+  // Three seconds of listening (1.5 s fell in a quiet start once
   // in forty runs, a new loop opening after the track's end), on the fixed
   // busy loop (below): what was heard is kept for the row's words.
   let heard = '';
@@ -659,7 +659,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   };
 
   console.log('\n  export audio (queue items 104b and 104c; its length the track\'s, session 30c)');
-  // The fixed busy loop the rows begin with, pasted again (session 30j):
+  // The fixed busy loop the rows begin with, pasted again:
   // the loop the picks' Next drew is any loop, and a sparse one is silent
   // for seconds at a time (neisk-nesk, run 45271085229: up to 6 s), which
   // a "music on" row then reads as stopped.
@@ -780,7 +780,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   const smallMoved = (await ev(() => window.__rows.exportProgress)) - progress0;
   const smallLine = await lateLine();
   // The audio's bytes a second: the file less its header pages (the tags
-  // and the cover, item 121), which the sheet's size allows for in its tail.
+  // and the cover), which the sheet's size allows for in its tail.
   const rate = small && small.seconds && ogg ? (smallGot.size - ogg.headerBytes) / small.seconds : 0;
   row('export audio (small): a minute to the file chosen, written as it went, an Ogg Opus file whose end and length are the Worker\'s frames to the sample, the browser decodes it, the music on and nothing late',
     small && small.type === 'done' && small.format === 'opus' && smallStart.sink === 'handle' && smallStart.job.format === 'opus' && /\.opus$/.test(smallStart.name) && smallGot.name === 'picked.opus' && smallGot.size === small.bytes
@@ -805,7 +805,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await clickId('exportOk');
 
   // The format pressed is kept through the Track length view, and an export
-  // under way is still there on the way back into Export (session 30e).
+  // under way is still there on the way back into Export.
   await trackTo(ev, null);
   await share();
   from = await count();
@@ -846,7 +846,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
     document.getElementById('goExport').click();
   });
   const tkey = (format) => tev((f) => document.querySelector(`[data-format="${f}"]`).click(), format);
-  // A finite piece with no track length set exports whole (session 30c).
+  // A finite piece with no track length set exports whole.
   await tev((code) => { window.__rows.clip = code; }, LOOPS.piece.code);
   await tev(() => document.getElementById('pasteCode').click());
   await sleep(3000);
@@ -999,7 +999,7 @@ async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
   await bare.close();
 }
 
-// The app's own rows (`--app`, session 27), on the page playing.
+// The app's own rows (`--app`), on the page playing.
 async function appRows({ ev, diag, clickId, level, probe }) {
   const line = (t, k) => t.split('\n').find((l) => l.startsWith(`${k}:`)) || '';
   {
@@ -1031,7 +1031,7 @@ async function appRows({ ev, diag, clickId, level, probe }) {
       `blocked ${blocked} ms; the core's clock ${clock.toFixed(2)} s in ${wall.toFixed(2)} s, ${sounding.toFixed(2)} s sounding; underruns ${n0.underruns} -> ${n1.underruns}; late ${p && p.late}`);
   }
   {
-    // Item 100's too-slow line can't show in the app: on lite, a minute of
+    // The too-slow line can't show in the app: on lite, a minute of
     // reports with every quarter-second behind (in a browser, the line
     // after twenty seconds), handed to the page as the core hands them.
     const isLite = () => ev(() => document.getElementById('liteMode').getAttribute('aria-checked'));
@@ -1066,7 +1066,7 @@ async function openApp() {
   return page;
 }
 
-// The Layers view against the core (queue item 110), in the page: the dots of
+// The Layers view against the core, in the page: the dots of
 // the bar shown are each step's Heard event where the step is decided (the
 // loudness of what each layer sounded), and the core's grid of the pass heard
 // where it is not yet; a bar of some pass seen fits every layer. A row each
@@ -1114,7 +1114,7 @@ async function layersFit() {
   return { ok: false, ...tried, dots: dots.map((d) => d.join('')).join(' ') };
 }
 
-// A long piece's quiet section drawn quiet (queue item 110), in a page of its
+// A long piece's quiet section drawn quiet, in a page of its
 // own: a 128-bar arc whose opening holds its layers under their full level
 // (the plan's level, and the kit and the bass still coming in), opened by its
 // link, in the Layers view. Every layer the core has heard under 0.95 of its
@@ -1182,7 +1182,7 @@ async function quietRows(browser) {
   await tab.close();
 }
 
-// A long piece on screen (queue item 106b), in a page of its own: opened on
+// A long piece on screen, in a page of its own: opened on
 // the 32,768-bar arc a listener's picks make (kept in the prefs as the app
 // keeps them), played in real time. Every row reads what the core says (its
 // `place` on each events post, its Jump event) against what the page shows.
@@ -1459,7 +1459,7 @@ async function main() {
       return out;
     });
     const kinds = { step: 0, pass: 1, section: 2, phrase: 3, loop: 4, revised: 5, end: 6, own: 7 };
-    // The last picks the page sent the core (queue item 95).
+    // The last picks the page sent the core.
     const lastPicks = () => ev(() => window.__rows.posts.filter((m) => m.type === 'playPicks').pop() || null);
     // The seed of each loop the core made itself, with the picks' number.
     const owns = async () => {
@@ -1604,7 +1604,7 @@ async function main() {
     const stereo = (await probe()).lanes;
     row('mono: one lane, then two again', mono === 1 && stereo === 2, `${mono}, ${stereo}`);
 
-    // The layers' grid (queue item 110): the dots of the bar shown are the
+    // The layers' grid: the dots of the bar shown are the
     // core's: what each step sounded where it is decided (its Heard event),
     // and the core's grid of the pass heard for the steps still to come.
     await ev(() => { if (document.querySelector('.view:not([hidden])').dataset.view !== 'layers') document.getElementById('viewBtn').click(); });
@@ -1646,7 +1646,7 @@ async function main() {
       row('picks: the next new loop is the core\'s own and leans on them', (p.d.vibes || '').split('|').some((x) => x.startsWith(`${vibe}:`)) && p.d.name === (await name())
         && own && own.seed === Number(p.d.seed), `${vibe}: ${p.d.vibes}`);
       // With nothing asked of the bars, about 1 new loop in 10 is a long
-      // piece the core drew (queue item 117), which ends: the rows after
+      // piece the core drew, which ends: the rows after
       // (the export's) want a loop that plays on, so Next again past one.
       for (let i = 0; i < 6 && p.d.length != null; i++) {
         await key('ArrowRight');
@@ -1656,7 +1656,7 @@ async function main() {
     }
     await ev(() => document.getElementById('vibesClear').click());
 
-    // Share (session 30e): keys, and nothing else on screen.
+    // Share: keys, and nothing else on screen.
     {
       await ev(() => {
         if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
@@ -1679,7 +1679,7 @@ async function main() {
       const back = await ev(() => !document.getElementById('saveShare').hidden && !document.getElementById('viewSave').hidden);
       await clickId('goExport');
       await sleep(800);
-      // The format keys (item 121's loop or album keys above them are an
+      // The format keys (the loop or album keys above them are an
       // album's: the album rows hold them).
       const keys = await ev(() => [...document.querySelectorAll('#exportChoose button')].filter((b) => !b.hidden && !b.closest('#exportScope')).map((b) => b.textContent.trim()).join());
       row('share: album from seed and export audio open their views; Export is a key a format, export midi among them', seed && back && /^flac,(opus,)?midi$/.test(keys), `seed ${seed}, back ${back}, ${keys}`);
@@ -1694,7 +1694,7 @@ async function main() {
       return String.fromCharCode(...t.slice(0, 4));
     });
     row('export MIDI: a MIDI file', midi === 'MThd', String(midi));
-    // The export's rows are the browser's (in the app, session 28's).
+    // The export's rows are the browser's (the app has its own).
     if (!APP) await exportRows({ page, ev, probe, level, diag, clickId, browser });
     await clickId('copySong');
     await sleep(500);
@@ -1717,7 +1717,7 @@ async function main() {
       const loops = (await steps()).filter((e) => e[1] === kinds.loop);
       row('lighter on processor: a new core at the other quality plays the same loop from its top', (await ev(() => window.__rows.nodes.length)) === nodes + 1
         && built === (lite === 'true' ? 'full' : 'lite') && p.player.state === 3 && p.d.name === card && loops.length === 1, `${lite} -> ${built}`);
-      // Session 30g, step 4: the old core fades out before it is let go
+      // The old core fades out before it is let go
       // (letting it go at once cut the sound mid-note): a fade to silence
       // asked well before the dispose, not only the transport's silence
       // posted with it.
@@ -1736,7 +1736,7 @@ async function main() {
       row('Diagnostics: the core\'s player, nothing late, missed or dropped, no event lost, no edit refused', /the core's player\)\s+late: 0\s+missed: 0\s+dropped: 0/.test(engineLine)
         && /playerEventsLost: 0/.test(text) && /playerRefused: 0/.test(text), `${engineLine}; ${text.split('\n').filter((l) => /^player(EventsLost|Refused)/.test(l)).join(', ')}`);
     }
-    // Why the app last moved to lite by itself (session 30g, step 2): said,
+    // Why the app last moved to lite by itself (step 2): said,
     // and "reset counters" clears the line but not the move (the rule
     // still never moves twice).
     {
@@ -1763,7 +1763,7 @@ async function main() {
     }
     if (APP) await appRows({ ev, diag, clickId, level, probe });
 
-    // The track length (the Track length view, session 30c): a minute.
+    // The track length (the Track length view): a minute.
     if (LONG) {
       await trackTo(ev, 60);
       await ev(() => document.getElementById('nowBtn').click());
@@ -1772,7 +1772,7 @@ async function main() {
       const track = await ev(() => window.__rows.posts.filter((m) => m.type === 'playTrack').pop());
       const clockText = await ev(() => document.getElementById('nowBig').textContent);
       // At the end of the history nothing of the page's follows: the core
-      // makes its own (queue item 95).
+      // makes its own.
       row('length: the core counts the track, its own loop to follow (nothing of the page\'s armed)', p.trackEnd >= 0 && track && track.kind > 0 && track.arm === null && clockText.startsWith('−'), `end step ${p.trackEnd}, clock ${clockText}`);
       const before = (await owns()).length;
       const t0 = Date.now();
@@ -1812,7 +1812,7 @@ async function main() {
       row('picks: held again by the core after a reload', kept && again && p.picksTag === again.tag && JSON.stringify(again.ask.vibes) === JSON.stringify(kept.ask.vibes), JSON.stringify(again && again.ask.vibes));
     }
     row('no page errors', errors.length === 0, errors.join('; '));
-    // A long piece on screen (queue item 106b), in a page of its own.
+    // A long piece on screen, in a page of its own.
     if (!APP) await longRows(browser, PORT, errors);
     if (!APP) await quietRows(browser);
     if (!APP) await plainRows(browser);
@@ -1835,7 +1835,7 @@ async function main() {
   report();
 }
 
-// An album exported whole (item 121), in a tab of its own.
+// An album exported whole, in a tab of its own.
 async function albumExportRows(browser) {
   console.log('\n  album export (item 121)');
   const origin = `http://127.0.0.1:${PORT}`;
@@ -2058,7 +2058,7 @@ async function albumExportRows(browser) {
   await tab.close();
 }
 
-// Share codes, version 2 (session 23), in a tab of its own: what pastes,
+// Share codes, version 2, in a tab of its own: what pastes,
 // what a code carries, and the Library through a reload and a backup.
 async function codeRows(browser) {
   console.log('\n  codes, version 2 (session 23)');
@@ -2211,8 +2211,8 @@ async function codeRows(browser) {
   await tab.close();
 }
 
-// Links, an album from one seed and the plain lines (session 24; queue item
-// 105c), each in fresh tabs (a fresh profile each): a link opens the loop or
+// Links, an album from one seed and the plain lines,
+// each in fresh tabs (a fresh profile each): a link opens the loop or
 // the album ready, not playing, online and offline; a damaged one says so
 // and the app goes on; sharing a link copies it (or uses the share sheet
 // where there is one); an album of one seed has a short code and the same
@@ -2286,7 +2286,7 @@ async function linkRows(browser) {
   const seedLink = await share.evaluate(() => window.__rows.clip);
   const linkCode = String(seedLink).slice(`${ORIGIN}/#c=`.length);
   row('links: its link is the address with the code after #c= (a fresh seed each press), and "Copied" says so', String(seedLink).startsWith(`${ORIGIN}/#c=`) && /^[A-Za-z0-9_-]{5,19}$/.test(linkCode) && /^Copied/.test(await share.evaluate(() => document.getElementById('toast').textContent)), seedLink);
-  // The album of one seed saved (item 121; Mikey, 2026-11-23: "Add 'save'"):
+  // The album of one seed saved (Mikey, 2026-11-23: "Add 'save'"):
   // named in the Name box as a new album is, it lands in the Library as an
   // album of its own, its tracks the ones its code plays, and it plays from
   // there. The seed is fixed for the press (the page draws it from
@@ -2415,7 +2415,7 @@ async function linkRows(browser) {
   row('links: no page errors in their tabs', !bad.length, bad.join('; '));
 }
 
-// An album's pacing (session 24b): each track plays as long as the album's
+// An album's pacing: each track plays as long as the album's
 // maker set it, then the next, in a profile that has never seen it.
 async function paceRows(browser) {
   console.log('\n  an album carries how long each track plays (session 24b)');
@@ -2431,7 +2431,7 @@ async function paceRows(browser) {
     return tab;
   };
   // Three short tracks, each its own time as its maker's Track length view
-  // set it (session 30c), with fades of their own: 5 s of a 2-bar loop
+  // set it, with fades of their own: 5 s of a 2-bar loop
   // fading out; 4 s of a 16-bar loop, nothing faded; 6 s of a 4-bar loop
   // fading in and out.
   const made = [[101, 'bars=2,bpm=160', 5, false, true], [202, 'bars=16,bpm=150', 4, false, false], [303, 'bars=4,bpm=130', 6, true, true]];
@@ -2515,7 +2515,7 @@ async function paceRows(browser) {
   row('album pacing: no page errors in its tabs', !bad.length, bad.join('; '));
 }
 
-// Previous in an album (session 30a, queue item 109): from the first track,
+// Previous in an album: from the first track,
 // a middle track, after a track's end handed over, an album of one, after a
 // track was deleted, and after leaving the album; from the on-screen key,
 // the keyboard and the lock screen and headset (the page's media session
@@ -2546,7 +2546,7 @@ async function previousRows(browser) {
   // at 160 beats a minute, played once: a few seconds each) that hand over.
   const mk = (seed, bpm, short) => {
     const s = newSpec(seed, `bars=2,bpm=${bpm}`);
-    // Played once: its pass, to the second (session 30c).
+    // Played once: its pass, to the second.
     if (short) setTrack(s, { secs: Math.max(1, Math.round(passSeconds(s))) });
     return s;
   };
@@ -2693,7 +2693,7 @@ async function previousRows(browser) {
   await tab.close();
 }
 
-// The lock screen's artwork (session 30f; Mikey, 2026-11-22): what
+// The lock screen's artwork (Mikey, 2026-11-22): what
 // navigator.mediaSession.metadata says, fetched, decoded and compared with
 // that loop's cover as js/cover.js draws it, pixel for pixel at 32 px.
 async function artRows(browser) {
@@ -2812,7 +2812,7 @@ async function artRows(browser) {
   await tab.close();
 }
 
-// A phone on its side in a browser (session 30f; Mikey's review,
+// A phone on its side in a browser (Mikey's review,
 // 2026-11-22): the insets as a browser reports them (DevTools' override),
 // the screen's size apart from the page's, real touch gestures.
 async function keyboardRows(browser) {
@@ -3128,7 +3128,7 @@ async function sidewaysRows(browser) {
       row(`the bar, ${at}: a finger on the piece's line doesn't move the page`, line.y === 0 && line.moves > 0, JSON.stringify(line));
       await home();
       for (let i = 0; i < 3 && await tab.evaluate(() => document.getElementById('viewSounds').hidden); i++) await press('#viewBtn');
-      // (Since session 30k a drag up a slider scrolls the page and leaves the
+      // (A drag up a slider scrolls the page and leaves the
       // slider as it was: the scroll rows.)
       const held = await tab.evaluate(() => document.getElementById('warmth').value);
       const slider = await swipe('#warmth', 0, -100, 0.05);
@@ -3202,7 +3202,7 @@ async function sidewaysRows(browser) {
   row('sideways and the bar: no page errors', !bad.length, bad.join('; '));
 }
 
-// Chrome's bar scrolled from anywhere (session 30k, queue item 119; Mikey:
+// Chrome's bar scrolled from anywhere (Mikey:
 // "I can only scroll up and down by touching specific places on the
 // screen"; `--only scroll` runs just these), in a touch tab of its own,
 // upright and on its side: a finger dragged up from each kind of place (the
@@ -3358,7 +3358,7 @@ async function scrollRows(browser) {
 // The plain lines, each in a tab of its own.
 async function plainRows(browser) {
   {
-    // The plain line (queue item 97; Mikey, 2026-11-07): a browser that
+    // The plain line (Mikey, 2026-11-07): a browser that
     // can't run the core says so in the card's place and plays nothing;
     // there is no fallback synth. A page with WebAssembly taken away
     // before its scripts run, and one whose module never arrives.
@@ -3391,14 +3391,14 @@ function report() {
 
 await main();
 
-// Track length (session 30c, queue item 111): its own view, opened from the
+// Track length: its own view, opened from the
 // Vibe panel's pace line beside "any tempo" and "any bars": the time typed
 // to the second, the keys a second and a minute either way, the coarse
 // slider, on and on, the two fades, cancel and done; the core's track a time
 // on its own clock (a tempo change doesn't move it); a short track ending on
 // its second with the next loop there, with and without its fade out; and
 // the Sound view's Length slider gone.
-// What can't be touched in a view (Track length's, Bars'; session 30f), as
+// What can't be touched in a view (Track length's, Bars'), as
 // it is on the screen (run in the page).
 function covered(id = 'viewTrack') {
   const view = document.getElementById(id);
@@ -3420,7 +3420,7 @@ function covered(id = 'viewTrack') {
   return out;
 }
 
-// The timeline (session 30h, queue item 116; Mikey, 2026-11-23): "click on
+// The timeline (Mikey, 2026-11-23): "click on
 // the timeline ... and skip around on the track", any length, paused or
 // playing; and the album's way back gone once a new track is made.
 async function timelineRows(browser) {
@@ -3911,7 +3911,7 @@ async function trackRows(browser) {
       row(`track length: at ${width}x${height}, ${endless ? 'on and on' : 'a time set'}, every control can be reached, nothing to scroll`, !out.length, out.join('; ') || 'all reached');
     }
   }
-  // A phone on its side (session 30f): the panel beside the card and the
+  // A phone on its side: the panel beside the card and the
   // keys, and Track length usable in it.
   const SIDEWAYS = [[640, 360], [800, 360], [844, 390], [915, 412], [568, 320]];
   for (const [width, height] of SIDEWAYS) {
@@ -3927,7 +3927,7 @@ async function trackRows(browser) {
     }
   }
   await tev(() => document.getElementById('trkCancel').click());
-  // Bars, the same way, upright and on its side (session 30f): any, a
+  // Bars, the same way, upright and on its side: any, a
   // number and Endless.
   await tev(() => document.querySelector('#picksList .pk-go-bars').click());
   for (const [width, height] of [[360, 640], [320, 568], [360, 740], [360, 780], ...SIDEWAYS]) {
@@ -3950,7 +3950,7 @@ async function trackRows(browser) {
     }
   }
   await tev(() => document.getElementById('lenCancel').click());
-  // Closing the gaps takes nothing from a key that has the room (session 30f).
+  // Closing the gaps takes nothing from a key that has the room.
   await tab.setViewportSize({ width: 360, height: 640 });
   await sleep(300);
   const anyKeys = await tev(() => [...document.querySelectorAll('#picksList .pk-anykey')].map((k) => [k.getBoundingClientRect().height, k.parentElement.getBoundingClientRect().height]));
@@ -3963,8 +3963,8 @@ async function trackRows(browser) {
   await tab.close();
 }
 
-// The tempo, key, style and voices pickers (session 30j, queue item 118;
-// `--only pickers` runs just these), in a tab of their own: each opened from
+// The tempo, key, style and voices pickers
+// (`--only pickers` runs just these), in a tab of their own: each opened from
 // its line on the Vibe panel, its keys pressed as a listener would (one pick,
 // a range or a set, any, the pages), cancel keeping what was there and done
 // what is shown; the line it fills and the picks sent to the core and held;

@@ -1,4 +1,4 @@
-// Share codes, version 2 (queue item 105) through the tools' WebAssembly
+// Share codes, version 2 through the tools' WebAssembly
 // build (`dl_code_*`, tools/codes.mjs): every line of core/golden/share-codes.txt
 // written and read back to the same characters, as the core's native test
 // holds them, so the web and the native core speak one format; a name in

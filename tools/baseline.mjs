@@ -1,5 +1,5 @@
 // The core baseline: what the Rust core plays today, kept in the repo, and a
-// check that fails on any difference (queue item 32).
+// check that fails on any difference.
 //
 //   node tools/baseline.mjs            render, and compare with test/core-baseline.json
 //   node tools/baseline.mjs --update   render, and rewrite it
@@ -11,13 +11,12 @@
 // PR, and says what moved and why; one that does not change it must leave
 // this check passing.
 //
-// Since queue item 96 every part is the player's: loops from their seeds on
+// Every part is the player's: loops from their seeds on
 // js/dlplayer.wasm, the module the app plays, in Node (tools/measure.mjs,
 // tools/play-lib.mjs), so one way of playing is checked and no browser is
-// needed. Until then the older parts were rendered in headless Chromium by
-// the page's engine handing its notes to the core up front; for the same
-// loops the two agree to 0.01 dB in every figure (item 96's PR has the
-// table), and differ in their last bits.
+// needed. The older parts were once rendered in headless Chromium. For the
+// same loops the two ways agree to 0.01 dB in every figure, and differ in
+// their last bits.
 //
 // What it keeps:
 //
@@ -27,7 +26,7 @@
 //             speakers and of each layer as it goes into the mix, with the
 //             integrated loudness, the peak and each layer's loudness beside
 //             them to read what a change did
-//   stereo    the same, in the core's stereo render (queue item 64), each
+//   stereo    the same, in the core's stereo render, each
 //             against its mono render: a fingerprint of each side, whether
 //             each side is mono's bit for bit, the fold ((L + R) / 2)
 //             against mono (loudness, and the residual in dB under it), and
@@ -193,7 +192,7 @@ function refusals() {
 
 function costs() {
   const source = fs.readFileSync(path.join(ROOT, 'core', 'src', 'player', 'budget.rs'), 'utf8');
-  // The voice table is data (queue item 78): data/voices.txt.
+  // The voice table is data: data/voices.txt.
   const { blockOf, readBlock } = data;
   const table = readBlock(blockOf('voices', 'voices', 'costs'), { default: 'num', dubstab: 'num', cost: 'table' }, 'data/voices.txt').cost;
   const budgets = {};

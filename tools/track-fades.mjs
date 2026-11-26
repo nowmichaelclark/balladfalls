@@ -1,5 +1,5 @@
-// Track length's fades and ends, measured on renders (session 30c, queue
-// item 111): the export's own render (js/export-render.js, what the app's
+// Track length's fades and ends, measured on renders:
+// the export's own render (js/export-render.js, what the app's
 // export runs) on the app's module, at 48 kHz (its 'opus' samples, float).
 //
 //   node tools/track-fades.mjs            the fades and the ends, on corpus

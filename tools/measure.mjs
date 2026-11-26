@@ -1,11 +1,11 @@
-// Offline audio measurement, on the player (queue item 96).
+// Offline audio measurement, on the player.
 //
 //   node tools/measure.mjs [--n 20] [--seed 1] [options]     the corpus report
 //   node tools/measure.mjs --voice all|a,b [options]         the voice probe
 //   node tools/measure.mjs --refusals [--n 100] [options]    the voice budget
 //   node tools/measure.mjs --endings                         every note fades out
 //
-// This is the audio half of roadmap item 1; `tools/stats.mjs` is the
+// This is the audio half of the measuring; `tools/stats.mjs` is the
 // generation half. It plays loops from their seeds on the core's player,
 // js/dlplayer.wasm in Node, the module the app plays, and reports what came
 // out: K-weighted loudness (ITU-R BS.1770) and loudness range, peak, the
@@ -16,10 +16,10 @@
 // the same samples from a seed (tools/seeds.sh), so there is no browser
 // here and nothing to seed: same options, same numbers, to the bit.
 //
-// Until item 96 this tool drove the page's Engine and Synth in headless
-// Chromium (that tool retired with the JavaScript synth, queue item 97).
+// This tool once drove the page's Engine and Synth in headless Chromium.
+// That way retired with the JavaScript synth.
 // For the same loops the two agree to 0.01 dB in every figure
-// both report (the PR of item 96 has the table).
+// both report.
 //
 // The voice probe, the request as text and the budget's counts need the
 // tools' build of the player (tools/build-core.sh --tools, made on first
@@ -181,7 +181,7 @@ function made(seed, way) {
   return { x, frame, head, about: describe(x) };
 }
 
-// --vibe-mix (queue item 38a): each loop drawn with a random selection of
+// --vibe-mix: each loop drawn with a random selection of
 // 1, 3, 5 or 10 vibes in turn, from a stream of its own, so the loops'
 // seeds are the corpus's own.
 function vibeMixFor(seed, i) {
@@ -247,7 +247,7 @@ function playLoop(loop, opts, gains) {
     comp: x.dl_deepest(0), ceiling: x.dl_deepest(1), layers, hashes, out };
 }
 
-// A stereo loop against its mono render (queue item 64): whether each side
+// A stereo loop against its mono render: whether each side
 // is mono's bit for bit, the fold ((L + R) / 2) against mono, and the side
 // ((L - R) / 2) against the mid.
 function spaceOf(stereo, mono, rate) {

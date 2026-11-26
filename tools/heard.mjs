@@ -1,5 +1,5 @@
 // What the layers draw against what each layer sounds, note by note
-// (session 30b, queue item 110).
+//.
 //
 //   node tools/heard.mjs [--quick] [--json <file>] [--model page|composed]
 //                        [--module <dltools.wasm>]
@@ -29,8 +29,8 @@
 // The cases: plain loops of the corpus (corpus seed 20261009) at full and
 // lite, long pieces through their quiet and fading sections (an arc, a
 // wander, Endless), a jump within a piece, and a track's close where the
-// length slider stops a piece. `--model composed` draws as the page did
-// before item 110 (the layers' grid of each pass, as composed), for the
+// length slider stops a piece. `--model composed` draws as the page once
+// did (the layers' grid of each pass, as composed), for the
 // figures before, with `--module` a tools' build of main from before (its
 // grid as composed: build main's with the note log, core/src/lib.rs's
 // `begun`); the default is the page as it is, on this build.
@@ -78,7 +78,7 @@ const LAYER_OF_CHANNEL = [3, 2, 1, 4, 0];
 const LAYERS = ['drums', 'bass', 'chords', 'melody', 'texture'];
 const KIND = { step: 0, pass: 1, section: 2, phrase: 3, loop: 4, revised: 5, end: 6, own: 7, jump: 8, heard: 9 };
 
-// The page before item 110: the grid of the pass heard, as composed, drawn a
+// The old page: the grid of the pass heard, as composed, drawn a
 // bar at a time when the playhead enters the bar (js/main.js's onStep).
 class ComposedModel {
   constructor() {

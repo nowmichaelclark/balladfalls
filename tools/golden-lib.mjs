@@ -1,4 +1,4 @@
-// The golden renders' shared code (queue item 42): the note-list text
+// The golden renders' shared code: the note-list text
 // format, the hash, and a host that renders a note list
 // through js/dlplayer.wasm in Node, with the same calls the worklet makes.
 //
@@ -146,7 +146,7 @@ export class Fnv {
 // The signals a render hashes, in the hash line's order (the native host's
 // SIGNALS).
 export const SIGNALS = ['out', 'melody', 'chords', 'bass', 'texture', 'drums', 'wash', 'bus'];
-// A stereo render's (queue item 64; `list.layout` 2): both sides of the
+// A stereo render's (`list.layout` 2): both sides of the
 // speakers and of the bus, the channels between, as the native host has them.
 export const STEREO_SIGNALS = ['left', 'right', 'melody', 'chords', 'bass', 'texture', 'drums', 'wash', 'bus', 'busright'];
 export function signalsOf(list) {

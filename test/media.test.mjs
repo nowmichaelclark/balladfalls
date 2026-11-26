@@ -1,4 +1,4 @@
-// The lock screen's artwork in a browser (session 30f; Mikey, 2026-11-22):
+// The lock screen's artwork in a browser (Mikey, 2026-11-22):
 // the playing loop's own cover, with no browser: the media session, the
 // object URLs and the cover's drawing are stand-ins.
 // Run with:  node test/media.test.mjs

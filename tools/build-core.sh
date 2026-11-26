@@ -1,13 +1,12 @@
 #!/bin/sh
 # Build the Rust core (core/) to WebAssembly and copy it to
-# js/dlplayer.wasm, the module the app plays (queue items 82 and 97: the
-# core with its generator and its player).
+# js/dlplayer.wasm, the module the app plays: the
+# core with its generator and its player.
 #
 #   tools/build-core.sh          build, and replace js/dlplayer.wasm
 #   tools/build-core.sh --check  build, and fail if the committed file
 #                                differs from its build by a single byte
-#   tools/build-core.sh --tools  build the measuring tools' module (queue item
-#                                96: the player's, with the generator's
+#   tools/build-core.sh --tools  build the measuring tools' module (the player's, with the generator's
 #                                exports, a request as text, the voice probe
 #                                and the budget's counts), to
 #                                core/target/dltools.wasm (not committed)
@@ -68,13 +67,12 @@ if [ "$tools" = yes ]; then
   echo "build-core: wrote core/target/dltools.wasm ($(wc -c < "$root/core/target/dltools.wasm" | tr -d ' ') bytes)"
   exit 0
 fi
-# The app's module (queue item 82: the `player` feature, the generator and
-# the player with their exports; and since session 20, queue item 104b, the
-# `flac` feature: the lossless export's encoder, `dl_flac_*`, which the
-# export's Worker drives, js/export-worker.js); and since session 23, queue
-# item 105b, the `codes` feature: share codes, version 2, `dl_code_*`, which
-# js/gen.js drives. Until item 97 a second one,
-# js/dlcore.wasm (the `web` feature alone), played the page's own engine.
+# The app's module has three features:
+# - `player`: the generator and the player, with their exports.
+# - `flac`: the lossless export's encoder, `dl_flac_*`, which the export's
+#   Worker drives (js/export-worker.js).
+# - `codes`: share codes, version 2, `dl_code_*`, which js/gen.js drives.
+# This is the only module that the app plays.
 status=0
 for module in dlplayer:player,flac,codes; do
   name=${module%%:*}

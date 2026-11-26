@@ -1,4 +1,4 @@
-// The chords' octave check (queue item 84).
+// The chords' octave check.
 //
 // Run with:  node tools/octave.mjs [--n 2000] [--seed 1] [--save FILE] [--against FILE [--list]]
 //
@@ -16,7 +16,7 @@
 // written for, is not a thing a request can ask: the core reads the octave
 // from today's lengths itself, `Render::chords_octave`.)
 // It prints the gap's distribution (the tune's centre less the chords', on
-// the sounding notes, as the blind album measured it: queue item 84b), for
+// the sounding notes, as the blind album measured it), for
 // every loop and for the loops whose chords were moved down, and how many
 // of those sit more than an octave under the tune.
 // `--save` writes every loop's octave and that gap to a file; `--against`
@@ -40,7 +40,7 @@ const SEED = +opt('seed', 1);
 // How many semitones the rendered chords sit from where the progression was
 // voiced (the plan's harmony is as drawn, the form's after the register
 // work), as the move the register work was given. A whole octave moves
-// every note; since item 84b a move of less than an octave down takes the
+// every note. A move of less than an octave down takes the
 // notes at or over a line in each chord an octave down (`render::lower`:
 // the line from the slot's chord, its top notes, as many as take its centre
 // at least that far), so the move is read back by replaying that rule: the

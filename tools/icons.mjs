@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Every icon the app uses, made from one source, icons/icon.svg (item 120):
+// Every icon the app uses, made from one source, icons/icon.svg:
 // the page's favicons, the web app's icons (192, 512, the maskable 512),
 // the apple-touch-icon, Android's adaptive icon (its background, foreground
 // and monochrome layers) and the status bar's icon, and the F-Droid

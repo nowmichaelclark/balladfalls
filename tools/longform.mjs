@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Long pieces, composed (queue item 102; docs/LONGFORM.md): the piece map's
+// Long pieces, composed (docs/LONGFORM.md): the piece map's
 // promises, checked over a corpus on the core's own plan
 // (core/src/generator/longform.rs, read through the tools' build:
 // tools/build-core.sh --tools). The same checks as core/tests/longform.rs,
-// as a table a person reads; sessions 12 to 15 add what is played to it.
+// as a table a person reads; later checks add what is played to it.
 // (That the plan is the same wherever the wander's slider stands is the
 // Rust test's: it plays the player at 0, 1 and 2.4.)
 //
@@ -44,11 +44,11 @@
 //                                           weigh the shares by
 //
 // Each seed is planned at 64, 256, 1,024 and 32,768 bars and Endless, as an
-// arc and as a wander (journey=arc, journey=wander). Since session 12 the
+// arc and as a wander (journey=arc, journey=wander). The
 // wander is heard: its checks are made again on what the player plays (the
 // corpus's first pieces, rendered by `dlrender`, built first), with the
 // joins' clicks, the loudness over twenty minutes and the cost of a
-// section's making and of its block. Since session 13 the arc is heard
+// section's making and of its block. The arc is heard
 // too: corpus pieces at 64, 256 and 1,024 bars, rendered whole, measured
 // unit by unit against the loop as itself (tools/longform-played.mjs's
 // `arcChecks`, `arcVerdict`): the loudness and the brightness rise to the
@@ -149,7 +149,7 @@ const things = (u) => u.changed.filter((c) => THINGS.includes(c));
 // A unit without what changed from the one before: what it is.
 const bare = (u) => JSON.stringify({ ...u, changed: null, section: null, phrase: null });
 
-/** The movements' kinds (session 14), over a whole finite piece's units or a stretch of Endless's. */
+/** The movements' kinds, over a whole finite piece's units or a stretch of Endless's. */
 function movementChecks(where, form, units, whole) {
   const kinds = [];
   for (const u of units) if (kinds.at(-1)?.part !== u.part) kinds.push({ part: u.part, kind: u.movement });
@@ -171,7 +171,7 @@ function arcPlanChecks(where, form, units) {
     while (end < units.length && units[end].part === units[at].part) end += 1;
     const run = units.slice(at, end);
     at = end;
-    // An interlude (session 14) is the wander's way for a span: theme A at
+    // An interlude is the wander's way for a span: theme A at
     // home, one thing moving at a time, the loop's own at both its ends.
     if (run[0].movement === 'interlude') {
       const started = at - run.length > 0 && units[at - run.length - 1].movement !== 'interlude';
@@ -243,7 +243,7 @@ const dlgen = (args) => {
   }
   return execFileSync(path.join(CORE, 'target', 'release', 'examples', 'dlgen'), args, { encoding: 'utf8' });
 };
-// The holes session 05 found on Endless arcs (docs/notes/for-mikey.md,
+// The holes that an earlier listening found on Endless arcs (docs/notes/for-mikey.md,
 // under dottedPulse), where each join began, in seconds as rendered.
 const PLACES = [{ seed: 1337654778, name: 'ta-muin', at: [124.0, 564.5] }, { seed: 819045617, name: 'yi-yoar', at: [373.5] }];
 const WANDERED = [7, ...seeds.slice(0, OPTIONS.played - 1)];
@@ -284,7 +284,7 @@ function work() {
           r.grains[form.grain] += 1;
           check('the journey asked is the piece\'s', form.journey === journey && form.asked, where);
 
-          // The joins (session 15): every line where a theme, a key or how
+          // The joins: every line where a theme, a key or how
           // the tune is played changes (or a wander's line move) written, a
           // glide only for what glides; none after a close.
           for (let x = 1; x < units.length; x++) {
@@ -498,7 +498,7 @@ function work() {
     } });
   }
 
-  // The arc as played (session 13): each piece rendered whole at the wander's
+  // The arc as played: each piece rendered whole at the wander's
   // amount 0 (the plan with no breathing, so what is measured is the arc's
   // own shape: each unit against the loop as itself on the same bars), the
   // first of them at the app's amount too for what is heard.
@@ -524,7 +524,7 @@ function work() {
     const verdicts = out.arcs.map((i) => R[i].verdict);
     const share = (key) => verdicts.filter((v) => v[key]).length / verdicts.length;
     check('arc played: the loudness rises to the peak and falls, in order (9 in 10)', share('loudRises') >= 0.9, `${(100 * share('loudRises')).toFixed(0)}%: ${verdicts.filter((v) => !v.loudRises).map((v) => v.seed).join(', ')}`);
-    // The brightness judged on the arc's own job (session 15): the opening and
+    // The brightness judged on the arc's own job: the opening and
     // the close darker than the peak. The order over every role is reported.
     check('arc played: darker at the opening and the close than at the peak (9 in 10)', share('brightEnds') >= 0.9, `${(100 * share('brightEnds')).toFixed(0)}%: ${verdicts.filter((v) => !v.brightEnds).map((v) => `${v.seed}@${v.length.slice(5)}`).join(', ')}`);
   } });
@@ -553,7 +553,7 @@ function work() {
       };
     } });
   }
-  // The places session 05 found (session 16b): three joins of two Endless
+  // The places that listening found: three joins of two Endless
   // arcs the corpus run never played, each held to HOLE_DB under the loop
   // there for half a beat at most (the wide run is the nightly's,
   // tools/longform-holes.mjs).
@@ -572,7 +572,7 @@ function work() {
       return { places, depths: joins.depths.map((d) => ({ ...d, where: `${seed} "${request}"` })) };
     } });
   }
-  // No join a hole (session 16): every join of every arc played, as played,
+  // No join a hole: every join of every arc played, as played,
   // against the loop as itself in the same window (`joinDepths`).
   out.depthsAt = w.length;
   add('arc joins, the whole set', 0, { finish: (R) => {
@@ -604,7 +604,7 @@ function work() {
     } });
   }
 
-  // Endings that land (session 15): twenty pieces the length slider stops
+  // Endings that land: twenty pieces the length slider stops
   // before their close (Endless arcs and wanders, and finite arcs part way),
   // each with the core's own next loop after it, as in the app: the last
   // chord struck the tonic's, nothing after it but its ring, never faded.

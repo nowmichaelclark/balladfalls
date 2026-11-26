@@ -1,5 +1,5 @@
-// Accessibility, the measurable parts (session 30f, queue item 114; the bar
-// is WCAG 2.2 level AA). The real app in headless Chromium, taken through
+// Accessibility, the measurable parts (the bar is
+// WCAG 2.2 level AA). The real app in headless Chromium, taken through
 // its screens:
 //
 //   contrast   as rendered, in every theme and in forced colors: text 4.5:1
@@ -7,8 +7,8 @@
 //              graphics and the controls' icons 3:1
 //   focus      Tab reaches every control and comes round again; on each the
 //              ring is drawn, whole, at 3:1, and nothing covers the control;
-//              a view opened or closed keeps the focus, closed by Esc too
-//              (session 30n), and so does the list of keys
+//              a view opened or closed keeps the focus, closed by Esc too,
+//              and so does the list of keys
 //   names      each control has a name, its role's state, and, a slider, its
 //              value in words; the words on a key are in its name
 //   targets    24 by 24 CSS px at the least (how many are under 44 is said)
@@ -222,7 +222,7 @@ const SCREENS = [
   ['advanced, the end', async (p) => {
     await p.evaluate(() => { document.querySelector('#libAdvanced .scroll').scrollTop = 1e6; });
   }],
-  // The list of keys (session 30n), a popup: Advanced's keys key opens it.
+  // The list of keys, a popup: Advanced's keys key opens it.
   ['keys, the list', async (p) => { await click(p, '#keysBtn'); }],
 ];
 
@@ -240,7 +240,7 @@ const ALONE = [
 function pageSide() {
   const CONTROLS = 'button, a[href], input:not([type="hidden"]), [role="button"], [role="slider"]';
   const SCROLLERS = '.scroll, .vb-list, .keys-pop';
-  // A popup open (the list of keys, session 30n): what is under it is
+  // A popup open (the list of keys): what is under it is
   // inert, so only it is looked at.
   const root = () => document.querySelector('dialog:modal') || document;
   // The graphics that mean something. `fill`: the middle of the shape;
@@ -822,7 +822,7 @@ async function focusFollows(browser) {
   await page.keyboard.press(' ');
   await sleep(250);
   if (await isHidden(page, 'viewVibe')) fail('focus', 'vibe', 'Space does not press the key the keyboard is on');
-  // Esc (session 30n) goes back as the view's own key does, the focus on
+  // Esc goes back as the view's own key does, the focus on
   // the key that opened it; and the list of keys, opened by ?, gives the
   // focus back where it was.
   const on = (sel) => page.evaluate((s) => document.activeElement === document.querySelector(s), sel);

@@ -1,4 +1,4 @@
-// The player in Node, for the measuring tools (queue item 96): the core's
+// The player in Node, for the measuring tools: the core's
 // player module (js/dlplayer.wasm, what the app plays) and the tools' build
 // of it (core/target/dltools.wasm, `tools/build-core.sh --tools`: the same
 // player with a request as text, the voice probe and the budget's counts).

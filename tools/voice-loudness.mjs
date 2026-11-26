@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Each voice's loudness in the mix over a note's life (queue item 102g,
-// session 16b): the numbers `[longform loudness]` in data/longform.txt holds,
+// Each voice's loudness in the mix over a note's life:
+// the numbers `[longform loudness]` in data/longform.txt holds,
 // by which a long piece's join knows, from its notes alone, how much of the
 // mix the layers it keeps carry (core/src/generator/heard.rs, `Heard::share`).
 // One note of every voice the probe knows (tools/play-lib.mjs's `probe`,
@@ -8,7 +8,7 @@
 // the last span) at velocity 0.8 at
 // three pitches across its layer's window (one for the kit), its mean power
 // in seven spans of its life (0 to 1/8 s, to 1/4, 1/2, 1, 2, 4 and 8 s; the
-// last since session 23, held 8 s: a long note past 4 s, which a table that
+// last held 8 s: a long note past 4 s, which a table that
 // stopped at 4 s read as its 2 to 4 s), as dB
 // at velocity 1 (power goes with the velocity squared: measured, 6.0 dB from
 // 0.4 to 0.8 on every tuned voice, 5.4 to 5.7 on the kit) through the
@@ -45,7 +45,7 @@ for (const layer of LAYERS) {
     const midis = layer === 'drums' ? [lo] : [lo + 6, Math.round((lo + hi) / 2), hi - 6];
     const acc = SPANS.map(() => 0);
     for (const midi of midis) {
-      // The first six spans held 4 s, as session 16b measured them; the last,
+      // The first six spans held 4 s, as first measured; the last,
       // past 4 s, held 8 s (a voice that fades toward its note's end fades
       // at the end of whichever it is, so the two holds differ before 4 s).
       const d = probe({ layer, voice, midi, vel: VEL, seconds: 4, rate: RATE, tail: 0.5, seed: 7 });

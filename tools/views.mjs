@@ -1,4 +1,4 @@
-// Glitches with the screen on (queue item 40): the real app, playing in
+// Glitches with the screen on: the real app, playing in
 // headless Chromium with the tab visible and the CPU throttled, while the
 // harness goes through the views as a listener would -- Now Playing, Vibes,
 // the Library with 30 saved loops and 5 albums, an album open, every loop,
@@ -28,7 +28,7 @@
 //                where the build reports it)
 //   lead ms      how far ahead of its time the closest note was handed
 //                over (its time less the context's clock as it was posted);
-//                and, where the core reports it (queue item 41), how far
+//                and, where the core reports it, how far
 //                ahead of what the core had rendered it arrived
 //   readbacks    canvas pixel reads and GPU flushes on the main thread:
 //                getImageData, putImageData, toDataURL, toBlob, and
@@ -44,8 +44,8 @@
 //                       (mute, unmute, re-roll, tempo, wander, a vibe loop):
 //                       from the key to the first note that reflects it
 //   --report            print Diagnostics at the end of each session
-//   --buffer <s>        a large, bursty audio output, as on the Pixel 10a
-//                       (queue item 41): the context asks for this latency
+//   --buffer <s>        a large, bursty audio output, as on the Pixel 10a:
+//                       the context asks for this latency
 //                       (a number for latencyHint), and Chromium renders in
 //                       blocks of that size -- 0.37 gives 8192 frames, 186
 //                       ms bursts and about 0.56 s of output latency.
@@ -170,8 +170,8 @@ const extra = (lite, buffer) => `(() => {
       }
     };
   }
-  // The core's reports of how its notes arrived (queue item 41; nothing
-  // on a build before it): the least time to spare, and how far past the
+  // The core's reports of how its notes arrived (nothing
+  // on an old build): the least time to spare, and how far past the
   // page's clock it had rendered.
   const early = window.__early = [];
   const desc = Object.getOwnPropertyDescriptor(MessagePort.prototype, 'onmessage');
@@ -307,7 +307,7 @@ async function go(tab, name) {
 
 const PHASES = [
   { view: 'now playing', run: async (tab) => { await go(tab, 'now'); await sleep(8000); } },
-  // A long piece's line (session 18, queue item 106b): taps along it and the
+  // A long piece's line: taps along it and the
   // section keys, each a jump whose place the core then says. On a loop that
   // is no long piece the line is not there and this is a wait on Now Playing.
   { view: 'now playing: the piece\'s line', run: async (tab) => {
@@ -333,7 +333,7 @@ const PHASES = [
     await sleep(2000);
   } },
   { view: 'vibes', run: async (tab) => { await go(tab, 'vibes'); await sleep(1500); await scroll(tab, 500); await sleep(4000); } },
-  // The Track length view (session 30c, queue item 111): opened from the
+  // The Track length view: opened from the
   // Vibe panel's pace line, its keys, slider and fades pressed as a listener
   // would, then cancel (the loop playing keeps what it had).
   { view: 'track length', run: async (tab) => {
@@ -350,7 +350,7 @@ const PHASES = [
     await click(tab, '#trkCancel');
     await sleep(1000);
   } },
-  // The tempo, key, style and voices pickers (session 30j, queue item 118):
+  // The tempo, key, style and voices pickers:
   // each opened from its line, keys pressed and pages turned as a listener
   // would, then done (the picks go to the core for loops still to come),
   // and clear all.
@@ -413,7 +413,7 @@ const PHASES = [
     await click(tab, '#pasteCode');
     await sleep(5000);
   } },
-  // Share's two views (session 30e, queue item 113).
+  // Share's two views.
   { view: 'export', run: async (tab) => {
     await go(tab, 'save');
     await click(tab, '[data-stab="share"]');
@@ -458,7 +458,7 @@ function longTasks(frames) {
 }
 
 // The core's dropped notes, from Diagnostics' engine line, and by cause
-// where the build says (queue item 41).
+// where the build says.
 function dropped(diag) {
   const e = String(diag.engine || '');
   const m = e.match(/dropped: (\d+)/);
@@ -510,7 +510,7 @@ async function phase(tab, engine, ph, loop) {
   };
 }
 
-// The changes that must be heard at once (queue item 40, step 2), from the
+// The changes that must be heard at once (step 2), from the
 // key (on the context's clock):
 //   heard from   when the music has the change: the time the core's queue is
 //                cut from and decided again (a cancel from a time); with
@@ -522,7 +522,7 @@ async function phase(tab, engine, ph, loop) {
 async function changes(tab, engine, loop) {
   const rows = [];
   const at = () => tab.evaluate('window.__stalls.ctx.currentTime');
-  // The core's late notes over each change (queue item 41): a change heard
+  // The core's late notes over each change: a change heard
   // from inside the render-ahead lands late.
   const coreLate = async () => (await tab.diagnostics()).coreLate;
   let lateMark = null;
@@ -690,7 +690,7 @@ async function main() {
   if (opts.md) fs.writeFileSync(opts.md, text);
   // A view that failed (no key to press, a list that did not scroll, a
   // session that threw) fails the run: it used to exit 0 with the error in
-  // the table (session 30c found it, 30 fixed it).
+  // the table.
   const failed = rows.filter((r) => r.error);
   if (failed.length) {
     log(`views: ${failed.length} failed: ${failed.map((r) => `${r.loop} ${r.throttle}x ${r.quality} ${r.view || 'session'}: ${r.error}`).join('; ')}`);

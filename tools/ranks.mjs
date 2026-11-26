@@ -1,4 +1,4 @@
-// The word-ranking test's answers, summed up (queue item 19).
+// The word-ranking test's answers, summed up.
 //
 // Run with:  node tools/ranks.mjs <file.jsonl>
 //
@@ -19,7 +19,7 @@
 // and word by word, the share of the five that got the same fits / doesn't
 // fit answer, and per word how often its answer flipped.
 //
-// --fit (queue item 35a) fits the words to the ten dials instead of the
+// --fit fits the words to the ten dials instead of the
 // tables: see tools/fit.mjs. --dials <file.json> reads the dials from
 // tools/dials.mjs --json rather than measuring each code; --json <out>
 // writes the fit for the brain; --boot <n> sets the bootstrap (1000).
@@ -74,7 +74,7 @@ console.log(`nothing tapped on ${none} of ${answered.length} (${pct(none, answer
 
 // The pool-3 groups, as in rank.html (the maps: color, shimmer, air,
 // motion, flavor). Pool 1 had no groups, but every pool-1 word sits in one.
-// Pool 4 is pool 3 less soft, comfy, energetic and silly (queue item 76b);
+// Pool 4 is pool 3 less soft, comfy, energetic and silly;
 // they stay here, so older answers keep their groups.
 const GROUPS = {
   color: ['golden', 'frosty', 'tender', 'happy', 'joyful', 'reflective', 'merry', 'peaceful',
@@ -134,7 +134,7 @@ function table(list, withGroup) {
   }
 }
 
-// Word-album answers (item 37) are not five-word trials: counted apart.
+// Word-album answers are not five-word trials: counted apart.
 const albumLines = answered.filter((t) => t.album || t.answer);
 if (albumLines.length) {
   console.log(`\n=== word albums: ${albumLines.length} answers ===`);

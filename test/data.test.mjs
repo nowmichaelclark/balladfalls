@@ -1,4 +1,4 @@
-// The generation data (queue item 78): the text format's reader, and every
+// The generation data: the text format's reader, and every
 // entry of data/*.txt: that it parses and that every name it uses exists.
 // Run with:  node test/data.test.mjs
 

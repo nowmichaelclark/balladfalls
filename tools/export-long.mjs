@@ -1,5 +1,5 @@
-// The long export's yardstick (queue item 104b, and 104c for `--format
-// small`): a three-hour lossless (or small, Opus) export in the real app, in headless Chromium, on tools/autolite.mjs's slow
+// The long export's yardstick: a three-hour export (lossless, or Opus with
+// `--format small`) in the real app, in headless Chromium, on tools/autolite.mjs's slow
 // case (`?burn=1700`: the Moto-class audio thread, every block the core
 // renders made 1.7 ms slower), while the music plays.
 //
@@ -7,7 +7,7 @@
 //                              [--format lossless|small] [--keep DIR] [--port 8772]
 //                              [--album N [--box zip|files]]
 //
-// `--album N` (item 121): an album of N tracks (corpus loops, each
+// `--album N`: an album of N tracks (corpus loops, each
 // `--length` / N seconds), playing, exported whole as one zip or a file a
 // track: the same watch over the whole run, then the zip tested by `unzip`
 // and every track checked as the single file is, against its own job.
@@ -155,7 +155,7 @@ function chromiumRss() {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const mb = (b) => (b / 1e6).toFixed(0);
 
-// An album's files (item 121): the zip downloaded at the end and tested by
+// An album's files: the zip downloaded at the end and tested by
 // unzip, or a download a track; each track checked against its own job by
 // tools/export.mjs --file.
 async function albumFiles({ page, end, out, downloads, check, each }) {
@@ -226,7 +226,7 @@ async function main() {
     await ev(() => document.getElementById('pasteCode').click());
     await sleep(4000);
     // An album of ALBUM corpus loops, each its share of the length, pasted
-    // and playing (item 121).
+    // and playing.
     const each = ALBUM ? Math.max(1, Math.round(LENGTH / ALBUM)) : 0;
     if (ALBUM) {
       const pool = [LOOPS.shatter, LOOPS.cinder, LOOPS.hollow, LOOPS.undertow];
@@ -247,7 +247,7 @@ async function main() {
       const n = (k) => Number((new RegExp(`${k}: (\\d+)`).exec(line) || [])[1] ?? NaN);
       return { line, late: n('late'), missed: n('missed'), dropped: n('dropped') };
     };
-    // The export is as long as the track (session 30c): set in the Track
+    // The export is as long as the track: set in the Track
     // length view, to the second, as a listener sets it.
     const set = await ev((t) => {
       document.getElementById('vibesBtn').click();

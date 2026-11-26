@@ -1,4 +1,4 @@
-// A long piece on screen (session 18, queue item 106b): the journey pick as
+// A long piece on screen: the journey pick as
 // the request's journey and what the core does with it, the map the line
 // draws (whole, for a finite piece; a window, for Endless), the markers on
 // their pixels, the sections either side of a place, and the words the

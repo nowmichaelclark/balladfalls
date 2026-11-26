@@ -1,4 +1,4 @@
-// Tests for what the Android app does for the page (session 28, js/app.js)
+// Tests for what the Android app does for the page (js/app.js)
 // that need no browser and no device: a stub in place of the app's
 // `DriftloomApp`, the real media bridge and file saving on it.
 // Run with:  node test/app.test.mjs

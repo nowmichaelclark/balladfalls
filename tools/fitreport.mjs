@@ -1,4 +1,4 @@
-// The readable report for `ranks.mjs --fit` (queue item 35a): a word's
+// The readable report for `ranks.mjs --fit`: a word's
 // region first, by group (the five maps), and the honest check on top.
 
 import fs from 'node:fs';
@@ -9,7 +9,7 @@ import {
 } from './fit.mjs';
 
 // The pool-3 groups, as in ranks.mjs (rank.html's pool 4 drops four of
-// them; queue item 76b).
+// them).
 const GROUPS = {
   color: ['golden', 'frosty', 'tender', 'happy', 'joyful', 'reflective', 'merry', 'peaceful',
     'bright', 'sunny', 'starry', 'wondrous', 'triumphant', 'wistful', 'warm', 'cool',

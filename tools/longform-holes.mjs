@@ -1,18 +1,18 @@
 #!/usr/bin/env node
-// No join a hole, on any piece (queue item 102g, session 16b): the wide run
-// of session 16's yardstick (tools/longform-played.mjs, `joinDepths`). Every
+// No join a hole, on any piece: the wide run
+// of the hole yardstick (tools/longform-played.mjs, `joinDepths`). Every
 // join of many pieces, as played, against the loop as itself at the same
 // moment: Endless arcs (their first 30 minutes) and 1,024-bar arcs (whole),
 // rendered by `dlrender` at the wander's amount 0 (the plan with nothing
 // breathing, so the two renders play the same notes but for the plan's). A
-// hole is session 16's (a join whose median 50 ms frame is HOLE_DB under the
+// hole is a join (one whose median 50 ms frame is HOLE_DB under the
 // loop there, made by the join, not the unit's own quiet before it) that
 // stays that far under for more than half a beat: a half-beat breath (a
 // four-bar unit's, the shortest there is) is the gesture Mikey kept in
-// moan-teil's look-back (docs/notes/102-mikey.md), and half a beat is what
-// brain B3 held session 05's three places to. Those are listed, not held.
-// tools/longform.mjs plays a small set of its own (the three places session
-// 05 found among them); this is the nightly's (.github/workflows/nightly.yml).
+// moan-teil's look-back (docs/DECISIONS.md, the Long Pieces Album), and half a beat is what
+// the three places found by ear are held to. Those are listed, not held.
+// tools/longform.mjs plays a small set of its own (the three places found by
+// ear among them); this is the nightly's (.github/workflows/nightly.yml).
 //
 //   node tools/longform-holes.mjs                 140 Endless arcs and 60 of
 //                                                 1,024 bars: about 90
@@ -65,7 +65,7 @@ function playSeed(seed, requests, minutes) {
   const out = [];
   try {
     // The loop as itself: its own bars asked (with none asked it is
-    // sometimes a long piece, queue item 117).
+    // sometimes a long piece).
     const loop = one(itself(seed), Math.max(...plans.map((p) => p.seconds)), path.join(tmp, 'loop.wav'));
     for (const p of plans) {
       const piece = one(p.request, p.seconds, path.join(tmp, 'piece.wav'));

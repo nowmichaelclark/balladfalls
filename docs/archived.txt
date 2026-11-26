@@ -26,6 +26,7 @@ docs/notes/102-b3-measured.md
 docs/notes/102c-arc-brightness.md
 docs/notes/102d-arc-brightness.md
 docs/notes/98-testers.md
+docs/notes/102-mikey.md
 
 # Part 2 of the slim (the ears' material; its findings are on the wiki's
 # Ballad Falls/What the ears found page, and the game's note on its

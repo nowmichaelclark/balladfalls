@@ -1,10 +1,12 @@
 # Next picks: the chosen design
 
-Chosen by Mikey on 2026-10-13, after four rounds and 70 options (Painter
-session 5). This is the brief for building it into the app. The canvas
-("Winner · next picks (locked)" page) and the three renders in
-`reference/next_picks_*.png` show it; where this text and a render
-differ, this text wins.
+Mikey chose this design on 2026-10-13, after four rounds and 70 options
+(Painter session 5). It is built: the Vibe panel, the picks on Now
+Playing, the Bars picker (v97 to v99), and the tempo, key, style and
+voices pickers (v205, built plain). This page is the design brief, kept
+for a Painter session that restyles them. The three renders that showed
+it left the tree after 1.0 (`docs/archived.txt`). If this text and the
+app differ, the app wins, and "Decided" below wins over the text above it.
 
 Three places: **Now Playing** shows what new loops lean toward, the
 **New loops** panel lists the picks, and the **Length** picker sets bars.
@@ -164,20 +166,6 @@ section wins.
   bars, not back to any. Tempo's any key comes with the tempo picker. Line two's any
   key in the panel still clears both.
 
-## Open questions (as they were asked, now answered above)
-
-1. **The way in during an album.** The pills are hidden in an album, so
-   they can't open New loops there. Painter's suggestion: keep today's
-   top-left key, renamed "new loops", in an album (where it is the only
-   way in), and drop it outside an album (where the pills are the way
-   in). Until Mikey decides, leave the Vibes key as it is.
-2. **How does someone set only length (or only tempo) back to "any"?**
-   Line two's any key clears both. The chosen design has no "any" inside
-   the Length picker. Until Mikey decides, building the line-level key
-   alone is enough; the dashed "any tempo" / "any length" pill exists for
-   when tempo and length differ (for example, length picked from the
-   picker while tempo is still "any").
-
 ## Tempo, key, style and voices (session 30j, queue item 118)
 
 Built plain by the hands on 2026-11-24 (Mikey, 2026-11-23: "We don't have
@@ -214,10 +202,8 @@ for a Painter session (30k) to restyle. `js/pickers.js`.
 
 ## Building notes
 
-- Today's generator draws bars from a profile table (2 to 32) and tempo
-  from a band (32 to 190 bpm). Per the brain's rules (`docs/BRAIN.md`,
-  "Two tracks"), wiring length and tempo to today's generator is fine if
-  cheap, clamped to what it can play; the full range (32,768 bars,
-  Endless) arrives with the core. Moods are today's vibes.
-- Bump `BUILD` and `CACHE` together; bake the spec again afterward
-  (`design/test-kit/bake.mjs`) so it shows the new views.
+- The core takes the full ranges: 1 to 32,768 bars or Endless, and 32 to
+  190 bpm. The vibes are the moods.
+- Bump `BUILD` and `CACHE` together. If a Painter session needs the spec,
+  bake it again (`design/test-kit/bake.mjs`) so that it shows the new
+  views, and do not commit it.

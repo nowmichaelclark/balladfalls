@@ -109,3 +109,8 @@ repository.
   `docs/LONGFORM.md` (41.4 to 25.2 KB) keep what is live. The research, the
   tuning record and the build story move to three wiki pages, under "Mood
   words and vibes" and "Long pieces". Nothing to hear.
+- balladfalls #19, the plain style, the design docs (docs only):
+  `docs/PAINTER.md` says what is built plain and what is not built yet;
+  `design/README.md` loses its version-by-version log (now the wiki's
+  "Ballad Falls/History/The design spec"); `design/next-picks.md` is the
+  brief as built; the answered note `102-mikey.md` leaves. Nothing to hear.

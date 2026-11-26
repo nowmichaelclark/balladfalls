@@ -772,3 +772,9 @@ merges (`docs/QUEUE.md`, standing rules). Entries before #357 are in
   and the changelog say 1.0 is out, the old address forwards, driftloom is
   archived and F-Droid's review (!59136) is open; what was done is archived.
   Nothing to hear.
+- balladfalls #9, the slim after 1.0, part 1 (Mikey, 2026-11-26; docs and
+  tools only): `docs/archive/`, `docs/sessions/`, the Painter's old pictures
+  and spec versions and five closed notes leave the tree (listed in
+  `docs/archived.txt`, still readable at 72b13f0 and in driftloom);
+  `tools/check-docs.mjs` fails on a broken pointer into `docs/` or `design/`;
+  `fastlane/` no longer deploys with the site. Nothing to hear.

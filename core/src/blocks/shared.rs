@@ -32,7 +32,7 @@ pub(crate) const Q_DEFAULT: f32 = 1.0;
 /// this is well past that.
 pub(crate) const FILTER_TAIL: f64 = 0.2;
 /// Where a gain behind the noise holds before its note: its first event's
-/// value (item 26b). A source can begin a frame ahead of that event, and
+/// value. A source can begin a frame ahead of that event, and
 /// the frame it plays then goes through this, not through unity.
 pub(crate) const QUIET: f32 = 0.0001;
 /// A partial's level in a struck bell (`BELL_PARTIAL_VEL`).
@@ -239,7 +239,7 @@ mod tests {
     }
 
     /// Every draw moved from JavaScript into the core, with the range it
-    /// keeps (queue item 44's list; each is `Math.random() * a + b` in the
+    /// keeps (each is `Math.random() * a + b` in the
     /// voice it came from).
     #[test]
     fn every_moved_draw_keeps_its_range() {
@@ -330,7 +330,7 @@ pub enum Turn {
     Rest,
 }
 
-/// The retune rule (queue items 46c and 61): a held instrument with `N`
+/// The retune rule: a held instrument with `N`
 /// voices holding `held` (NaN for a silent voice) moves to `chord`. A note
 /// two chords share keeps sounding, untouched, on the voice that holds it;
 /// each new note goes to the first voice left over, in order; a voice with

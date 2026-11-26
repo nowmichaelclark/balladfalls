@@ -1,5 +1,5 @@
-//! A long piece's joins and its endings (queue item 102e, session 15;
-//! `docs/LONGFORM.md`, "The joins"): where two units meet and something
+//! A long piece's joins and its endings
+//! (`docs/LONGFORM.md`, "The joins"): where two units meet and something
 //! changes, the line is written (`longform::Join`), chosen by what changes
 //! and the energy either side, and played as `heard` plays it; a section
 //! reached straight from its number joins as one reached by playing; and
@@ -173,10 +173,10 @@ fn every_line_that_changes_a_theme_or_a_key_is_written() {
                         let what = format!("seed {seed} {text} section {n}.{p}");
                         // What the plan asked, or the next of its kind the
                         // loop could play (a fill with no kit is a glide).
-                        // (Or, where it would be a hole, a breath or a glide:
-                        // session 16b.)
+                        // (Or, where it would be a hole, a breath or a
+                        // glide.)
                         assert!(u.join == s.join || matches!((s.join, u.join), (Join::Fill | Join::Floor | Join::Alone | Join::Breath | Join::Pivot, Join::Glide) | (Join::Alone | Join::Pivot | Join::Floor, Join::Breath) | (Join::Pivot, Join::Floor)), "{what}: planned {:?}, played {:?}", s.join, u.join);
-                        // Never a hole, by its notes (session 16b).
+                        // Never a hole, by its notes.
                         if matches!(u.join, Join::Alone | Join::Floor | Join::Breath) {
                             assert!(u.under < JOINS.hole, "{what}: a {:?} {:.1} dB under the unit", u.join, u.under);
                         }
@@ -186,7 +186,7 @@ fn every_line_that_changes_a_theme_or_a_key_is_written() {
                         if u.join == Join::Pivot {
                             assert!(u.pivot_count >= 2 && u.out & (1 << Layer::Chords as usize) != 0, "{what}");
                             // Struck, never at a silent entry chord's 0
-                            // (session 16: 1 loop in 12 had every pivot a hole).
+                            // (1 loop in 12 had every pivot a hole).
                             assert!(u.pivot_vel > 0.0, "{what}: a pivot struck at nothing");
                         }
                         if u.join == Join::Fill {
@@ -195,7 +195,7 @@ fn every_line_that_changes_a_theme_or_a_key_is_written() {
                         if u.join == Join::Alone {
                             assert_eq!(u.out & (1 << Layer::Melody as usize), 0, "{what}: the tune left out of its own bar");
                             // The tune sounds there as the unit plays it
-                            // (session 16: a stretched return joined "alone"
+                            // (a stretched return joined "alone"
                             // over a tune silent there, three seconds near
                             // silence).
                             assert!(tune_sounds(&own, &second, cycle, pass, u), "{what}: the tune alone over a silent tune");
@@ -213,7 +213,7 @@ fn every_line_that_changes_a_theme_or_a_key_is_written() {
     });
 }
 
-/// The holes session 05 found on Endless arcs (session 16b): ta-muin's tune
+/// The holes found by ear on Endless arcs: ta-muin's tune
 /// alone over a stab's one note into sections 4 and 18, a kit and a bass
 /// that are most of the loop (19 to 38 dB under it), and yi-yoar's floor out
 /// of section 15, its kit and bass most of the mix (33 to 40 dB under). Each

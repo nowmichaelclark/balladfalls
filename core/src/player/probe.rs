@@ -1,4 +1,4 @@
-//! One note of one voice, through its layer's own path (queue item 96): the
+//! One note of one voice, through its layer's own path: the
 //! measuring tools' voice probe, on the player. A loop of one step holding
 //! one note is handed to the sequencer, which plays it as it plays any
 //! loop's, so what is measured (the level a voice sits at in its layer, its

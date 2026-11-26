@@ -1,6 +1,6 @@
-//! The generation data, compiled in (queue item 79).
+//! The generation data, compiled in.
 //!
-//! The profiles, vibes and moods are plain text in `data/` (queue item 78),
+//! The profiles, vibes and moods are plain text in `data/`,
 //! one format the JavaScript generator reads at start (`js/data.js`) and
 //! this script reads at build time: it parses the files and writes them out
 //! as Rust tables (`$OUT_DIR/gen_data.rs`, included by `src/gen/data.rs`).
@@ -603,7 +603,7 @@ impl Reader<'_> {
     }
 }
 
-/// The choices and every setting they draw from (queue items 80 and 81):
+/// The choices and every setting they draw from:
 /// the draw's counts and leans, each choice's options and vibes, and the
 /// settings of the arc, the tuned kick, subDuck, lateFloor, the floor drop's
 /// shapes, the pedal, padSweep, padWow, the echo time, the tuning, the
@@ -841,7 +841,7 @@ fn voices(out: &mut String, blocks: &[Block]) {
     // must agree, in its order.
     assert_eq!(order, ["drums", "bass", "chords", "melody", "texture"], "{file}: the layers are not the core's (generator::Layer)");
     // The voice budget's costs, which the player asks as the JavaScript synth
-    // does (queue item 82): the keys `js/synth.js` reads (`COSTS`).
+    // does: the keys `js/synth.js` reads (`COSTS`).
     let costs = blocks.iter().find(|b| b.kind == "voices" && b.name == "costs").expect("data/voices.txt has no [voices costs]");
     let costs = Reader { file, block: costs };
     costs.only(&["default", "dubstab", "cost"]);
@@ -854,7 +854,7 @@ fn voices(out: &mut String, blocks: &[Block]) {
     );
 }
 
-/// The long pieces' numbers (`data/longform.txt`, queue item 102): the
+/// The long pieces' numbers (`data/longform.txt`): the
 /// journey's draw, the arc's forms and the wander's holds, which
 /// `generator::longform` draws a piece's plan by. Every role, variation and
 /// vibe it names must be one the core knows, or the build fails here.
@@ -883,7 +883,7 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
     arc.only(&["minutes", "long", "small", "need", "full", "short", "energy.*", "peak", "height", "second", "returns", "builds", "close", "common", "dark", "stay", "kinds", "gentle", "prepare", "call", "outline"]);
     let wander = find("wander");
     wander.only(&["hold", "sections", "key", "theme", "density", "apart", "reach", "lengths", "glide"]);
-    // A long piece with no length asked (queue item 117): a share, and
+    // A long piece with no length asked: a share, and
     // lengths past the loop's own (a whole number of bars, 33 up: a shorter
     // one would be a loop), never Endless.
     let unasked = find("unasked");
@@ -940,7 +940,7 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
         f(share),
         show_numpool(lengths)
     );
-    // How an arc's energy is heard (session 13): each layer that may fade,
+    // How an arc's energy is heard: each layer that may fade,
     // by name, with the two energies of its fade.
     let heard = find("energy");
     heard.only(&["level.*", "swell", "kit", "shimmer", "backbeat", "beat", "soft", "thin", "held", "double", "aim", "dark", "open", "space", "land"]);
@@ -979,7 +979,7 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
         heard.need_num("space"),
         heard.need_num("land")
     );
-    // How a unit meets the next (session 15): the joins' numbers.
+    // How a unit meets the next: the joins' numbers.
     let joins = find("joins");
     joins.only(&["step", "bars", "share", "breath", "fill", "hold", "hole"]);
     let _ = writeln!(
@@ -993,7 +993,7 @@ fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
         joins.need_num("hold"),
         joins.need_num("hole")
     );
-    // Each voice's loudness over a note's life (session 16b), by layer in
+    // Each voice's loudness over a note's life, by layer in
     // the generator's order: what a join reads its kept layers' share by.
     let loud = find("loudness");
     loud.only(&["drums.*", "bass.*", "chords.*", "melody.*", "texture.*"]);
@@ -1037,8 +1037,8 @@ fn laid_over(blocks: &mut Vec<Block>, more: Vec<Block>) {
     }
 }
 
-/// The share codes' names, ids and versions (`data/codes.txt`, queue item
-/// 105): each list as `(name, id, since, member)` rows, the release's version
+/// The share codes' names, ids and versions (`data/codes.txt`):
+/// each list as `(name, id, since, member)` rows, the release's version
 /// and the one a new code writes, the numbers a field has ever taken, and
 /// the checks that keep them forever: an id or a name once in a list (a
 /// gone one's too), every `since` from the first version (2) to `newest`, a

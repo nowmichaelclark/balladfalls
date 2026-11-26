@@ -1,5 +1,5 @@
 //! How long a track plays and how it comes in and goes out, as the player
-//! takes it and a code carries it (session 30c, queue item 111): shared by
+//! takes it and a code carries it: shared by
 //! `player::track` and `code`'s `Pace`, so the two read a host's numbers
 //! the same way. Here, and not in the player, because the codes build
 //! without it (the generator's checks, `tools/gen-core.sh`).

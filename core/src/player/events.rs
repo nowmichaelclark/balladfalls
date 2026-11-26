@@ -1,4 +1,4 @@
-//! What the player tells a host about where the loop is (queue item 94a):
+//! What the player tells a host about where the loop is:
 //! events (0 to 9), each at the time on the core's clock it is heard, so a host can
 //! draw the cursor, the pass, the phrase lines and a piece's sections as the
 //! music reaches them, with nothing of its own deciding when.
@@ -31,7 +31,7 @@ pub enum Kind {
     /// A pass of the loop begins (a loop's own; in a piece, a round of all
     /// its sections): `number` is the pass, from the loop's first (0).
     Pass = 1,
-    /// A section of a piece begins (queue item 88): `number` is the
+    /// A section of a piece begins: `number` is the
     /// section, from the piece's first (0). A loop with no length asked has
     /// none.
     Section = 2,
@@ -49,18 +49,18 @@ pub enum Kind {
     /// loop starts here; if not, the loop plays on.
     End = 6,
     /// The loop whose `Loop` comes next, at the same time, is one the core
-    /// made itself (queue item 95: `Player::next`, or a track's end with
+    /// made itself (`Player::next`, or a track's end with
     /// nothing waiting for it): its seed drawn from the host's
     /// (`Player::set_draws`), with the picks the host numbered `number`
     /// (`Player::set_picks`), so the host knows which loop it is.
     Own = 7,
-    /// The loop playing goes on from somewhere else in it (session 17,
-    /// `Player::jump`): `number` and `step` are the step it goes on from,
+    /// The loop playing goes on from somewhere else in it
+    /// (`Player::jump`): `number` and `step` are the step it goes on from,
     /// from the load (a piece's from its start); its section, phrase and
     /// steps follow as they come.
     Jump = 8,
-    /// What each layer sounded on a step, as heard (session 30b, queue item
-    /// 110), made as the step is decided and at its time: `number` holds the
+    /// What each layer sounded on a step, as heard,
+    /// made as the step is decided and at its time: `number` holds the
     /// five layers, in `LAYERS`' order, `HEARD_BITS` each from the lowest
     /// (`pack_heard`, `unpack_heard`): the loudest note's velocity as heard
     /// (times the share of its level a long piece's plan leaves its

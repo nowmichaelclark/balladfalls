@@ -1,4 +1,4 @@
-//! `dlrender --endless HOURS` (queue item 88): an Endless piece rendered
+//! `dlrender --endless HOURS`: an Endless piece rendered
 //! for hours at speed, on the player, checked for drift and for growth.
 //!
 //! - **Drift:** the step the player decides next falls where the step grid

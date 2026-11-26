@@ -1,7 +1,7 @@
-//! The wander heard (queue item 102b; `generator::heard`, `docs/LONGFORM.md`,
+//! The wander heard (`generator::heard`, `docs/LONGFORM.md`,
 //! "The wander"): a wander's sections carry its plan as marks and levels,
 //! the player plays them at any slider setting, and a loop's passes carry
-//! nothing (an arc's are `tests/arc.rs`'s, session 13). `tools/longform.mjs` checks what is played,
+//! nothing (an arc's are `tests/arc.rs`'s). `tools/longform.mjs` checks what is played,
 //! note by note, from the player's calls; these check the marks.
 //!
 //! - every unit of a section is its plan's state: a layer rests where the
@@ -127,7 +127,7 @@ fn a_loop_hears_nothing() {
             for text in ["bars=24", "bars=32", "-"] {
                 generator.load_with(seed, &Request::parse(text).expect("a request"));
                 // With none asked, a loop is sometimes a long piece all the
-                // same (queue item 117): that one hears its plan.
+                // same: that one hears its plan.
                 if generator.spec().length_drawn {
                     continue;
                 }

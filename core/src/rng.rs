@@ -86,8 +86,8 @@ pub mod salt {
 
     /// The page's: a drum's timing jitter, a layer's ensemble slip, a chord's
     /// strum span, whether a held vowel drifts and where to, whether a chord
-    /// rings out as glass and on which notes (queue item 59), and whether an
-    /// offbeat takes a dubStab (queue item 60).
+    /// rings out as glass and on which notes, and whether an
+    /// offbeat takes a dubStab.
     pub const HOST_JITTER: u32 = 100;
     pub const HOST_ENSEMBLE: u32 = 101;
     pub const HOST_STRUM: u32 = 102;

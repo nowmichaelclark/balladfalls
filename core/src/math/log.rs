@@ -5,7 +5,7 @@
 //! float by Ian Lance Taylor, Cygnus Support) by way of Rust's `libm`, the
 //! code the WebAssembly build already ran. The 64-bit ones (musl's `log.c`,
 //! `log10.c` and `log2.c`, from msun, by way of `libm` too) are for the
-//! generator (queue item 77): nothing that renders calls them. The
+//! generator: nothing that renders calls them. The
 //! generator's JavaScript calls their mirror (`js/dlmath.js`), so its
 //! decisions are the same in every browser and in the Rust port to come.
 

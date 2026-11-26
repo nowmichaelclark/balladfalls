@@ -1,4 +1,4 @@
-//! The chapel organ (queue item 61; Ears 4, rounds 5 to 7, approved by Mikey
+//! The chapel organ (Ears 4, rounds 5 to 7, approved by Mikey
 //! 2026-10-16 as `organVariant: 'chapelOrgan'`): an instrument the chords'
 //! channel holds for the whole loop, outside the voice pool and its budget.
 //!

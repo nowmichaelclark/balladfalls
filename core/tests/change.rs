@@ -1,4 +1,4 @@
-//! Changing loops at a musical moment (queue item 86): `Player::change`.
+//! Changing loops at a musical moment: `Player::change`.
 //! The next loop takes its first step on the boundary asked for, where the
 //! player said it would; the old one decides nothing past it; the latest
 //! change for a boundary wins and the others wait their turn; a crossfade
@@ -203,7 +203,7 @@ fn a_change_lands_on_its_moment() {
 
 #[test]
 fn now_lands_on_the_old_loops_grid_however_long_the_loop_takes_to_make() {
-    // Queue item 86b: the brain's change 270 on corpus 20261101, shoung-roun
+    // The brain's change 270 on corpus 20261101, shoung-roun
     // (180 bpm, a pass of 2.7 s) to a loop whose tuned kick's fit takes 90-odd
     // blocks, longer than the old loop had decided ahead: asked anywhere about
     // 2.28 s, the new loop starts on one of the old one's steps all the same.

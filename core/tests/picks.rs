@@ -1,4 +1,4 @@
-//! Queue item 95: the picks through the core's commands. The host's picks
+//! The picks through the core's commands. The host's picks
 //! are held by the core (`Player::set_picks`) and asked by every loop it
 //! makes itself: at the app's Next (`Player::next`) and at a track's end
 //! with nothing waiting for it, so the page may sleep through a hand-over.

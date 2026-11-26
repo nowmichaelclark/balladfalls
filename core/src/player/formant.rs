@@ -1,6 +1,6 @@
 //! The sung voices' trims (`_formantTrim`, `formantEnergy` and
-//! `biquadPower` in `js/synth.js`), as the player works them out (queue
-//! item 82). A sung note whose fundamental sits on a formant's peak comes
+//! `biquadPower` in `js/synth.js`), as the player works them out.
+//! A sung note whose fundamental sits on a formant's peak comes
 //! out much louder than its neighbors, so each note is trimmed by how much
 //! energy the vocal tract hands its harmonics against the voice's usual
 //! note on that vowel: the median over MIDI 43-91. Worked out from the

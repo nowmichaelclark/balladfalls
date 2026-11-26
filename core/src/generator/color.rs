@@ -1,4 +1,4 @@
-//! colorTone (queue item 101e; batch 6's #5, approved by Mikey 2026-11-08):
+//! colorTone (batch 6's #5, approved by Mikey 2026-11-08):
 //! a held 13th over the major chords and an 11th over the minor ones, on a
 //! share of the chords, decided here, where the chords are made, once the
 //! choices are drawn and the chords' octave is taken (`Render::finish_part`).

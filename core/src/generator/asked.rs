@@ -1,5 +1,5 @@
-//! The voices and the layers a request asks for (queue item 91;
-//! `askedVoice`, `layerOn` and `onPick` in `js/generator.js`, draw for draw).
+//! The voices and the layers a request asks for (ported draw for draw
+//! from the old JavaScript's `askedVoice`, `layerOn` and `onPick`).
 //!
 //! Every draw a layer makes is made as ever, and the request then overrules
 //! one value: a voice already inside the set asked stands, else one of the
@@ -65,7 +65,7 @@ pub fn on_pick(spec: &Spec, layer: Layer, pool: &[(&'static str, f64)], not: &st
 }
 
 /// `pool.filter(([k]) => k !== not)`: the pool without `not`, for a layer
-/// re-rolled (queue item 94a, `forced`), which never draws its rest.
+/// re-rolled (`forced`), which never draws its rest.
 #[must_use]
 pub fn without(pool: &[(&'static str, f64)], not: &str) -> super::character::Names {
     let mut out = super::character::Names::new();

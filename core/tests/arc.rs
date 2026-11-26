@@ -1,4 +1,4 @@
-//! An arc heard (queue item 102c; `generator::heard`, `docs/LONGFORM.md`,
+//! An arc heard (`generator::heard`, `docs/LONGFORM.md`,
 //! "How an arc is heard"): an arc's sections carry its energy as marks and
 //! levels, and a finite arc lands on its tonic. `tools/longform.mjs` measures
 //! what is played (its loudness and brightness, its last chord, its
@@ -80,8 +80,8 @@ fn an_arcs_units_follow_its_energy_and_glide() {
                     for (p, u) in heard.units().iter().enumerate() {
                         let span = form.at(n, p as u64);
                         if let Some(l) = &mut last {
-                            // (A theme stated comes in whole on its line,
-                            // session 14: the tune never fills in from the
+                            // (A theme stated comes in whole on its line:
+                            // the tune never fills in from the
                             // outline before it.)
                             if matches!(span.role, Role::Second | Role::Return) && u.thin[0] == u.thin[1] {
                                 l[7] = u.thin[0];
@@ -90,7 +90,7 @@ fn an_arcs_units_follow_its_energy_and_glide() {
                         }
                         last = Some(ends(u));
                         for layer in [Layer::Chords, Layer::Melody] {
-                            // (But in an interlude, the wander's way: session 14.)
+                            // (But in an interlude, the wander's way.)
                             assert!(!u.rests(layer) || (layer == Layer::Melody && span.role == Role::Breath) || span.kind == Kind::Interlude, "{what}: section {n} rests {layer:?}");
                         }
                         let bass = 1.0 - u.cut[Layer::Bass as usize][1];
@@ -194,7 +194,7 @@ fn a_finite_arc_lands_on_its_tonic_and_endless_never() {
                 };
                 let l = generator.section(struck[0], 1.0).heard.landing;
                 // The tonic's triad, the root lowest (a planed loop's major,
-                // its tonic's major seventh: queue item 101f).
+                // its tonic's major seventh).
                 if !l.chord.is_empty() {
                     let spec = generator.spec();
                     let root = (spec.root.round() as i16).rem_euclid(12);

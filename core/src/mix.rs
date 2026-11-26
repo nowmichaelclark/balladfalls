@@ -1,6 +1,6 @@
 //! The mixing stage: the synth's five channels, their reverb and echo
 //! sends, the kick's duck, the echo, the reverb and the tails, summed into
-//! the bus that feeds the master chain (queue item 29). The graph is
+//! the bus that feeds the master chain. The graph is
 //! `_build()` in synth.js, node for node:
 //!
 //! ```text
@@ -79,7 +79,7 @@ const ECHO_FRAMES: usize = crate::MAX_FRAMES_A_SECOND * 2;
 
 /// The channels' gains, sends and order, in the core's channel numbers
 /// (`MELODY` and the rest), as `_build()` sets them; the wash's channel as
-/// the sketch made it, a copy of the textures' (queue item 62).
+/// the sketch made it, a copy of the textures'.
 const GAIN: [f64; CHANNELS] = [0.58, 0.44, 0.62, 0.5, 0.82, 0.5];
 const VERB: [f64; CHANNELS] = [0.28, 0.35, 0.05, 0.6, 0.1, 0.6];
 const ECHO: [f64; CHANNELS] = [0.12, 0.15, 0.0, 0.25, 0.05, 0.25];
@@ -163,12 +163,12 @@ pub struct Mix {
     echo_last: Signal,
     memory: [f32; MEMORY],
     bus: Signal,
-    /// The side, in a stereo render (queue item 65).
+    /// The side, in a stereo render.
     side: Side,
 }
 
-/// What a stereo render's side needs besides the channels (queue item 65;
-/// `space`): the notes each channel places apart from itself (the light kit
+/// What a stereo render's side needs besides the channels
+/// (`space`): the notes each channel places apart from itself (the light kit
 /// and glass), weighted by their places, before the channel's gain; each
 /// channel's own blocks' width (the wash's), before its gain; and the loop's
 /// space.
@@ -301,7 +301,7 @@ impl Side {
         self.sway = d.spread_sway;
         let r = f(self.rate);
         let nyquist = 0.45 * self.rate;
-        // The chords' own in a widePad loop (queue item 101c; `SPREAD`'s
+        // The chords' own in a widePad loop (`SPREAD`'s
         // order: melody, chords, texture), the spread's otherwise.
         for (hp, cut) in self.sway_hp.iter_mut().zip([d.spread_cutoff, d.chords_cutoff, d.spread_cutoff]) {
             hp.set(Kind::Highpass, f(cut.min(nyquist)), Q, 0.0, r);
@@ -317,7 +317,7 @@ impl Side {
     }
 
     /// The amounts alone, glided to from the next block: a space that moves
-    /// over the loop (widePad's late kind, queue item 101c), its filters and
+    /// over the loop (widePad's late kind), its filters and
     /// lines as they are.
     fn amounts(&mut self, d: &Drawn) {
         self.want = amounts(d);
@@ -513,7 +513,7 @@ impl Mix {
         self.side.init(rate);
     }
 
-    /// A stereo render's side of the last block (queue item 65): zeros
+    /// A stereo render's side of the last block: zeros
     /// until a block is mixed with a side.
     #[must_use]
     pub fn side(&self) -> &Signal {
@@ -532,7 +532,7 @@ impl Mix {
         self.side.amounts(drawn);
     }
 
-    /// The side from silence, gliding to `drawn` (queue item 66): a stereo
+    /// The side from silence, gliding to `drawn`: a stereo
     /// render that starts in the middle of a mono one, with nothing left in
     /// its lines from the last time it played.
     pub fn restart_side(&mut self, drawn: &Drawn) {
@@ -580,13 +580,12 @@ impl Mix {
     /// `sends`, if any, is what voices sent past their channels this block
     /// (`block::Sends`: into the reverb, then the echo), added into
     /// reverbIn and echoIn beside the channels' sends, as the sketch's stab
-    /// connects its throw straight into echoIn (queue item 60).
+    /// connects its throw straight into echoIn.
     ///
     /// `lift`, if any, is what the arc adds to the echo's feedback, frame by
-    /// frame (queue item 63).
+    /// frame.
     ///
-    /// `side`, in a stereo render, makes the side as well (`Mix::side`,
-    /// queue item 65); the bus, the mid, is the same either way.
+    /// `side`, in a stereo render, makes the side as well (`Mix::side`); the bus, the mid, is the same either way.
     pub fn process(
         &mut self,
         block: u64,
@@ -810,7 +809,7 @@ mod tests {
             .expect("mix")
     }
 
-    /// A stereo render's side (queue item 65): the mid is the mono mix bit
+    /// A stereo render's side: the mid is the mono mix bit
     /// for bit whatever the side does, a centered space makes no side, and
     /// the side keeps out of the low end (every part of it is highpassed).
     #[test]
@@ -926,7 +925,7 @@ mod tests {
     }
 }
 
-// The measuring tools' read of a channel's gain (session 30b): at the file's
+// The measuring tools' read of a channel's gain: at the file's
 // end, so no line of shipped code moves.
 #[cfg(feature = "tools")]
 impl Mix {

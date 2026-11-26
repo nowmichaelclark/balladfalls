@@ -1,6 +1,6 @@
 //! The C face of the core (`include/dlcore.h`; `docs/CORE.md`, promise 4),
-//! in a build with the `capi` feature: today the player's calls (queue item
-//! 82), so a C host plays a loop from its seed with nothing but the header
+//! in a build with the `capi` feature: today the player's calls,
+//! so a C host plays a loop from its seed with nothing but the header
 //! and the library. `examples/c/seed.c` is such a host, a seed to a WAV,
 //! and CI holds it to `dlrender --seed`'s samples.
 //!
@@ -225,8 +225,8 @@ pub extern "C" fn dl_player_ask_tempo(player: *mut Engine, lo: f64, hi: f64) -> 
     }
 }
 
-/// Pin setting `number` at `value` for the next `dl_player_load` (queue
-/// item 85b; `Request::with_pin`, `request::Pins`: a word by its place in
+/// Pin setting `number` at `value` for the next `dl_player_load`
+/// (`Request::with_pin`, `request::Pins`: a word by its place in
 /// the pin's list). Null if it can be met; else the line saying why not,
 /// and the request is left as it was.
 #[unsafe(no_mangle)]
@@ -241,8 +241,8 @@ pub extern "C" fn dl_player_pin(player: *mut Engine, number: u32, value: f64) ->
     }
 }
 
-/// Ask the next `dl_player_load` to bend the loop of `seed` (queue item
-/// 85d; `Request::with_theme`): the loop made keeps that loop's profile mix,
+/// Ask the next `dl_player_load` to bend the loop of `seed`
+/// (`Request::with_theme`): the loop made keeps that loop's profile mix,
 /// key and mode, metre and tune. Any seed is a theme.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_player_theme(player: *mut Engine, seed: u32) {
@@ -252,8 +252,8 @@ pub extern "C" fn dl_player_theme(player: *mut Engine, seed: u32) {
 }
 
 /// Ask the next `dl_player_load` for a piece `bars` bars long, a whole
-/// number from 1 up, or for Endless with `bars` infinite (queue item 88;
-/// `Request::with_length`, `generator::piece`). Null if it can be met; else
+/// number from 1 up, or for Endless with `bars` infinite
+/// (`Request::with_length`, `generator::piece`). Null if it can be met; else
 /// the line saying why not, and the request is left as it was.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_player_length(player: *mut Engine, bars: f64) -> *const c_char {
@@ -269,8 +269,8 @@ pub extern "C" fn dl_player_length(player: *mut Engine, bars: f64) -> *const c_c
 }
 
 /// Ask the next `dl_player_load` for the home notes in `keys`, a bit each
-/// with C the lowest, or for nothing in particular with 0 (queue item 89;
-/// `Request::with_keys`). Null if it can be met; else the line saying why
+/// with C the lowest, or for nothing in particular with 0
+/// (`Request::with_keys`). Null if it can be met; else the line saying why
 /// not, and the request is left as it was.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_player_keys(player: *mut Engine, keys: u32) -> *const c_char {
@@ -286,7 +286,7 @@ pub extern "C" fn dl_player_keys(player: *mut Engine, keys: u32) -> *const c_cha
 
 /// Ask the next `dl_player_load` for the modes in `scales`, a bit each by
 /// its place in the core's list of modes, or for nothing in particular with
-/// 0 (queue item 89; `Request::with_scales`). Null if it can be met; else the
+/// 0 (`Request::with_scales`). Null if it can be met; else the
 /// line saying why not, and the request is left as it was.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_player_scales(player: *mut Engine, scales: u32) -> *const c_char {
@@ -302,7 +302,7 @@ pub extern "C" fn dl_player_scales(player: *mut Engine, scales: u32) -> *const c
 
 /// Ask the next `dl_player_load` for the profiles in `styles`, a bit each by
 /// its place in the frozen order, or for no style in particular with 0
-/// (queue item 90; `Request::with_styles`). Null if it can be met; else the
+/// (`Request::with_styles`). Null if it can be met; else the
 /// line saying why not, and the request is left as it was.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_player_styles(player: *mut Engine, styles: u32) -> *const c_char {
@@ -318,8 +318,8 @@ pub extern "C" fn dl_player_styles(player: *mut Engine, styles: u32) -> *const c
 
 /// Ask the next `dl_player_load` for the voices in `voices` of layer `layer`
 /// (0 to 4: drums, bass, chords, melody, texture), a bit each by its place in
-/// the layer's list, or for none in particular with 0 (queue item 91;
-/// `Request::with_voices`). Null if it can be met; else the line saying why
+/// the layer's list, or for none in particular with 0
+/// (`Request::with_voices`). Null if it can be met; else the line saying why
 /// not, and the request is left as it was.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_player_voices(player: *mut Engine, layer: u32, voices: u32) -> *const c_char {
@@ -334,7 +334,7 @@ pub extern "C" fn dl_player_voices(player: *mut Engine, layer: u32, voices: u32)
 }
 
 /// Ask the next `dl_player_load` for layer `layer` (0 to 4) to be left to
-/// chance (`state` 0), always played (1) or left out (2): queue item 91,
+/// chance (`state` 0), always played (1) or left out (2):
 /// `Request::with_layer`. Null if it can be met ("all layers off" for the
 /// fifth left out); else the line saying why not, and the request is left as
 /// it was.
@@ -394,7 +394,7 @@ pub extern "C" fn dl_player_load(player: *mut Engine, seed: u32) {
 /// at `moment` of the loop playing (`DL_NOW`, `DL_BEAT`, `DL_BAR`,
 /// `DL_PHRASE`, `DL_PASS`), the old loop crossfading over `crossfade`
 /// seconds (`DL_CROSSFADE` the default), or ringing out for a negative one
-/// (queue item 86, `Player::change`): no reset, no second core. Several
+/// (`Player::change`): no reset, no second core. Several
 /// changes may wait, one a kind of moment, the latest for a boundary
 /// winning. 1 if it was asked, 0 for a moment with no such number.
 #[unsafe(no_mangle)]
@@ -408,7 +408,7 @@ pub extern "C" fn dl_player_change(player: *mut Engine, seed: u32, moment: u32, 
 }
 
 /// `dl_player_change`, and how long the loop's track plays once it starts
-/// (`Player::change_with_track`; queue item 95): `kind` and `count` as
+/// (`Player::change_with_track`): `kind` and `count` as
 /// `dl_player_track` takes them. 1 if it was asked, 0 for a moment or a kind
 /// with no such number.
 #[unsafe(no_mangle)]
@@ -422,8 +422,8 @@ pub extern "C" fn dl_player_change_track(player: *mut Engine, seed: u32, moment:
     1
 }
 
-/// A new loop of the core's own at `moment` (`Player::next`; queue item
-/// 95): its seed the next drawn from `dl_player_draws`', with the picks
+/// A new loop of the core's own at `moment` (`Player::next`):
+/// its seed the next drawn from `dl_player_draws`', with the picks
 /// (`dl_player_picks`), crossfading as `dl_player_change` does. 1 if asked;
 /// 0 for no such moment, or with no seed given to draw from.
 #[unsafe(no_mangle)]
@@ -445,7 +445,7 @@ pub extern "C" fn dl_player_drop(player: *mut Engine, moment: u32) -> c_int {
 }
 
 /// Hold what was asked since the last load as the picks, numbered `tag`
-/// (`Player::set_picks`; queue item 95): every loop the core makes itself
+/// (`Player::set_picks`): every loop the core makes itself
 /// asks them, and its `DL_OWN` event carries `tag`.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_player_picks(player: *mut Engine, tag: u32) {
@@ -514,7 +514,7 @@ pub unsafe extern "C" fn dl_player_render(player: *mut Engine, out: *const *mut 
 }
 
 /// The frames from the last rendered to the end of the pass playing
-/// (`Player::pass_frames`; queue item 87): the chunk a host rendering a pass
+/// (`Player::pass_frames`): the chunk a host rendering a pass
 /// at a time asks for next. -1 while no loop plays.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_player_pass_frames(player: *mut Engine) -> i64 {
@@ -522,7 +522,7 @@ pub extern "C" fn dl_player_pass_frames(player: *mut Engine) -> i64 {
 }
 
 /// How long the next `frames` frames will take to render, in microseconds
-/// on the reference host (`Player::estimate`; queue item 87): a host scales
+/// on the reference host (`Player::estimate`): a host scales
 /// it by its own speed, timed on a chunk. -1 for a null player.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_player_estimate(player: *mut Engine, frames: u64) -> f64 {
@@ -555,8 +555,8 @@ pub extern "C" fn dl_player_wander(player: *mut Engine, amount: f64) {
     }
 }
 
-/// The salt on the wander's stream, from the next pass (queue item 92,
-/// `Player::set_wander_salt`): a new one each play makes a loop wander
+/// The salt on the wander's stream, from the next pass
+/// (`Player::set_wander_salt`): a new one each play makes a loop wander
 /// differently each time; 0, the default, is every code's own wander.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_player_wander_salt(player: *mut Engine, salt: u32) {
@@ -635,7 +635,7 @@ pub extern "C" fn dl_player_trouble(player: *mut Engine) -> u32 {
 
 /// Layer `layer`'s seed set to `seed` for the next load, change or re-roll,
 /// re-rolled (always played) with `rolled` not 0 (`Request::with_layer_seed`;
-/// queue item 94a, a code's edit): null if it can be met, else why not.
+/// a code's edit): null if it can be met, else why not.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_player_seed(player: *mut Engine, layer: u32, seed: u32, rolled: c_int) -> *const c_char {
     let Some(e) = engine(player) else { return ptr::null() };
@@ -668,7 +668,7 @@ pub extern "C" fn dl_player_tone(player: *mut Engine, warmth: f64, space: f64, w
 
 /// How long the track plays (`Player::set_track_with`): `kind` 0 on and
 /// on, 1 `count` passes, 2 `count` bars, 3 `count` seconds, with 4 added
-/// for a fade in and 8 for a fade out (`Track::of`; session 30c). 1 if it
+/// for a fade in and 8 for a fade out (`Track::of`). 1 if it
 /// is a kind there is.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_player_track(player: *mut Engine, kind: u32, count: u32) -> c_int {
@@ -685,8 +685,8 @@ pub extern "C" fn dl_player_track_end(player: *mut Engine) -> i64 {
     engine(player).and_then(|e| e.player.track_end()).and_then(|s| i64::try_from(s).ok()).unwrap_or(-1)
 }
 
-/// Go on from somewhere else in the loop playing (session 17,
-/// `Player::jump`): `kind` 0 a section (`at`, a whole number), 1 a bar, 2 a
+/// Go on from somewhere else in the loop playing
+/// (`Player::jump`): `kind` 0 a section (`at`, a whole number), 1 a bar, 2 a
 /// time in seconds, each from the piece's start, landing on the phrase line
 /// at or before it; 3 a step from the load, exactly (`Jump::of`). Stopped,
 /// it is held and lands at the resume. 1 if it was asked; 0 with nothing
@@ -868,7 +868,7 @@ pub unsafe extern "C" fn dl_player_note(player: *mut Engine, layer: u32, index: 
     1
 }
 
-// FLAC, the lossless export (queue item 104a; `crate::flac`): an encoder in
+// FLAC, the lossless export (`crate::flac`): an encoder in
 // the host's memory, as a player is. The host hands it what the player
 // rendered, a block at a time, and writes the bytes each call gives back.
 
@@ -1036,7 +1036,7 @@ unsafe fn written(out: *mut c_char, room: usize, write: impl FnOnce(&mut [u8]) -
     }
 }
 
-/// Read a loop's share code (queue item 105; `code::read_loop`): what it
+/// Read a loop's share code (`code::read_loop`): what it
 /// asks becomes what the next `dl_player_load` asks for, and its seed, the
 /// layers it mutes (a bit each, drums lowest) and the wander's salt (0 for
 /// none) are written to `seed`, `mutes` and `salt` (each may be null) for

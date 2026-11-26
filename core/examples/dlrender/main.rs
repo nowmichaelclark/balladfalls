@@ -1,4 +1,4 @@
-//! `dlrender`: the core's native test host (queue item 42).
+//! `dlrender`: the core's native test host.
 //!
 //! Reads note lists (`notelist.rs`), renders each through the core on this
 //! machine and prints one line of hashes per list; with `--wav` it writes
@@ -25,7 +25,7 @@
 //!     [--request TEXT] [--seconds 45] [--rate 44100] [--stereo] [--lite] [--wander 1]
 //!     [--salt 0] [--track bars=N|passes=N] [--wav OUT.wav] [--calls OUT.calls]
 //!                                           a loop from its seed on the
-//!                                           player (queue item 82), no note
+//!                                           player, no note
 //!                                           list: one hash line a seed;
 //!                                           --request asks as the C
 //!                                           host's dl_player_ask does
@@ -40,27 +40,26 @@
 //! cargo run --release --example dlrender -- --changes N [--from-corpus 1]
 //!     [--moment KIND] [--crossfade S | --ring] [--each] [--runs N]
 //!                                           changes of loop at a moment
-//!                                           (queue item 86, `change.rs`):
+//!                                           (`change.rs`):
 //!                                           on the moment, no click, the
 //!                                           new loop as itself, the cost
 //! cargo run --release --example dlrender -- --endless HOURS [--seed N]
 //!     [--request TEXT] [--rate 22050] [--stereo] [--full] [--wander 1]
 //!                                           an Endless piece for hours at
-//!                                           speed (queue item 88,
-//!                                           `endless.rs`): no drift, no
+//!                                           speed (`endless.rs`): no drift, no
 //!                                           growth, a line an hour
 //! cargo run --release --example dlrender -- --jumps [--seed N,...] [--request TEXT]
 //!     [--at 240] [--settle 8] [--length 20] [--rate 44100]
-//!                                           jumps within a piece (session
-//!                                           17, `jump.rs`): played, played on
+//!                                           jumps within a piece
+//!                                           (`jump.rs`): played, played on
 //!                                           a later core, and jumped, heard
 //!                                           from the line, and the jump's
 //!                                           cost
 //! cargo run --release --example dlrender -- --seed N | --corpus SEED:N | LIST
 //!     --flac OUT.flac [--bits 16|24] [the same options]
 //!                                           the render as FLAC, by the
-//!                                           core's own encoder (queue item
-//!                                           104a, `flac.rs`): from a seed
+//!                                           core's own encoder
+//!                                           (`flac.rs`): from a seed
 //!                                           streamed a block at a time, a
 //!                                           directory for a corpus; 24 bits
 //!                                           unless asked; --wav beside it
@@ -68,15 +67,15 @@
 //! cargo run --release --example dlrender -- --compare A.wav B.wav
 //! cargo run --release --example dlrender -- --block NAME/PROBE [--rate HZ] [--wav OUT.wav]
 //!                                           one building block alone, as the
-//!                                           test kit plays it (queue item 46):
+//!                                           test kit plays it:
 //!                                           its hash, and its samples for an
 //!                                           A/B between two versions;
 //!                                           NAME/PROBE~SETTING with that
 //!                                           setting driven, NAME/PROBE:stereo
-//!                                           a stereo block's two sides
-//!                                           (queue item 46b), NAME/PROBE:wide
+//!                                           a stereo block's two sides,
+//!                                          NAME/PROBE:wide
 //!                                           a stereo processor's, fed two
-//!                                           different sides (queue item 64)
+//!                                           different sides
 //! ```
 //!
 //! Everything it prints is plain ASCII. It exits with 1 on any error.
@@ -227,7 +226,7 @@ fn write_files(kept: &[f32], rate: f64, stereo: bool, wav_to: Option<&str>, flac
     Ok(())
 }
 
-/// The options of `--changes N` (queue item 86, `change.rs`): the corpus its
+/// The options of `--changes N` (`change.rs`): the corpus its
 /// loops come from, the handover, the kind of moment, a line each, and how
 /// many runs a change's costs are the least of.
 #[derive(Default)]
@@ -286,14 +285,14 @@ impl Changes {
 }
 
 /// What `--seed` measures in place of rendering: each block's cost, or the
-/// voice budget's let-go fades (queue item 85e).
+/// voice budget's let-go fades.
 #[derive(Clone, Copy)]
 enum Measure {
     Costs,
     Fades,
 }
 
-/// The options of a loop from its seed (queue item 82): the seeds (each
+/// The options of a loop from its seed: the seeds (each
 /// with its place in a corpus, if from one), and how to play them.
 #[derive(Default)]
 struct BySeed {

@@ -1,4 +1,4 @@
-//! A name a code carries (session 23; Mikey, 2026-11-17: "a loop's name
+//! A name a code carries (Mikey, 2026-11-17: "a loop's name
 //! should travel with its code", "all characters and emojis"): a renamed
 //! loop's, a track's or an album's, in any script and with emoji, as its
 //! UTF-8 bytes. The code itself stays the 64 link-safe characters: the bytes

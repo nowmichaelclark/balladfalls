@@ -1,4 +1,4 @@
-//! What the player reports about the loop it plays (queue item 94a), so a
+//! What the player reports about the loop it plays, so a
 //! host shows the loop without a generator of its own: the layers' grid of
 //! the pass being decided, and the loop's description, everything the
 //! app's info card, its cover and a share code read from a spec.
@@ -56,7 +56,7 @@ impl Player {
     /// one velocity a step of the layer's own cycle (the loop's pass, or its
     /// polymeter cycle), the loudest note on each step, 0 for none; of the
     /// pass the player is deciding, as it wanders, and as its plan will have
-    /// it heard (session 30b, `Loop::each_heard`: a long piece's levels and
+    /// it heard (`Loop::each_heard`: a long piece's levels and
     /// its second tune, the kit and the bass waiting to come in). Returns
     /// the cycle's steps, or 0 with nothing made or `out` too short
     /// (`GRID_MAX` is always enough). A bar `b` of the grid is steps
@@ -155,7 +155,7 @@ impl Player {
     ///   `vibes` (each and the weight it drew) and `strength`;
     /// - `root` (0 is C), `scale`, `bpm` (the tempo playing), `metre`,
     ///   `steps_per_bar`, `bars` (the loop's), `length` (the piece's: bars,
-    ///   or `endless`; asked, or drawn with none asked (queue item 117); only
+    ///   or `endless`; asked, or drawn with none asked; only
     ///   for a piece);
     /// - `swing`, `coherence`, `tone` (warmth, space, wobble);
     /// - `layer_seeds` (in the core's layer order), `rolled` (the layers

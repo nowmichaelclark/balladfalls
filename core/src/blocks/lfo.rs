@@ -1,7 +1,7 @@
 //! A low-frequency oscillator: a sine at a rate, through a depth. The
 //! signal every vibrato drives an oscillator's detune with, the texture
 //! wind's slow sine drives its filter's band with and, at audio rate, the
-//! modulator FM drives a carrier's frequency with (queue item 46b): a
+//! modulator FM drives a carrier's frequency with: a
 //! source of signals for other blocks' `MODS`.
 //!
 //! As Web Audio builds one: an `OscillatorNode` (a sine; its frequency is
@@ -54,7 +54,7 @@ impl<const N: usize> Lfo<N> {
         self.depth.reset(depth);
     }
 
-    /// Start `cycles` into its swing, after `set` (session 17: a sweep at
+    /// Start `cycles` into its swing, after `set` (a sweep at
     /// the phase a jump within a piece lands on).
     pub fn turn(&mut self, cycles: f64) {
         self.sine.turn(cycles);

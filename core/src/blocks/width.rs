@@ -1,4 +1,4 @@
-//! The width ceiling (queue item 64; `docs/ears/batch-3.md`, "Stereo"): the
+//! The width ceiling (the wiki's "Stereo, measured"): the
 //! side of a stereo signal turned down wherever it rises above a target
 //! against the mid, so no loop gets wider than its space recipe means, however
 //! its parts happen to fall. The ears sketched it offline on finished renders

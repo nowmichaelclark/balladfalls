@@ -1,4 +1,4 @@
-//! A long piece's plan (queue item 102a; `generator::longform`,
+//! A long piece's plan (`generator::longform`,
 //! `docs/LONGFORM.md`): the map's promises, over a few hundred seeds at 64,
 //! 256, 1,024 and 32,768 bars and Endless, for both journeys. An arc's
 //! themes return (A after B, changed, in the home key) and its energy rises
@@ -116,7 +116,7 @@ fn an_arc_returns_its_theme_and_rises_to_one_peak() {
                 continue;
             }
             let what = format!("seed {seed} {text} arc {arc}");
-            // An interlude (session 14) is no arc: theme A at home, level.
+            // An interlude is no arc: theme A at home, level.
             let kind = run[0].kind;
             assert!(run.iter().all(|s| s.kind == kind), "{what}: a movement of two kinds");
             if kind == Kind::Interlude {
@@ -505,8 +505,8 @@ fn the_journey_is_asked_or_drawn_and_short_loops_have_none() {
         for text in ["bars=256", "bars=256,journey=arc", "bars=256,journey=wander"] {
             generator.load_with(31, &Request::parse(text).expect("a request"));
             let drawn = generator.form().expect("a plan").journey;
-            // The loop's own parts; its passes carry a wander's plan heard
-            // (session 12), so only an arc's are the loop's wandered passes.
+            // The loop's own parts; its passes carry a wander's plan heard,
+            // so only an arc's are the loop's wandered passes.
             let own: Vec<u64> = dlcore::generator::Part::ALL.iter().filter(|p| !matches!(p, dlcore::generator::Part::Pass(_))).map(|&p| generator.hash(p)).collect();
             let passes: Vec<u64> = dlcore::generator::Part::ALL.iter().filter(|p| matches!(p, dlcore::generator::Part::Pass(_))).map(|&p| generator.hash(p)).collect();
             hashes.push((own, passes, drawn));

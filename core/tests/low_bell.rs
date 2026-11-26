@@ -1,4 +1,4 @@
-//! lowBell (queue item 101g; batch 6's #2): a struck low bell on the chord's
+//! lowBell (batch 6's #2): a struck low bell on the chord's
 //! root, drawn per loop at load on a stream of its own
 //! (`choices::low_bell_of`), struck by the player (`Sequencer::low_bell`),
 //! sounded by its voice (`blocks::low_bell`). What it holds to: it goes only
@@ -92,8 +92,8 @@ fn each_kind_is_leaned_by_its_own_vibes_never_to_none() {
 }
 
 /// The list's changes with a setting on (`on`) against off (`off`), as
-/// option words: the same, or the list giving way to the setting (queue
-/// item 101h), which drops the last change the list drew and nothing else.
+/// option words: the same, or the list giving way to the setting,
+/// which drops the last change the list drew and nothing else.
 fn gives_way(on: &[&str], off: &[&str]) -> bool {
     let changed = |c: &[&str]| c.iter().filter(|w| !w.is_empty() && **w != "today").count();
     on == off || changed(on) + 1 == changed(off) && on.iter().zip(off).all(|(a, b)| a == b || *a == "today")

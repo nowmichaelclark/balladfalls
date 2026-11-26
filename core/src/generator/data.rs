@@ -1,4 +1,4 @@
-//! The generation data (`data/*.txt`, queue item 78), as compiled into the
+//! The generation data (`data/*.txt`), as compiled into the
 //! core by `core/build.rs`: read-only tables, the same doubles the
 //! JavaScript reads. A key a file leaves out is `None` here, as it is
 //! `undefined` there, and the generator reads each the way the JavaScript
@@ -142,12 +142,12 @@ pub struct Choice {
     /// The vibes that lean each option, by option.
     pub option_vibes: &'static [(&'static str, Table)],
     /// Whether the option a picked choice plays is drawn on a stream of its
-    /// own (`ownStream`, queue item 101), so options added to a choice move
+    /// own (`ownStream`), so options added to a choice move
     /// no other choice's draw.
     pub own_stream: bool,
     /// Drawn by itself for this share of the loops it may go to, outside the
-    /// list's draw but counted against its changes (`alone`, queue items
-    /// 101b and 101h), or `None`.
+    /// list's draw but counted against its changes (`alone`),
+    /// or `None`.
     pub alone: Option<f64>,
 }
 
@@ -220,8 +220,8 @@ pub struct SubDuck {
     pub recover: [f64; 2],
     /// The recovery's longest, as a share of a beat.
     pub beat: f64,
-    /// deepDuck's own ranges (`deep.depth`, `deep.recover`; queue item
-    /// 101a), its recovery held to the loop's kick spacing instead.
+    /// deepDuck's own ranges (`deep.depth`, `deep.recover`),
+    /// its recovery held to the loop's kick spacing instead.
     pub deep_depth: [f64; 2],
     pub deep_recover: [f64; 2],
 }
@@ -242,7 +242,7 @@ pub struct LateFloor {
     pub gap_long: f64,
     pub long_vibes: Table,
     /// slowOpening's own wait and fade, in seconds (`slow.seconds`,
-    /// `slow.fade`; queue item 101a).
+    /// `slow.fade`).
     pub slow_seconds: [f64; 2],
     pub slow_fade: [f64; 2],
 }
@@ -271,7 +271,7 @@ pub struct PadSweep {
     pub oct: [f64; 2],
     pub period: [f64; 2],
     pub q: [f64; 2],
-    /// wideSweep's two (`wide.*`, `fast.*`; queue item 101a): each the same
+    /// wideSweep's two (`wide.*`, `fast.*`): each the same
     /// four ranges.
     pub wide: SweepRanges,
     pub fast: SweepRanges,
@@ -287,7 +287,7 @@ pub struct SweepRanges {
     pub q: [f64; 2],
 }
 
-/// padWow's settings (`[setting padwow]`, queue item 101b): the ranges a
+/// padWow's settings (`[setting padwow]`): the ranges a
 /// loop draws its depth (cents) and rate (Hz) from.
 #[derive(Clone, Copy, Debug)]
 pub struct Wow {
@@ -295,7 +295,7 @@ pub struct Wow {
     pub rate: [f64; 2],
 }
 
-/// dottedPulse's settings (`[setting dottedpulse]`, queue item 101d): the
+/// dottedPulse's settings (`[setting dottedpulse]`): the
 /// pulse's velocity on the rim, and the 3-3-2's room over the loop's own
 /// kick, in dB (the low guard).
 #[derive(Clone, Copy, Debug)]
@@ -304,15 +304,15 @@ pub struct Dotted {
     pub low: f64,
 }
 
-/// colorTone's settings (`[setting colortone]`, queue item 101e): the share
+/// colorTone's settings (`[setting colortone]`): the share
 /// of a loop's chords that take the color.
 #[derive(Clone, Copy, Debug)]
 pub struct ColorTone {
     pub share: f64,
 }
 
-/// The progression's per-loop draw (`[setting progression]`, queue item
-/// 101f): how often a loop's progression planes (planingSevenths, every
+/// The progression's per-loop draw (`[setting progression]`):
+/// how often a loop's progression planes (planingSevenths, every
 /// chord a major seventh sliding a step or a minor third), and the vibes
 /// that lean it.
 #[derive(Clone, Copy, Debug)]
@@ -323,7 +323,7 @@ pub struct Progression {
     pub vibes: Table,
 }
 
-/// lowBell's per-loop draw (`[setting lowbell]`, queue item 101g): how
+/// lowBell's per-loop draw (`[setting lowbell]`): how
 /// often a loop plays the low bell, its kinds by weight, each kind's vibes,
 /// and how long before the same root is struck again.
 #[derive(Clone, Copy, Debug)]
@@ -344,7 +344,7 @@ pub struct LowBellDraw {
     pub spotlight_least: f64,
 }
 
-/// twang's per-loop draw (`[setting twang]`, queue item 101h): how often a
+/// twang's per-loop draw (`[setting twang]`): how often a
 /// loop it may play in plays it, its versions by weight, each version's
 /// vibes, how long before the same root is picked again, and the busiest kit
 /// it plays over.
@@ -357,7 +357,7 @@ pub struct TwangDraw {
     /// 2026-11-17); a draw landing on another plays the first of these.
     pub kinds: Pool,
     /// The versions drawn, by weight (`soft`, and `slow` and `bright`, which
-    /// the core no longer has: item 105e): the batch's draw kept whole, so
+    /// the core no longer has): the batch's draw kept whole, so
     /// the loops that play twang stay the ones that did.
     pub drawn: Pool,
     /// The vibes that lean each drawn version's share.
@@ -381,7 +381,7 @@ pub struct Echo {
     pub vibes: &'static [(f64, Table)],
 }
 
-/// tuningOffset's settings (`[setting tuning]`, queue item 101b): how
+/// tuningOffset's settings (`[setting tuning]`): how
 /// often a loop plays off A440, how far, and the vibes that lean how often.
 #[derive(Clone, Copy, Debug)]
 pub struct Tuning {
@@ -393,7 +393,7 @@ pub struct Tuning {
     pub vibes: Table,
 }
 
-/// The long pieces' numbers (`data/longform.txt`, queue item 102): what
+/// The long pieces' numbers (`data/longform.txt`): what
 /// `longform` draws a piece's plan by. The file says what each is.
 #[derive(Clone, Copy, Debug)]
 pub struct Longform {
@@ -466,13 +466,13 @@ pub struct Longform {
     /// How long a move glides, in seconds, where it can.
     pub glide: f64,
     /// The share of loops made with no length asked that are long pieces
-    /// (`[longform unasked]`, queue item 117: Mikey's "Sometimes").
+    /// (`[longform unasked]`: Mikey's "Sometimes").
     pub unasked: f64,
     /// Their lengths, in bars, by weight: each past the loop's own.
     pub unasked_lengths: NumPool,
 }
 
-/// How a long piece's units meet (`[longform joins]`, session 15): how
+/// How a long piece's units meet (`[longform joins]`): how
 /// long a join lasts and what it plays, as `longform` and `heard` read it.
 #[derive(Clone, Copy, Debug)]
 pub struct Joins {
@@ -492,11 +492,11 @@ pub struct Joins {
     pub hold: f64,
     /// How far under the unit, in dB by its notes (`Heard::under`), a join
     /// may leave the mix before it falls back to a lighter one, or to a
-    /// glide (session 16b: never a hole).
+    /// glide (never a hole).
     pub hole: f64,
 }
 
-/// How an arc's energy is heard (`[longform energy]`, queue item 102c):
+/// How an arc's energy is heard (`[longform energy]`):
 /// what a unit of a given energy plays, as `heard` reads it.
 #[derive(Clone, Copy, Debug)]
 pub struct Energy {
@@ -549,7 +549,7 @@ pub struct BassLift {
 
 /// What each voice costs the voice budget (`[voices costs]` in
 /// `data/voices.txt`; `VOICE_COST` in `js/synth.js`), which the player asks
-/// as the JavaScript synth does (queue item 82): a voice the table leaves
+/// as the JavaScript synth does: a voice the table leaves
 /// out costs what each call says, `default` where it says nothing.
 #[derive(Clone, Copy, Debug)]
 pub struct VoiceCosts {
@@ -622,12 +622,12 @@ impl super::list::Empty for Degree {
     const EMPTY: Self = Degree::plain(0);
 }
 
-/// A share code's list (`data/codes.txt`, queue item 105): each member's
+/// A share code's list (`data/codes.txt`): each member's
 /// name, its id in a code (forever its own), the version it joined, and
 /// whether it is still here. Every id ever given has its row.
 pub type Ids = &'static [(&'static str, u32, u32, Member)];
 
-/// What became of a share code's member (queue item 105e): a code naming
+/// What became of a share code's member: a code naming
 /// one taken out still reads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Member {
@@ -639,8 +639,8 @@ pub enum Member {
     StandIn(u32),
 }
 
-/// The numbers a code's field has ever taken (`[code numbers]`, queue item
-/// 105e): a code holds none outside them, and one inside that the field no
+/// The numbers a code's field has ever taken (`[code numbers]`):
+/// a code holds none outside them, and one inside that the field no
 /// longer takes plays the nearest it does.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Numbers {
@@ -690,7 +690,7 @@ pub fn since(list: Ids, name: &str) -> Option<u32> {
 }
 
 /// Whether a member that joined at `since` is there for a loop drawn at
-/// `version` (queue item 105: a code's draws see only what existed at its
+/// `version` (a code's draws see only what existed at its
 /// version). `version` 0 is this build's newest, a loop no code asked for:
 /// every member is.
 #[must_use]
@@ -708,7 +708,7 @@ pub fn there(list: Ids, name: &str, version: u32) -> bool {
 }
 
 /// Whether the setting `setting`, drawn per loop outside the list of
-/// choices, draws at all for a loop at `version` (queue item 105e). **Every
+/// choices, draws at all for a loop at `version`. **Every
 /// such draw asks this first** and plays today's where it is false, so a
 /// setting drawn per loop that joins later leaves an older code's loop, and
 /// the count of its changes, as it was (`data/codes.txt`'s rules).
@@ -721,8 +721,8 @@ pub fn drawn_at(setting: &str, version: u32) -> bool {
 pub const WORDS_MOST: usize = 8;
 
 /// `pool`'s members that had joined `list` by `version`, in their order:
-/// what a draw of a setting's word or a choice's option draws from (queue
-/// item 105e).
+/// what a draw of a setting's word or a choice's option draws from
+/// .
 #[must_use]
 pub fn joined_of(pool: Pool, list: Ids, version: u32) -> super::list::List<(&'static str, f64), WORDS_MOST> {
     let mut out = super::list::List::new();

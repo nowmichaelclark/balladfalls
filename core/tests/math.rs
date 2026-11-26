@@ -1,4 +1,4 @@
-//! The core's own math (`dlcore::math`, queue item 43), measured.
+//! The core's own math (`dlcore::math`), measured.
 //!
 //! Each function against a reference far more precise than it: for the
 //! 64-bit functions, a double-double reference written here (about 106
@@ -302,7 +302,7 @@ fn the_64_bit_functions_are_under_their_bounds() {
         |x| math::pow(x, exponent(x)),
         |x| dd_pow(x, exponent(x)),
     );
-    // The generator's logarithms (queue item 77), over its ranges (the
+    // The generator's logarithms, over its ranges (the
     // vibes' exponential draws, decibels, octaves) and far past them.
     let ln10 = dd_ln(10.0);
     let ln2 = Dd(LN2[0], LN2[1]);

@@ -1,4 +1,4 @@
-//! The melody (queue item 80): `genMelody` (the motif, its cell, the
+//! The melody: `genMelody` (the motif, its cell, the
 //! phrase plan, the anchors, the register) and a developing loop's
 //! `developMelody` (`answerFigure`, `varyFigure`), from `js/generator.js`.
 
@@ -332,7 +332,7 @@ fn pc(x: f64) -> f64 {
 
 /// `figureDraws(r, spec, lf, spb, scale)`: the tune's figure, one rhythmic
 /// cell and the walk over it, then which notes it leaves out, drawn with `r`
-/// as `gen_melody` draws them, so a theme's tune (queue item 85d) is drawn
+/// as `gen_melody` draws them, so a theme's tune is drawn
 /// the same way as a loop's own.
 fn figure_draws(r: &mut Rng, cx: &Cx, lf: Feel) -> (Cell, Figure, Figure) {
     let spb = cx.spb;
@@ -379,7 +379,7 @@ fn figure_draws(r: &mut Rng, cx: &Cx, lf: Feel) -> (Cell, Figure, Figure) {
     (rhythm, motif, kept)
 }
 
-/// `themeTune(theme)`: a theme's tune (queue item 85d), its own loop's
+/// `themeTune(theme)`: a theme's tune, its own loop's
 /// figure and rhythmic cell, drawn as `gen_melody` draws them; `None` where
 /// its melody rests.
 #[must_use]
@@ -417,7 +417,7 @@ pub fn gen_melody(cx: &Cx, bars: f64, seed: u32, over: &Over, dev: Option<&Hande
     };
     let lf = spec.feel_for(Layer::Melody);
     let silent = r.chance(0.08);
-    // A theme's tune (queue item 85d): whether there is one, and its figure,
+    // A theme's tune: whether there is one, and its figure,
     // held in place of this loop's own (whose draws are still made).
     let tune = if dev.is_none() { spec.tune } else { None };
     out.clear();

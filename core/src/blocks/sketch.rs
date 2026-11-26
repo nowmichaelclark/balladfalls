@@ -1,4 +1,4 @@
-//! The sketch slot (queue item 83): `core/sketch/block.rs` as a channel's
+//! The sketch slot: `core/sketch/block.rs` as a channel's
 //! own block, in the `sketch` build only.
 //!
 //! An ears or brain session sketches a sound by dropping one block file into

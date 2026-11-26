@@ -1,10 +1,10 @@
-//! twang (queue item 101h; batch 6's #13): a synth in the spirit of a
+//! twang (batch 6's #13): a synth in the spirit of a
 //! tremolo baritone guitar, drawn per loop at load on a stream of its own
 //! (`choices::twang_of`), picked by the player (`Sequencer::twang`), sounded
 //! by its voice (`blocks::twang`). What it holds to (the batch's yardstick):
 //! it goes only to loops that play a chord and have no kit busier than a
 //! soft one, to about its share of them, every one soft (Mikey's Batch 6 Album,
-//! 2026-11-17, slow and bright taken out by item 105e; the draw weighs the
+//! 2026-11-17, slow and bright taken out; the draw weighs the
 //! three versions as before, each leaned by its own vibes); a pin plays it
 //! or keeps it off, and nothing the
 //! generator decides but twang moves; in the player, at each chord whose
@@ -111,8 +111,8 @@ fn the_vibes_lean_its_share_never_to_none() {
 }
 
 /// The list's changes with a setting on (`on`) against off (`off`), as
-/// option words: the same, or the list giving way to the setting (queue
-/// item 101h), which drops the last change the list drew and nothing else.
+/// option words: the same, or the list giving way to the setting,
+/// which drops the last change the list drew and nothing else.
 fn gives_way(on: &[&str], off: &[&str]) -> bool {
     let changed = |c: &[&str]| c.iter().filter(|w| !w.is_empty() && **w != "today").count();
     on == off || changed(on) + 1 == changed(off) && on.iter().zip(off).all(|(a, b)| a == b || *a == "today")

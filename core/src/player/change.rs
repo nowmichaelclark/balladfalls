@@ -1,4 +1,4 @@
-//! Changing loops at a musical moment (queue item 86): what a host asks for
+//! Changing loops at a musical moment: what a host asks for
 //! (`Player::change`), and the boundaries a change waits for. Broken
 //! Friends changes its music at moments, not on a timer (a new room, a
 //! friend made well, a mood): the next loop starts on the loop playing's
@@ -33,8 +33,8 @@ pub const CROSSFADE: f64 = 1.0;
 /// The longest crossfade asked for is held to this, in seconds.
 pub const CROSSFADE_MAX: f64 = 30.0;
 /// How long the old loop falls to nothing when a track ends at a phrase
-/// line inside a pass and the core makes the next loop itself (queue item
-/// 95; the app's `END_FADE`, queue item 88b): the same second as a change's
+/// line inside a pass and the core makes the next loop itself
+/// (the app's `END_FADE`): the same second as a change's
 /// crossfade. At a pass's end the old loop rings out, as for any change at
 /// the track's end. For Mikey's ears.
 pub const END_FADE: f64 = 1.0;
@@ -65,9 +65,9 @@ pub enum Moment {
     Phrase,
     /// The end of the pass, where the loop would start again.
     Pass,
-    /// The end of the track (queue item 94a, `Player::set_track`): the
+    /// The end of the track (`Player::set_track`): the
     /// app's track length, a number of passes or of bars counted from when
-    /// it was set, or a time (session 30c: its next loop starts on its
+    /// it was set, or a time (its next loop starts on its
     /// second, the old one ringing out or faded out there). The old loop hands over as the app's does: its notes ring
     /// out at a pass's end, and fall over the crossfade asked at a phrase line
     /// inside one. It waits while no length is set, and for Endless.
@@ -102,7 +102,7 @@ impl Moment {
 pub enum Handover {
     /// The old loop's notes ring out as they would (`Player::load`'s way).
     /// First, so that a player of nothing, which hands over this way, is
-    /// all zero bytes (queue item 93).
+    /// all zero bytes.
     RingOut,
     /// Everything the old loop handed over falls from the boundary to
     /// nothing over this many seconds (`Core::fade_all`), its organ letting
@@ -135,7 +135,7 @@ impl Default for Handover {
 /// moment, promise 11): the loop asked for, how it hands over, when it was
 /// asked (the latest for a boundary wins), and the step it starts on, from
 /// the loop playing's load (none until worked out against the loop that
-/// plays). A change for a loop of the core's own (`own`, queue item 95)
+/// plays). A change for a loop of the core's own (`own`)
 /// draws its seed and takes the host's picks when it starts, not when it
 /// was asked, so a pick made meanwhile is heard in it; and a change may say
 /// how long its loop's track plays (`sets_track`), so a host asleep at the
@@ -150,7 +150,7 @@ pub(super) struct Change {
     pub own: bool,
     pub sets_track: bool,
     pub track: super::Track,
-    /// The fades the track plays with (session 30c), with `track`.
+    /// The fades the track plays with, with `track`.
     pub fades: super::track::Fades,
 }
 

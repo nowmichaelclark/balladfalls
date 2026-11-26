@@ -1,4 +1,4 @@
-//! The tuned kick (queue item 67; Ears 8's tunedKick, approved by Mikey
+//! The tuned kick (Ears 8's tunedKick, approved by Mikey
 //! 2026-10-18): today's kick or soft kick, the same sweep, landing on a
 //! target note instead of 44 or 46 Hz, falling at a rate the loop draws,
 //! and for a long boom ringing on at a tail level after today's punch. As
@@ -106,8 +106,8 @@ impl TunedKick {
         let db = |x: f64| 20.0 * f64::from(math::log10f(x as f32));
         let t1 = att + -db(tail) / PUNCH;
         let len = t1 + SHORTEST.max(db(peak * tail / QUIET) / dbps);
-        // Its pitch rests at where it starts, as the frame drum's does (queue
-        // item 55), so where a hit falls in its block never adds a blip of
+        // Its pitch rests at where it starts, as the frame drum's does,
+        // so where a hit falls in its block never adds a blip of
         // 440 Hz to it.
         let p = &mut self.pitch;
         p.reset(from as f32);

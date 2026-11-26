@@ -1,12 +1,10 @@
-//! The request's theme (queue item 85d; `Request::with_theme`): a seed whose
+//! The request's theme (`Request::with_theme`): a seed whose
 //! loop the request bends. Its text and refusal, the theme's own seed with
 //! nothing else asked making the theme's loop, and a theme bent by vibes,
 //! on its own seed or another, keeping its key and mode, its profile mix,
 //! its metre and its tune (the melody's figure and rhythmic cell, as the
 //! generator plays them; a theme whose melody rests keeps its rest, choir or
-//! not: queue item 85f). test/generator.test.mjs measures the same in the
-//! JavaScript's render; the generation goldens' `theme` cases hold the two
-//! together.
+//! not). The generation goldens' `theme` cases hold what is generated.
 
 // Seeds and degrees are compared exactly on purpose.
 #![allow(clippy::float_cmp)]
@@ -69,7 +67,7 @@ fn held() {
         assert_eq!(held.metre(&held.character()), own.metre(&own.character()), "theme {theme_seed} on {seed}: the metre");
         let (ma, mb) = (&theme.render().melody_out, &bent.render().melody_out);
         // A theme whose melody rests has no tune to hold: the loop rests too,
-        // choir or not (queue item 85f).
+        // choir or not.
         assert_eq!(mb.cell, ma.cell, "theme {theme_seed} on {seed}: the cell");
         assert_eq!(mb.motif.len(), ma.motif.len(), "theme {theme_seed} on {seed}: the figure");
         for (x, y) in mb.motif.iter().zip(ma.motif.iter()) {
@@ -87,7 +85,7 @@ fn a_theme_that_rests_keeps_its_rest_choir_or_not() {
     std::thread::Builder::new().stack_size(64 << 20).spawn(rests).expect("a thread").join().expect("rests");
 }
 
-/// The brain's case (queue item 85f): theme 3570153259, whose own loop has no
+/// The brain's case: theme 3570153259, whose own loop has no
 /// tune, bent from seed 2428270433, whose own loop is a vowel choir. Before
 /// 85f its choir sang 87 notes of a tune of its own; now it isn't a choir
 /// loop and the melody rests.

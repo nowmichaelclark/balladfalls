@@ -1,4 +1,4 @@
-//! The building-block interface (queue item 46; `docs/CORE.md`, promise 5).
+//! The building-block interface (`docs/CORE.md`, promise 5).
 //!
 //! A *block* is one piece of sound with its own state: an oscillator, a
 //! filter, a source playing the noise, an instrument's body, a compressor,
@@ -15,7 +15,7 @@
 //!   place), what sets it (its `Settings`), and when it sounds (its span).
 //!   A [`Voice`] is a block whose settings are a [`Note`]; a [`Channel`]
 //!   block is one a channel holds for as long as the core runs.
-//!   Four seams are optional parts of it (queue items 46b and 46c), each
+//!   Four seams are optional parts of it, each
 //!   with a default, so a block that does not use one writes nothing for it:
 //!   - **modulation:** a signal into a setting ([`Block::MODS`],
 //!     [`Block::render_mod`]), as Web Audio connects a node into an
@@ -79,7 +79,7 @@ pub struct Mod {
 }
 
 /// The most settings one block lets a signal drive: one for each channel,
-/// so a block can follow every other (the wash's follower, queue item 62).
+/// so a block can follow every other (the wash's follower).
 pub const MAX_MODS: usize = 6;
 
 /// What drives a block's settings for one render: for each setting in its
@@ -128,23 +128,23 @@ pub mod event {
     /// time. Reaches every held note, every time.
     pub const BEND: u32 = 2;
     /// A retune: a held instrument moves to the chord in `notes` at the
-    /// event's time (queue item 46c; the organ, item 61). Notes the two
+    /// event's time (the organ). Notes the two
     /// chords share keep sounding, untouched; only the changed ones are let
     /// go and spoken again (`blocks::retune`). Reaches every held note,
     /// every time.
     pub const RETUNE: u32 = 3;
-    /// A choke: a voice whose next hit cuts its last (the tuned kick, queue
-    /// item 67) falls away from the event's time. Sent with every hit, it
+    /// A choke: a voice whose next hit cuts its last (the tuned kick)
+    ///  falls away from the event's time. Sent with every hit, it
     /// reaches every note held when its time comes, every time; a note
     /// passes by the choke sent with its own hit.
     pub const CHOKE: u32 = 4;
-    /// A color (colorTone, queue item 101e): the chords channel's held
+    /// A color (colorTone): the chords channel's held
     /// color moves to the note `value` (MIDI) at the event's time, held for
     /// `notes[0]` seconds, or, with `value` NaN, lets go. Reaches every held
     /// note, every time (none of the notes hears it: the color is the
     /// channel's own block, `blocks::color_tone`).
     pub const COLOR: u32 = 5;
-    /// A let-go (twang, queue item 101h): the notes of the channel that
+    /// A let-go (twang): the notes of the channel that
     /// hear it and started at or before `value` seconds let go from the
     /// event's time, falling to -60 dB over `notes[0]` seconds (0: the
     /// voice's own). The player takes a twang's oldest string as a seventh
@@ -255,7 +255,7 @@ impl Event {
 
 /// A setting a host sets on a block for the loop (`Block::SETTINGS`): a
 /// channel's own block's sweep period, depth or registration, through
-/// `Core::set` (queue item 46c).
+/// `Core::set`.
 #[derive(Clone, Copy)]
 pub struct Setting {
     /// What the setting is, in plain ASCII (`"rate"`), for the kit's report.
@@ -512,7 +512,7 @@ pub const NO_EXTRA: [f64; EXTRA] = [f64::NAN; EXTRA];
 /// Where a voice that follows its channel (`Voice::FOLLOWS`) finds the
 /// channel's level as its note starts: the mean square of the channel's
 /// signal, as it leaves the channel's own blocks, over about the last
-/// `FOLLOW` seconds (queue item 101g). The core writes it there; a host's
+/// `FOLLOW` seconds. The core writes it there; a host's
 /// value is overwritten.
 pub const HEARD: usize = EXTRA - 1;
 
@@ -535,10 +535,10 @@ pub trait Voice: Block<Settings = Note> {
 
     /// Whether it sends some of itself into the reverb and the echo directly
     /// (`render_sends`), past its channel's own sends: a stab thrown into
-    /// the echo (queue item 60).
+    /// the echo.
     const SENDS: bool = false;
 
-    /// Whether it follows its channel (queue item 101g, lowBell): its notes
+    /// Whether it follows its channel (lowBell): its notes
     /// sound into the channel after the channel's own blocks (a sweep, a
     /// wow, a color), as a sketch on the whole channel did, rather than
     /// before them, and each note is stamped as it starts with how loud the
@@ -588,7 +588,7 @@ pub trait Channel: Block {
 
     /// Whether it sends some of itself into the reverb and the echo directly
     /// (`render_sends`), past its channel's own sends: the organ's room
-    /// (queue item 61).
+    ///.
     const SENDS: bool = false;
 
     /// Render as `Block::render_mod` does, and add what it sends into
@@ -599,7 +599,7 @@ pub trait Channel: Block {
         self.render_mod(block, cx, signal, mods);
     }
 
-    /// In a stereo render (queue item 65): render as `Block::render_mod`
+    /// In a stereo render: render as `Block::render_mod`
     /// does into `signal`, the mid, bit for bit the mono render's, and add
     /// what it puts out as its own width into `side` (+ left, - right). The
     /// core calls it instead of `render_mod` for a block that doesn't send;
@@ -624,7 +624,7 @@ pub enum Play {
     Stereo,
     /// Its stereo render, a processor fed two different sides (the noise,
     /// and the noise half its length on), so a block that works on how the
-    /// sides differ (the width ceiling, queue item 64) has something to
+    /// sides differ (the width ceiling) has something to
     /// work on; handed over as `Stereo`'s.
     Wide,
     /// Its mono render, hearing the events of kind `n` in `probe_events`,
@@ -702,7 +702,7 @@ pub fn solo<B: Block>(
     mut take: impl FnMut(&[f32]),
 ) -> u64 {
     block.start(settings, cx);
-    // The sketch slot (queue item 83) starts off, to play only where a host
+    // The sketch slot starts off, to play only where a host
     // turns it on; alone, it plays.
     #[cfg(feature = "sketch")]
     if B::SETTINGS.first().is_some_and(|s| s.name == SKETCH_ON) {

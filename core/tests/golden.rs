@@ -1,4 +1,4 @@
-//! The note-list host and the golden renders (queue item 42), as far as a
+//! The note-list host and the golden renders, as far as a
 //! test run on one machine can say: the parser, the hash against published
 //! answers, and the committed render of the shortest golden on this
 //! machine. `tools/golden.sh` renders every golden on every target.
@@ -63,7 +63,7 @@ fn the_shortest_golden_matches_its_kept_hashes() {
     assert_eq!(notelist::line(&list, &rendered.hashes), want);
 }
 
-/// A golden whose drums' tails once went subnormal (queue item 43): with the
+/// A golden whose drums' tails once went subnormal: with the
 /// processor flushing subnormal numbers to zero, as Chromium's audio
 /// threads do, it must render to the same bits as without, because the core
 /// never makes one (`dlcore::math`, "Subnormal numbers"). `tools/golden.sh

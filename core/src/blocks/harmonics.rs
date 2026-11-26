@@ -1,4 +1,4 @@
-//! A bass note's soft harmonics (queue item 56, roundBass): its 2nd, 3rd
+//! A bass note's soft harmonics (roundBass): its 2nd, 3rd
 //! and 4th partials as sines, under a 900 Hz lowpass and an envelope of
 //! their own, so a bass note reads on a phone whose speaker does not play
 //! its fundamental. Every bass voice but `rhodesbass` (an FM voice) adds

@@ -1,4 +1,4 @@
-//! planingSevenths (queue item 101f; batch 6's #10, Ears 13b, approved by
+//! planingSevenths (batch 6's #10, Ears 13b, approved by
 //! Mikey 2026-11-09): an option of the progression's per-loop draw, today's
 //! first. Every chord a major seventh, the roots a whole step or a minor
 //! third apart, either way: the shape sliding rather than a progression in
@@ -30,7 +30,7 @@
 //!
 //! The draw ([`planes`]) is per loop, on the loop's seed salted on a stream
 //! of its own, outside the list of choices and counted against a loop's
-//! changes (queue item 101h), as tuningOffset is (`[setting progression]`); a request may pin
+//! changes, as tuningOffset is (`[setting progression]`); a request may pin
 //! it (`progression.kind`). A loop that does not plane draws and plays
 //! exactly as before.
 
@@ -90,7 +90,7 @@ pub fn chord_scale(notes: usize) -> &'static [f64] {
 /// Whether the loop of `spec` planes: drawn on its own stream, for
 /// `[setting progression] planing` of the loops before its vibes lean it
 /// (never to none), unless the request pinned `progression.kind`; none at a
-/// version before the setting's or the word's (queue item 105e).
+/// version before the setting's or the word's.
 #[must_use]
 pub fn planes(spec: &Spec) -> bool {
     let mut r = Rng::new(js::salted(spec.seed, DRAW_SALT, 1));
@@ -250,7 +250,7 @@ pub fn snap(midi: f64, tonic: f64, slot: &Slot) -> f64 {
     midi
 }
 
-/// The sketch build's lever (queue item 99, `levers`): `--force
+/// The sketch build's lever (`levers`): `--force
 /// planingSevenths=on` plans the loop as if it drew it.
 #[cfg(feature = "sketch")]
 fn forced(drawn: bool) -> bool {

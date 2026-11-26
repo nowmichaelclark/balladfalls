@@ -1,11 +1,10 @@
-//! The request's voices and layers (queue item 91; `Request::with_voices`,
+//! The request's voices and layers (`Request::with_voices`,
 //! `Request::with_layer`): a layer's voices, a set or one, and a layer on or
 //! off. Read from text, refused with a plain line, and honored in what the
 //! generator makes and in what the player hands the core: the voice that
 //! plays is one asked, the choir is not forced by the melody's and the
-//! chords', a layer on plays, a layer off is silent. test/generator.test.mjs
-//! measures the same in the JavaScript's render; the generation goldens'
-//! `voice` cases hold the two generators together.
+//! chords', a layer on plays, a layer off is silent. The generation
+//! goldens' `voice` cases hold what is generated.
 
 // Counts and indexes, compared exactly on purpose.
 #![allow(clippy::float_cmp, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -228,7 +227,7 @@ fn played() {
         // The next load asks the layer on: it is unmuted and sounds (within
         // 160 s: the lateFloor choice keeps a kit out for a while at the
         // start, its slow opening up to 90 s and a bar, and the second part
-        // up to eight bars after the first, a minute at 32 bpm: item 101a).
+        // up to eight bars after the first, a minute at 32 bpm).
         let on = Request::new().with_layer(layer, LayerAsk::On).expect("on");
         let mut host = Counts { frame: 0, notes: [0; 5] };
         player.attach(&mut host, 48_000.0, true);

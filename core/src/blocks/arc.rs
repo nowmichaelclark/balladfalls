@@ -1,7 +1,7 @@
-//! The arc (queue item 63; the prototypes, approved by Mikey 2026-10-10): a
+//! The arc (the prototypes, approved by Mikey 2026-10-10): a
 //! second lowpass after the master's tone filter that breathes over minutes,
 //! and lifts the echo's feedback a little as it opens. It has two shapes
-//! (queue item 63b, Mikey 2026-10-21), which the host draws per loop:
+//! (Mikey 2026-10-21), which the host draws per loop:
 //!
 //! - **Deep**, the prototype's swing (`startArc` on the `ears/prototypes`
 //!   branch): from 300 Hz up to 9 kHz and back, lingering on the dark side.
@@ -57,7 +57,7 @@ const NYQUIST_SHARE: f64 = 0.45;
 /// Under this, an aim's share is none: the filter as the swing has it.
 const AIM_LEAST: f64 = 1e-4;
 
-/// The swing's shape (queue item 63b).
+/// The swing's shape.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Shape {
     /// The prototype's: 300 Hz to 9 kHz and back, lingering dark.
@@ -191,7 +191,7 @@ impl Arc {
     /// The cutoff and the feedback's lift at `t`: the swing's, gliding from
     /// the last one's for `GLIDE` seconds after it starts (geometric for the
     /// cutoff, straight for the feedback), and the last one's before it
-    /// starts (queue item 86: a swing is taken in the block it starts in, and
+    /// starts (a swing is taken in the block it starts in, and
     /// read before its start there it jumped the cutoff for a block, open
     /// for an arc's end, which rang).
     fn at(&self, t: f64) -> (f64, f64) {
@@ -261,12 +261,12 @@ impl Arc {
 
     /// Filter `signal`, the block from `block`, in place: nothing at all with
     /// no arc. With none the filter still runs, open, on the signal, which it
-    /// leaves as it is (queue item 86): so an arc that starts while the music
+    /// leaves as it is: so an arc that starts while the music
     /// plays (a loop with one after a loop without) takes over from a filter
     /// already in step with it, not from rest, which stepped the output.
     /// Before any music its state is all zeros, as it always was.
     ///
-    /// `aim` is a long piece's (queue item 102c): how far the swing's centre
+    /// `aim` is a long piece's: how far the swing's centre
     /// is lowered, a share of its range in log frequency, and how much
     /// shallower its depth is, each 0 to 1. Both 0: the swing exactly as it
     /// is. A loop with no swing has the filter open, and lowered from there

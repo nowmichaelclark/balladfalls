@@ -1,4 +1,4 @@
-//! lowBell (queue item 101g; batch 6's #2, Ears 13, approved by Mikey
+//! lowBell (batch 6's #2, Ears 13, approved by Mikey
 //! 2026-11-08, both kinds): a struck low bell on the chord's root, in a
 //! register Ballad Falls' other bells never reach. The player strikes it
 //! (`Synth::low_bell`) at each chord whose root changes, or the same root
@@ -29,7 +29,7 @@
 //! is a note of its own that ends once its first partial is 60 dB under its
 //! peak (5.5 s), so a ring is never cut off.
 //!
-//! dropSpotlight (queue item 101g; batch 6's #11, Ears 13b) is the same bell
+//! dropSpotlight (batch 6's #11, Ears 13b) is the same bell
 //! stepping forward in a floor drop (`SPOT` in the parts, either kind): the
 //! spotlight sketch's louder rule, 2 times the chords' RMS, never under 0.05
 //! nor over 0.15.

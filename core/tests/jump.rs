@@ -1,4 +1,4 @@
-//! A jump within a piece (session 17, queue item 106a): `Player::jump`. The
+//! A jump within a piece: `Player::jump`. The
 //! place a jump lands on plays what playing would have reached there: the
 //! notes the player hands over from the jump's first step are the notes
 //! playing hands over at the same steps, bit for bit (their pitches, lengths,
@@ -354,7 +354,7 @@ fn a_jump_on_a_core_allocates_nothing() {
     });
 }
 
-// Session 30h (queue item 116): the timeline moves the playhead on any loop,
+// The timeline moves the playhead on any loop,
 // paused or playing. A short loop's rail asks for a step (`Jump::Step`),
 // exactly; a jump asked while paused is held and lands as Play goes on; a
 // step's jump moves a time's track with it, so it ends on its own clock.

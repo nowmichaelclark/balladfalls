@@ -1,4 +1,4 @@
-//! The core's own math (queue item 43; `docs/CORE.md`, promise 3).
+//! The core's own math (`docs/CORE.md`, promise 3).
 //!
 //! Every platform computes `sin`, `exp` or `powf` its own way, and the last
 //! bits differ: the same notes made different samples on a phone, a laptop
@@ -12,7 +12,7 @@
 //! `asin`, `exp`, `expm1`, `tanh` and `pow` in 64 bits; `powf`, `exp2f`,
 //! `log10f` and `log2f` in 32; and the exact operations (`floor`, `ceil`,
 //! `round`, `trunc`, `sqrt`), which `core` does not offer on stable Rust.
-//! And for the generator (queue item 77; phase 2 ports it here), `log`,
+//! And for the generator (phase 2 ports it here), `log`,
 //! `log10` and `log2` in 64 bits. The generator's JavaScript calls the
 //! same functions through their mirror, `js/dlmath.js`, which
 //! `test/dlmath.test.mjs` holds to these bit for bit (through `dl_math`).

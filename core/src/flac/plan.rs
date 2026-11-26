@@ -3,8 +3,8 @@
 //! predicts), or one of FLAC's five fixed predictors with its residual in
 //! partitioned Rice codes.
 //!
-//! Fixed predictors and Rice coding are all of FLAC a simple encoder needs
-//! (queue item 104a): the predictor is chosen by the smallest sum of
+//! Fixed predictors and Rice coding are all of FLAC a simple encoder needs:
+//! the predictor is chosen by the smallest sum of
 //! residuals, as most encoders choose it, and then the Rice partitions and
 //! their parameters exactly, by counting the bits each would take. What a
 //! plan says it costs is what `write` writes, to the bit, so the encoder

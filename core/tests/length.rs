@@ -1,4 +1,4 @@
-//! Length, up to 32,768 bars and Endless (queue item 88; `generator::piece`
+//! Length, up to 32,768 bars and Endless (`generator::piece`
 //! says what a piece is). A length of up to 32 bars is the loop's own, in
 //! every profile, honored where the tables never draw it; a longer one
 //! comes round on exactly its length, a round's last section cut short at a
@@ -251,7 +251,7 @@ fn nothing_asked_draws_as_ever() {
 
 #[test]
 fn nothing_asked_is_sometimes_a_long_piece() {
-    // Queue item 117 (Mikey, 2026-11-23: "Sometimes"): with no length asked
+    // (Mikey, 2026-11-23: "Sometimes"): with no length asked
     // about a loop in ten is a long piece, of a length from `[longform
     // unasked]`, never Endless, with a journey drawn; and the draw is its
     // own stream, so the loop itself is what a long length asked makes of

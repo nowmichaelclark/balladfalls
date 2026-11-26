@@ -1,4 +1,4 @@
-//! The drums (queue item 27): `kick` and `softkick`, `snare` and `clap`,
+//! The drums: `kick` and `softkick`, `snare` and `clap`,
 //! `rim`, and the hand kit's `frame`, `tap` and `jingle`/`ojingle`, each its
 //! JavaScript twin in `Synth.drum`, call for call. (The hats are
 //! `struck::Struck`, ported with the noise source.) The budget is asked in
@@ -63,7 +63,7 @@ pub fn uses_noise(kind: u32) -> bool {
 const SOFTKICK_LEVEL: f64 = 1.15;
 const FRAME_LEVEL: f64 = 1.097;
 const TAP_LEVEL: f64 = 0.2918;
-/// How long the frame drum's skin rings, in seconds (queue item 55; it was
+/// How long the frame drum's skin rings, in seconds (it was
 /// 0.32). Its second mode keeps the old ring (`FRAME_MODE_RING`).
 const FRAME_RING: f64 = 0.40;
 const FRAME_MODE_RING: f64 = 0.32;
@@ -139,7 +139,7 @@ impl Drum {
     }
 
     // The noise grain: `_noiseSource(time, dur)`'s two draws, a filter, and
-    // a gain that starts at its first value (item 26b).
+    // a gain that starts at its first value.
     #[allow(clippy::too_many_arguments)]
     fn grain(
         &mut self,
@@ -334,7 +334,7 @@ impl Drum {
     // The body's frequency: set at the start, and for most falling to a
     // second value by a time.
     //
-    // The frame drum's pitch rests at its first frequency (queue item 55);
+    // The frame drum's pitch rests at its first frequency;
     // every other drum's at Web Audio's default, 440 Hz. In the block a
     // drum starts in, its moving pitch is read from the block's start, as
     // Chromium reads it (see `osc`), so for up to a block before the strike

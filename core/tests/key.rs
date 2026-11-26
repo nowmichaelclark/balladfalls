@@ -1,11 +1,9 @@
-//! The request's key and mode (queue item 89; `Request::with_keys`,
+//! The request's key and mode (`Request::with_keys`,
 //! `Request::with_scales`): a note or a set of notes, a mode or a set of
 //! modes, read from text, refused with a plain line, and honored in what the
 //! generator makes. Measured in the render, not only in the spec: the
 //! tonic chord sounds on the key, and the melody and the chords keep to the
-//! mode (the JavaScript's test takes the texture too). test/generator.test.mjs measures the same in the
-//! JavaScript's render; the generation goldens' `key` cases hold the two
-//! together.
+//! mode. The generation goldens' `key` cases hold what is generated.
 //!
 //! What is allowed outside a mode, as the catalog's own loops are: the bass's
 //! fifth and its pickups, a fixed interval from a chord's root (the catalog
@@ -109,7 +107,7 @@ fn pinned() {
         let key = r.pick_index(12);
         let scale = r.pick_index(SCALES.len());
         // (Today's progression: a planed one leaves the mode on purpose, its
-        // notes in each chord's own scale, queue item 101f.)
+        // notes in each chord's own scale.)
         let request = Request::new().with_keys(1 << key).expect("a key").with_scales(1 << scale).expect("a mode").with_pin(today(), 0.0).expect("a pin");
         let p = new_spec(seed, &request).character().lead;
         if loops >= 200 && led[p] >= 12 {
@@ -297,7 +295,7 @@ fn played() {
         let seed = r.seed32();
         let (key, scale) = (r.pick_index(12), r.pick_index(SCALES.len()));
         // (Today's progression: a planed one leaves the mode on purpose, its
-        // notes in each chord's own scale, queue item 101f.)
+        // notes in each chord's own scale.)
         let request = Request::new().with_keys(1 << key).expect("a key").with_scales(1 << scale).expect("a mode").with_pin(today(), 0.0).expect("a pin");
         let mut host = Pitches { frame: 0, melody: Vec::new(), chords: Vec::new() };
         player.attach(&mut host, 48_000.0, true);
@@ -306,7 +304,7 @@ fn played() {
         assert_eq!(player.state(), State::Playing);
         assert_eq!((player.generator().spec().root as usize, player.generator().spec().scale), (key, scale), "loop {i}, seed {seed}");
         let cinder = CHARACTERS[player.generator().spec().character().lead].id == "cinder";
-        // The note a pitch plays, the loop's tuning (item 101b) taken out.
+        // The note a pitch plays, the loop's tuning taken out.
         let tune = player.generator().settings().tuning / 100.0;
         while host.frame < 20 * 48_000 {
             player.decide(&mut host);

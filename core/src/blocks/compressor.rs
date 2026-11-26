@@ -1,4 +1,4 @@
-//! Chromium's `DynamicsCompressorNode` (queue item 31): the kernel of
+//! Chromium's `DynamicsCompressorNode`: the kernel of
 //! `dynamics_compressor.cc` (Chromium 141), which the synth's bus
 //! compressor (`comp`) and its limiter (`ceiling`) both are.
 //!
@@ -333,7 +333,7 @@ impl<const C: usize> Compressor<C> {
     /// One block, as `process`, but hearing `key` instead of its channels:
     /// one gain for every channel, worked out from `key` alone. The stereo
     /// master keys its compressors with the mid, `(left + right) / 2`, so
-    /// they press as the mono render's do (queue item 64): fed the same
+    /// they press as the mono render's do: fed the same
     /// on both sides, each side is the mono render's, bit for bit.
     pub fn process_keyed(&mut self, input: &[Signal; C], key: &Signal, out: &mut [Signal; C]) {
         self.run::<true>(input, out, key);

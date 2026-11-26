@@ -1,9 +1,9 @@
-//! subDuck (queue item 68; Ears 8, approved by Mikey 2026-10-18): the bass
+//! subDuck (Ears 8, approved by Mikey 2026-10-18): the bass
 //! channel alone dips at each kick and comes back, so the kick and the sub
 //! take turns while the pads and the tune stay steady.
 //!
 //! A channel's own block on the whole bass channel (`Channel::WHOLE`), keyed
-//! by the drums' channel, routed in (`Core::route`), as queue item 46c's
+//! by the drums' channel, routed in (`Core::route`), as the duck's
 //! sidechain demonstration is. The sketch (`ears8-sketch.patch`,
 //! `e8Duck`) dipped the bass channel's gain at each kick's time: a line down
 //! to `depth` dB, scaled by the kick's velocity (full at 0.8), in 8 ms, and

@@ -1,7 +1,7 @@
 //! JavaScript's number operations, to the bit, where Rust's differ.
 //!
-//! The generator is ported note for note from `js/generator.js` (queue item
-//! 79), and every number in it is a JavaScript double: `+ - * /` and the
+//! The generator is ported note for note from `js/generator.js`,
+//! and every number in it is a JavaScript double: `+ - * /` and the
 //! comparisons are IEEE 754's on both sides, so they need nothing. These
 //! are the few that are not the same function in Rust: `Math.round` rounds
 //! halves up (Rust's `round` rounds them away from zero) and keeps the

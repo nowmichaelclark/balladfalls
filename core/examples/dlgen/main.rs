@@ -1,5 +1,5 @@
-//! `dlgen`: the Rust generator against the generation goldens (queue items
-//! 79 to 82), on whatever target it is built for.
+//! `dlgen`: the Rust generator against the generation goldens,
+//! on whatever target it is built for.
 //!
 //! ```text
 //! cargo run --release --example dlgen -- --check golden/generation.hashes
@@ -11,7 +11,7 @@
 //!     second field writes it (`Request::parse`: "glacial,misty",
 //!     "glacial=0.7,bpm=70-85", or - for none)
 //! cargo run --release --example dlgen -- --map SEED [REQUEST] [--from N] [--count N]
-//!     a long piece's map (queue item 102; `generator::longform`): one
+//!     a long piece's map (`generator::longform`): one
 //!     line a section (a line a phrase where the plan's unit is the
 //!     phrase), from section N (0) for COUNT sections (a finite piece's
 //!     whole round up to 200, else 60): its role, theme, key, tempo and
@@ -19,7 +19,7 @@
 //!     length is printed straight from its number
 //! cargo run --release --example dlgen -- --section-cost SEED [REQUEST]
 //!     what a section costs to make as the player makes it (its pass drawn
-//!     and its plan heard, queue item 102b), timed at sections 1, 1,000 and
+//!     and its plan heard), timed at sections 1, 1,000 and
 //!     10^9: the least of many makings each, in microseconds
 //! ```
 //!
@@ -78,7 +78,7 @@ fn section_cost(args: &[String]) -> Result<(), String> {
 }
 
 /// `--theme-cost`: what a section of an arc costs to make by whose tune it
-/// plays (session 14), from section `from` on: a theme-A section and a
+/// plays, from section `from` on: a theme-A section and a
 /// theme-B one made again and again (the second tune already made, as the
 /// player has it a section ahead), a theme-B section whose tune is made
 /// from nothing each time (two movements' in turn), and the loop's own
@@ -337,7 +337,7 @@ fn map(args: &[String]) -> Result<(), String> {
             if s.prepares {
                 state.push("the bass holds the home fifth".to_string());
             }
-            // How it meets the unit after it (session 15).
+            // How it meets the unit after it.
             if !matches!(s.join, Join::None | Join::Glide | Join::Prepared) {
                 state.push(format!("then {}", s.join.name()));
             }

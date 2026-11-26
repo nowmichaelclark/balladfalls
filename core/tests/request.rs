@@ -1,8 +1,7 @@
-//! The request (queue item 85; promise 11): a test that walks its choices,
+//! The request (promise 11): a test that walks its choices,
 //! and the tempo it asks for measured in what the player plays (the notes'
-//! onsets), not only in the spec. It grows with items 86 to 91 (the key and
-//! the mode, item 89, the style, item 90, and the voices and layers, item 91, are
-//! measured in `key.rs`, `style.rs` and `voices.rs`).
+//! onsets), not only in the spec. The key and the mode, the style, and the
+//! voices and layers are measured in `key.rs`, `style.rs` and `voices.rs`.
 
 // The tempos are whole bpm, compared exactly on purpose.
 #![allow(clippy::float_cmp)]
@@ -54,7 +53,7 @@ impl Host for Onsets {
 /// moves only the steps between), each step's earliest note, and the median
 /// of the slopes between every pair of beats (a step's length), so a grace
 /// or a strum cannot pull it. Played until twelve beats have sounded, or
-/// two minutes (a slow opening's floor can wait 90 s: queue item 101a).
+/// two minutes (a slow opening's floor can wait 90 s).
 fn measured_bpm(player: &mut Player, seed: u32, request: &Request) -> f64 {
     let mut host = Onsets { frame: 0, key: Key::default(), notes: Vec::new() };
     player.attach(&mut host, RATE, true);
@@ -197,8 +196,8 @@ fn the_request_walks_its_choices() {
     let pinned = Request::new().with_tempo(76.6, 76.6).expect("in range");
     assert_eq!(pinned.tempo(), Some([77.0, 77.0]));
 
-    // The key, the mode, the style, the voices and the layers (queue items 89
-    // to 91; core/tests/key.rs, style.rs and voices.rs walk them).
+    // The key, the mode, the style, the voices and the layers
+    // (core/tests/key.rs, style.rs and voices.rs walk them).
     let r = Request::parse("cozy,key=G|D,scale=aeolian|dorian,style=shrine|tide,voice.melody=flute,layer.drums=off,bpm=80").expect("a request");
     assert_eq!((r.voices(3), r.layers_off()), (1 << 5, 1));
     assert_eq!((r.keys(), r.scales(), r.styles(), r.tempo()), ((1 << 2) | (1 << 7), 0b11, (1 << 12) | (1 << 13), Some([80.0, 80.0])));

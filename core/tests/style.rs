@@ -1,12 +1,10 @@
-//! The request's style (queue item 90; `Request::with_styles`): a profile or
+//! The request's style (`Request::with_styles`): a profile or
 //! a set of them, read from text, refused with a plain line, and honored in
 //! what the generator and the player make. A pinned style is that profile
 //! whole; a set draws only from the set, every member reached; a mix already
 //! inside the set stands; the other requests (a tempo, a key and a mode, a
-//! theme) ride with it. test/generator.test.mjs measures the same in the
-//! JavaScript's render, and holds a pinned profile's figures to its whole
-//! loops on chance; the generation goldens' `style` cases hold the two
-//! generators together.
+//! theme) ride with it. The generation goldens' `style` cases hold what is
+//! generated.
 
 // Weights and degrees are compared exactly on purpose.
 #![allow(clippy::float_cmp)]

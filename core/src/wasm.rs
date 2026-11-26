@@ -18,8 +18,8 @@ use crate::{Core, Key, Tap, Taken};
 
 /// What the module does if the core panics: nothing reachable from the
 /// exports can (`lib.rs`), but a `no_std` module must say. It traps, which
-/// the worklet reports as a processor error and the page answers by
-/// falling back to the JavaScript synth (queue item 31b).
+/// the worklet reports as a processor error. There is no JavaScript synth
+/// to fall back to: the page says in a plain line that it can't play.
 #[panic_handler]
 fn panic(_: &core::panic::PanicInfo) -> ! {
     core::arch::wasm32::unreachable()
@@ -56,8 +56,8 @@ pub extern "C" fn dl_init(rate: f64) {
 }
 
 /// Render `channels` output channels from the next block: 1 (mono) or 2
-/// (stereo, queue item 64). 1 if it did, 0 for any other number. While the
-/// core plays, the switch fades (`Core::set_layout`, queue item 66).
+/// (stereo). 1 if it did, 0 for any other number. While the
+/// core plays, the switch fades (`Core::set_layout`).
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_layout(channels: u32) -> u32 {
     u32::from(core().set_layout(channels))
@@ -113,7 +113,7 @@ pub extern "C" fn dl_damp(channel: u32, time: f64) {
 }
 
 /// Let the notes of `channel` keyed (`seed`, `pass`, `step`, `ord`) go,
-/// falling to nothing from `from` to `to` (queue item 85c); see
+/// falling to nothing from `from` to `to`; see
 /// `Core::steal`. Returns how many it reached.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_steal(channel: u32, seed: u32, pass: u32, step: u32, ord: u32, from: f64, to: f64) -> u32 {
@@ -211,14 +211,14 @@ pub extern "C" fn dl_out() -> *const f32 {
 }
 
 /// Set the space recipe's setting `which` to draw from `lo` to `hi`
-/// (`Core::space_range`; queue item 65). 1 if it did.
+/// (`Core::space_range`). 1 if it did.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_space_range(which: u32, lo: f64, hi: f64) -> u32 {
     u32::from(core().space_range(which as usize, lo, hi))
 }
 
-/// Set the bass layer's lift in dB for the loop; see `Core::bass_lift`
-/// (queue item 76c). 1 if it took.
+/// Set the bass layer's lift in dB for the loop; see `Core::bass_lift`.
+/// 1 if it took.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_bass_lift(db: f64) -> u32 {
     u32::from(core().bass_lift(db))
@@ -228,7 +228,7 @@ pub extern "C" fn dl_bass_lift(db: f64) -> u32 {
 /// for `pow`): 0 `pow`, 1 `exp`, 2 `log`, 3 `log2`, 4 `log10`, 5 `sin`,
 /// 6 `cos`, 7 `sqrt`; NaN for any other `which`. Nothing that plays calls
 /// it: it is how `test/dlmath.test.mjs` holds the generator's JavaScript
-/// mirror (`js/dlmath.js`, queue item 77) to these functions bit for bit,
+/// mirror (`js/dlmath.js`) to these functions bit for bit,
 /// in the very module the app runs.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_math(which: u32, x: f64, y: f64) -> f64 {
@@ -253,8 +253,8 @@ pub extern "C" fn dl_outputs() -> u32 {
 }
 
 /// How many of `dl_out`'s runs the last block filled: the layout, except
-/// while a switch into mono fades the side out (`Core::lanes`, queue item
-/// 66), when it is still 2.
+/// while a switch into mono fades the side out (`Core::lanes`),
+/// when it is still 2.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_lanes() -> u32 {
     core().lanes()
@@ -293,13 +293,13 @@ pub extern "C" fn dl_clear() {
     core().clear();
 }
 
-/// Drop every note still waiting to start (queue item 39).
+/// Drop every note still waiting to start.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_cancel() {
     core().cancel();
 }
 
-/// Drop the notes waiting to start at `time` or later (queue item 40).
+/// Drop the notes waiting to start at `time` or later.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_cancel_from(time: f64) {
     core().cancel_from(time);
@@ -307,7 +307,7 @@ pub extern "C" fn dl_cancel_from(time: f64) {
 
 /// Let every note handed over go, falling from `from` to nothing at `to`
 /// (seconds; `Core::fade_all`): the page's track that its length slider
-/// ends inside a pass, at a phrase line (queue item 88b), before it hands
+/// ends inside a pass, at a phrase line, before it hands
 /// over the next loop's notes. Returns how many notes it reached.
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_fade_all(from: f64, to: f64) -> u32 {
@@ -319,8 +319,8 @@ pub extern "C" fn dl_late() -> u32 {
     core().late()
 }
 
-/// Notes that arrived more than `MISS` late and were left out (queue item
-/// 41).
+/// Notes that arrived more than `MISS` late and were left out
+/// .
 #[unsafe(no_mangle)]
 pub extern "C" fn dl_missed() -> u32 {
     core().missed()
@@ -349,9 +349,9 @@ const _: () = assert!(
 
 // ------------------------------------------------------------ the generator
 
-/// The generator's exports (queue item 79), in a build with the
-/// `generator` feature only: not in the app's `.wasm` until the player is
-/// (item 82). `tools/gen-core.sh` builds one and checks the generation
+/// The generator's exports, in a build with the
+/// `generator` feature only: not in the app's `.wasm` until the player is.
+/// `tools/gen-core.sh` builds one and checks the generation
 /// goldens through it in Node. A host writes the vibes it asks for at
 /// `dl_gen_input` (one byte a vibe, its number), loads a loop, and reads
 /// what the generator made: a part's hash, or the spec as text.
@@ -469,8 +469,8 @@ mod generator {
         TEXT.0.get().cast()
     }
 
-    /// The map of the loaded loop's piece (queue item 102;
-    /// `generator::longform`), at `dl_gen_text`: a list of the piece's own
+    /// The map of the loaded loop's piece
+    /// (`generator::longform`), at `dl_gen_text`: a list of the piece's own
     /// line and then a line a unit (`[section, phrase, span]`) for `count`
     /// sections from section `from` (a whole number, as a double: sections
     /// go past 2^32). Returns its length; 0 for a loop that is no long
@@ -499,13 +499,13 @@ mod generator {
         if text.lost > 0 { 0 } else { u32::try_from(text.len).unwrap_or(0) }
     }
 
-    /// The joins of the loaded loop's piece as played (session 16), at
+    /// The joins of the loaded loop's piece as played, at
     /// `dl_gen_text`: a list of a section's steps and then a line a unit
     /// (`[section, phrase, kind, from, to, out, rests, under]`: the join `heard`
     /// plays, where it begins and the unit ends, in the section's steps, the
     /// layers it takes out and the layers the unit rests, a bit each, in
     /// `LAYERS`' order, and how far under the unit the join's notes leave
-    /// the mix, `Unit::under`, session 16b), for `count` sections from section
+    /// the mix, `Unit::under`), for `count` sections from section
     /// `from`, each drawn at the wander's amount 0. The map (`dl_gen_map`)
     /// names the plan's join; this, what the loop can play of it (a tune
     /// alone over a tune silent there is a breath, a breath with nothing to
@@ -548,7 +548,7 @@ mod generator {
 
 // --------------------------------------------------------------- the player
 
-/// The player's exports (queue item 82), in a build with the `player`
+/// The player's exports, in a build with the `player`
 /// feature: `js/dlplayer.wasm`, which the app plays with `?engine=player`
 /// (for testing; the app's own `.wasm` stays without it until phase 3). The
 /// worklet starts the core as always (`dl_init`, `dl_quality`, `dl_layout`),
@@ -586,7 +586,7 @@ mod player {
         unsafe { &mut *REQUEST.0.get() }
     }
 
-    /// The first thing refused in the request being asked (queue item 95), so
+    /// The first thing refused in the request being asked, so
     /// the picks can say why they can't be met: plain ASCII, the request's
     /// own line ("tempo must be 32 to 190 bpm"). None while all is met.
     struct Refused(UnsafeCell<Option<&'static str>>);
@@ -660,14 +660,14 @@ mod player {
     }
 
     /// Bend the loop of `seed` in what the next `dl_play_load` asks for
-    /// (`Request::with_theme`; queue item 85d).
+    /// (`Request::with_theme`).
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_theme(seed: u32) {
         *request() = request().with_theme(seed);
     }
 
     /// Ask the next `dl_play_load` for a piece `bars` bars long, or Endless
-    /// with `bars` infinite (`Request::with_length`; queue item 88). 1 if it
+    /// with `bars` infinite (`Request::with_length`). 1 if it
     /// can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_length(bars: f64) -> u32 {
@@ -677,7 +677,7 @@ mod player {
     }
 
     /// Ask the next `dl_play_load` for the journey a long piece takes: 1 an arc, 2 a wander
-    /// (`Request::with_journey`; queue item 106b, the app's journey pick). 0 for no such journey
+    /// (`Request::with_journey`; the app's journey pick). 0 for no such journey
     /// (refused with the request's own line), else 1. A loop of up to 32 bars has none and plays as it does without.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_journey(journey: u32) -> u32 {
@@ -695,7 +695,7 @@ mod player {
     }
 
     /// Ask the next `dl_play_load` for the home notes in `keys`, a bit each
-    /// with C the lowest (`Request::with_keys`; queue item 89). 1 if it can
+    /// with C the lowest (`Request::with_keys`). 1 if it can
     /// be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_keys(keys: u32) -> u32 {
@@ -703,7 +703,7 @@ mod player {
     }
 
     /// Ask the next `dl_play_load` for the modes in `scales`, a bit each by
-    /// its place in the core's list (`Request::with_scales`; queue item 89).
+    /// its place in the core's list (`Request::with_scales`).
     /// 1 if it can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_scales(scales: u32) -> u32 {
@@ -711,7 +711,7 @@ mod player {
     }
 
     /// Ask the next `dl_play_load` for the profiles in `styles`, a bit each
-    /// by place in the frozen order (`Request::with_styles`; queue item 90).
+    /// by place in the frozen order (`Request::with_styles`).
     /// 1 if it can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_styles(styles: u32) -> u32 {
@@ -720,7 +720,7 @@ mod player {
 
     /// Ask the next `dl_play_load` for the voices in `voices` of layer
     /// `layer` (0 to 4), a bit each by place in the layer's list
-    /// (`Request::with_voices`; queue item 91). 1 if it can be met.
+    /// (`Request::with_voices`). 1 if it can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_voices(layer: u32, voices: u32) -> u32 {
         take(request().with_voices(layer as usize, voices))
@@ -728,7 +728,7 @@ mod player {
 
     /// Ask the next `dl_play_load` for layer `layer` (0 to 4) to be left to
     /// chance (`state` 0), always played (1) or left out (2)
-    /// (`Request::with_layer`; queue item 91). 1 if it can be met.
+    /// (`Request::with_layer`). 1 if it can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_layer(layer: u32, state: u32) -> u32 {
         use crate::generator::request::LayerAsk;
@@ -742,7 +742,7 @@ mod player {
     }
 
     /// Pin setting `number` at `value` for what the next `dl_play_load`
-    /// asks for (`Request::with_pin`; queue item 85b). 1 if it can be met.
+    /// asks for (`Request::with_pin`). 1 if it can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_pin(number: u32, value: f64) -> u32 {
         take(request().with_pin(number as usize, value))
@@ -750,7 +750,7 @@ mod player {
 
     /// Set layer `layer`'s seed (0 to 4, the core's order) to `seed` in what
     /// the next load, change or re-roll asks for, re-rolled (always played)
-    /// with `rolled` not 0 (`Request::with_layer_seed`; queue item 94a, a
+    /// with `rolled` not 0 (`Request::with_layer_seed`; a
     /// code's edit). 1 if it can be met.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_seed(layer: u32, seed: u32, rolled: u32) -> u32 {
@@ -774,7 +774,7 @@ mod player {
     }
 
     /// The loop playing made again with what was asked since the last load,
-    /// in its place (`Player::revise`; queue item 94a, a re-roll): the loop
+    /// in its place (`Player::revise`; a re-roll): the loop
     /// of `seed` with a layer's new seed (`dl_play_seed`).
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_revise(seed: u32) {
@@ -789,7 +789,7 @@ mod player {
 
     /// How long the track plays (`Player::set_track_with`): `kind` 0 on and
     /// on, 1 `count` whole passes, 2 `count` bars (to the next phrase line),
-    /// 3 `count` seconds (session 30c); with 4 added for a fade in and 8 for
+    /// 3 `count` seconds; with 4 added for a fade in and 8 for
     /// a fade out (a time's only): `Track::of`. 1 if it is a kind there is.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_track(kind: u32, count: u32) -> u32 {
@@ -799,7 +799,7 @@ mod player {
     }
 
     /// The second a time's track ends on, on the core's clock
-    /// (`Player::track_at`; session 30c); -1 for none.
+    /// (`Player::track_at`); -1 for none.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_track_at() -> f64 {
         player().track_at().unwrap_or(-1.0)
@@ -819,7 +819,7 @@ mod player {
     static EVENTS: Floats<{ 4 * EVENTS_MAX }> = Floats(UnsafeCell::new([0.0; 4 * EVENTS_MAX]));
     static GRID: Floats<GRID_MAX> = Floats(UnsafeCell::new([0.0; GRID_MAX]));
 
-    /// Take every event waiting (`Player::event`; queue item 94a) into
+    /// Take every event waiting (`Player::event`) into
     /// `dl_play_event_at`, four doubles each: its time on the core's clock,
     /// its kind (`Kind::ALL`'s order: 0 step, 1 pass, 2 section, 3 phrase, 4
     /// loop, 5 revised, 6 end, 7 own, 8 jump, 9 heard), its number and its
@@ -957,7 +957,7 @@ mod player {
     }
 
     /// `dl_play_load` for a loop resumed on a new core (`Player::load_resumed`;
-    /// queue item 94b, the app's automatic quality switch): its lateFloor is
+    /// the app's automatic quality switch): its lateFloor is
     /// not waited out a second time.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_load_resumed(seed: u32, at: f64) {
@@ -967,8 +967,8 @@ mod player {
     /// Change to the loop of `seed` with what was asked since the last load,
     /// at `moment` of the loop playing (0 now, 1 the next beat, 2 bar, 3
     /// phrase, 4 pass, 5 the track's end: `Moment::ALL`), the old loop crossfading over
-    /// `crossfade` seconds, or ringing out for a negative one (queue item
-    /// 86, `Player::change`). 0 for a moment there is no such number for
+    /// `crossfade` seconds, or ringing out for a negative one
+    /// (`Player::change`). 0 for a moment there is no such number for
     /// (nothing changes), else 1.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_change(seed: u32, moment: u32, crossfade: f64) -> u32 {
@@ -979,7 +979,7 @@ mod player {
     }
 
     /// `dl_play_change`, and how long the loop's track plays once it starts
-    /// (`Player::change_with_track`; queue item 95): `kind` and `count` as
+    /// (`Player::change_with_track`): `kind` and `count` as
     /// `dl_play_track` takes them. The app arms the loop that follows a
     /// track's end this way. 0 for a moment or a kind there is no such number
     /// for (nothing changes), else 1.
@@ -992,8 +992,8 @@ mod player {
         1
     }
 
-    /// A new loop of the core's own at `moment` (`Player::next`; queue item
-    /// 95, the app's Next at the end of its history), crossfading as
+    /// A new loop of the core's own at `moment` (`Player::next`;
+    /// the app's Next at the end of its history), crossfading as
     /// `dl_play_change` does: its seed drawn from `dl_play_draws`', with the
     /// picks (`dl_play_picks`). 1 if asked; 0 for no such moment, or with no
     /// seed to draw from.
@@ -1004,8 +1004,8 @@ mod player {
         u32::from(player().next(m, handover))
     }
 
-    /// Drop the change waiting for `moment` (`Player::drop_change`; queue item
-    /// 95): the app drops the one armed for the track's end when nothing it
+    /// Drop the change waiting for `moment` (`Player::drop_change`):
+    /// the app drops the one armed for the track's end when nothing it
     /// holds comes next, so the core's own loop follows. 1 if there is such
     /// a moment.
     #[unsafe(no_mangle)]
@@ -1023,7 +1023,7 @@ mod player {
     static PICKS_REFUSED: Why = Why(UnsafeCell::new(None));
 
     /// Hold what was asked since the last load as the picks, numbered `tag`
-    /// (`Player::set_picks`; queue item 95, the app's New loops panel): every
+    /// (`Player::set_picks`; the app's New loops panel): every
     /// loop the core makes itself asks them. If any part of them was refused,
     /// only their vibes are held, as the page's own draw kept the moods of a
     /// request it could not meet, and the first refusal is kept for
@@ -1066,7 +1066,7 @@ mod player {
     }
 
     /// Give the core a seed to draw its own loops' seeds from
-    /// (`Player::set_draws`; queue item 95); 0, none of its own.
+    /// (`Player::set_draws`); 0, none of its own.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_draws(seed: u32) {
         player().set_draws(seed);
@@ -1110,8 +1110,8 @@ mod player {
     }
 
     /// Render the next `frames` frames (at most 4,096, or 2,048 a side in
-    /// stereo) the way a host rendering ahead does (`Player::render`; queue
-    /// item 87): any number a call, each call carrying on where the last
+    /// stereo) the way a host rendering ahead does (`Player::render`):
+    /// any number a call, each call carrying on where the last
     /// stopped. Where they are, as `dl_render` says; 0 if the core would not
     /// render. Never mixed with `dl_play_process`, which owns the block clock.
     #[unsafe(no_mangle)]
@@ -1166,8 +1166,8 @@ mod player {
         player().set_wander(amount);
     }
 
-    /// The salt on the wander's stream (queue item 92,
-    /// `Player::set_wander_salt`): 0, every code's own wander.
+    /// The salt on the wander's stream
+    /// (`Player::set_wander_salt`): 0, every code's own wander.
     #[unsafe(no_mangle)]
     pub extern "C" fn dl_play_wander_salt(salt: u32) {
         player().set_wander_salt(salt);
@@ -1243,8 +1243,8 @@ mod player {
         player().position().2
     }
 
-    /// Go on from somewhere else in the loop playing (session 17,
-    /// `Player::jump`): `kind` 0 a section (`at`, a whole number), 1 a bar,
+    /// Go on from somewhere else in the loop playing
+    /// (`Player::jump`): `kind` 0 a section (`at`, a whole number), 1 a bar,
     /// 2 a time in seconds, from the piece's start, 3 a step from the load
     /// (`Jump::of`). 1 if it was asked; 0 with nothing playing or stopped,
     /// for no such kind, or a place that is not a number.
@@ -1284,7 +1284,7 @@ mod player {
     const MARKS_MAX: usize = 2048;
     static MARKS: Floats<{ MARK * MARKS_MAX }> = Floats(UnsafeCell::new([0.0; MARK * MARKS_MAX]));
 
-    /// A long piece's marks for the page (session 17, `Player::marks`), of
+    /// A long piece's marks for the page (`Player::marks`), of
     /// the loop made (js/gen.js's instance makes it; the one that plays has
     /// it too), at `dl_play_marks_at`: for `count` sections from section
     /// `from` (whole numbers, as doubles), each unit where a role, theme,
@@ -1327,7 +1327,7 @@ mod player {
     }
 }
 
-/// The measuring tools' exports (queue item 96; the `tools` feature, a build
+/// The measuring tools' exports (the `tools` feature, a build
 /// the tools make for themselves and the app never ships): a request as
 /// text, as the C host's `dl_player_ask` takes one; one note of one voice
 /// through its layer's path (`player::probe`); and what the voice budget
@@ -1439,9 +1439,9 @@ mod tools {
     }
 }
 
-// FLAC, the lossless export (queue item 104a; `crate::flac`), with the `flac`
-// feature: in js/dlplayer.wasm since the app exports (session 20, item 104b;
-// js/export-worker.js drives it), and in the tools' build (`tools/flac.mjs` holds its bytes to the native encoder's).
+// FLAC, the lossless export (`crate::flac`), with the `flac`
+// feature: in js/dlplayer.wasm since the app exports
+// (js/export-worker.js drives it), and in the tools' build (`tools/flac.mjs` holds its bytes to the native encoder's).
 // One encoder an instance, in static memory like the core: a host writes up to
 // `BLOCK` frames a channel at `dl_flac_input` (left, then right), calls
 // `dl_flac_write`, and appends the bytes at `dl_flac_out` to its file.
@@ -1531,8 +1531,8 @@ mod flac {
     }
 }
 
-// Share codes, version 2 (queue item 105; `crate::code`), with the `codes`
-// feature: in the tools' build, and in js/dlplayer.wasm from session 23. A
+// Share codes, version 2 (`crate::code`), with the `codes`
+// feature: in the tools' build, and in js/dlplayer.wasm. A
 // host writes a code (or an album's parts, or a name) at `dl_code_input`,
 // and reads what is written at `dl_code_text`. What a code asks is the
 // player's request being asked (`dl_play_*`), and a refusal is noted where
@@ -1830,7 +1830,7 @@ mod codes {
     }
 }
 
-// The measuring tools' log of the notes heard (session 30b; the `tools`
+// The measuring tools' log of the notes heard (the `tools`
 // feature), at the file's end so no line of shipped code moves.
 #[cfg(feature = "tools")]
 mod begun_exports {
@@ -1841,8 +1841,8 @@ mod begun_exports {
     unsafe impl Sync for Begun {}
     static BEGUN: Begun = Begun(UnsafeCell::new([0.0; crate::begun::MOST * crate::begun::WORDS]));
 
-    /// The notes that took a voice since the last call (session 30b,
-    /// `crate::begun`), at `dl_tools_begun_at`, ten numbers each: channel,
+    /// The notes that took a voice since the last call
+    /// (`crate::begun`), at `dl_tools_begun_at`, ten numbers each: channel,
     /// key seed, pass, step and order, the frame it began on, velocity, the
     /// channel's gain, the share a fade left it, and its voice. Returns how
     /// many.

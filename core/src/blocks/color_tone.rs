@@ -1,4 +1,4 @@
-//! colorTone (queue item 101e; batch 6's #5, Ears 13, approved by Mikey
+//! colorTone (batch 6's #5, Ears 13, approved by Mikey
 //! 2026-11-08): a held color over the chord, a 13th over a major chord or an
 //! 11th over a minor one, which the generator decides
 //! (`generator::color`) and the player sends as color events
@@ -51,7 +51,7 @@ pub const REST: Settings = Settings { level: 0.02, rel: 1.2, start: f64::NAN, on
 
 /// Its setting a host sets, by number: whether the loop plays colors.
 pub const ON: usize = 0;
-/// Forget the chords' level it has followed (session 17, a jump within a
+/// Forget the chords' level it has followed (a jump within a
 /// piece): it reads the level afresh from the chords that play after, as at
 /// a loop's start on a new core, not the ones the jump left.
 pub const FORGET: usize = 1;

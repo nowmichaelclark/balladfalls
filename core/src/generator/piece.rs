@@ -1,4 +1,4 @@
-//! A piece of a length asked (promise 11, queue item 88): any whole number
+//! A piece of a length asked (promise 11): any whole number
 //! of bars from 1 up, or Endless, worked a section at a time
 //! (`pieceOf` in `js/generator.js`, the same way).
 //!
@@ -27,7 +27,7 @@
 //! numbered on (each round's drawn afresh, as a loop's next pass wanders),
 //! and every round is exactly the length asked, its last section cut short
 //! where it was. With the wander off the rounds are the same. The length is
-//! how many bars the loop is, never when it ends (queue item 88b): the
+//! how many bars the loop is, never when it ends: the
 //! player plays round after round and hands the host no end; the host
 //! decides, as the app's length slider does. Endless never comes round:
 //! its sections are numbered on, the wander's pass number wrapping past
@@ -38,8 +38,8 @@
 //! from the piece's start (a loop that is no piece keeps today's first
 //! pass, drawn at the count the loop before it reached).
 //!
-//! **With no length asked** a loop is sometimes a long piece all the same
-//! (queue item 117): the spec's length is then one the seed drew
+//! **With no length asked** a loop is sometimes a long piece all the same:
+//! the spec's length is then one the seed drew
 //! (`spec::new_spec`), and the piece is counted from it as from one asked.
 
 use super::data::MAX_BARS;

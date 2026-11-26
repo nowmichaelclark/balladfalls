@@ -1,282 +1,202 @@
 # Roadmap
 
-Open work, ordered. Everything here has a size and a test that would prove it
-done. Decisions already made are at the bottom so they stop being reopened.
+This page lists the open work, in order. Each item has a size, and a test
+that proves it is done. At the bottom are the ideas that were decided
+against, so that nobody opens them again, and the rules for contributions.
 
-What has shipped or been closed is in `docs/archive/roadmap-shipped.md`: items
-1-4, 9 (v2), 10-14 and 21, and the full original of 16. The numbers are kept,
-so "roadmap 17" still means item 17.
+The items keep their old numbers, so "roadmap 17" still means item 17. The
+items that shipped before 1.0 are in `docs/archive/roadmap-shipped.md` (read
+it at the commit that `docs/archived.txt` names).
 
-Sizes: **S** under an hour, **M** a session, **L** more than a session.
+Sizes: **S** is under an hour, **M** is a session, and **L** is more than a
+session.
 
 ---
 
-## 5. Real-hardware budget calibration — **S**
+## 5. Calibrate the voice budget on real hardware — **S**
 
-Nothing is stopping this except that it needs a phone, and the phone is not
-mine. The totals (260 / 170 / 140) are reasoned, not measured. Diagnostics
-already reports `lateTicks` and `worstLateMs`.
+The voice budget limits how many voices sound at once. Its totals (260 at
+full, 170 for the accompaniment, 140 on Lite; `core/src/player/budget.rs`)
+are reasoned, not measured. Diagnostics reports the late notes.
+
+**Check the weights first, then the totals.** A bug once refused the melody
+in 28.6% of loops, partly because one weight was wrong: `keys` was priced at
+25, the same as a piano, but it is half of a piano (one FM voice against
+two). If one weight was that far out, others may be too. Measure tone with
+`node tools/measure.mjs --voice`, and cost with the marginal render time.
 
 **Done when** a twenty-minute run on the target phone, on the densest profile
-mix available, reports zero late ticks — or the totals are lowered until it
-does, and the number that worked is written down here.
+mix, reports zero late notes. If it does not, lower the totals until it does,
+and write the number that worked here.
 
-**This got more urgent, not less.** A melody-starvation bug (fixed in v33)
-turned out to be the budget refusing the tune on 28.6% of loops, and part
-of the cause was a weight that was simply wrong: `keys` was priced at 25,
-the same as a piano, when it is *half* of a piano -- one FM voice against
-two. If one weight was that far out, others may be. The tool to check is
-now in the repo: `node tools/measure.mjs --voice` for tone and the
-marginal-render-time method for cost, both documented in the README.
+## 6. A floor for the cover art — **M**
 
-The same fix also found that `SOFT_BUDGET` did nothing on lite, because
-`Math.min(170, 140)` is 140. So two of the three numbers in this item's
-title were not doing what the title claims, and neither failure was
-visible from reading them. **Calibrating the totals on real hardware is
-worth less than it looks until the weights they are spent on are checked**,
-and this item should probably be done in that order: weights first, then
-totals.
+The covers are "occasionally amateurish", which is not testable. The real
+fault is in the sparse compositions (`drift`, `orb`, `aperture`): the
+gradient ground fills most of the frame, so the cover looks like a
+background, not a picture.
 
-## 6. Cover art floor — **M**
+**Done when** no cover in a contact sheet of 100 covers has more than 70% of
+its pixels within one palette stop of the ground color.
 
-"Occasionally amateurish" is not testable. The specific failure is the sparse
-compositions (`drift`, `orb`, `aperture`) where the gradient ground carries
-most of the frame and the result reads as a background rather than a picture.
+## 7. Three small interface tickets — **S each**
 
-**Done when** no cover in a 100-cover contact sheet has more than 70% of its
-pixels within one palette stop of the ground color.
+- **7a.** Reorder the tracks in an album.
+- **7b.** Duplicate a loop before you edit it, so that a saved version stays.
+- **7c.** Search or filter the saved list when it has more than about 30
+  entries.
 
-## 7. Interface: three standalone tickets — **S each**
+**Done when** each one works from the album or the saved list without a page
+reload.
 
-The old "revisit when the feature set stops moving" had no trigger, which
-meant never. These stand on their own:
+## 9. Articulation v3: a breath before a phrase — **M** — *not started*
 
-- **7a.** Reorder tracks within an album.
-- **7b.** Duplicate a loop before editing, so a saved version survives.
-- **7c.** Search or filter the saved list once it passes ~30 entries.
+A wind player breathes in before a phrase. The sound of that breath, before
+the first note, is a large part of why a recording sounds like a person in a
+room. The voices already have breath noise *under* the note. This item adds
+a separate, louder, unpitched event *before* an entry.
 
-**Done when** each works from the album or saved panel without a page reload.
+The generator already finds the entries: a phrase entry is a melody note
+with no note before it (`annotate_prev` in `core/src/generator/render.rs`,
+the same test that the slide uses). The hard part is where to put the
+breath. It must sound *before* the note, so either the player starts it
+early (the note's start minus the breath's length, which can fall before the
+loop's start), or the generator leaves room for it.
 
-## 8. Album code length — **S to decide, M to build**
+**Done when** an audible breath comes before 40-70% of the phrase entries of
+wind notes, the breath never delays or clips its note, and no breath starts
+at a negative time. The last check is the one that will be hard.
 
-The real complaint is not size, it is that a 1300-character code is not
-tappable the way a link is. Compression does not fix that; it makes an
-untappable thing slightly shorter.
+## 15. Ringing bells in fast blends take the melody's room — **S** — *low priority*
 
-**Decide first:** if the goal is tappability, the answer is a file export or a
-QR code, not deflate. **Ship compression only if it clears 35%** — below that
-it adds an async path and a fallback for no felt benefit. Album payloads are
-mostly high-entropy seeds, so measure before building.
+A fast loop (about 136-146 bpm) that blends in enough `shrine` to draw its
+temple bell rings bells for about 1.4 s, at a cost of 12 each. A dense line of
+them fills the voice budget. One `cinder` loop in 183 lost 48.7% of its
+melody at full quality. `shatter` and `undertow` blends have the same case,
+so it is rare.
 
-**Done when** either a measurement below 35% is recorded here and the item is
-closed, or codes are 35%+ shorter with a working no-compression fallback.
+Mikey: worth a fix, but not soon. Options: shorten the bell's ring (and so
+its reservation) at fast tempos, keep room in the budget for the melody (as
+the soft cap does for the accompaniment), or keep the long bells out of fast
+blends.
 
-## 9. Articulation v3: breath before phrase entries — **M** — *not started*
+**A related fix, at the same priority.** Every bass voice except `fifths`
+reserves budget for 0.8 s after its note, but stops sounding at 0.4 s. So the
+bass holds room that it does not use, in every loop. `wayfare`'s chug already
+reserves only while it sounds. The same for all bass notes would free room
+for the melody everywhere, on Lite most of all. It changes how loops sound
+(fewer refusals), so measure refusals on full and Lite before and after.
 
-v2 (slid attacks) shipped; its entry, and the shared preamble, are in
-`docs/archive/roadmap-shipped.md`.
+Also measured: on Lite, `tide` and `cinder` loops lose more melody notes than
+the average (2.9% and 3.5%, against 1.5%). The fixes above are the likely
+cure. Measure both profiles again when this item is done.
 
-A wind player inhales before a phrase, and the sound of that breath before
-the first note is a large part of why a recording sounds like a person in a
-room. The voices already have continuous breath noise *under* the note;
-this is a separate, louder, unpitched event placed *before* an entry.
+**Done when** no loop in a corpus of 200 loses more than 5% of its melody at
+full quality to this case, with refusals measured again on full and Lite.
 
-`annotatePrev` is half of what this needs already: a phrase entry is
-exactly a note with no `prev`, which is the same test the scoop uses. What
-it additionally needs is somewhere to put the breath, and that is the
-problem -- it has to sound *before* the note, so either the engine
-schedules it early (the note's own start time minus the breath length,
-which can fall in the past at the top of a loop) or the composer leaves
-room for it.
+## 18. Music that follows a game — **vision**
 
-**Done when** a phrase-initial wind note is preceded by an audible breath
-in 40-70% of entries, the breath never delays or clips the note it
-precedes, and no breath is scheduled at a negative time. The last of those
-is the one that will bite.
+Mikey asked if the engine could go into a game, where "the player's stats and
+which room they're in and what is going on or significant events could change
+what kind of music is generated". He means calm games (a life sim, a
+point-and-click adventure, something turn-based), not action games. The music
+follows the time of day, the weather, the place, the season or the turn.
 
-## 15. Ringing bells in fast blends starve the tune — **S** — *low priority*
+The core is ready for most of it: the request (pins, ranges, vibes, layers),
+changes at a musical moment, events, and the C header (`core/docs/player.md`).
+The game that will prove it is Broken Friends (`docs/CORE.md`, promise 10).
 
-Found by Claude Code while measuring `cinder` (#66), 2026-09-25. When a
-fast loop (around 136-146 bpm) blends in enough `shrine` to draw its
-temple bell, the bells ring long (about 1.4 s) at a cost of 12 each, and a
-dense tune of them fills the voice budget. One `cinder` loop in 183 lost
-48.7% of its melody at full quality. The same case already exists on
-`main` in `shatter` and `undertow` blends, so it is rare, not new.
+## 19. Words that steer the music — **L** — *the vibes shipped; tuning by ear*
 
-Mikey: worth fixing, not soon. Options when it comes up: shorten the
-bell's ring (and so its reservation) at fast tempos, reserve budget for
-the melody the way `SOFT_BUDGET` does for pads, or keep the long-ringing
-bells out of fast blends.
-
-**Done when** no loop in a 200-loop corpus loses more than 5% of its
-melody at full quality to this case, with refusals re-measured on full
-and lite.
-
-**A related budget fix, same priority** (raised in #67). Every bass voice
-except `fifths` reserves budget for 0.8 s past its note but stops sounding
-at 0.4 s, so bass holds room it doesn't use in every loop. `wayfare`'s
-chug already reserves only while it sounds (#67); doing the same for all
-bass notes would free room for the tune everywhere, lite especially. It
-changes how existing loops sound (fewer refusals), so it gets a refusal
-run on full and lite before and after.
-
-Also measured (#74, #75): on lite, tide and cinder loops lose more melody
-notes than the catalog (mean 2.9% and 3.5% against 1.5%), the same on
-the old code. The fixes above are the likely remedy; re-measure both
-profiles when this item is done.
-
-## 16. A compiled audio engine (Rust) — **L** — *the core is the engine and plays by default; what is ahead is the phases in `docs/CORE.md`*
-
-The synth, the effects and the master chain shipped (queue items 21-32), and the core is
-Ballad Falls' own engine now (`docs/DECISIONS.md`, "The engine and stereo"). What is still
-ahead is the charter's phases: the generator in Rust, the page off the audio path, the
-platforms and the export (`docs/CORE.md`). The original entry -- the timing, the feasibility
-probes, the language comparison -- is in `docs/archive/roadmap-shipped.md`.
-
-## 17. Export a loop as audio — **M**
-
-Rendering a loop offline was considered for playback and rejected
-(2026-09-26): "Let the loop wander" is on by default and changes the loop
-every pass, and re-rolling a layer must be instant. As an export it's
-right. Download a loop as an audio file, including a wandering loop
-rendered for as many passes as the user asks ("bake a track that wanders
-for 100 loops"). Offline rendering has no deadline, so the export has no
-refusals even on a slow phone. MIDI export already exists beside it.
-
-## 18. Adaptive music for games — **vision**
-
-Mikey: could the engine go into a videogame, where "the player's stats and
-which room they're in and what is going on or significant events could
-change what kind of music is generated"? The games he has in mind are chill ones --
-Animal Crossing, a point-and-click adventure, something turn-based -- not
-action: music that follows the time of day, the weather, the place, the
-season, the turn, rather than combat. The generator is already
-parameterised in the right way: a profile blend, feel (energy, lift,
-warmth), mood, layer mutes and drift. A game would map its state onto
-those, with changes landing on bar or phrase boundaries so the music
-turns rather than jumps, and short stingers for events. It needs the
-compiled core (item 16) to run outside a browser, and an API: set the
-parameters, get bar and phrase callbacks, trigger stingers. Not planned;
-recorded so item 16 is designed with it in mind.
-
-**Now a real game (Mikey, 2026-10-24):** Broken Friends, his Godot
-creature-care game, is where this happens: a theme per creature, music
-by time of day and by what is happening at camp. `docs/CORE.md`,
-promise 10.
-
-## 19. Words that steer the music — **L, a design project, worth doing well**
-
-From Mikey's mood vocabulary (`docs/MOODS.md`, 178 words). Agreed
+From Mikey's mood vocabulary (`docs/MOODS.md`, 178 words). Agreed on
 2026-09-27:
 
-- **Labels of one to five words**, usually two or three of different
-  kinds (heart, light, texture and taste, motion, sound, strangeness),
-  each true of what the loop does. Some loops are **one word, fully
-  embraced**: everything about the loop leans into that word.
-- **Words steer, not just describe.** A one-word loop needs generating
-  *toward* its word, so every word gets a recipe in musical terms: which
-  dials it moves (lift, energy, warmth, tempo, swing, density, register,
-  brightness, space, harmony color, instrument families, rhythm feel)
-  and by how much.
-- **Words bend a profile, they don't replace it.** The profile is the
-  base; a word pushes it within its character. How each word meets each
-  profile is to be defined together, by ear. Mikey's example: what would
-  "sour" and "floating" sound like on `cinder`? One reading: cinder's
-  flamenco core, slowed and suspended (long notes, sparse drums, more
-  space, a higher line), with tart harmony (the added b9, close
-  clusters, a thinner and brighter tone). Some pairings may turn out
-  not to fit; finding that out is part of the work.
+- **A label has one to five words,** usually two or three of different kinds
+  (heart, light, texture and taste, motion, sound, strangeness). Each word is
+  true of what the loop does. Some loops have **one word, fully embraced**:
+  everything about the loop leans into that word.
+- **Words steer, not only describe.** Each word has a recipe in musical terms:
+  which dials it moves (lift, energy, warmth, tempo, swing, density, register,
+  brightness, space, harmony color, instrument families, rhythm feel), and by
+  how much.
+- **Words bend a profile, but do not replace it.** The profile is the base,
+  and a word pushes it within its character. Mikey and the sessions define
+  how each word meets each profile, by ear.
 
-The process:
-1. A pilot set of about a dozen words across the kinds, chosen with
-   Mikey, each with a written recipe in `docs/MOODS.md`.
-2. Build the recipes as data the generator reads, so tuning a word is an
-   edit, not a code change.
-3. Listening albums per word across several profiles: "does this track
-   fit the word?", and "which word fits this track?" blind.
-4. Tune, then widen to more words.
+The vibes are these recipes, as data (`data/vibes.txt`, `docs/VIBES.md`).
+What is still open is the listening: albums for each word across profiles,
+"does this track fit the word?" and, blind, "which word fits this track?",
+then tuning and more words.
 
-Where it stands (2026-10-11): the ranking test (`/rank`, pool 3, 71
-words) is collecting Mikey's answers; queue items 34-35 measure each
-loop on the ten dials and fit each word's region from them, so the
-recipes can come from his ears rather than the brain's drafts.
+## 20. `tools/listen.mjs`: an album in one command — **S**
 
-This is generator work, so it happens before the generator moves to Rust
-(item 16's timing); the vocabulary will be part of what the Rust
-generator carries.
-
-## 20. `tools/listen.mjs`: albums in one command — **S**
-
-Every listening album so far was assembled by hand in the brain's
-container: filter a corpus, shuffle, encode, round-trip, and work out the
-key. A tool that does it -- by voice, profile, kit, meter, length,
-development or mood, blind or labeled, with the key derivable -- would
-make albums quick for any brain session and remove the chance of a
-mistyped code.
+The brain makes each listening album by hand: it filters a corpus, shuffles,
+encodes, round-trips and works out the key. A tool could do it, by voice,
+profile, kit, meter, length, development or mood, blind or labeled, with the
+key made for it. It would make albums quick for any brain session and stop
+mistyped codes.
 
 ## 21. Composition depth — **M** — *two passes shipped; tuning by ear*
 
-Shipped as queue items 12 (#92) and 17 (#108) (the entry is in
-`docs/archive/roadmap-shipped.md`). Open:
-- "Depth two" was heard on 2026-10-11 (`docs/ALBUMS.md at commit f040b5b`).
-- Three in four 32-bar loops are micro-loops that never develop; making
-  them develop would be a new kind of form. Mikey to decide.
-- The share is his to tune as he listens.
+Two passes of development shipped before 1.0. Still open:
+
+- Three in four 32-bar loops are micro-loops that never develop. Making them
+  develop would be a new kind of form. Mikey decides.
+- Mikey tunes how often loops develop, as he listens.
 
 ---
+
+## Closed since 1.0
+
+- **8. Album code length.** Codes version 2 answered it: eight plain loops as
+  an album take 61 characters, not about 1,300 (`core/docs/codes.md`).
+- **16. A compiled audio engine.** The core is the only engine. What is ahead
+  is the charter's phases (`docs/CORE.md`).
+- **17. Export a loop as audio.** The app exports FLAC, Opus and MIDI, for a
+  loop, a track or an album.
 
 ## Decided against
 
 **More of the FM bell family.** There were already five FM bell voices (bell,
-chime, musicbox, celeste, harp) differing mainly in ratio and decay, and a
-sixth would have been a sixth setting of the same instrument.
+chime, musicbox, celeste, harp) that differ mainly in ratio and decay. A
+sixth would be a sixth setting of the same instrument. This rule does not
+cover temple and church bells, which are a different object: struck metal is
+inharmonic, and a bowl's character is the *beating* between partials a few
+cents apart, which one FM voice cannot make. `templebell` and `tubular` are in
+the `shrine` profile.
 
-This was wrongly used to defer temple and church bells too, which are a
-different object rather than another setting: struck metal is inharmonic, and
-a bowl's character is *beating* between partials a few cents apart, which a
-single FM voice cannot produce however inharmonic its ratio. `templebell` and
-`tubular` now exist in the `shrine` profile.
+**Sung words, as in Vocaloid.** Words would make a loop be *about* something,
+which works against what the app is for. A wordless voice never sounds dated
+or foreign; a synthesized word always does.
 
-**Vocaloid-style sung words.** Words would make a loop be *about* something,
-which fights the use case. A wordless voice also never sounds dated or
-foreign; a synthesised word always does.
-
-**Speech-synthesis dependencies** (Klattsch, Pink Trombone, Qlatt). They
-optimize for intelligibility, which is the opposite of the goal, and each
-brings a build step or a worklet, breaking "works offline from a folder".
+**Speech-synthesis dependencies** (Klattsch, Pink Trombone, Qlatt). They aim
+for clear speech, which is the opposite of the goal, and each brings a build
+step or a worklet.
 
 ---
 
-## Contribution rules
+## Rules for contributions
 
-Not roadmap items; the things that are not obvious from reading the code.
+These rules are not obvious from the code. `AGENTS.md` and `core/AGENTS.md`
+have the full rules for each change.
 
-Run `node test/generator.test.mjs` before and after any change, a few times,
-since it uses random seeds. For anything that touches generation, also run
-`node tools/stats.mjs` before and after and compare the two: the tests prove
-nothing is broken, the statistics say whether the change did what it claimed.
-
-1. **A voice added to an existing pool re-renders every code that draws
-   from it.** Voices are drawn at render time from the blended pool, so one
-   added entry shifts that draw and every random decision after it.
-   While the app is in testing (Mikey, 2026-09-23) that is allowed: old
-   codes are not protected. It still has to pass the balance lock, and the
-   PR should say so, since an A/B album across it compares different
-   loops. `grove`, `hollow` and `shrine` were added as new profiles when
-   codes were still protected.
-2. **`PROFILE_IDS`, `SCALE_IDS` and `MOOD_IDS` in `share.js` are append-only.**
-   Reordering them silently rewrites codes already written down. Breaking
-   old codes is allowed during testing, but reordering gains nothing.
-3. **Generation is quantised to a 1/255 grid** (`q8` in `generator.js`) so
-   share codes are lossless. Weights feed weighted random picks and a
-   rounding difference of 0.004 selects a different scale.
-4. **A declared cost that is not passed is worse than no cost.** `VOICE_COST`
-   only applies where the call site passes it; several weights sat declared
-   and ignored for a while, charging the default instead.
-5. **A new voice arrives measured, not guessed.** Its `VOICE_COST` weight and
-   its loudness beside the voices it will sit next to are measured when it is
-   added, not estimated and corrected in a later project. `keys` was priced
-   at 25 -- one FM voice charged like `piano`'s two -- and quietly ate the
-   melody on real phones until #19; the same kind of guess about level is
-   what item 13 is now unpicking. Both get cheaper the earlier they are taken.
-
+1. **A new voice in a pool changes the loops that draw from that pool,**
+   because one new entry moves that draw and every draw after it. From 1.0
+   on, a new voice, profile or vibe joins at a new code version
+   (`data/codes.txt`), so a code made before it never draws it. Run the
+   balance lock (`node tools/stats.mjs --check`), and say in the PR what
+   moved.
+2. **Ids in `data/codes.txt` never change.** Add a new member with the next
+   free id. To take a member out, keep its row and mark it `gone`
+   (`core/docs/codes.md`).
+3. **Generation is quantized to a grid of 1/255** (`q8` in
+   `core/src/generator/character.rs`), so that share codes are lossless. The
+   weights feed weighted random picks, and a rounding difference of 0.004
+   can pick a different scale.
+4. **A cost that is declared but not passed is worse than no cost.** A voice
+   cost (`data/voices.txt`) applies only where the player passes it. Check
+   that a new cost is used, not only declared.
+5. **A new voice arrives measured, not guessed.** Measure its cost and its
+   loudness next to the voices that it will sit with when you add it. `keys`
+   was once priced at 25, like the piano's two voices, and it took the
+   melody's room on real phones until it was measured.

@@ -1,8 +1,11 @@
 # The docs: a map
 
 Which doc is for what, and who reads it. Every role loads only its own live
-docs; the history is in `docs/archive/`, which nothing loads by default.
-Sizes are limited and checked in CI (`node tools/check-docs.mjs`).
+docs. The history before the slim after 1.0 (2026-11-26) left the tree:
+`docs/archived.txt` lists it and says where to read it. Sizes and pointers
+are checked in CI (`node tools/check-docs.mjs`). The explanations of how the
+parts work go to the Workshop Wiki's Ballad Falls pages
+(<https://nowmichaelclark.github.io/wiki/>).
 
 ## Start here, by role
 
@@ -22,7 +25,8 @@ Sizes are limited and checked in CI (`node tools/check-docs.mjs`).
 | `core/AGENTS.md` | The core's standing rules, and the rules for sound items. | hands (core) |
 | `docs/QUEUE.md` | The work queue: status, standing rules, the open items, known issues, the merge policy. | hands, brain |
 | `docs/DONE.md` | One line for each merged PR since #277. | hands (to add), brain |
-| `docs/sessions/` | The road to 1.0 as sessions, all done (the record of how 1.0 was made): `README.md` is the order and the rules every session kept; one file per session holds its prompt, model and effort; `long-pieces-brief.md` is where item 102's design starts. | brain, hands (for history) |
+| `docs/archived.txt` | Every path removed at the slim after 1.0, and where its text still reads (the commit before the slim; the driftloom repository). | anyone following an old pointer |
+| `tools/README.md` | The toolbox: what earlier sessions learned about the tools. | hands |
 | `docs/notes/` | One file for each note from the hands (`<item>-<name>.md`); `for-mikey.md` is the one list of what waits for Mikey's ears, phone, accounts or a decision. | brain, Mikey |
 | `docs/BRAIN.md` | How the work is organized, getting oriented, "Start here", listening albums, methods, tools. | brain |
 | `docs/DECISIONS.md` | What Mikey has decided: one dated line each, by topic. | brain, hands |
@@ -39,21 +43,10 @@ Sizes are limited and checked in CI (`node tools/check-docs.mjs`).
 | `CHANGELOG.md` | What changed for listeners, in plain words, by release (begun in session 30; session 31 wrote the 1.0 entry). | everyone; whoever makes a release |
 | `Mikey's Thoughts.md` | His. | Mikey |
 
-## The archive (`docs/archive/`)
+## The archive (removed after 1.0)
 
-Out of the Project sync. Open one when a question needs it.
-
-| File | What it holds |
-|---|---|
-| `queue-items.md` | The full text of every finished item, with an index; an item number like "item 46" means the text there (phase 3, batch 6, long pieces, export, codes and Android since session 30). Also the queue's old status notes. |
-| `notes.md`, `notes/` | The hands' notes: everything before 2026-10-26 in `notes.md`; closed notes from `docs/notes/` after. |
-| `done.md` | Done lines before #277. |
-| `brain-log.md` | The brain's log and the early History, newest first. |
-| `decisions-reasoning.md` | The long reasoning behind the short lines in `docs/DECISIONS.md`. |
-| `roadmap-shipped.md` | The roadmap items that shipped or closed. |
-| `engineering-notes.md` | How Driftloom works inside (it was the README's body): feeling, measurement, the core, the voices. |
-| `perf-baseline.md` | The performance baseline (v54) and what came of it. |
-| `session26-clips.md` | The brain's clip renderer from Session 26 (forced choices, a moved constant), for item 83. |
-
-Archived text keeps the pointers it was written with; where one names a
-heading that moved, this map and the headings above say where it went.
+`docs/archive/` and `docs/sessions/` left the tree in the slim after 1.0
+(2026-11-26), with the Painter's old spec versions and reference pictures.
+`docs/archived.txt` lists them. An old pointer such as "item 46" (the text
+in `docs/archive/queue-items.md`) or "session 30g" (`docs/sessions/`)
+still names that text: read it at the commit `docs/archived.txt` names.

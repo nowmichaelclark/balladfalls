@@ -85,22 +85,23 @@ everything a session needs.
 
 **The docs stay small (since 2026-10-26).** Each role loads only its own
 live docs (`docs/README.md` is the map), so a doc holds what is live and
-nothing else; the history sits in `docs/archive/`, which nothing loads by
-default. Move text, don't rewrite decisions.
+nothing else. Since the slim after 1.0 (2026-11-26) there is no archive
+folder: the history before then is listed in `docs/archived.txt` (readable
+at the commit it names, and in the driftloom repository). Don't rewrite
+decisions.
 
-- **Every brain session ends with an archive pass.** Move what is finished
-  out of the live docs: finished items from `docs/QUEUE.md` to
-  `docs/archive/queue-items.md`; the notes it has read and answered from
-  `docs/notes/` to `docs/archive/notes/`; Done lines older than the current
-  phase from `docs/DONE.md` to `docs/archive/done.md`; the session's own log
-  entry to the top of `docs/archive/brain-log.md` (newest first); the long
-  reasoning behind a decision to `docs/archive/decisions-reasoning.md`,
-  leaving the decision itself as one dated line in `docs/DECISIONS.md`. Then
-  run `node tools/check-docs.mjs`.
+- **Every brain session ends with a clean-up pass.** Take what is finished
+  out of the live docs, as Broken Friends deletes a finished row: a
+  finished item from `docs/QUEUE.md`, a note it has read and answered from
+  `docs/notes/`. The PR that takes it out says what it was; git keeps the
+  text. The session's own log goes in its PR's body. The long reasoning
+  behind a decision goes in the PR too, leaving the decision itself as one
+  dated line in `docs/DECISIONS.md`. Then run `node tools/check-docs.mjs`
+  (it also fails on a pointer to a doc that is gone).
 - **The limits,** checked in CI by that script: `AGENTS.md` 6 KB,
   `core/AGENTS.md` 10 KB, `docs/QUEUE.md` 80 KB, `docs/BRAIN.md` 50 KB,
-  `docs/DECISIONS.md` 40 KB. Over one, CI fails with "archive the finished
-  parts".
+  `docs/DECISIONS.md` 40 KB. Over one, CI fails with "take the finished
+  parts out".
 - **Each new decision of Mikey's** is one dated line in `docs/DECISIONS.md`
   under its topic, written in his words, the day he made it.
 
@@ -133,8 +134,9 @@ default. Move text, don't rewrite decisions.
   `docs/QUEUE.md`, `docs/MOODS.md`, `docs/ALBUMS.md`, `ROADMAP.md` and
   `README.md` (a short front page since 2026-10-08). The engineering notes
   (`docs/archive/engineering-notes.md`, the README's old body) and the
-  performance baseline (`docs/archive/perf-baseline.md`) are archive
-  reading: open them when a question needs them. `Mikey's Thoughts.md` is
+  performance baseline (`docs/archive/perf-baseline.md`) are archived
+  (`docs/archived.txt`; the wiki's Ballad Falls pages explain the same
+  parts): open them when a question needs them. `Mikey's Thoughts.md` is
   his.
 - Credentials: Mikey pastes a GitHub token in the session's opening
   message. With it the brain commits and merges **docs-only** changes --

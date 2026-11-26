@@ -1,0 +1,27 @@
+# Removed from the tree after 1.0 (2026-11-26, the slim)
+#
+# Each path below left the repository's files. Its text is not lost:
+#
+# - Read it as it was at commit 72b13f0, the last commit before the slim:
+#   https://github.com/nowmichaelclark/balladfalls/tree/72b13f0/<path>
+# - Everything before 1.0 is also in the archived driftloom repository:
+#   https://github.com/nowmichaelclark/driftloom
+#
+# A pointer in a doc, a comment or a workflow to a path below (or to a file
+# under a folder below, which ends in "/") is not broken: it names that old
+# text. `node tools/check-docs.mjs` fails on a pointer into docs/ or design/
+# that is neither a file here now nor on this list.
+#
+# Finished items leave the live docs and are not archived again: the PR keeps
+# their text, git keeps their history and docs/DONE.md has their line.
+
+design/archive/
+design/reference/
+docs/archive/
+docs/sessions/
+docs/theory-sheets.md
+docs/notes/101e-choice-room.md
+docs/notes/102-b3-measured.md
+docs/notes/102c-arc-brightness.md
+docs/notes/102d-arc-brightness.md
+docs/notes/98-testers.md

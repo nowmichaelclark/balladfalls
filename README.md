@@ -157,8 +157,9 @@ change.
   contribution rules; what shipped is in `docs/archive/roadmap-shipped.md`.
 - `docs/QUEUE.md` -- the work queue Claude Code works down, with its
   standing rules and merge policy; `docs/DONE.md` lists what shipped.
-- `docs/archive/engineering-notes.md` -- how it works inside: the sound, the
-  measurements, and why things are the way they are.
+- The Workshop Wiki's Ballad Falls pages
+  (<https://nowmichaelclark.github.io/wiki/>) -- how it works inside: the
+  sound, the measurements, and why things are the way they are.
 - `docs/BRAIN.md` -- the planning side's handoff: how the work is organized,
   listening results, methods, current state; `docs/DECISIONS.md` has what
   Mikey has decided.
@@ -170,10 +171,10 @@ change.
   album cards, raw data (index in `docs/ears/README.md`). Ears outputs live
   in the repo, not only in the Project (Mikey, 2026-10-17).
 - `CHANGELOG.md` -- what changed for listeners, in plain words.
-- `docs/archive/perf-baseline.md` -- the performance baseline and what came
-  of it.
 - `core/` -- the Rust core's source; `js/dlplayer.wasm` is built from it.
-- `docs/theory-sheets.md` -- music theory notes.
+- `docs/archived.txt` -- what left the repository after 1.0 and where it
+  still reads (everything before 1.0 is in the archived
+  [driftloom](https://github.com/nowmichaelclark/driftloom) repository).
 
 ## License
 

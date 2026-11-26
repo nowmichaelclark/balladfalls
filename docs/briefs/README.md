@@ -16,7 +16,7 @@ the queue's status (`docs/QUEUE.md`, "Status") and use its type.
 | Fix | `fix.md` | Finds, shows and fixes one known issue or a red nightly | Opus 5.5, medium |
 | Tune by ear | `tune.md` | Turns Mikey's listening notes into data and defaults | Sonnet 5.5, medium |
 | Hygiene | `hygiene.md` | Docs, tests, CI, tools, weak spots | Sonnet 5.5, medium |
-| Research | `research.md` | Wiki articles, research for an item | Sonnet 5.5, medium |
+| Research | `research.md` | Wiki articles, research for an item, records measured (the ears' work) | Sonnet 5.5, medium |
 | Bird's-eye | `docs/BRAIN.md` | Plans, sorts the inbox, writes the queue | the brain (claude.ai) |
 
 ## The cycle

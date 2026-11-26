@@ -17,13 +17,13 @@ Three roles.
   under the merge policy, and report.
 - **Mikey** -- the ears. His listening is the acceptance test for anything
   that changes how the app sounds. He relays between brain and hands.
-- **Ears** (since 2026-10-09) -- separate claude.ai chats that measure
-  records Mikey loves against Ballad Falls renders and write findings with
-  yardsticks (`docs/EARS.md`, `tools/ears/`, and the reports, plan and
-  album cards in `docs/ears/`; read `docs/ears/sessions.md` for their
-  scope and for the rule that their outputs live in the repo).
-  They don't touch the queue or app code; the brain turns their findings
-  into items.
+- **Research** -- a hands session type (`docs/briefs/research.md`). Since
+  2026-11-26 it does the ears' work too (Mikey: the ears fold into
+  Research): it measures records Mikey loves against Ballad Falls with
+  `tools/ears/` and writes the findings, with yardsticks, in the wiki's
+  `Ballad Falls/` pages. The brain turns its findings into items. What the
+  ears found from 2026-10-09 to 1.0 is on the wiki's "What the ears found"
+  and its subpages.
 
 The loop, since 2026-09-25:
 
@@ -131,7 +131,7 @@ decisions.
   Since the move, PR branches build as Cloudflare **Previews**: the commit
   link is the Deployment URL, `<deployment-id>-balladfalls...` (`-driftloom...` before the copy); the
   branch's Preview URL moves (see Session 5 in State). Previews from the
-  old account's links in the Done lists (`docs/DONE.md`,
+  old account's links in the Done lists (`docs/DONE.md` at commit f040b5b,
   `docs/archive/done.md`) depend on that account.
 - The app's Diagnostics panel reports `build` (bump `BUILD` in `js/main.js`
   and `CACHE` in `sw.js` together on every app change), `sw` state, and
@@ -391,25 +391,12 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
 - Sessions 29 and 30's "Start here" bullets (phase 2's proof, phase 3's
   items, the road to 1.0 written): `docs/archive/brain-log.md`, "Start here
   before B1".
-- **Waiting on Mikey, not urgent:** the Full Room Album (85e,
-  <https://claude.ai/artifact/NmfNUM1hj6buNUHKZzG9of>, on his second
-  account); the blind album's in-app checklist for bars and length (88b),
-  which he left blank.
-- **Ears:** Ears 10, 10b and 11 done (piles 4 and 5, #314, #316, #326),
-  on Mikey's second account; Ears 12 done (#329, 2026-11-07: Synthesist,
-  Animal Crossing and three Nonlocal Forecast cards); Ears 12b done (#332,
-  2026-11-08: *Triangular Reformat*, *Pyramid*, six more K.K. songs, and
-  `theory.py`'s colors reading past the seventh). Ears 13 (the second
-  synthesis) done in a cloud session (#336, 2026-11-08): batch 6, twelve
-  candidates; five sketched on the core (lowBell, padWow, colorTone,
-  deepDuck, wideSweep), clips on the throwaway branch `ears13-clips`
-  (deleted; Mikey approved all five and the sampler, 2026-11-08, both
-  versions where there are two); seven wait on hooks, queued as item 99
-  (the sketch build only), then an Ears 13b sketches them. The approved
-  batch is built after phase 3, the second synthesis (Opus 5.5, high).
-  Mikey asked (2026-11-07) whether the ears must finish by a phase: no; Ears
-  12-13 by the end of phase 3, for the batch after it; piles 7-18 have no
-  deadline (phase 5's block catalogue, long-form composing, phase 8).
+- **No album waits on Mikey** (2026-11-26): `docs/ALBUMS.md` started fresh
+  at 1.0, and the four albums that were out (the three in the app, Phase 3
+  Control, Full Room, Lite Room) are retired.
+- **The ears are Research now** (Mikey, 2026-11-26): Ears 1 to 13 measured
+  piles 1 to 6; their batch 6 is built. Piles 7 to 18 have no deadline: a
+  Research session takes them when the brain queues one.
 - **Broken Friends:** the game restarted in 3D in November 2026, and its
   2D version's core extension is in its `archive/2d/`. The note for a game
   that hosts the core (`docs/notes/82-for-broken-friends.md`: the calls, the
@@ -426,8 +413,6 @@ topic. The long reasoning is in `docs/archive/decisions-reasoning.md`.
   picks; an any key in each picker; the key reads "vibe"). Next Painter work:
   the tempo, key and scale, style and voices pickers and the "can't do that"
   line; long-piece display (`docs/PAINTER.md`, section 2) before item 53.
-- **Ears:** the pause (until Session 26's album was heard) is over; it was
-  heard 2026-10-29. Item 83 gives them sketches and clips on the core.
 - **New profiles and sounds** go in with Ears 13's batch, after phase 3 and
   before phase 4 (one generator by then). **Before phase 5:** the block
   catalogue for Mikey (charter, promise 5).

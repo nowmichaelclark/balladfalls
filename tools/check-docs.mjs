@@ -26,7 +26,7 @@ const LIMITS = {
   'docs/DECISIONS.md': 40,
 };
 const LIVE = ['CLAUDE.md', 'README.md', 'ROADMAP.md', 'docs/README.md', 'docs/DONE.md', 'docs/CORE.md',
-  'docs/EARS.md', 'docs/MOODS.md', 'docs/VIBES.md', 'docs/ALBUMS.md', 'docs/PAINTER.md'];
+  'docs/MOODS.md', 'docs/VIBES.md', 'docs/ALBUMS.md', 'docs/PAINTER.md'];
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const size = (file) => readFileSync(join(root, file)).length;

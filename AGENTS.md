@@ -28,9 +28,10 @@ that changes how it sounds.
   read the brief for its type (`docs/briefs/`). A session that touches
   `core/` also reads `core/AGENTS.md`. Ideas for later go in
   `docs/inbox.md`, one line each.
-- **Ears** (claude.ai chats): measure records Mikey loves against Ballad Falls
-  and write findings and sketches, never app or core code. Start at
-  `docs/ears/sessions.md`, then `docs/ears/plan.md`.
+- **Research** (a hands session type since 2026-11-26, when the ears
+  folded into it): writes what is known into the wiki, and measures records
+  Mikey loves against Ballad Falls with `tools/ears/`. Starts at
+  `docs/briefs/research.md`.
 - **Painter** (design sessions): the look and the screens. Starts at
   `docs/PAINTER.md`.
 

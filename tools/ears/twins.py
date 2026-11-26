@@ -1,10 +1,10 @@
 """List tracks that look like the same audio on different albums.
 
-Usage: python3 -I twins.py WORKDIR [--csv docs/ears/data.csv] [--artist TEXT]
+Usage: python3 -I twins.py WORKDIR [--csv tools/ears/data.csv] [--artist TEXT]
                            [--seconds 3] [--lu 0.6]
 
 Reads every WORKDIR/*/pick.json (the picker's mix-level rows) and, with --csv,
-the earlier piles' rows (docs/ears/data.csv; --artist keeps only albums whose
+the earlier piles' rows (tools/ears/data.csv; --artist keeps only albums whose
 name contains TEXT, so a different artist with a similar length does not show).
 Two tracks on different albums are a probable twin when their lengths are
 within --seconds (default 3), loudness within --lu (default 0.6 LU), centroid

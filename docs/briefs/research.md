@@ -15,6 +15,22 @@ that an item needs.
    cannot check a fact against a page that you read, leave it out.
 5. Link the article from the item, or from `docs/inbox.md`.
 
+## Measuring a record
+
+Since 2026-11-26 the ears' work is a Research session (Mikey: the ears
+fold into Research). The question is then "how does this record differ
+from Ballad Falls?"
+
+1. Read the wiki's "Ballad Falls/What the ears found" and its subpage
+   "Measuring a record": the method, each measure's limits and the traps.
+2. Run the tools in `tools/ears/` (its README says how) on the record and
+   on Ballad Falls renders, the same way. Use `python3 -P` on downloaded
+   audio.
+3. Give each difference a yardstick that a Build session can test.
+4. Write the findings in the wiki. Put the raw numbers in
+   `tools/ears/data.csv` if they are new rows.
+5. Never build a sound in the app. Sketch it offline; the brain queues it.
+
 ## Do not
 
 - Do not copy code with a license that does not fit this repo.

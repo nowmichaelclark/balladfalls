@@ -165,11 +165,9 @@ change.
   Mikey has decided.
 - `docs/MOODS.md` -- the mood vocabulary and its draft recipes.
 - `docs/ALBUMS.md` -- listening albums waiting for answers.
-- `docs/EARS.md` -- what the ears sessions measured on Mikey's albums
-  against Ballad Falls, and what they're for; their tools are in `tools/ears/`.
-- `docs/ears/` -- everything the ears sessions write: reports, the plan,
-  album cards, raw data (index in `docs/ears/README.md`). Ears outputs live
-  in the repo, not only in the Project (Mikey, 2026-10-17).
+- `tools/ears/` -- the tools that measure Mikey's albums and Ballad Falls
+  renders the same way, with the ears' raw measurements. What the ears found
+  is on the wiki's Ballad Falls pages.
 - `CHANGELOG.md` -- what changed for listeners, in plain words.
 - `core/` -- the Rust core's source; `js/dlplayer.wasm` is built from it.
 - `docs/archived.txt` -- what left the repository after 1.0 and where it

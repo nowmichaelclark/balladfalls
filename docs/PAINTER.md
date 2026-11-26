@@ -69,8 +69,8 @@ used soon. The rest waits for its phase of the core work.
   the words on the left; the playhead's lit dot a diffused LED, no sparkle.
 - **Text size is the root size** (rem, the pixel caps holding), in the
   browser and in the Android app.
-- The baked spec (`design/driftloom_v20.html`) predates this: bake it again
-  before designing on it.
+- No baked spec is kept (Mikey, 2026-11-26): bake one with
+  `design/test-kit/bake.mjs` when a session needs it, and do not commit it.
 
 ## 1. Next-loop picks (soonest: can be designed now)
 

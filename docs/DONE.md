@@ -132,3 +132,8 @@ repository.
   tags leave the comments of 43 files (Kotlin, Rust, scripts, XML). The
   F-Droid recipe template stays as it is. Only comments change. Nothing to
   hear.
+- The history's fresh start (item H1, Mikey, 2026-11-26, "Do it now"): `main`
+  is one commit, 108e4c5, with the same files as the old `main` (6f5c8d2). A
+  fresh clone is 9 MB, down from 83 MB. The old history is under
+  `refs/archive/main-before-fresh-start`, and the `v1.0` tag is on 108e4c5.
+  Nothing to hear.

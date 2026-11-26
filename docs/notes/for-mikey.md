@@ -40,18 +40,20 @@ sections below hold the steps):
   a release again: Actions, android-release, **Run workflow** on `main` with
   its tag. The steps for adding the secrets, if they ever need adding again,
   are in `android/README.md`, "Versions and releases".
-- **F-Droid: submitted, waiting for review.** Your merge request
-  <https://gitlab.com/fdroid/fdroiddata/-/merge_requests/59136> ("New app:
-  Ballad Falls", 2026-11-25, from your GitLab fork `nowmichaelclark/fdroiddata`,
-  branch `com.balladfalls.app`). Its recipe builds 8b9750c, #7's merge, since
-  F-Droid reads the listing's screenshots from the commit it builds (the app
-  is the same as `v1.0`'s).
-  1. Reviewers answer in the merge request, usually within a few weeks. Likely
+- **F-Droid: try again at about the end of February 2027.** F-Droid closed
+  your first merge request
+  <https://gitlab.com/fdroid/fdroiddata/-/merge_requests/59136> on
+  2026-11-26: an app must be maintained for more than three months first.
+  1. At the end of February, ask a session to make the new recipe. It needs a
+     commit of the new history, because the old recipe's 8b9750c is in the
+     old one. Then open a new merge request from your GitLab fork
+     `nowmichaelclark/fdroiddata`.
+  2. Reviewers answer in the merge request, usually within a few weeks. Likely
      questions: the NDK (r28c), why the app deletes the committed wasm and
      rebuilds it, and the WebView (no network permission); the recipe's
      comments hold the reasons. Paste a question into a session if you want
-     help with the answer or a change to the recipe.
-  2. Once merged, the listing appears in a few days. Then `APP_LINK` in
+     help with the answer.
+  3. Once merged, the listing appears in a few days. Then `APP_LINK` in
      `js/main.js` becomes `https://f-droid.org/packages/com.balladfalls.app/`,
      with `BUILD` and `CACHE` bumped: ask a session for it.
 - **Google's developer verification** (nothing to do now): since 2026-09-30

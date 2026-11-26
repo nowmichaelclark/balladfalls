@@ -14,18 +14,19 @@ end. It holds one line for each open item, and `node tools/check-docs.mjs`
 holds it to 40 lines (as Broken Friends holds `plan/STATE.md`). The full text
 of each item is below. The order of the table is the order of the work.
 
-**1.0 is out** (2026-11-25, the `v1.0` tag on d723b80): balladfalls.com, the
-signed APK on the release, the old address forwarding, and driftloom
-archived. F-Droid's review is open
-([fdroid/fdroiddata!59136](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/59136),
-with its recipe on commit 8b9750c). A new session starts here: read the
-standing rules and the merge policy, then take the first ready line.
+**1.0 is out** (2026-11-25): balladfalls.com, the signed APK on the release,
+the old address forwarding, and driftloom archived. The history started
+fresh on 2026-11-26: `main` begins at one commit (108e4c5), and the `v1.0`
+tag is on it. A short hash in a doc names the old history
+(`docs/archived.txt` says how to read it). F-Droid closed its first review:
+an app must be maintained for more than three months first. A new session
+starts here: read the standing rules and the merge policy, then take the
+first ready line.
 
 | # | Item | Type | Model, effort | Status |
 |---|---|---|---|---|
 | K1 | The app keeps a code's version (known issue "The app drops a code's version") | Fix | not yet written | **first** after 1.0, before any new sound |
-| 107 | `APP_LINK` to the F-Droid listing | Build | any, low | waits for F-Droid's review |
-| H1 | The history starts fresh at 1.0 | Hygiene | Opus 5.5, high | after F-Droid lists 1.0 (and 107's `APP_LINK`) |
+| 107 | `APP_LINK` to the F-Droid listing | Build | any, low | waits for F-Droid (a new request, about end of February 2027) |
 | 75 | The reverb, rate-true for steady tones | Build | Opus 5.5, high | ready, low priority |
 | 37 | Word albums on `/rank` | Build | not yet written | on hold |
 
@@ -134,23 +135,22 @@ tracks").
 Not written yet. The known issue "The app drops a code's version" (below)
 says what is wrong. The brain writes this item before any new sound joins.
 
-## 107. The Android app, on F-Droid (submitted; the review is open)
+## 107. The Android app, on F-Droid (a new request, about end of February 2027)
 
 The Android app is built (`android/README.md`,
 `docs/notes/107-reproducible.md`). Mikey's key signs each release in GitHub
 Actions.
 
-**Open:** the merge request
+**Closed for now:** F-Droid closed the merge request
 [fdroid/fdroiddata!59136](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/59136)
-("New app: Ballad Falls", 2026-11-25), with its recipe on 8b9750c (the same
-app as d723b80). Reviewers answer there, usually within a few weeks. If they
-ask for a change to the recipe, make a docs-and-recipe PR here and a new
-commit in the merge request.
+on 2026-11-26. Its policy wants an app maintained for more than three months
+first. Mikey sends a new request at about the end of February 2027 (Mikey,
+2026-11-26: he is fine with the wait). The new request needs a recipe on a
+commit of the new history, because 8b9750c is in the old one.
 
-**Then:** when the merge request merges and the listing is up, point
-`APP_LINK` in `js/main.js` at
+**Then:** when the listing is up, point `APP_LINK` in `js/main.js` at
 <https://f-droid.org/packages/com.balladfalls.app/>, and bump `BUILD` and
-`CACHE`. Item H1 comes after it.
+`CACHE`.
 
 **Also noted, not queued: the player's stack.** The player's calls use 45 to
 47 KB of the caller's stack (Emscripten, measured), under its default of
@@ -158,35 +158,6 @@ commit in the merge request.
 and native games. Before a port to a small device (the charter's handhelds
 and consoles), an item must trim the generator's frames, with a measured
 aim.
-
-## H1. The history starts fresh at 1.0 (after F-Droid lists 1.0)
-
-**Hands:** Opus 5.5, high, a Hygiene session. Mikey, 2026-11-26: rewrite the
-history, as "Fresh start, after F-Droid lists it". A full clone is 79 MB
-today, and one commit of today's tree is about 10 MB (both measured
-2026-11-26). The history before 1.0 stays in the archived driftloom
-repository.
-
-**Wait for:** the listing at <https://f-droid.org/packages/com.balladfalls.app/>
-shows 1.0, and item 107's `APP_LINK` is merged. F-Droid's recipe for 1.0
-names commit 8b9750c, which this item removes from `main`.
-
-1. Make a git bundle of the whole history (`git bundle create --all`).
-   Attach it to the `v1.0` release, so that every commit stays readable.
-2. Make the new history: a root commit with `v1.0`'s tree (d723b80), and
-   each change since 1.0 played again on it, one commit for each PR.
-3. Check that the new `main`'s tree is the same as the old one's (`git diff`
-   is empty), and that `tools/build-core.sh --check` passes.
-4. Ask Mikey to allow the force-push to `main` if a rule blocks it. Then push
-   `main` and move the `v1.0` tag to the new root. The tree does not change,
-   so the site deploys the same files.
-5. Point `docs/archived.txt` and the queue's old-commit pointers (72b13f0,
-   f040b5b) at the bundle, and give F-Droid's recipe the new commit for its
-   next version. If his GitLab fork needs a change, say so in
-   `docs/notes/for-mikey.md`.
-
-**Checks:** a fresh `git clone` is under 15 MB; every gate part is green on
-the new `main`; the `v1.0` release still has its APK and the bundle.
 
 ## 75. The reverb, rate-true for steady tones (low priority)
 

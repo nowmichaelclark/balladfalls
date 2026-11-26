@@ -1,24 +1,30 @@
-// An Ogg file for Opus audio (queue item 104c), written a page at a time.
+// An Ogg file for Opus audio, written a page at a time.
 //
-// The export's small format: the browser's own Opus encoder (WebCodecs'
-// AudioEncoder, js/export-opus.js) gives packets, and this puts them in an
-// Ogg file (RFC 3533 for the container, RFC 7845 for Opus in it) with no
-// library. Pure: no DOM, no Worker, no file; it takes packets and gives
-// bytes, so Node tests it (test/ogg.test.mjs) and the Worker writes each
-// page as it comes, straight to the file.
+// This is the export's small format. The browser's own Opus encoder
+// (WebCodecs' AudioEncoder, js/export-opus.js) gives packets. This file puts
+// them in an Ogg file with no library (RFC 3533 for the container, RFC 7845
+// for Opus in it). It is pure: no DOM, no Worker, no file. It takes packets
+// and gives bytes. So Node tests it (test/ogg.test.mjs), and the Worker
+// writes each page straight to the file as it comes.
 //
-// The file is the OpusHead page, the OpusTags page (or pages: item 121's
-// cover), then audio pages, the last marked end of stream. A page holds whole packets (up to a second of
-// audio or 255 segments, whichever first). Its granule position is the
-// number of 48 kHz samples the decoder has made once it has decoded the
-// page's last packet, counted from the first packet, so the pre-skip (the
-// samples at the start that are the encoder's lead-in, not played) is in
-// the count already: what plays is the granule less the pre-skip. The last
-// page's granule is where the audio really ends (`finish(total)`: the
-// pre-skip and the samples the file holds), which may be short of the
-// packets' span (the encoder pads its last frame): a player cuts the rest.
-// That is how a file's length is exact to the sample, and how a player seeks
-// and shows the true length.
+// The file has these pages, in order:
+// 1. The OpusHead page.
+// 2. The OpusTags page, or more than one page when it holds a cover.
+// 3. The audio pages. The last one is marked end of stream.
+// A page holds whole packets: up to a second of audio or 255 segments,
+// whichever comes first.
+//
+// A page's granule position is the number of 48 kHz samples that the decoder
+// has made after it decodes the page's last packet, counted from the first
+// packet. So the count includes the pre-skip: the samples at the start that
+// are the encoder's lead-in, and do not play. What plays is the granule less
+// the pre-skip.
+//
+// The last page's granule is where the audio really ends (`finish(total)`:
+// the pre-skip and the samples that the file holds). This can be short of
+// the packets' span, because the encoder pads its last frame, and a player
+// cuts the rest. That is how a file's length is exact to the sample, and how
+// a player seeks and shows the true length.
 
 // Opus always counts its samples at 48 kHz in a granule, whatever the rate
 // the audio was made at.
@@ -119,11 +125,12 @@ export function page(flags, granule, serial, sequence, packets) {
   return rawPage(flags, granule, serial, sequence, segments, packets);
 }
 
-// One packet over as many pages as it takes (item 121: OpusTags with the
-// cover in it is larger than a page holds, 255 segments of 255 bytes): each
-// page but the first marked continued, the packet's last lacing value (under
-// 255, perhaps 0) on its last. Every page has `granule` (RFC 7845: a header's
-// pages have 0).
+// One packet over as many pages as it takes. OpusTags with a cover in it is
+// larger than one page holds (255 segments of 255 bytes).
+// - Each page but the first is marked continued.
+// - The packet's last lacing value (under 255, perhaps 0) is on its last
+//   page.
+// - Every page has `granule`. A header's pages have 0 (RFC 7845).
 export function packetPages(flags, granule, serial, sequence, packet) {
   const out = [];
   let at = 0;

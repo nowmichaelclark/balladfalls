@@ -1,27 +1,27 @@
-// The Android app's transport to the native core (session 27, queue item
-// 107c).
+// The Android app's transport to the native core.
 //
-// In a browser the core's player runs in an AudioWorklet (js/worklet.js) and
-// js/core.js's CoreHost talks to it over the node's message port. In the
-// Android app the same player runs natively, on Android's own audio, on the
-// path a music player takes (android/native): the app puts an object in the page,
-// `DriftloomNative`, and CoreHost posts the very same messages to it and
-// hears the very same messages back (events with their grids, the counts,
-// the cost and busy reports, the probes, the picks' answers), batched a few
-// times a second as the worklet batches them. One path, two transports: the
-// page's player, its screens and its checks don't know which carries them.
-// The WebView plays no audio of its own.
+// In a browser, the core's player runs in an AudioWorklet (js/worklet.js),
+// and CoreHost in js/core.js talks to it over the node's message port. In
+// the Android app, the same player runs natively, on Android's own audio,
+// on the path that a music player takes (android/native).
+// - The app puts an object in the page, `DriftloomNative`. CoreHost posts
+//   the same messages to it, and gets the same messages back: events with
+//   their grids, the counts, the cost and busy reports, the probes and the
+//   picks' answers. They come in batches a few times a second, as the
+//   worklet's do.
+// - So there is one path, with two transports. The page's player, its
+//   screens and its checks don't know which one carries them. The WebView
+//   plays no audio of its own.
 //
-// What a browser's AudioContext gives the page and the app's has no context
-// to give, NativeContext stands in for: the clock (`currentTime`, the core's
-// own clock, as a context's is its worklet's), the sample rate, the latency
-// to the speaker, the state, and an alarm on that clock (js/quality.js). The
-// native side sends it a `native` message with each batch: the clock, and
-// the stream's figures (its underruns, its burst, the thread's priority) for
-// Diagnostics.
+// The app has no AudioContext, so NativeContext stands in for what a
+// context gives the page: the clock (`currentTime`, the core's own clock),
+// the sample rate, the latency to the speaker, the state, and an alarm on
+// that clock (js/quality.js). The native side sends a `native` message with
+// each batch: the clock, and the stream's figures for Diagnostics (its
+// underruns, its burst, the thread's priority).
 
-// The app's bridge, or null in a browser (and in an app whose WebView is too
-// old to carry it, which plays the page as a browser does).
+// The app's bridge, or null in a browser. It is also null in an app whose
+// WebView is too old to carry it; that app plays the page as a browser does.
 export function nativeBridge() {
   const b = globalThis.DriftloomNative;
   return b && typeof b.postMessage === 'function' ? b : null;
@@ -33,8 +33,8 @@ export class NativeContext extends EventTarget {
     super();
     this.native = true;
     this.bridge = bridge;
-    // The stream's rate once the core says (48 kHz until then: what
-    // nearly every phone runs at).
+    // The stream's rate, once the core says it. Until then, 48 kHz, which
+    // nearly every phone runs at.
     this.sampleRate = 48000;
     this.baseLatency = 0;
     this.outputLatency = 0;
@@ -59,9 +59,9 @@ export class NativeContext extends EventTarget {
     else bridge.onmessage = hear;
   }
 
-  // The core's clock, in seconds, as a context's `currentTime` is: where it
-  // last said it was, carried on by the page's own clock since, while the
-  // stream runs; never backward.
+  // The core's clock in seconds, as a context's `currentTime` is: where the
+  // core last said it was, carried on by the page's own clock while the
+  // stream runs. It never goes backward.
   get currentTime() {
     const c = this._clock;
     let t = c.time;
@@ -71,7 +71,8 @@ export class NativeContext extends EventTarget {
     return t;
   }
 
-  // The stream starts with the first player (`init`); nothing to resume.
+  // The stream starts with the first player (`init`), so there is nothing to
+  // resume.
   resume() { return Promise.resolve(); }
   suspend() { return Promise.resolve(); }
   close() { return Promise.resolve(); }
@@ -87,10 +88,9 @@ export class NativeContext extends EventTarget {
   _ring() {
     clearTimeout(this._timer);
     if (!this._alarms.length) return;
-    // While the stream runs an alarm waits for the core itself to have
-    // rendered to it (session 30g: the clock reads up to a run of callbacks
-    // ahead of that, and a quality switch's fade must end before its core
-    // is let go).
+    // While the stream runs, an alarm waits until the core itself has
+    // rendered to it. The clock reads up to a run of callbacks ahead of
+    // that, and a quality switch's fade must end before its core is let go.
     const now = this._clock.running ? this._served : this.currentTime;
     const due = this._alarms.filter((a) => a.at <= now);
     this._alarms = this._alarms.filter((a) => a.at > now);
@@ -101,8 +101,8 @@ export class NativeContext extends EventTarget {
     }
   }
 
-  // A batch from the core: the clock and the stream's figures kept here,
-  // every message handed to CoreHost as its port would hand it.
+  // A batch from the core. Keep the clock and the stream's figures here, and
+  // give every message to CoreHost as its port would.
   _hear(text) {
     let batch;
     try {
@@ -123,12 +123,12 @@ export class NativeContext extends EventTarget {
     const at = performance.now();
     let time = m.time;
     let latency = m.latency || 0;
-    // Session 30g: on the music path the core renders in runs of callbacks,
-    // so its clock moves in steps and the latency measured rises and falls
-    // with them; their difference, what the speaker plays, moves evenly.
-    // So the clock is that plus the most latency of the last two seconds
-    // (at most a buffer ahead of the core), and the latency that most: the
-    // clock is even and the layers stay with what is heard.
+    // On the music path the core renders in runs of callbacks. So its clock
+    // moves in steps, and the measured latency rises and falls with them.
+    // Their difference, what the speaker plays, moves evenly. So the clock is
+    // that, plus the most latency of the last two seconds (at most a buffer
+    // ahead of the core), and the latency is that most. Then the clock is
+    // even, and the layers stay with what is heard.
     if (m.running && m.measured) {
       this._latencies = this._latencies.filter((x) => at - x.at < 2000);
       this._latencies.push({ at, latency });
@@ -150,9 +150,9 @@ export class NativeContext extends EventTarget {
     if (this._alarms.length) this._ring();
   }
 
-  // Diagnostics' "reset counters" (session 30g): the stream's underruns,
-  // the watch's figures, the busiest callback and the time played with the
-  // screen off start again from nothing.
+  // Diagnostics' "reset counters": the stream's underruns, the watch's
+  // figures, the busiest callback and the time played with the screen off
+  // start again from nothing.
   resetCounts() {
     this.bridge.postMessage(JSON.stringify({ type: 'resetCounts' }));
   }
@@ -167,8 +167,8 @@ export class NativeContext extends EventTarget {
     return `${s.running ? 'running' : 'stopped'}, ${s.rate} Hz, ${s.channels} channels, burst ${s.burst}, callbacks of ${s.callback || 'any'}, buffer ${s.buffer} of ${s.capacity}, ${perf}, ${s.sharing === 0 ? 'exclusive' : 'shared'}, thread ${thread}/${s.priority}, reopens ${s.reopens}, latency ${Math.round((s.latency || 0) * 1000)} ms (${s.measured ? 'measured' : 'from the buffer'}), busiest callback ${(s.busiest * 100).toFixed(1)}% of its deadline, mean ${(s.mean * 100).toFixed(2)}%, sound ${(s.sounding || 0).toFixed(1)} s${this._watchReport()}`;
   }
 
-  // What a crackle leaves (session 30g, android/native/src/watch.rs), since
-  // the app started or "reset counters": lines of their own under the
+  // What a crackle leaves (android/native/src/watch.rs), since the app
+  // started or since "reset counters": lines of their own, under the
   // stream's.
   _watchReport() {
     const s = this.stream;

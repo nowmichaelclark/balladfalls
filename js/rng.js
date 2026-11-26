@@ -1,7 +1,6 @@
-// Deterministic pseudo-random number generation.
-// Everything in Ballad Falls grows from seeds, so the same seed always
-// produces the same loop. That is what makes a share code of about
-// seventy bytes enough to carry a whole loop.
+// The page's seeded random numbers, and a loop's name.
+// Everything in Ballad Falls grows from seeds, so the same seed always makes
+// the same loop. That is why a short share code can carry a whole loop.
 
 export function mulberry32(a) {
   return function () {
@@ -52,7 +51,7 @@ export class Rng {
     }
     return a;
   }
-  // A fresh 32-bit seed, used to hand each layer its own independent stream.
+  // A fresh 32-bit seed, to give each layer its own independent stream.
   seed32() {
     return Math.floor(this.next() * 4294967296) >>> 0;
   }
@@ -66,11 +65,11 @@ const ONSETS = ['k', 's', 't', 'm', 'n', 'h', 'r', 'w', 'y', 'v', 'l', 'd', 'f',
 const NUCLEI = ['a', 'e', 'i', 'o', 'u', 'ai', 'ei', 'oa', 'ui', 'ou'];
 const CODAS = ['', '', '', 'n', 'm', 'l', 'r', 'sk', 'th', 'ng'];
 
-// Seeds are long numbers and hard to say out loud. Give every loop a
-// pronounceable name derived from its seed, the way world seeds get names.
+// Seeds are long numbers, and hard to say out loud. So every loop gets a
+// name that can be said, made from its seed, the way world seeds get names.
 export function seedName(seed) {
   const r = new Rng((seed >>> 0) ^ 0x9e3779b9);
-  // Two syllables. Three fits, but it wraps onto a second line on a phone
-  // and the name is meant to be glanceable.
+  // Two syllables. Three fit, but they wrap onto a second line on a phone,
+  // and the name must read at a glance.
   return `${r.pick(ONSETS)}${r.pick(NUCLEI)}${r.pick(CODAS)}-${r.pick(ONSETS)}${r.pick(NUCLEI)}${r.pick(CODAS)}`;
 }

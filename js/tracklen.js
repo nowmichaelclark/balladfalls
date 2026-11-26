@@ -1,26 +1,28 @@
-// Track length (session 30c, queue item 111; Mikey, 2026-11-18: "Track
-// length should get it's own viewport ... Should be able to set track
-// length to an exact second", and "we could include a fade in/fade out
-// option for the track length viewport actually").
+// Track length (Mikey, 2026-11-18: "Track length should get it's own
+// viewport ... Should be able to set track length to an exact second", and
+// "we could include a fade in/fade out option for the track length viewport
+// actually").
 //
-// How long the loop playing plays before the next, to the second, and how
-// it comes in and goes out: the loop's own, as the Length slider's was (a
-// saved loop keeps it, an album's track has its own, a new loop plays on
-// and on). Kept on the spec as `track`: { secs, fadeIn, fadeOut }, `secs`
-// null for on and on; a spec without one plays on and on, fade in off and
-// fade out on (the conservative defaults: today's start, and a close).
+// How long the loop that plays plays before the next, to the second, and
+// how it comes in and goes out. It belongs to the loop: a saved loop keeps
+// it, an album's track has its own, and a new loop plays on and on. It is
+// kept on the spec as `track`: { secs, fadeIn, fadeOut }, with `secs` null
+// for on and on. A spec without one plays on and on, with the fade in off
+// and the fade out on (the conservative defaults: the usual start, and a
+// close).
 //
 // The core counts the time on its own clock from when it is set (or from
-// the loop's first step), so a tempo change doesn't move it
-// (core/src/player/track.rs, `Track::Seconds`); the fades are its
-// (`FADE_IN`, `FADE_OUT`).
+// the loop's first step), so a tempo change doesn't move it (`Track::Seconds`
+// in core/src/player/track.rs). The fades are the core's (`FADE_IN`,
+// `FADE_OUT`).
 //
 // The view is built like the Bars view (js/picks.js, design/next-picks.md):
-// the time typed to the second (h:mm:ss, or m:ss under an hour), keys a
-// second and a minute either way, a coarse slider for the big moves (to a
-// whole day), an "on and on" key, the two fade keys, cancel and done. It
-// opens from the Vibe panel's pace line, and from the export when nothing
-// would end the export (js/export.js).
+// - the time, typed to the second (h:mm:ss, or m:ss under an hour);
+// - keys for a second and a minute either way;
+// - a coarse slider for the big moves (to a whole day);
+// - an "on and on" key, the two fade keys, cancel and done.
+// It opens from the Vibe panel's pace line, and from the export when
+// nothing would end the export (js/export.js).
 
 // The most a track is set to: a day (core/src/fades.rs, TRACK_MOST).
 export const TRACK_MOST = 86400;
@@ -29,11 +31,11 @@ export const TRACK_MOST = 86400;
 const KIND_SECONDS = 3;
 const KIND_FADE_IN = 4;
 const KIND_FADE_OUT = 8;
-// What a loop with none of its own plays: on and on, no fade in, a fade
-// out ready for when a time is set.
+// What a loop with no track of its own plays: on and on, no fade in, and a
+// fade out ready for when a time is set.
 export const DEFAULT_TRACK = Object.freeze({ secs: null, fadeIn: false, fadeOut: true });
-// The coarse slider's stops, in seconds: fine at the short end, where people
-// set it, and reaching a whole day (the Length slider's reach).
+// The coarse slider's stops, in seconds: fine at the short end, where
+// people set it, and reaching a whole day.
 export const STOPS = [60, 120, 300, 600, 900, 1200, 1800, 2700, 3600, 5400, 7200, 10800, 14400, 28800, 43200, 86400];
 
 const isSecs = (n) => Number.isInteger(n) && n >= 1 && n <= TRACK_MOST;
@@ -48,8 +50,8 @@ export function trackOfSpec(spec) {
   };
 }
 
-// Set `spec`'s track to `t` (any part left out kept), or take it away where
-// it is the default, so a loop with none set keeps none.
+// Set `spec`'s track to `t` (a part left out is kept). If the result is the
+// default, take the track away, so that a loop with none set keeps none.
 export function setTrack(spec, t) {
   const next = { ...trackOfSpec(spec), ...t };
   if (!isSecs(next.secs)) next.secs = null;
@@ -58,7 +60,7 @@ export function setTrack(spec, t) {
   return spec;
 }
 
-// Whether the loop of `spec` ends by itself (a time set).
+// True if the loop of `spec` ends by itself (a time is set).
 export const ends = (spec) => trackOfSpec(spec).secs != null;
 
 // The track as the core takes it (`dl_play_track`, `Track::of`): [kind,
@@ -71,7 +73,7 @@ export function coreTrack(spec) {
 }
 
 // The track of the core's [kind, count] (an album code's pace,
-// `dl_code_pace`), or null for none it could be.
+// `dl_code_pace`), or null if it can be none.
 export function trackOfCore(kind, count) {
   const fadeIn = (kind & KIND_FADE_IN) !== 0;
   const fadeOut = (kind & KIND_FADE_OUT) !== 0;
@@ -97,9 +99,10 @@ export function spokenTime(secs) {
   return parts.filter(([n]) => n).map(([n, w]) => `${n} ${w}${n === 1 ? '' : 's'}`).join(' ') || '0 seconds';
 }
 
-// What is typed, as seconds (or null for nothing to read): h:mm:ss, m:ss or
-// :ss; digits alone fill from the right, as a timer's keys do ("12345" is
-// 1:23:45, "90" a minute and a half). Clamped to a second to a day.
+// What is typed, as seconds (or null if there is nothing to read): h:mm:ss,
+// m:ss or :ss. Digits alone fill from the right, as a timer's keys do
+// ("12345" is 1:23:45, "90" is a minute and a half). Clamped to between a
+// second and a day.
 export function readClock(text) {
   const t = String(text || '').trim();
   if (!t) return null;
@@ -123,10 +126,10 @@ export function readClock(text) {
   return Math.max(1, Math.min(TRACK_MOST, secs));
 }
 
-// A loop saved before session 30c: its length was whole passes
-// (`playFor`) or bars to a phrase line (`playBars`), counted at its tempo.
-// Now the time they came to, to the second, with the defaults' fades (a
-// close, as the slider's had; no fade in, as it started). True if it moved.
+// A loop saved by an older build: its length was whole passes (`playFor`)
+// or bars to a phrase line (`playBars`), counted at its tempo. Now it is the
+// time that they came to, to the second, with the defaults' fades (a close,
+// as the old slider's had; no fade in, as it started). True if it moved.
 export function fromOldLength(spec) {
   if (!spec || typeof spec !== 'object' || !('playFor' in spec || 'playBars' in spec)) return false;
   const { playFor, playBars } = spec;
@@ -144,8 +147,8 @@ export function fromOldLength(spec) {
 // ------------------------------------------------------------- the view
 
 const el = (id) => document.getElementById(id);
-// What the view holds while it is open: { secs, on, fadeIn, fadeOut }, on
-// meaning on and on; and what it tells the app (`wireTrack`).
+// What the view holds while it is open: { secs, on, fadeIn, fadeOut }, with
+// `on` meaning on and on. And what it tells the app (`wireTrack`).
 let draft = null;
 let api = null;
 
@@ -156,9 +159,9 @@ function stopOf(secs) {
   return best;
 }
 
-// The view opened on `spec`'s track (none: on and on), from `from` (the
-// view done and cancel go back to, and 'export' to export once a time is
-// set).
+// Open the view on `spec`'s track (none: on and on), from `from`. `from` is
+// the view that done and cancel go back to, or 'export' to export once a
+// time is set.
 export function openTrack(spec, from = 'vibe') {
   const t = trackOfSpec(spec);
   draft = { secs: t.secs || 300, on: t.secs == null, fadeIn: t.fadeIn, fadeOut: t.fadeOut, from };
@@ -173,7 +176,7 @@ export function renderTrack() {
   const num = el('trkNum');
   if (document.activeElement !== num || on) num.value = on ? '\u221e' : clock(secs);
   num.setAttribute('aria-label', on ? 'Track length: on and on' : `Track length: ${spokenTime(secs)}`);
-  // Not on screen (session 30e): the time says it. A screen reader gets it.
+  // Not on screen, because the time says it. A screen reader gets it.
   el('trkWords').textContent = on ? 'plays until you move on' : spokenTime(secs);
   el('trkSecDown').disabled = !on && secs <= 1;
   el('trkMinDown').disabled = !on && secs <= 1;
@@ -194,7 +197,7 @@ export function renderTrack() {
   const fin = el('trkFadeIn');
   fin.setAttribute('aria-pressed', fadeIn ? 'true' : 'false');
   fin.classList.toggle('armed', fadeIn);
-  // The fade out is a time's: dimmed while it plays on.
+  // The fade out belongs to a time, so it is dimmed while it plays on.
   const fout = el('trkFadeOut');
   fout.setAttribute('aria-pressed', fadeOut ? 'true' : 'false');
   fout.classList.toggle('armed', fadeOut);
@@ -211,8 +214,8 @@ function fitNumber() {
   }
 }
 
-// −1 s, +1 s, −1 min, +1 min, the slider and typing all set a time, from on
-// and on too (it starts from the time the view last showed).
+// −1 s, +1 s, −1 min, +1 min, the slider and typing all set a time, from
+// on and on too. They start from the time that the view last showed.
 function setDraft(secs) {
   draft.secs = Math.max(1, Math.min(TRACK_MOST, Math.round(secs)));
   draft.on = false;
@@ -265,8 +268,8 @@ export function wireTrack(handlers) {
     if (e.key === 'Escape') { e.preventDefault(); num.value = ''; num.blur(); }
   });
   num.addEventListener('blur', commitTyped);
-  // The slider snaps to its stops; arrows step a stop at a time, from a time
-  // between stops to the stop on that side.
+  // The slider snaps to its stops. The arrows step a stop at a time, from a
+  // time between stops to the stop on that side.
   const slide = el('trkSlide');
   slide.addEventListener('input', () => setDraft(STOPS[Math.round(Number(slide.value))]));
   slide.addEventListener('keydown', (e) => {
@@ -283,8 +286,9 @@ export function wireTrack(handlers) {
     if (next < 0) next = up ? last : 0;
     setDraft(STOPS[next]);
   });
-  // On and on: lit while the loop plays on; pressed again, the time it
-  // showed. The fades: each lit while on, pressed to turn it over.
+  // On and on: lit while the loop plays on. Pressed again, it goes back to
+  // the time it showed. The fades: each is lit while on, and a press turns
+  // it over.
   el('trkOn').addEventListener('click', () => {
     draft.on = !draft.on;
     renderTrack();

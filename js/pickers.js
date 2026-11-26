@@ -1,25 +1,27 @@
-// The tempo, key, style and voices pickers (session 30j, queue item 118;
-// Mikey, 2026-11-23: "We don't have viewport menus for tempo, key, style or
-// voices. Those need to be built."). Each is a view of its own in the middle
-// viewport, opened from its value on the Vibe panel and built as the Bars
-// view is: cancel in the head keeps what was there, done keeps what is shown,
-// and both go back to the panel. They shape only loops still to come.
+// The tempo, key, style and voices pickers (Mikey, 2026-11-23: "We don't
+// have viewport menus for tempo, key, style or voices. Those need to be
+// built."). Each is a view of its own in the middle viewport, opened from
+// its value on the Vibe panel, and built as the Bars view is. Cancel in the
+// head keeps what was there, done keeps what is shown, and both go back to
+// the panel. They shape only loops still to come.
 //
-// Every pick has the three states the Painter asks (docs/PAINTER.md,
-// section 1), shown and switched one way everywhere: keys lit the app's way
-// (a ring) are what is asked, one lit is pinned, several are a set, and
-// none lit is left to chance, which is the any key, lit. Tempo is a number:
-// one is pinned, two ends a range (two sliders, the slow end and the fast
-// end, each pushing the other), any left to chance.
+// Every pick has the three states that the Painter asks for
+// (docs/PAINTER.md), shown and switched one way everywhere:
+// - keys lit the app's way (a ring) are what is asked;
+// - one lit is pinned, and several lit are a set;
+// - none lit is left to chance, which is the any key, lit.
+// Tempo is a number: one is pinned, two ends are a range (two sliders, the
+// slow end and the fast end, each pushing the other), and any is chance.
 //
-// What each can ask is what the core takes (js/request.js): a tempo of 32 to
+// Each picker can ask what the core takes (js/request.js): a tempo of 32 to
 // 190 bpm, the twelve home notes and the modes, the profiles, each layer's
-// own voices, and a layer on or off, never all five off (the one request the
-// core can't meet: its off key rests while the other four are off).
+// own voices, and a layer on or off. It can never ask all five off, which is
+// the one request that the core can't meet: a layer's off key rests while
+// the other four are off.
 //
-// Long lists page rather than scroll (the Painter's rule: only the Library
-// and Advanced scroll): as many keys as the panel's room holds at 44 px,
-// then ‹ and › and where you are.
+// Long lists page; they do not scroll (the Painter's rule: only the Library
+// and Advanced scroll). A page holds as many keys as the panel's room holds
+// at 44 px, then ‹ and › and where you are.
 
 import { el } from './ui.js';
 import { NOTE_NAMES, SCALES, SCALE_ORDER } from './theory.js';

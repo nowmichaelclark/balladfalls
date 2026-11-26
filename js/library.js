@@ -8,8 +8,8 @@
 // ticking an album, and taking it out of its last album deletes it
 // (storage.js has the rules).
 //
-// Lists scroll (design v17): the Library's lists and the Advanced page are
-// the only things in the app that do. Everything else holds still.
+// Lists scroll. The Library's lists and the Advanced page are the only
+// things in the app that do. Everything else holds still.
 //
 // Opening an album turns the card over to show the album; leaving the album
 // turns it back to whatever is playing.
@@ -94,7 +94,7 @@ export function shownAlbum() {
 }
 
 // The album open in the Library's albums, shown now or not (the Export
-// view offers it, item 121), or null.
+// view offers it), or null.
 export function openedAlbum() {
   return lib.tab === 'albums' ? lib.albumId : null;
 }
@@ -128,11 +128,11 @@ export function closeAlbum() {
   lib.app.cardChanged();
 }
 
-// Called whenever something the lists show may have changed. Cheap when
-// neither view is on screen: it does nothing. And a list that would come
-// out the same -- a new loop playing that is in none of them, say, every
-// time one starts -- is left as it is rather than built again (queue item
-// 40). A tap on the lists themselves always builds them.
+// Called when something that the lists show may have changed. It is cheap
+// when neither view is on screen: it does nothing. A list that would come
+// out the same (for example, a new loop that is in none of them, every time
+// one starts) is left as it is, not built again. A tap on the lists
+// themselves always builds them.
 export function refresh() {
   if (isVisible() && built.library !== shownKey()) render();
   if (saveVisible() && built.save !== shownKey()) renderSave();
@@ -358,11 +358,10 @@ function mark(on, warn = false) {
 // Album art is drawn once per album contents and copied after that, so
 // re-rendering a list does not redraw noise fields every time.
 //
-// And it is drawn off the main thread (queue item 41; js/covers.js): a
-// Library's worth at once held the main thread for a second and more on a
-// slow phone, past what the music had queued (items 40 and 41). A row's art
-// comes in a moment after the row the first time; `warmArt` asks for them
-// ahead, so mostly it is there.
+// And it is drawn off the main thread (js/covers.js). A Library's worth at
+// once held the main thread for a second and more on a slow phone, past
+// what the music had queued. The first time, a row's art comes in a moment
+// after the row. `warmArt` asks for them ahead, so mostly it is there.
 function albumSpec(album, specs) {
   return albumCoverSpec(album.title, specs.length ? specs : [
     { seed: 1, feel: { lift: 0.5, energy: 0.3, warmth: 0.6 }, mix: { dust: 1 } },
@@ -435,8 +434,8 @@ function listedAlbums(alsoShow = null) {
 }
 
 // A new album's name, asked as every new album's is (the Name box, Untitled
-// in it), or null: closed, empty, or nothing a code can carry. Also the
-// seed album's save (item 121).
+// in it), or null: closed, empty, or nothing a code can carry. The seed
+// album's save uses it too.
 export function askAlbumName() {
   const title = prompt('Name', 'Untitled');
   if (!title || !title.trim()) return null;
@@ -680,8 +679,8 @@ export function renderSave() {
 
   // A saved loop that has been re-rolled or tweaked since: say so, and offer
   // both ways forward rather than guessing.
-  // A tick says saved (session 30e): the line shows only for a changed
-  // loop, and a screen reader hears it all, on each album's tick.
+  // A tick says saved. The line shows only for a changed loop, and a screen
+  // reader hears it all, on each album's tick.
   const head = make('div', 'save-head');
   let said;
   if (kept && app.isChanged()) {

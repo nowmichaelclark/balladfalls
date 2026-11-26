@@ -1,27 +1,28 @@
-// What the layers draw (session 30b, queue item 110): each layer's notes as
-// they are heard, not as they were composed.
+// What the layers draw: each layer's notes as they are heard, not as they
+// were composed.
 //
-// The core reports two things the layers read (core/src/player/events.rs):
-// with each pass, the layers' grid of that pass as its plan will have it
-// heard (each step's loudest note, a long piece's levels on it, a layer
-// resting left out; `Player::grid`), and with each step it decides, what
-// each layer actually sounded there, as heard (`Kind::Heard`: a note the
-// budget refused, a muted or a resting layer, a kit still waiting to come
-// in, none; a layer under a long piece's level as soft as it is heard). A
-// step is decided a lookahead before it is heard (a quarter-second), so by
-// the time the playhead reaches a dot, the dot is what is heard there; the
-// dots further on in the bar are the pass's grid until their steps are
-// decided.
+// The core reports two things that the layers read
+// (core/src/player/events.rs):
+// - With each pass, the layers' grid of that pass, as its plan will have it
+//   heard (`Player::grid`): each step's loudest note, a long piece's levels
+//   on it, and a resting layer left out.
+// - With each step that it decides, what each layer actually sounded there,
+//   as heard (`Kind::Heard`). That is none for a note that the budget
+//   refused, a muted or resting layer, or a kit that waits to come in. A
+//   layer under a long piece's level is as soft as it is heard.
+// A step is decided a lookahead (a quarter-second) before it is heard. So
+// when the playhead reaches a dot, the dot is what is heard there. The dots
+// further on in the bar are the pass's grid until their steps are decided.
 //
-// No DOM here: js/main.js draws what `bar` returns (js/ui.js's renderGrids),
-// and tools/heard.mjs asks the same questions of it in Node, to measure the
-// drawing against what each layer's channel sounds.
+// There is no DOM here. js/main.js draws what `bar` returns (renderGrids in
+// js/ui.js). tools/heard.mjs asks the same questions of it in Node, to
+// measure the drawing against what each layer's channel sounds.
 
 // The kinds of event this reads (`Kind::ALL`).
 const KIND = { pass: 1, section: 2, loop: 4, revised: 5, jump: 8, heard: 9 };
-// A Heard event's number: five layers, HEARD_BITS each from the lowest, in
-// each the loudness in the low LOUD_BITS (1 at HEARD_ONE) and the share of
-// its level the layer was left in the rest, in sevenths
+// A Heard event's number: five layers, HEARD_BITS each, from the lowest.
+// In each, the low LOUD_BITS are the loudness (1 at HEARD_ONE), and the
+// rest is the share of its level that the layer was left at, in sevenths
 // (`events::pack_heard`).
 const HEARD_BITS = 10;
 const LOUD_BITS = 7;
@@ -29,15 +30,16 @@ const HEARD_ONE = 64;
 const SHARE_MOST = 7;
 const LAYER_COUNT = 5;
 
-// A note under this loudness is not drawn: too quiet to be heard as a note
-// (about -30 dB under a full one; two steps of a Heard event's loudness).
-// HEARD_LEAST is the same line before a note's loudness is rounded into its
-// event: tools/heard.mjs counts a note under it as not heard.
+// A note under this loudness is not drawn, because it is too quiet to be
+// heard as a note (about 30 dB under a full one: two steps of a Heard
+// event's loudness). HEARD_LEAST is the same line before a note's loudness
+// is rounded into its event. tools/heard.mjs counts a note under it as not
+// heard.
 export const DRAWN_LEAST = 2 / HEARD_ONE;
 export const HEARD_LEAST = 1.5 / HEARD_ONE;
 
-// How many steps' sounds are kept: a few bars behind the playhead and the
-// lookahead in front, with room.
+// How many steps' sounds are kept: a few bars behind the playhead, and the
+// lookahead in front, with room to spare.
 const KEPT = 512;
 const GRIDS_MOST = 16;
 
@@ -57,8 +59,8 @@ export function unpackHeard(number) {
   return { loud, share };
 }
 
-// The layers' drawing, fed the core's events as they arrive and asked as
-// the music is heard.
+// The layers' drawing. It is fed the core's events as they arrive, and
+// asked as the music is heard.
 export class HeardSteps {
   constructor() {
     this.clear();
@@ -66,28 +68,28 @@ export class HeardSteps {
 
   // Forget everything (a new loop to show, a pause).
   clear() {
-    // The grids waiting for their time, and the one heard now; what each
+    // The grids that wait for their time, and the one heard now. What each
     // step sounded, by `place` (the run of steps it belongs to, and its step
-    // from the load); and the run the events coming in belong to.
+    // from the load). And the run that the incoming events belong to.
     this.grids = [];
     this.live = null;
     this.sounds = new Map();
     this.order = [];
     this.run = 0;
-    // Each layer's share of its level at the latest step decided: how bright
-    // the dots not yet decided are drawn (a long piece's level, a kit rising,
-    // glide slowly).
+    // Each layer's share of its level at the latest step decided. It sets
+    // how bright the dots not yet decided are drawn. (A long piece's level
+    // and a rising kit glide slowly.)
     this.share = new Array(LAYER_COUNT).fill(1);
     this.shareAt = -Infinity;
-    // Bumped whenever what a bar shows may have moved (a step's sounds came
-    // in, a grid took over): the page draws again only then.
+    // Bumped when what a bar shows may have moved (a step's sounds came in,
+    // or a grid took over). The page draws again only then.
     this.version = 0;
   }
 
   // One of the core's events: its time on the core's clock, its kind, its
-  // number and its step from the load, and the layers' grid read with it
-  // (an array a layer, or null). A new loop or a jump starts a run of steps
-  // of its own: their steps from the load start again.
+  // number, its step from the load, and the layers' grid read with it (an
+  // array a layer, or null). A new loop or a jump starts a run of steps of
+  // its own, whose steps from the load start again.
   event(time, kind, number, step, grid) {
     if (kind === KIND.loop || kind === KIND.jump) this.run++;
     if (grid) {
@@ -108,19 +110,20 @@ export class HeardSteps {
     }
   }
 
-  // Forget the grids still to come (a jump: what was queued to draw from the
-  // old place is dropped).
+  // Forget the grids still to come. On a jump, what was queued to draw from
+  // the old place is dropped.
   dropGrids() {
     this.grids = [];
   }
 
-  // The run the next steps the page queues belong to (js/player.js keeps it
-  // with each step, so a step heard after a jump asks the right run).
+  // The run that the next steps the page queues belong to. js/player.js
+  // keeps it with each step, so that a step heard after a jump asks the
+  // right run.
   get current() {
     return this.run;
   }
 
-  // The music heard now is at `time`: the grid of the pass heard takes
+  // The music heard now is at `time`, so the grid of the pass heard takes
   // over.
   at(time) {
     while (this.grids.length && this.grids[0].time <= time) {
@@ -129,13 +132,16 @@ export class HeardSteps {
     }
   }
 
-  // What bar `bar` of the pass heard shows, `spb` steps a bar, its first
-  // step `from` steps from the load, in run `run` (the current one if left
-  // out): for each layer, each step's loudness (`loud`, 0 for none) and the
-  // share of its level it is heard at (`share`, how bright it is drawn). A
-  // step decided is what it sounded; one not yet decided, the pass's grid,
-  // as bright as the layer is now. A layer in `planned` (a muted one: it
-  // sounds nothing) shows the grid throughout.
+  // What bar `bar` of the pass heard shows. It has `spb` steps a bar, and
+  // its first step is `from` steps from the load, in run `run` (the current
+  // one if left out). For each layer: each step's loudness (`loud`, 0 for
+  // none), and the share of its level that it is heard at (`share`, how
+  // bright it is drawn).
+  // - A step decided shows what it sounded.
+  // - A step not yet decided shows the pass's grid, as bright as the layer
+  //   is now.
+  // - A layer in `planned` (a muted one, which sounds nothing) shows the
+  //   grid throughout.
   bar(bar, spb, from, run = this.run, planned = null) {
     const g = this.live && this.live.grid;
     const loud = [];

@@ -114,3 +114,7 @@ repository.
   `design/README.md` loses its version-by-version log (now the wiki's
   "Ballad Falls/History/The design spec"); `design/next-picks.md` is the
   brief as built; the answered note `102-mikey.md` leaves. Nothing to hear.
+- balladfalls #20, the plain style, the comments in js/ (v224): every
+  file's comments without queue, item and session tags, and long ones split
+  into lists. Only full-line comments change (proved by comparing the code
+  with those lines removed). Nothing to hear.

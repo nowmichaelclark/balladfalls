@@ -1,36 +1,42 @@
-// The audio export's render (queue item 104b): a loop or a piece made into
-// a FLAC file by its own instance of the core, a chunk at a time.
+// The audio export's render: its own instance of the core makes a loop or a
+// piece into a file, a chunk at a time.
 //
-// Shared by the export's Worker (js/export-worker.js), which writes each
-// chunk's bytes straight to the file, and by tools/export.mjs, which checks
-// in Node that the file is the core's render (it decodes and nulls against
-// a straight render of the same loop) and that memory stays flat. It touches
-// nothing but the instance it is given: no DOM, no file, no timer.
+// Two users share this file:
+// - The export's Worker (js/export-worker.js) writes each chunk's bytes
+//   straight to the file.
+// - tools/export.mjs checks in Node that the file is the core's render, and
+//   that memory stays flat. It decodes the file and nulls it against a
+//   straight render of the same loop.
+// It touches nothing but the instance that it gets: no DOM, no file, no
+// timer.
 //
-// What is exported is what plays: the record's seed, request and edits as
-// the page asks the core that plays them (`askOf`, the same calls in the
-// same order as js/worklet.js's `ask`), its mutes, the wander and the play's
-// salt, and the track length (session 30c: a time to the second, with its
-// fade in and fade out, as the Track length view set it; or a finite piece
-// whole). The track is played to its end as the app plays it, then the core
-// stops deciding and what it has started rings out (the tail) before the
-// file ends: with the fade out, from silence.
+// What is exported is what plays:
+// - the record's seed, request and edits, asked of the core the same way
+//   the page asks the core that plays (`askOf`: the same calls in the same
+//   order as js/worklet.js's `ask`);
+// - its mutes, the wander and the play's salt;
+// - the track length: a time to the second with its fade in and fade out,
+//   as the Track length view set it, or a finite piece whole.
+// The track plays to its end as the app plays it. Then the core stops
+// deciding, and what it started rings out (the tail) before the file ends.
+// With the fade out, the tail starts from silence.
 //
-// Always at full quality (the six-comb mix), whatever "lighter on processor"
-// says: the export is not in real time, so it can afford the better mix (for
-// Mikey's ears). Stereo unless the Mono switch is on.
+// The export always uses full quality (the six-comb mix), whatever "lighter
+// on processor" says. The export is not in real time, so it can use the
+// better mix (for Mikey's ears). It is stereo unless the Mono switch is on.
 //
-// Two formats (queue item 104b and 104c), the job's `format`: 'flac' (the
-// default, lossless: 44.1 kHz, 16-bit, the core's own FLAC writer; `step`
-// gives the file's next bytes) and 'opus' (the small one: the core renders at
-// 48 kHz, the rate Opus works at, so nothing is resampled, and `pcm` gives
-// each chunk's samples for the browser's encoder, js/export-opus.js). The
-// track, its end and its tail are the same in both.
+// The job's `format` is one of two:
+// - 'flac' (the default, lossless): 44.1 kHz, 16-bit, the core's own FLAC
+//   writer. `step` gives the file's next bytes.
+// - 'opus' (the small one): the core renders at 48 kHz, the rate Opus uses,
+//   so nothing is resampled. `pcm` gives each chunk's samples for the
+//   browser's encoder (js/export-opus.js).
+// The track, its end and its tail are the same in both.
 //
-// Tags (item 121): `tag(blocks)` puts FLAC metadata blocks (js/tags.js:
-// the comments and the cover) after STREAMINFO, which is then no longer the
-// last block, in the first header and the finished one alike. The samples
-// and the frames are the same with or without them.
+// Tags: `tag(blocks)` puts FLAC metadata blocks after STREAMINFO (the
+// comments and the cover, from js/tags.js). STREAMINFO is then no longer the
+// last block, in the first header and in the finished one. The samples and
+// the frames are the same with or without the tags.
 
 import { notLast } from './tags.js';
 
@@ -316,7 +322,7 @@ export class Render {
     return this.bytes(this.x.dl_flac_finish());
   }
 
-  // FLAC metadata blocks to follow STREAMINFO (item 121), before the first
+  // FLAC metadata blocks to follow STREAMINFO, before the first
   // step: `first` becomes the header with STREAMINFO not the last block, and
   // `blocks` the bytes to write after it.
   tag(blocks) {

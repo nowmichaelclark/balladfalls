@@ -1,7 +1,7 @@
-// The speed test's worker (queue item 87, speed.html): runs js/speed.js off
-// the page's thread, so drawing the page never lands in a timed block. It
-// is handed the player's module bytes and a plan (which loops, which ways,
-// how long, how many runs) and posts each result as it has it.
+// The speed test's worker (speed.html). It runs js/speed.js off the page's
+// thread, so that drawing the page never lands in a timed block. It gets the
+// player's module bytes and a plan (which loops, which ways, how long, how
+// many runs), and posts each result as it has it.
 
 import { measure, line, tick, warm } from './speed.js';
 

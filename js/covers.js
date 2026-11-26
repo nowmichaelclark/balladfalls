@@ -1,18 +1,18 @@
-// Covers, as pictures to paste in (queue item 41).
+// Covers, as pictures to paste in.
 //
-// Every cover the page shows -- the playing loop's on the card, an album's
-// on the card and in the lists -- comes from here, drawn by
-// js/cover-worker.js on a thread of its own, so no cover ever holds the
-// main thread (and the music's clock) for the hundreds of ms it costs on a
-// slow phone. What comes back is an ImageBitmap: the page draws it into
-// its canvas, and never reads a pixel back.
+// Every cover that the page shows (the playing loop's on the card, an
+// album's on the card and in the lists) comes from here. js/cover-worker.js
+// draws it on a thread of its own, so that no cover holds the main thread
+// (and the music's clock) for the hundreds of ms that it costs on a slow
+// phone. What comes back is an ImageBitmap. The page draws it into its
+// canvas, and never reads a pixel back.
 //
 // A browser without module workers or OffscreenCanvas (Safari before 16.4)
-// draws on the main thread as before, a task of its own per cover, on a
-// canvas made for reading.
+// draws on the main thread, one task for each cover, on a canvas made for
+// reading.
 //
-// Kept, the last few dozen, by what they show and their size: going back to
-// a cover costs nothing.
+// The last few dozen covers are kept, by what they show and their size, so
+// going back to a cover costs nothing.
 
 import { drawCover } from './cover.js';
 
@@ -106,9 +106,9 @@ export function coverPng(spec, size = 320) {
   return coverFile(spec, size, 'image/png');
 }
 
-// The cover of `spec` as an image file's Blob of `type` (PNG, or JPEG for an
-// exported file's picture, item 121: a tenth of the PNG's bytes for this
-// grain, which every player reads), drawn as the Library draws it.
+// The cover of `spec` as an image file's Blob of `type`, drawn as the
+// Library draws it. The type is PNG, or JPEG for an exported file's picture
+// (a tenth of the PNG's bytes for this grain, and every player reads it).
 export async function coverFile(spec, size = 320, type = 'image/png', quality = 0.9) {
   const image = await coverImage(spec, size);
   const here = () => fileHere(image, size, type, quality);

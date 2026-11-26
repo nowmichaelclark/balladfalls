@@ -1,24 +1,25 @@
-// The page in a phone's browser (session 30f; Mikey, 2026-11-22, from their
-// phone sideways): which of the safe area's insets are really inside the
-// page, and the browser's bar put away by a small scroll.
+// The page in a phone's browser (Mikey, 2026-11-22, with the phone on its
+// side): which of the safe area's insets are really inside the page, and
+// the browser's bar put away by a small scroll.
 //
-// Insets. With viewport-fit=cover some browsers report the whole window's
-// insets (the status bar's 25, the navigation bar's 49) to a page they have
-// already laid out clear of those bars, and padding by them counts them
-// twice: the boxes end up off center and short. The screen tells: what of
-// it the page doesn't cover is already outside, so an inset that fits in
-// that is too. A page that covers the screen (a notch, edge to edge, the
-// installed app) keeps every inset it is given.
+// Insets. With viewport-fit=cover, some browsers report the whole window's
+// insets (the status bar's 25, the navigation bar's 49) to a page that they
+// have already laid out clear of those bars. Padding by them counts them
+// twice, and the boxes end up off center and short. The screen tells the
+// truth: the part of it that the page doesn't cover is already outside, so
+// an inset that fits in that part is outside too. A page that covers the
+// screen (a notch, edge to edge, the installed app) keeps every inset that
+// it is given.
 //
-// The bar. A phone's browser hides it only when the document itself
-// scrolls, so in a browser's tab on a touch screen the document is a little
-// taller than the screen and the app is stuck to its top at the screen's
-// height (css/style.css, `.bar-scroll`): a scroll puts the bar away and the
-// app grows into the room. No Fullscreen API.
+// The bar. A phone's browser hides its bar only when the document itself
+// scrolls. So in a browser's tab on a touch screen, the document is a
+// little taller than the screen, and the app sticks to its top at the
+// screen's height (css/style.css, `.bar-scroll`). A scroll puts the bar
+// away, and the app grows into the room. There is no Fullscreen API.
 //
 // 400% zoom. A computer's screen that short scrolls (css/style.css, the
-// same query as ZOOMED), and the keyboard's focus is scrolled into sight
-// where the app moves it: a view opened moves it with preventScroll.
+// same query as ZOOMED). The keyboard's focus is scrolled into sight where
+// the app moves it; a view that opens moves it with preventScroll.
 
 const ZOOMED = '(max-height: 279.98px) and (pointer: fine), (max-height: 279.98px) and (pointer: none)';
 const SIDES = ['top', 'right', 'bottom', 'left'];
@@ -41,22 +42,22 @@ export function outsideInsets(reported, screen, page) {
   return { top: above, right: sides && right > 0, bottom: below, left: sides && left > 0 };
 }
 
-// Whether a small scroll should put the browser's bar away: a tab on a
-// touch screen; never installed, the Android app, or a browser without dvh
-// (there the screen's height would cut the keys).
+// True if a small scroll should put the browser's bar away: a tab on a
+// touch screen. Never when installed, in the Android app, or in a browser
+// without dvh (there the screen's height would cut the keys).
 export function scrollsBarAway({ app, installed, touch, dvh }) {
   return !app && !installed && touch && dvh;
 }
 
-// A slider in a tab that scrolls the bar away (session 30k, item 119; Mikey:
-// "I can only scroll up and down by touching specific places"). A slider's
-// track lets a finger's drag up or down scroll the page (css/style.css,
-// `.bar-scroll`, pan-y), as anywhere else does; but the browser moves the
-// value to where the finger lands before it knows the drag is a scroll. So,
-// under a finger, what a slider says is held from the app until the drag
-// shows itself sideways (or is a tap) and then given to it; and put back,
-// unheard, if the browser took the drag for a scroll. A mouse, a pen and
-// the keys are never held.
+// A slider in a tab that scrolls the bar away (Mikey: "I can only scroll up
+// and down by touching specific places"). A slider's track lets a finger's
+// drag up or down scroll the page (css/style.css, `.bar-scroll`, pan-y), as
+// anywhere else does. But the browser moves the value to where the finger
+// lands before it knows that the drag is a scroll. So, under a finger, the
+// app holds back what a slider says until the drag goes sideways (or is a
+// tap), and then gives it to the app. If the browser took the drag for a
+// scroll, the value goes back, unheard. A mouse, a pen and the keys are
+// never held back.
 export function holdSliders(doc) {
   let held = null;   // { input, from, x, y, id }
   const give = () => {
@@ -87,7 +88,8 @@ export function holdSliders(doc) {
   }, true);
 }
 
-// The screen's size the way it is held: some report it always upright.
+// The screen's size the way it is held. Some browsers always report it
+// upright.
 function screenAsHeld() {
   const long = Math.max(screen.width, screen.height);
   const short = Math.min(screen.width, screen.height);
@@ -128,7 +130,8 @@ export function watchViewport({ app }) {
   // (Registered before the app's own resize: it measures with these.)
   addEventListener('resize', set);
 
-  // Never while the mouse is down: what it presses would move from under it.
+  // Never while the mouse is down, because what it presses would move from
+  // under it.
   const zoomed = matchMedia(ZOOMED);
   let down = false;
   addEventListener('pointerdown', () => { down = true; }, true);

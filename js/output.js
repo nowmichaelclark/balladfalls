@@ -1,39 +1,38 @@
-// The core's node, into the speakers (queue item 97).
+// The core's node, into the speakers.
 //
 // The core plays everything: its player decides the notes, its voices make
-// them, its mix and master chain finish them (core/, through
-// js/dlplayer.wasm in js/worklet.js). What is left for the page is where
-// that sound goes and the few things only a listener's device decides: the
-// volume, the transport's silence, mono or stereo, and the quality the core
-// mixes at. This is that: one core's node on one context, and nothing of
-// Web Audio besides. Until item 97 it was a JavaScript synth of its own
-// (js/synth.js), which played whatever the core could not; a browser that
-// cannot run the core now plays nothing, and the page says so in a plain
-// line (Mikey, 2026-11-07).
+// them, and its mix and master chain finish them (core/, through
+// js/dlplayer.wasm in js/worklet.js). The page decides only where that
+// sound goes, and the few things that a listener's device decides: the
+// volume, the transport's silence, mono or stereo, and the quality that the
+// core mixes at. This module is that: one core's node on one context, and
+// no other Web Audio. If a browser cannot run the core, nothing plays, and
+// the page says so in a plain line.
 //
-// In the Android app (session 27) the core's player is native and the
-// context a stand-in on its clock (js/native.js): there is no node to
-// connect, and the WebView plays nothing; the same commands reach the core.
+// In the Android app, the core's player is native, and the context is a
+// stand-in on its clock (js/native.js). There is no node to connect, and
+// the WebView plays nothing. The same commands reach the core.
 
 import { CoreHost, MIX, CANCEL, HOLD, LINEAR, SET, DROP_CAUSES } from './core.js';
 
 export class Output {
-  // `core` is what loadCore() gave for this context, if it has arrived; one
-  // that arrives later is handed over with attachCore(). `onCoreError`
-  // hears it, once, if the core turns out not to run, at any time.
+  // `core` is what loadCore() gave for this context, if it has arrived. A
+  // core that arrives later comes in with attachCore(). `onCoreError` hears
+  // once if the core does not run, at any time.
   constructor(ctx, quality = 'full', { core = null, coreError = null, onCoreError = null, layout = 2, burn = 0 } = {}) {
     this.ctx = ctx;
     this.quality = quality;
-    // The core's render: 1 mono, 2 stereo (queue item 64; `setLayout`).
+    // The core's render: 1 mono, 2 stereo (`setLayout`).
     this.layout = layout === 2 ? 2 : 1;
     this.onCoreError = onCoreError;
-    // How busy the core's audio thread is (queue item 87b): called with each
-    // of its reports ({ max, behind, windows, seconds }); and a test's slow
-    // device, microseconds added to each of its blocks (`?burn=`).
+    // How busy the core's audio thread is: called with each of its reports
+    // ({ max, behind, windows, seconds }). And a test's slow device: the
+    // microseconds added to each of its blocks (`?burn=`).
     this.onBusy = null;
     this._burn = burn;
     this.core = null;
-    // Why the core is not coming, if it is not: Diagnostics shows it.
+    // The reason that the core is not coming, if it is not. Diagnostics
+    // shows it.
     this.coreError = coreError;
     // What reaches the speakers: the core's node, once there is one.
     this.output = null;
@@ -53,7 +52,7 @@ export class Output {
     }
     this.core.onbusy = (busy) => { if (this.onBusy) this.onBusy(busy); };
     this.core.onfail = () => {
-      // The app keeps this answer for the session: a later output (the
+      // The app keeps this answer for the session. A later output (the
       // quality toggle) does not build a core that has failed.
       this.coreError = this.core.failed;
       if (this.onCoreError) this.onCoreError(this.coreError);
@@ -64,8 +63,8 @@ export class Output {
     if (this.userVolume != null) this.core.playVolume(this.userVolume);
   }
 
-  // The core will not come (it did not load, or its node could not be
-  // built): nothing plays, and the page says why.
+  // The core will not come: it did not load, or its node could not be
+  // built. Nothing plays, and the page says why.
   coreFailed(err) {
     if (this.core) return;
     this.coreError = String((err && err.message) || err);
@@ -77,8 +76,8 @@ export class Output {
     return this.core && !this.core.failed ? this.core : null;
   }
 
-  // The listener's Mono switch (queue item 66): the core's render from
-  // now, mono (1) or stereo (2), faded so a loop playing goes on; a core
+  // The listener's Mono switch: the core's render from now, mono (1) or
+  // stereo (2), faded, so that a loop that plays goes on. A core that is
   // still on its way starts in it.
   setLayout(layout) {
     this.layout = layout === 2 ? 2 : 1;
@@ -94,9 +93,9 @@ export class Output {
     if (core) core.playVolume(v);
   }
 
-  // A switch of quality hands over at `from` (queue item 87b): what the
-  // player handed the core for `from` or later is dropped, and the mix's
-  // own events from then on with it (the tails' fades and the ducks).
+  // A quality switch hands over at `from`. Drop what the player handed the
+  // core for `from` or later, and the mix's own events from then on (the
+  // tails' fades and the ducks).
   cancelFrom(from) {
     const core = this._core();
     if (!core) return;
@@ -114,9 +113,9 @@ export class Output {
     core.param(MIX.kill, LINEAR, 0, when + 0.06);
   }
 
-  // The whole output falls to nothing from `from` to `to` and stays there
-  // (queue item 87b: the quality switch hands over at a boundary, the old
-  // core fading out before it). Like `silence`, over a fade of its own.
+  // The whole output falls to nothing from `from` to `to`, and stays there.
+  // The quality switch uses it to hand over at a boundary, with the old core
+  // fading out before it. Like `silence`, but over a fade of its own.
   fadeOut(from, to) {
     this._killed = true;
     const core = this._core();
@@ -140,7 +139,7 @@ export class Output {
   }
 
   // For Diagnostics: the core's player, with the notes it took late, left
-  // out or dropped; or why there is none.
+  // out or dropped; or the reason that there is none.
   engineReport() {
     const c = this.core;
     if (!c) return this.coreError ? `none (${this.coreError})` : 'rust (loading)';
@@ -148,7 +147,7 @@ export class Output {
     const p = c.playerAt;
     const at = p ? `  player: ${['idle', 'making a loop', 'its first pass', 'playing'][p.state] || p.state}, step ${p.step}` : '';
     const dropped = c.dropped ? ` (${DROP_CAUSES.map((cause, i) => `${cause} ${c.droppedBy[i] || 0}`).join(', ')})` : '';
-    // The app's native core (session 27): with the stream's underruns.
+    // The app's native core, with the stream's underruns.
     if (c.native) {
       const s = this.ctx.stream;
       return `native (the core's player)  late: ${c.late}  missed: ${c.missed}  dropped: ${c.dropped}${dropped}  underruns: ${s ? s.underruns : '-'}${at}`;

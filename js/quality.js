@@ -1,38 +1,39 @@
-// "Lighter on processor" chosen by the app itself on slow devices (queue
-// item 87b; Mikey, 2026-11-02: yes, and the listener can always switch it
-// back). The worklet measures how busy the audio thread is where the music
-// plays (js/worklet.js, BUSY_WINDOW); this module keeps those measurements,
+// "Lighter on processor" (Lite), chosen by the app itself on slow devices
+// (Mikey, 2026-11-02: yes, and the listener can always switch it back).
+// The worklet measures how busy the audio thread is where the music plays
+// (BUSY_WINDOW in js/worklet.js). This module keeps those measurements,
 // holds them to the rule, and hands one quality over to the other at a
-// boundary without a cut. Pure apart from `handOver`, so test/quality.test.mjs
-// runs it in Node.
+// boundary, without a cut. It is pure apart from `handOver`, so
+// test/quality.test.mjs runs it in Node.
 //
-// The rule, its first values the conservative choice, "for Mikey's ears":
-// - On full: if the busiest quarter-second over the last OVER_FOR seconds of
-//   playing passes OVER of its deadline, switch to lite at the next pass; if
-//   a quarter-second took longer than the audio it made (the render falling
-//   behind for its own cost), at the next bar.
+// The rule. Its first values are the conservative choice, for Mikey's ears:
+// - On full: if the busiest quarter-second over the last OVER_FOR seconds
+//   of playing passes OVER of its deadline, switch to lite at the next pass.
+//   If a quarter-second took longer than the audio it made (the render fell
+//   behind because of its own cost), switch at the next bar.
 // - On lite chosen by the first guess (four cores or fewer): if the busiest
 //   quarter-second stays under UNDER for UNDER_FOR seconds of playing, move
-//   up to full, at the next pass. Lite costs about 0.6 of full (item 87, on
-//   the Moto G Power), so that leaves full well under OVER.
-// - Once the app has moved, it never moves again (no back and forth); and a
-//   listener's own choice is never changed.
+//   up to full at the next pass. Lite costs about 0.6 of full (measured on
+//   the Moto G Power), so full stays well under OVER.
+// - Once the app has moved, it never moves again (no back and forth). The
+//   app never changes a listener's own choice.
 //
-// Too slow even on lite (queue item 100; Mikey, 2026-11-10: no workarounds,
-// no cushion, no lower tier: a plain line). On lite, however it was chosen,
-// when STUCK_BEHIND of the quarter-seconds in the last STUCK_FOR seconds of
-// playing each took longer than the audio it made (the render behind real
-// time, so the output runs dry), or the device filled in that often where
-// the browser says (`playoutStats`), the browser is too slow to play
-// Ballad Falls smoothly, and the page says so (js/main.js). The line is set
-// from what is known of the devices: the weakest we support, Mikey's Lenovo
-// tablet, renders lite's busiest loops at 2.0 to 3.1 times real time (item
-// 87: its quarter-seconds at a third to a half of their time), so it would
-// have to run at half its measured speed for two seconds in twenty to trip
-// this; a Pixel 9 on a browser that interprets WebAssembly took 55% of real
-// time on average and skipped throughout. A busy share short of the whole
-// quarter-second never trips it: `tools/autolite.mjs`'s slow case sits at
-// 60 to 80% on lite and must not.
+// Too slow even on lite (Mikey, 2026-11-10: no workarounds, no cushion, no
+// lower tier, only a plain line). On lite, however it was chosen, the
+// browser is too slow to play Ballad Falls smoothly if, in the last
+// STUCK_FOR seconds of playing:
+// - STUCK_BEHIND of the quarter-seconds each took longer than the audio
+//   they made (the render is behind real time, so the output runs dry); or
+// - the device filled in that often, where the browser says so
+//   (`playoutStats`).
+// Then the page says so (js/main.js). The line comes from what is known of
+// the devices. The weakest that we support, Mikey's Lenovo tablet, renders
+// lite's busiest loops at 2.0 to 3.1 times real time. So it would have to
+// run at half its measured speed for two seconds in twenty to trip this. A
+// Pixel 9 on a browser that interprets WebAssembly took 55% of real time on
+// average, and skipped throughout. A busy share short of the whole
+// quarter-second never trips it: the slow case of `tools/autolite.mjs` sits
+// at 60 to 80% on lite, and must not trip it.
 
 // The share of a block's deadline past which full is too much, over the
 // seconds of playing it is read across.
@@ -41,8 +42,8 @@ export const OVER_FOR = 20;
 // The share under which lite may move up to full, over its seconds.
 export const UNDER = 0.15;
 export const UNDER_FOR = 60;
-// The seconds of a new output's playing left out at its start: the browser
-// compiles the core's code again, faster, once it has run a while, and the
+// The seconds at a new output's start that are left out. The browser
+// compiles the core's code again, faster, once it has run a while, so the
 // first blocks read slower than the device is.
 export const WARM = 5;
 // How long the old quality fades out before the boundary, in seconds (for
@@ -50,11 +51,11 @@ export const WARM = 5;
 export const FADE = 0.5;
 // The least time from the decision to the start of the fade, in seconds.
 export const PREP = 0.5;
-// The listener's own switch (session 30g, queue item 115, step 4): heard
-// at once, so a short fade from a little ahead (for Mikey's ears). Ahead
-// by more than the Android app's core renders between two of the page's
-// readings of its clock (its callbacks come in runs of about 40 ms), so
-// the fade starts where the core has not yet been.
+// The listener's own switch is heard at once, so it uses a short fade from
+// a little ahead (for Mikey's ears). It is ahead by more than the Android
+// app's core renders between two of the page's readings of its clock (its
+// callbacks come in runs of about 40 ms). So the fade starts where the core
+// has not yet been.
 export const HAND_PREP = 0.15;
 export const HAND_FADE = 0.1;
 // Too slow even on lite: over this many seconds of playing, this many
@@ -63,17 +64,17 @@ export const STUCK_FOR = 20;
 export const STUCK_BEHIND = 8;
 export const STUCK_FILLS = 8;
 
-// What the worklet has said, while playing, as one record a report:
+// What the worklet has said while playing, as one record a report:
 // { at (seconds, the page's clock), seconds (of audio), max, behind }.
-// Anything else (paused, a new output's first seconds, the page asleep) ends
-// the run: only an unbroken run of playing counts.
+// Anything else (paused, a new output's first seconds, the page asleep)
+// ends the run. Only an unbroken run of playing counts.
 export class Busy {
   constructor() {
     this.runs = [];
     this.played = 0;
   }
 
-  // One report: `playing` says whether the loop played throughout it;
+  // One report. `playing` is true if the loop played throughout it.
   // `fills` is the device's count of fill-ins so far, where the browser
   // reports one (null where it doesn't).
   add(report, playing, at = 0, fills = null) {
@@ -142,11 +143,14 @@ export class Busy {
 
 const pct = (x) => `${Math.round(x * 100)}%`;
 
-// What to do now, or null. `quality` is the output's ('full' or 'lite');
-// `yours` the listener's own choice (true, false, or undefined for none);
-// `auto` the app's last move, if it has made one ({ lite, why }); `guess`
-// whether the first guess started it on lite. Returns { lite, why, at }:
-// switch to lite (true) or full (false), at the next 'pass' or 'bar'.
+// What to do now, or null.
+// - `quality` is the output's ('full' or 'lite').
+// - `yours` is the listener's own choice (true, false, or undefined for
+//   none).
+// - `auto` is the app's last move, if it has made one ({ lite, why }).
+// - `guess` is true if the first guess started it on lite.
+// Returns { lite, why, at }: switch to lite (true) or full (false), at the
+// next 'pass' or 'bar'.
 export function decide({ quality, yours, auto, guess, busy }) {
   if (yours !== undefined && yours !== null) return null;
   if (auto) return null;
@@ -163,12 +167,12 @@ export function decide({ quality, yours, auto, guess, busy }) {
   return null;
 }
 
-// Whether the browser is too slow even on lite (queue item 100), or null:
-// { why }, in a tester's words for Diagnostics.
+// If the browser is too slow even on lite: { why }, in a tester's words for
+// Diagnostics. Otherwise null.
 export function stuck({ quality, busy, native = false }) {
-  // Never in the Android app (session 27): its core plays natively, at
-  // high priority, and there is no browser to be too slow; the line's
-  // advice (get the app) would be the app's own.
+  // Never in the Android app. Its core plays natively, at high priority,
+  // and there is no browser to be too slow. The line's advice (get the app)
+  // would be the app's own.
   if (native) return null;
   if (quality !== 'lite') return null;
   const o = busy.over(STUCK_FOR);
@@ -204,26 +208,25 @@ export function boundary(engine, unit, after) {
   return t;
 }
 
-// The old quality's part of a switch (queue item 87b): `old` ({ engine,
-// output }) decides nothing from `at` on, drops what it handed over for `at`
-// or later, and fades out over `fade` seconds to it. The caller then lets it
-// go and starts the new quality, which takes the loop from its top as soon as
-// it can: the new output is built only once the old one is silent and gone,
-// because building it (its worklet compiles the core) works on the very
-// audio thread the old one plays on, and two cores at once is what a slow
-// device can least afford. So the switch is a fade, a breath and the loop
-// again, never a cut.
+// The old quality's part of a switch. `old` ({ engine, output }) decides
+// nothing from `at` on, drops what it handed over for `at` or later, and
+// fades out over `fade` seconds to it. Then the caller lets it go, and
+// starts the new quality, which takes the loop from its top as soon as it
+// can. The new output is built only when the old one is silent and gone.
+// Building it (its worklet compiles the core) works on the same audio thread
+// that the old one plays on, and a slow device can least afford two cores at
+// once. So the switch is a fade, a breath and the loop again, never a cut.
 export function handOff(old, at, fade = FADE) {
   old.engine.until = at;
   old.output.cancelFrom(at);
   old.output.fadeOut(Math.max(old.output.ctx.currentTime, at - fade), at);
 }
 
-// Call `fn` once the context's clock reaches `at`: an alarm on the audio
-// clock (a silent source's end), which a hidden page's timers would delay.
+// Call `fn` when the context's clock reaches `at`: an alarm on the audio
+// clock (a silent source's end). A hidden page's timers would delay it.
 export function alarm(ctx, at, fn) {
-  // The Android app's context (js/native.js) keeps its own, on the core's
-  // clock: it has no nodes to make one of.
+  // The Android app's context (js/native.js) keeps its own alarm, on the
+  // core's clock, because it has no nodes to make one of.
   if (ctx.alarm) return ctx.alarm(at, fn);
   const src = ctx.createConstantSource();
   const mute = ctx.createGain();

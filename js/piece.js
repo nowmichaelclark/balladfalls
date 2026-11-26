@@ -1,27 +1,31 @@
-// A long piece on Now Playing (session 18, queue item 106b): where you are
-// in it (bar 812 of 3,072, the time played and left), its line of sections
-// with the markers of its map (a theme entering, the peak, the return, the
-// close; a wander's turns), and the ways to move in it: the line itself (press
-// a point, drag, let go) and a key each way to the section before or after.
-// A jump is session 17's command (`Engine.jumpTo`), the place and the map are
-// the core's (`Player::place`, `Player::marks`); the page decides nothing
-// about the piece, it draws what it is told.
+// A long piece on Now Playing. It shows:
+// - where you are in it: bar 812 of 3,072, and the time played and left;
+// - its line of sections, with the markers of its map: a theme entering,
+//   the peak, the return, the close, a wander's turns;
+// - the ways to move in it: the line itself (press a point, drag, let go),
+//   and a key each way to the section before or after.
+// A jump is the core's command (`Engine.jumpTo`), and the place and the map
+// are the core's (`Player::place`, `Player::marks`). The page decides
+// nothing about the piece: it draws what it is told.
 //
-// Drawn cheaply for any length: the map is asked once a piece, in calls of at
-// most a few milliseconds each with a breath between (a 32,768-bar arc is
-// about 2,800 marks), kept as numbers, and painted once into a canvas as
-// one-pixel ticks, a column of the line at most one tick tall; the playhead is
-// an element moved by a transform, so a frame's work is one style change.
-// Endless is a window of 64 sections around the playhead, asked again as it
-// moves out of it. Nothing here scrolls.
+// It is cheap to draw at any length.
+// - The map is asked once a piece, in calls of a few milliseconds at most,
+//   with a breath between (a 32,768-bar arc is about 2,800 marks). It is
+//   kept as numbers, and painted once into a canvas as one-pixel ticks, with
+//   a column of the line at most one tick tall.
+// - The playhead is an element moved by a transform, so a frame's work is
+//   one style change.
+// - Endless is a window of 64 sections around the playhead, asked again
+//   when the playhead moves out of it.
+// Nothing here scrolls.
 
 import { MARKS_MOST, pieceMarks } from './gen.js';
 import { JUMP } from './player.js';
 import { pieceOf, requestOf } from './request.js';
 import { setIcon } from './ui.js';
 
-// A piece is long from a section past the longest loop any profile draws
-// (`core/src/generator/piece.rs`); a shorter length is the loop's own.
+// A piece is long from a section past the longest loop that any profile
+// draws (`core/src/generator/piece.rs`). A shorter length is the loop's own.
 export const LONG_FROM = 33;
 // Endless is asked a window at a time: this many sections.
 export const WINDOW = 64;
@@ -29,7 +33,7 @@ export const WINDOW = 64;
 const CALLS_MOST = 16;
 
 // What the listener hears the unit at the playhead as: the plan's roles
-// (js/gen.js `ROLES`) in plain words. For Mikey to approve.
+// (`ROLES` in js/gen.js) in plain words. For Mikey to approve.
 export const ROLE_WORDS = {
   opening: 'opening',
   theme: 'theme',
@@ -46,11 +50,11 @@ export const ROLE_WORDS = {
   turning: 'turning',
 };
 
-// The marks the line draws, and how tall (0 to 1): an opening starts a
-// movement (a long faint line), a second theme enters, and the peak, the
-// return and the close stand tallest; a wander's turns are short. The rest of
-// the plan's roles (the theme's own entry with the opening, a build, a
-// release) are shown by the words, not the line.
+// The marks that the line draws, and how tall (0 to 1). An opening starts a
+// movement (a long faint line). A second theme enters. The peak, the return
+// and the close stand tallest. A wander's turns are short. The words show
+// the rest of the plan's roles (the theme's own entry with the opening, a
+// build, a release), not the line.
 const TICKS = { opening: 1, second: 0.5, peak: 0.8, return: 0.62, close: 1, turning: 0.36 };
 
 export const isLong = (spec) => !!spec && (spec.length === 'endless' || (Number.isFinite(spec.length) && spec.length >= LONG_FROM));
@@ -69,10 +73,10 @@ export function clock(secs) {
 // ----------------------------------------------------------- the model
 
 // A piece's map for the line, from the core: { endless, spec, first, last,
-// marks }, `marks` in order of their bar (js/gen.js `pieceMarks`), `first` to
-// `last` the bars the line spans (the whole piece, or Endless's window).
-// Null for a loop that is no long piece. Synchronous: `modelAsync` is the
-// page's way, in calls with a breath between.
+// marks }. `marks` are in order of their bar (`pieceMarks` in js/gen.js).
+// `first` to `last` are the bars that the line spans (the whole piece, or
+// Endless's window). Null for a loop that is not a long piece. This one is
+// synchronous; the page uses `modelAsync`, in calls with a breath between.
 export function windowOf(spec, section) {
   const p = pieceOf(spec);
   if (!p) return null;
@@ -82,9 +86,9 @@ export function windowOf(spec, section) {
   return { start, bar: start * p.bars, end: (start + WINDOW) * p.bars };
 }
 
-// Marks of a finite piece, a call at a time (`next` gives the next call's
-// marks or null when done): the calls join at the section the last one ended
-// in, the marks of units already given dropped.
+// The marks of a finite piece, a call at a time (`next` gives the next
+// call's marks, or null when done). The calls join at the section that the
+// last one ended in, and the marks of units already given are dropped.
 export function joinCalls(call) {
   const marks = [];
   let from = 0;
@@ -114,9 +118,10 @@ export function modelNow(spec, section = 0) {
   return { endless: false, spec, first: 0, last: bars, window: 0, marks };
 }
 
-// The same, a call a task, so no one task of the page is long (a 32,768-bar
-// arc's marks are two calls of about ten milliseconds; a phone slowed six
-// times is still under a hundred each). Resolves with the model, or null.
+// The same, with one call a task, so that no task of the page is long. A
+// 32,768-bar arc's marks are two calls of about ten milliseconds. A phone
+// slowed six times is still under a hundred each. Resolves with the model,
+// or null.
 export function modelAsync(spec, section = 0) {
   return new Promise((resolve) => {
     if (!isLong(spec)) { resolve(null); return; }
@@ -145,7 +150,7 @@ export function modelAsync(spec, section = 0) {
   });
 }
 
-// The mark at or before `bar` (the unit being played), or null.
+// The mark at or before `bar` (the unit that plays), or null.
 export function markAt(model, bar) {
   const marks = model.marks;
   let lo = 0;
@@ -158,8 +163,9 @@ export function markAt(model, bar) {
   return found < 0 ? null : marks[found];
 }
 
-// A section for the keys: a mark where the role changes (a key change inside
-// a role, a development moving to its next key, is not a new section).
+// A section for the keys: a mark where the role changes. A key change
+// inside a role (a development moving to its next key) is not a new
+// section.
 export function sectionsOf(model) {
   if (!model.sections) {
     model.sections = model.marks.filter((m, i) => i === 0 || m.role !== model.marks[i - 1].role);
@@ -167,10 +173,10 @@ export function sectionsOf(model) {
   return model.sections;
 }
 
-// The section before or after `bar`: the nearest one either way. "Before"
-// from more than a couple of bars into one goes to its own start, as a
-// player's previous key does. Null where there is none (the first one, the
-// last one of a finite piece).
+// The section before or after `bar`: the nearest one either way. "Before",
+// from more than a couple of bars into a section, goes to its own start, as
+// a player's previous key does. Null where there is none (the first one, or
+// the last one of a finite piece).
 export function neighbor(model, bar, dir, slack = 2) {
   const marks = sectionsOf(model);
   if (dir > 0) {
@@ -216,13 +222,13 @@ export function barAt(model, x, width) {
   return width > 0 ? model.first + Math.max(0, Math.min(1, x / width)) * span : model.first;
 }
 
-// The ticks as columns: for each pixel the tallest mark that falls in it
-// (and its role), a `Float32Array` of heights and an array of roles. Cheap:
-// one pass over the marks, two with a crowded piece, whatever its length. A
-// piece with more marks than a third of the line's pixels (a 32,768-bar arc
-// has 2,700) would be a comb, so the line keeps the markers that matter most
-// to a listener: where a movement opens, the peak and the close (a wander's
-// turns, every few of them).
+// The ticks as columns: for each pixel, the tallest mark that falls in it
+// (and its role), as a `Float32Array` of heights and an array of roles.
+// It is cheap: one pass over the marks (two for a crowded piece), whatever
+// the length. A piece with more marks than a third of the line's pixels (a
+// 32,768-bar arc has 2,700) would look like a comb. So the line keeps the
+// markers that matter most to a listener: where a movement opens, the peak
+// and the close (for a wander, every few of its turns).
 export const DENSE = 0.33;
 const KEPT_WHEN_DENSE = ['opening', 'peak', 'close'];
 export function columns(model, width) {
@@ -245,7 +251,7 @@ export function columns(model, width) {
 }
 
 // Paint the line's ticks into `canvas` at its CSS size and the screen's
-// density: a quiet baseline, then the ticks. Colors are the theme's own.
+// density: a quiet baseline, then the ticks. The colors are the theme's own.
 export function paintLine(canvas, model) {
   const css = getComputedStyle(canvas);
   const w = Math.max(1, Math.round(canvas.clientWidth));
@@ -285,9 +291,10 @@ let view = null; // { model, drawnWidth, place, shown }
 let pending = null; // the model being asked, for what spec
 let dragging = null; // { id, bar } while a finger is down on the line
 
-// The page's few connections: `jump(kind, at)` (false with nothing playing),
-// `spec()` the loop on the card, `place()` the core's last word, `playing()`
-// and `barSeconds()` (a bar at the tempo, before there is a place).
+// The page's few connections: `jump(kind, at)` (false if nothing plays),
+// `spec()` (the loop on the card), `place()` (the core's last word),
+// `playing()`, and `barSeconds()` (a bar at the tempo, before there is a
+// place).
 export function wirePiece(handlers) {
   host = handlers;
   const line = document.getElementById('pieceLine');
@@ -296,8 +303,8 @@ export function wirePiece(handlers) {
     const r = bounds();
     return barAt(view.model, e.clientX - r.left, r.width);
   };
-  // Playing or paused (session 30h): paused, the playhead goes there and
-  // Play starts from it.
+  // Playing or paused. When paused, the playhead goes there, and Play
+  // starts from it.
   line.addEventListener('pointerdown', (e) => {
     if (!view || !view.model || e.button > 0) return;
     try { line.setPointerCapture(e.pointerId); } catch (err) { /* a pointer that is gone: the move events still come */ }
@@ -334,15 +341,15 @@ export function wirePiece(handlers) {
 function jumpToBar(bar) {
   const to = Math.max(0, Math.floor(bar));
   if (!host.jump(JUMP.bar, to)) return;
-  // The words come from the core's next word, where it landed. Paused
-  // (session 30h), the playhead goes to the bar asked at once, until the
-  // core says where Play goes on from (its phrase line).
+  // The words come from the core's next word, where it landed. When paused,
+  // the playhead goes to the bar asked at once, until the core says where
+  // Play goes on from (its phrase line).
   if (view && !host.playing() && view.model) view.place = askedPlace(view.model, to);
   if (view) view.shown = null;
   if (!host.playing()) updatePiece();
 }
 
-// The place a jump asked while paused shows until the core's word: the bar
+// What a jump asked while paused shows, until the core's word: the bar
 // asked, the time to it at the tempo, and what is left of the piece.
 function askedPlace(model, bar) {
   const last = view.place;
@@ -357,8 +364,8 @@ function askedPlace(model, bar) {
   };
 }
 
-// The playhead a section on or back (the keyboard's Shift with an arrow,
-// js/shortcuts.js), from any view: true where the loop is a long piece.
+// Move the playhead a section on or back (the keyboard's Shift with an
+// arrow, js/shortcuts.js), from any view. True if the loop is a long piece.
 export function stepPiece(dir) {
   if (!updatePiece()) return false;
   toSection(dir);
@@ -394,9 +401,10 @@ function hideGhost() {
   view.shown = null; // the words come back from the place
 }
 
-// Called as Now Playing is drawn and every frame it is up: shows the piece's
-// line and words for a long piece, and the plain rail for any other. Cheap
-// when nothing moved (the place is the core's last post, a new object each).
+// Called as Now Playing is drawn, and on every frame while it is up. It
+// shows the piece's line and words for a long piece, and the plain rail for
+// any other loop. It is cheap when nothing moved (the place is the core's
+// last post, a new object each time).
 export function updatePiece() {
   const spec = host.spec();
   const root = document.getElementById('nowPiece');
@@ -412,7 +420,7 @@ export function updatePiece() {
     if (view.model) view.model.spec = spec;
   }
   if (!view || view.spec !== spec) {
-    // A new piece: the map is asked, the words wait for it.
+    // A new piece: ask for the map; the words wait for it.
     view = { spec, key: mapKey(spec), model: null, drawnWidth: 0, place: null, shown: null, window: -1 };
     root.hidden = false;
     rail.hidden = true;
@@ -433,9 +441,9 @@ export function updatePiece() {
   const place = host.place();
   const playing = host.playing();
   const line = document.getElementById('pieceLine');
-  // Paused, the bead looks paused; the line still moves it (session 30h).
+  // When paused, the bead looks paused, but the line still moves it.
   root.classList.toggle('idle', !playing);
-  // Endless: a window; asked again when the playhead leaves it.
+  // Endless: a window, asked again when the playhead leaves it.
   if (view.model.endless && place) {
     const w = windowOf(spec, place.section);
     if (w.start !== view.model.window && view.window !== w.start) {
@@ -446,7 +454,8 @@ export function updatePiece() {
     }
   }
   const width = Math.round(line.clientWidth);
-  // Painted again when the line's width or the theme (a class of the app) changes.
+  // Paint again when the line's width or the theme (a class of the app)
+  // changes.
   const theme = document.getElementById('app').className;
   if (width && (width !== view.drawnWidth || theme !== view.theme)) {
     paintLine(document.getElementById('pieceCanvas'), view.model);
@@ -476,8 +485,8 @@ export function updatePiece() {
   } else if (!at && !dragging) {
     setText('pieceBars', view.model.endless ? 'bar 1' : `bar 1/${group(view.model.last)}`);
     setText('pieceTimes', '');
-    // A slider says its value, before the core has said where it is too
-    // (session 30h: the line takes a press with nothing playing).
+    // A slider says its value, even before the core has said where it is,
+    // because the line takes a press while nothing plays.
     const said = placeWords(view.model, null).said;
     if (line.getAttribute('aria-valuetext') !== said) {
       line.setAttribute('aria-valuemin', String(Math.round(view.model.first)));
@@ -494,8 +503,8 @@ function setText(id, text) {
   if (node.textContent !== text) node.textContent = text;
 }
 
-// What the plan depends on: the seed and the request, not the edits (the
-// tempo, the tone, a layer re-rolled), which leave a piece's map as it is.
+// What the plan depends on: the seed and the request. The edits (the tempo,
+// the tone, a layer re-rolled) leave a piece's map as it is.
 const keys = new WeakMap();
 function mapKey(spec) {
   let k = keys.get(spec);
@@ -506,7 +515,7 @@ function mapKey(spec) {
   return k;
 }
 
-// What a test or a row may read: whether the line is up, and its map.
+// What a test or a row may read: if the line is up, and its map.
 export function pieceState() {
   return view ? { model: view.model, place: view.place, dragging: !!dragging } : null;
 }

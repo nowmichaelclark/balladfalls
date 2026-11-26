@@ -1,11 +1,11 @@
-// The audio export's thread (queue item 104b; Mikey, 2026-10-13: an export
-// must never crash or break anything, whatever the device).
+// The audio export's thread. An export must never crash or break anything,
+// on any device (Mikey, 2026-10-13).
 //
-// Its own instance of the core (js/dlplayer.wasm, never the one that plays,
-// never on the audio thread) renders the loop or the piece a chunk at a time
-// (js/export-render.js) through the core's FLAC writer, and each chunk's
-// bytes go straight to the file, so memory stays the same for a minute or
-// three hours. The file is one of:
+// This Worker has its own instance of the core (js/dlplayer.wasm). It is
+// never the instance that plays, and never on the audio thread. It renders
+// the loop or the piece a chunk at a time (js/export-render.js) through the
+// core's FLAC writer. Each chunk's bytes go straight to the file, so memory
+// stays the same for a minute or for three hours. The file is one of:
 //
 //   handle   a file the listener chose (the File System Access API's save
 //            picker, where the browser has it): written through a writable
@@ -15,7 +15,7 @@
 //            download at the end.
 //   memory   neither: the bytes kept here, to a limit the page states before
 //            it starts, and handed to the page as one Blob.
-//   app      the Android app (session 28): a file made in Android's own
+//   app      the Android app: a file made in Android's own
 //            picker, which only the page can reach (the app's bridge is in
 //            the page, not in a Worker). Each megabyte goes to the page as
 //            base64, the page gives it to the app, which writes it to the
@@ -26,26 +26,32 @@
 // is left behind. A page closed mid-export takes this Worker with it; its
 // private file is removed the next time an export starts.
 //
-// Speed ("lighter on processor"): `gentle` renders in short slices and rests
-// three times as long as each took, a quarter of one core, so the music
-// playing never stutters and the device stays cool; `fast` renders on,
-// yielding between slices only to hear Cancel. The page can move a running
-// export to gentle (the audio thread getting busy).
+// Speed ("lighter on processor") has two paces:
+// - `gentle` renders in short slices, and rests three times as long as each
+//   slice took. This is a quarter of one core, so the music that plays never
+//   stutters and the device stays cool.
+// - `fast` renders without a rest. It yields between slices only to hear
+//   Cancel.
+// The page can move a running export to gentle when the audio thread gets
+// busy.
 //
-// Two formats (the job's `format`): 'flac', the core's own writer, and
-// 'opus' (queue item 104c), the browser's AudioEncoder through js/ogg.js
-// (js/export-opus.js), which also gets the Worker's say on whether this
-// browser can encode Opus at all.
+// The job's `format` is one of two:
+// - 'flac': the core's own writer.
+// - 'opus': the browser's AudioEncoder (js/export-opus.js), written into Ogg
+//   by js/ogg.js. js/export-opus.js also tells the Worker if this browser
+//   can encode Opus at all.
 //
-// Tags (item 121): every file says what it is (js/tags.js): FLAC's comments
-// and cover as metadata blocks after STREAMINFO, Opus's in OpusTags. The
-// samples are untouched.
+// Every file is tagged (js/tags.js). FLAC's comments and cover are metadata
+// blocks after STREAMINFO. Opus's are in OpusTags. The samples are not
+// changed.
 //
-// An album as one zip (item 121, js/zip.js): `zip` opens it on a sink, each
-// `start` with an `entry` is a track inside it, `zip-end` writes its
-// directory (or `zip-abort` removes it). Its tracks go one at a time, so its
-// memory is one track's, as a single export's is. An album as a file a track
-// is a `start` a track, each its own file.
+// An album as one zip (js/zip.js):
+// 1. `zip` opens the zip on a sink.
+// 2. Each `start` with an `entry` is one track inside it.
+// 3. `zip-end` writes its directory, or `zip-abort` removes it.
+// The tracks go one at a time, so the memory is one track's, the same as a
+// single export. An album as one file for each track is one `start` for
+// each track.
 //
 // Messages in: { type: 'hello' }; { type: 'start', bytes, job, sink, name,
 // title, pace, limit, tags, picture, entry, keep }; { type: 'zip', sink,
@@ -155,7 +161,7 @@ class PrivateSink {
     this.h.write(bytes, { at: 0 });
   }
 
-  // Bytes written again where they were (the zip's headers, item 121).
+  // Bytes written again where they were (the zip's headers).
   writeAt(at, bytes) {
     this.h.write(bytes, { at });
   }
@@ -466,7 +472,7 @@ async function run(m) {
       if (sink instanceof MemorySink) sink.write(render.first);
       if (!(sink instanceof MemorySink)) await out.add(render.first);
       else out.total = render.first.length;
-      // The tags and the cover, after STREAMINFO (item 121).
+      // The tags and the cover, after STREAMINFO.
       if (render.blocks) await out.add(render.blocks);
     }
     let posted = 0;

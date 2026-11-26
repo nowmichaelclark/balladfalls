@@ -79,8 +79,8 @@ tracks").
   Say so in the PR. Notes before 2026-10-26 are in
   `docs/archive/notes.md`.
 - **When a PR is merged,** add one line to `docs/DONE.md`: the PR number,
-  the commit preview URL, and what the ears should listen for. (Lines
-  before #277 are in `docs/archive/done.md`.)
+  the commit preview URL, and what the ears should listen for. (The file started fresh at 1.0; the
+  lines before read at commit f040b5b.)
 - **Items that touch `core/`** also follow `core/AGENTS.md` (the core's
   standing rules, and the rules for sound items).
 - **Finished items** leave this file. An item cited as "item 46" from
@@ -180,7 +180,7 @@ tells the brain which loops fit.
 Mikey's idea (2026-10-11): "Is this playlist heartwarming? Which songs are
 not?" The brain sends a word album (item 35b); Mikey answers each track
 with one tap. The pilots, "Heartwarming?" and "Joyful?", went out as
-plain albums (`docs/ALBUMS.md`); **if the brain's State says the pilot
+plain albums (their codes: `docs/ALBUMS.md at commit f040b5b`); **if the brain's State says the pilot
 didn't work, skip this item.**
 
 - **`rank.html?album=<DLA1 code>`** (the word from the album's title,
@@ -204,7 +204,7 @@ didn't work, skip this item.**
   core like the app (item 32's note: `/rank` still builds the JavaScript
   `Synth`; wire it to the core here, with `?engine=js` as the fallback,
   and say what changed). Bump `BUILD` and `CACHE`.
-- **Checks:** both pilot album codes in `docs/ALBUMS.md` open, play and
+- **Checks:** both pilot album codes (`docs/ALBUMS.md at commit f040b5b`) open, play and
   record on the core and `?engine=js`; an export holding both kinds of
   line reads in `ranks.mjs`; tests three times.
 

@@ -1,7 +1,9 @@
 # Ears tools
 
-Measuring records and Driftloom renders the same way. Used by the ears
-sessions (`docs/EARS.md`). Python needs
+Measuring records and Ballad Falls renders the same way. Built by the ears
+sessions; since 2026-11-26 Research sessions run them
+(`docs/briefs/research.md`). What they found, and each measure's limits,
+are on the wiki's "Ballad Falls/What the ears found" and its subpages. Python needs
 `pip install --break-system-packages librosa soundfile` and ffmpeg; the
 renderer needs Playwright's Chromium. Run everything from a working folder
 outside the repo, with `python3 -I` for anything that reads downloaded
@@ -42,18 +44,18 @@ audio.
 | `card.py` | Drafts the album card (hook, sounds, techniques, theory, space, vibes, wholesome take, For later) from the JSON; judgment lines are marked **[JUDGMENT]** |
 | `check_stems.py` | **Ears 5:** spot checks on one track's stems before its card is written: each stem's share of the power (empty bass stem, no beat), band shares per stem, the strongest 20–200 Hz lines (subharmonic misreads), the drum-onset grid (tempo octave), and runs where the low end of all stems summed is 15 dB down (floor drops the stems-only count misses): `python3 -I check_stems.py WORKDIR/<album>/stems/<track> [--drop-db 15]`. **Ears 6b:** `album.py` now runs it as stage `check` (`stem_check.json` per track) and `card.py` puts the void flags and the meter-tool-against-drum-grid tempo note at the top of the card; `check_stems.report()` is the function behind it |
 | `longform.py` | **Ears 10:** how a long piece moves, from the mix in 10 s windows: level and brightness swells (smoothed over 60 s; count, spacing, depth, autocorrelation period), sections at the minute scale (a novelty curve, boundaries 60 s apart or more), returns (a window as close to one at least 120 s earlier as neighboring windows are to each other), travel from the opening, how often the strongest pitch class changes, width and change rate (spectral flux) over time, and a one-line-a-minute timeline: `python3 -P longform.py AUDIO OUT.json`. `--selftest` (about 2 minutes) reads a 120 s level swell as 120 s, a 240 s filter swing as 240 s, and an A-B-A form's boundaries exactly (180 and 360 s); not calibrated beyond that |
-| `twins.py` | **Ears 6b:** probable twin tracks across albums (length within 3 s, loudness within 0.6 LU, tone alike) from the picker rows in a workdir and, with `--csv docs/ears/data.csv --artist Aphex`, from earlier piles: `python3 -I twins.py WORKDIR [--csv FILE] [--artist TEXT]` |
+| `twins.py` | **Ears 6b:** probable twin tracks across albums (length within 3 s, loudness within 0.6 LU, tone alike) from the picker rows in a workdir and, with `--csv tools/ears/data.csv --artist Aphex`, from earlier piles: `python3 -I twins.py WORKDIR [--csv FILE] [--artist TEXT]` |
 | `cardlib.py`, `calsig.py` | Shared helpers; the test-signal makers |
 | `calibrate.py`, `cal_*.py` | Calibration: test signals with known answers through every card tool; `python3 -I calibrate.py [--out FILE]` (about 80 s). Rows with tolerance `"limit"` are reported, not graded |
 
 **`python3 -P` instead of `-I` (Ears 7):** `-I` also hides the user site-packages, which is where `pip install --break-system-packages` puts numpy, torch and demucs on a machine without root, so every script died on `import numpy`. `-P` keeps the same protection that matters here (no current-folder or script-folder entry on `sys.path`, so a planted `json.py` next to downloaded audio is not imported) and still sees installed packages. Use `-I` where the packages are system-wide; use `-P` where they are in `~/.local`. If pip fails with a disk quota error, set `TMPDIR` to a folder on the home disk (`/tmp` was a small tmpfs).
 
-Card tools need `pip install --break-system-packages demucs scipy` too (Demucs is about 1 GB and fetches its weights on first run). If the Demucs weights are blocked, install `audio-separator onnxruntime audioread` instead and download the four models `kuielab_a_{drums,bass,other,vocals}.onnx` from `https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/` into `/tmp` (or `$MDX_DIR`); `split.py` picks them up on its own. One album takes about 40 minutes of machine time on 2 CPU cores (28 to 43 over five albums), about 1.6 seconds per second of deep-pass audio plus 25 s per track in the album, mostly Demucs; see `docs/EARS.md`.
+Card tools need `pip install --break-system-packages demucs scipy` too (Demucs is about 1 GB and fetches its weights on first run). If the Demucs weights are blocked, install `audio-separator onnxruntime audioread` instead and download the four models `kuielab_a_{drums,bass,other,vocals}.onnx` from `https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/` into `/tmp` (or `$MDX_DIR`); `split.py` picks them up on its own. One album takes about 40 minutes of machine time on 2 CPU cores (28 to 43 over five albums), about 1.6 seconds per second of deep-pass audio plus 25 s per track in the album, mostly Demucs; see the wiki's "Measuring a record".
 
 Definitions the reports use: medians per file; "steady beat" means pulse
 0.6 or more for records, drums on for Driftloom; drift ratio is the median
 of drift60/drift10 per file. The measurements for batches one and two are
-in the repo as `docs/ears/data.csv`.
+in the repo as `tools/ears/data.csv`.
 
 A shell command stops after 10 minutes: run long render batches in the
 background (`nohup ... &`) and poll.

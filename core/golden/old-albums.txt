@@ -1,0 +1,6 @@
+# The three album links that were out in docs/ALBUMS.md until it started fresh at
+# 1.0 (2026-11-26): batch 6, the nearer chords and the long pieces, in the app.
+# core/tests/codes.rs reads every #c= code here, so they keep reading.
+https://balladfalls.com/#c=FAPJKOYsYDW0FJ7ZatZAW0HGfJIxZAJ4c7hKCWkMJu7pCOAWsHJKky18BWgJJHbNWxCWwHJXpKi6AWkLJ63vuPBW8HJxTa0wAW4IJTYm7NBWwJJH3VwoDWkGJ8i3bEBW0GGCVXKDBJFzdmMAWwKWgIeSQmF0Y2ggNiBpbiB0aGUgYXBwTr
+https://balladfalls.com/#c=FAGGZIRo3DJWHNQHCW4HJKreV6AW4IJAgQiVBW8HJem_wlDW8IJLMMy3AWkGWgGeTTmVhcmVyIGNob3JkcyAoODRiKQeS
+https://balladfalls.com/#c=FAKO0U0niCF_BHAWgLPlG_oEBF_HHAWwmCPapBrACF_HHAWwhCPAcCz6BF_fHAWskIRHbNWxCCAQBF_fWosHJHAAAAAGHBJJeyuABGHBMB1tFqACmCQBGJlG_oEBGHAOxkMs_AF_BHAWwdeWTG9uZyBwaWVjZXMgaW4gdGhlIGFwcAKc

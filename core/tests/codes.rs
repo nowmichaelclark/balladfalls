@@ -722,7 +722,8 @@ fn an_album_code_from_before_times_still_reads() {
     // exact"): a pace was whole passes or bars before, and its numbers now
     // read as times of a few seconds; every such album still reads, its
     // tracks as they were. The fixtures as they stood (session 24b), and
-    // every album code in docs/ALBUMS.md.
+    // every album code in core/golden/old-albums.txt (the albums that were
+    // out in docs/ALBUMS.md until it started fresh at 1.0).
     let old = [
         ("FADGRiSNBAGAAAAAAI_____DWSWDYD", 3),
         ("FADNNBAAAABuBCbOBMNBAAAAEmBOWAJNBAAAAGHBWHeEUmFpbgMd", 3),
@@ -737,7 +738,7 @@ fn an_album_code_from_before_times_still_reads() {
         let _ = album_tracks(album);
         let _ = album_paces(album);
     }
-    let doc = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../docs/ALBUMS.md")).expect("the albums");
+    let doc = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/golden/old-albums.txt")).expect("the albums");
     let mut read = 0;
     for code in doc.split("#c=").skip(1).map(|r| r.split(|c: char| !(c.is_ascii_alphanumeric() || c == '-' || c == '_')).next().unwrap_or("")) {
         if code.starts_with('F') {
@@ -746,7 +747,7 @@ fn an_album_code_from_before_times_still_reads() {
             read += 1;
         }
     }
-    assert!(read >= 3, "the albums in docs/ALBUMS.md");
+    assert!(read >= 3, "the albums in core/golden/old-albums.txt");
 }
 
 #[test]

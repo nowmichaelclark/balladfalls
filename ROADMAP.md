@@ -218,7 +218,7 @@ mistyped code.
 
 Shipped as queue items 12 (#92) and 17 (#108) (the entry is in
 `docs/archive/roadmap-shipped.md`). Open:
-- "Depth two" is out for listening (`docs/ALBUMS.md`).
+- "Depth two" was heard on 2026-10-11 (`docs/ALBUMS.md at commit f040b5b`).
 - Three in four 32-bar loops are micro-loops that never develop; making
   them develop would be a new kind of form. Mikey to decide.
 - The share is his to tune as he listens.

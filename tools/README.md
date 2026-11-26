@@ -73,6 +73,12 @@ Each tool's header says more. "Limits" says what the tool cannot do, or what it 
 | Check the audio export, short and long | `node tools/export.mjs`, `node tools/export-long.mjs` | the long one is export's `long` job; it holds no merge |
 | Check the move from the old address | `node tools/old-address.mjs` | Chromium (Playwright) |
 
+### Records (Research sessions, the ears' work)
+
+| Use it to | Run | Limits |
+|---|---|---|
+| Measure a record and a render the same way, and draft an album card | `python3 -P tools/ears/album.py ALBUM_DIR WORKDIR` (every script: `tools/ears/README.md`) | Python with librosa, Demucs and ffmpeg; about 40 minutes an album on two cores; each measure's limits are on the wiki's "Measuring a record" |
+
 ### Files the app ships
 
 | Use it to | Run | Limits |

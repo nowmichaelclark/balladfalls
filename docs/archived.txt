@@ -58,3 +58,11 @@ docs/ears/space-sketch.md
 docs/ears/tools.md
 docs/ears/uploads.md
 docs/notes/82-for-broken-friends.md
+
+# Part 3 (Mikey's answers, 2026-11-26): the ears fold into Research sessions,
+# so their role's docs leave (the findings are on the wiki's Ballad Falls/What
+# the ears found and its subpages; the tools and data.csv stay in tools/ears/);
+# no baked design spec is kept (design/test-kit/bake.mjs makes one).
+docs/EARS.md
+docs/ears/
+design/driftloom_v20.html

@@ -373,7 +373,7 @@ brain's understanding directly: a guess that keeps missing means the
 brain hasn't heard the word yet. It also answers whether the catalog can
 make a word at all, which is what recipes are for (roadmap 19, steps 1-3).
 The five-word ranking rests; its 181 trials stay the base for the fit.
-Pilots: "Heartwarming?" and "Joyful?" (`docs/ALBUMS.md`), the two heart
+Pilots: "Heartwarming?" and "Joyful?" (`docs/ALBUMS.md at commit f040b5b`), the two heart
 words that almost never fit.
 
 **The pilots worked.** Words that fit almost no random loop in the

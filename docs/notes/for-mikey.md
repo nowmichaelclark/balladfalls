@@ -69,7 +69,7 @@ Each is a few minutes. Say a step's number if something is wrong.
    2026-11-25; promise 1 on a phone): install `balladfalls-1.0.apk` from
    <https://github.com/nowmichaelclark/balladfalls/releases/tag/v1.0> (no
    sign-in needed; it installs beside a test build, as its own app). Play
-   E9T-ZxDxj, then the Batch 6 album (its link in `docs/ALBUMS.md`): screen off for ten minutes, then a few minutes behind the home screen. No
+   E9T-ZxDxj, then the Batch 6 album (<https://balladfalls.com/#c=FAPJKOYsYDW0FJ7ZatZAW0HGfJIxZAJ4c7hKCWkMJu7pCOAWsHJKky18BWgJJHbNWxCWwHJXpKi6AWkLJ63vuPBW8HJxTa0wAW4IJTYm7NBWwJJH3VwoDWkGJ8i3bEBW0GGCVXKDBJFzdmMAWwKWgIeSQmF0Y2ggNiBpbiB0aGUgYXBwTr>): screen off for ten minutes, then a few minutes behind the home screen. No
    gap, no crackle, the loops changing on their time. Then Diagnostics,
    refresh, copy, send it with the phone's name (it now has "screen off: N s"
    and "lite by itself").
@@ -248,20 +248,9 @@ Each is a few minutes. Say a step's number if something is wrong.
   About 1 new loop in 10 is one now (64 to 512 bars, weighted to the short end;
   a round 1 to 39 minutes, typically 4): two numbers in `data/longform.txt`,
   `[longform unasked]`, if you want more or fewer, longer or shorter.
-- **The three albums in the app** (brain B4, `docs/ALBUMS.md`): batch 6, the
-  nearer chords and the long pieces, as links the app plays, on your own devices.
-  One word a track only if something sounds wrong. The long pieces' later fixes
-  (item 102f and 102g's clips, no join a hole, on the branch `long-clips`) and
-  "no join a hole on soath-wa" (corpus piece #27 as a 1,024-bar arc, at about
-  38:50 and 45:35, and as an Endless arc at about 9:20) are there too.
 - **twang** (v179, #414): every loop that plays twang plays the soft one;
   he-rosk (corpus #33, was bright) and tom-wen (#172, was slow) are the two that
   changed: the same picks, a beat apart. Say if either still sounds off.
-- **Phase 3 Control** (`docs/ALBUMS.md`, v155): six loops, one album code, the
-  old app and today's, each about 45 s, one word a loop. tui-doask (track 1, from
-  about 0:31) and soath-wa (track 4, from about 0:27) used to come back narrow in
-  stereo for about ten seconds after a long rest; Now may sound the same as Before
-  or wider there.
 - **The FLAC writer** (item 104a): 16 or 24 bits with no dither (the conservative
   pick). If a very quiet fade-out ever sounds grainy on headphones, say so and a
   seeded dither is a small change.

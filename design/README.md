@@ -5,7 +5,7 @@ This folder is the **design spec** for the one-screen phone app. It is not part 
 ## What this is
 
 - **The app has moved on (session 30f, v196 to v198):** a second layout for a phone on its side, the panel's height steps, and the accessibility pass (`docs/PAINTER.md`, "What the final pass settled"). Bake again before designing on the file below.
-- **Current file:** `driftloom_v20.html` (v20, Painter session 6: the vibe key, and any and ∞ in the Length picker; v19 is archived: `docs/archived.txt`). One phone, exactly as the app draws it, at 340 × 780. Use it like the app: the bottom keys move between views, **Library › More** picks the theme, Play starts the playhead. Review controls beside the phone switch the view, text size (100 / 130 / 150 / 200%), insets (iPhone, Android, this device), touch-target outlines and reduced motion, and an audit line re-measures the phone after every change.
+- **No baked file is kept (Mikey, 2026-11-26).** The last one, `driftloom_v20.html` (v20, Painter session 6), left the tree; it reads at the commit before this change (`docs/archived.txt`). Bake it again (below) when a Painter session needs it, and do not commit it: the app is the spec. The baked page is one phone, exactly as the app draws it, at 340 × 780, with review controls beside it for the view, text size, insets, touch targets and reduced motion.
 - **It is baked from the app (since v18, Painter session 5).** `test-kit/bake.mjs` runs the real app in headless Chromium, seeds a library, plays an album, visits every view at each text size and copies what the app drew. The phone's stylesheet is `css/style.css` itself. So the spec stays in step with the app as long as it is baked again after every change to the look.
 - **Until v17 it went the other way:** the spec was drawn by hand (nine phones, one per theme) and the app followed it. v17 and its full handover (sessions 1–12, v13–v17) were kept unchanged in `archive/driftloom_v17_library.html`, now archived (`docs/archived.txt`).
 
@@ -20,7 +20,7 @@ This folder is the **design spec** for the one-screen phone app. It is not part 
 ```
 cd design/test-kit
 npm install            # Playwright; if the sandbox already has a Chromium, pin playwright to its version
-node bake.mjs          # writes ../driftloom_v20.html
+node bake.mjs          # writes ../driftloom_v20.html (not committed)
 node sheet18.mjs ../driftloom_v20.html out/sheet.png --places layers --themes all
 node picks_shots.mjs out/picks --themes all --sizes 100,200   # the next picks in the app, measured
 ```

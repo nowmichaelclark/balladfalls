@@ -1,4 +1,4 @@
-// The ten dials, measured (queue item 34).
+// The ten dials, measured.
 //
 // Run with:  node tools/dials.mjs <export.jsonl | code ...> [--json <file>]
 //

@@ -3,9 +3,9 @@
 // AudioWorkletGlobalScope gives it stubbed.
 // Run with:  node test/worklet.test.mjs
 //
-// What they pin down: which block the worklet asks the core to render
-// (queue item 31b): the frame count that rides out Chromium's stale
-// `currentFrame`, and (item 32) never goes backward, however long the clock
+// What they pin down: which block the worklet asks the core to render:
+// the frame count that rides out Chromium's stale
+// `currentFrame`, and never goes backward, however long the clock
 // stays stale; the Mono switch; how busy the audio thread is; and the
 // player's commands and events as the app sends and reads them (94b, 95).
 
@@ -216,7 +216,7 @@ console.log('\nThe core\'s player (queue item 94b)');
   for (let i = 0; i < 8; i++) {
     const seed = r.seed32();
     const spec = newSpec(seed, i % 2 ? vibeSelection(['cozy', 'rainy'].slice(0, 1 + (i % 2))) : null);
-    // A long piece (here one drawn with nothing asked, queue item 117) never
+    // A long piece (here one drawn with nothing asked) never
     // moves a tone edited, and the edits sent whole carry the tone: its
     // sections are not the bare request's, as an asked length's aren't.
     if (spec.length != null) { pieces++; continue; }

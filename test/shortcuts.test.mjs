@@ -1,4 +1,4 @@
-// The keyboard (session 30n, item 122; Mikey, 2026-11-23), with no browser.
+// The keyboard (Mikey, 2026-11-23), with no browser.
 // Run with:  node test/shortcuts.test.mjs
 //
 // What it pins down: every key of a keyboard, alone and with Shift, on

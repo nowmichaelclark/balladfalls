@@ -1,4 +1,4 @@
-// The wander as it is played (queue item 102b; docs/LONGFORM.md, "The
+// The wander as it is played (docs/LONGFORM.md, "The
 // wander"): what tools/longform.mjs checks on the plan, checked again on what
 // the player plays, read from its calls (`dlrender --seed --calls`) and its
 // samples (`dlrender --seed --wav`), beside the piece's map (the tools'
@@ -15,8 +15,7 @@
 //   length    the chords' notes the same but their lengths
 //   density   the tune's notes a few fewer or more, the rest the same
 //   key       every pitched layer moved the same few semitones
-//   theme     the tune's notes another tune's (the piece's second theme,
-//             session 14), or none where that theme rests
+//   theme     the tune's notes another tune's (the piece's second theme), or none where that theme rests
 //   warmth    the tone's lowpass gliding; space: the room's
 //
 // and every check is the plan's, held to what was heard: at most one thing
@@ -50,7 +49,7 @@ const GLIDING = ['layers', 'warmth', 'space', 'density'];
 /** How long a move glides, as data/longform.txt has it ([longform wander] glide). */
 const GLIDE = Number(fs.readFileSync(path.join(ROOT, 'data', 'longform.txt'), 'utf8').match(/^glide = (\S+)/m)?.[1] ?? 24);
 /** How long a finite arc's landing lasts at least, in seconds ([longform energy] land). */
-// A join's length (session 15, `[longform joins]`): at most `bars` bars and
+// A join's length (`[longform joins]`): at most `bars` bars and
 // `share` of its unit; a breath `breath` of that.
 const JOIN = Object.fromEntries(['bars', 'share', 'breath'].map((k) => [k, Number(fs.readFileSync(path.join(ROOT, 'data', 'longform.txt'), 'utf8').split('[longform joins]')[1].match(new RegExp(`^${k} = (\\S+)`, 'm'))[1])]));
 const LAND = Number(fs.readFileSync(path.join(ROOT, 'data', 'longform.txt'), 'utf8').match(/^land = (\S+)/m)?.[1] ?? 4);
@@ -64,7 +63,7 @@ const SPREAD = (() => {
 /**
  * The request that plays the loop of `seed` as itself (no plan): `rest`
  * (the request but its length and journey) with the loop's own bars asked.
- * With no length asked a loop is sometimes a long piece (queue item 117);
+ * With no length asked a loop is sometimes a long piece;
  * a short length asked is the loop's own and moves no other draw, so this
  * plays what no length asked played before, sample for sample.
  */
@@ -74,7 +73,7 @@ export function itself(seed, rest = '') {
 }
 
 /** The release dlrender, built once. */
-// Whether a loop's progression planes (planingSevenths, queue item 101f):
+// Whether a loop's progression planes (planingSevenths):
 // every chord of its harmony a major seventh with a scale of its own. Its
 // tonic chord is then major whatever the mode (the landing's triad,
 // `heard::Heard::land`).
@@ -193,7 +192,7 @@ export function playedChecks(seed, request, seconds) {
   const seam = (n) => form.sections && n % form.sections !== n && (n % form.sections) * sectionSeconds <= GLIDE + form.unitSeconds + 0.01;
   // A layer with a cycle of its own plays other notes each section: read
   // by its gain alone (it differs in most sections, the plan's or not).
-  // A join's last bar (session 15: a breath, a pivot's chord and its bass,
+  // A join's last bar (a breath, a pivot's chord and its bass,
   // the floor out) is the line's, not a move: the steps of either
   // section's joins are left out of both before they are compared.
   const barSteps = spb;
@@ -217,7 +216,7 @@ export function playedChecks(seed, request, seconds) {
     CH.forEach((l, i) => {
       const [la, lb] = pair(n, i);
       let m = !cycling[i] && moved(l, la, lb);
-      // The tune handed to the second theme, or home again (session 14):
+      // The tune handed to the second theme, or home again:
       // other notes, more or fewer, or none (a theme that rests), on the
       // move's line; a move inside a section is heard in the next too.
       if (m && l === 'melody' && moves.some((x) => x.thing === 'theme' && (x.section === n || (x.section === n - 1 && x.phrase > 0)))) m = 'theme';
@@ -296,9 +295,9 @@ const powerDb = (x, from, to) => {
   return 10 * Math.log10(s / Math.max(1, b - a) + 1e-20);
 };
 
-// A join is a hole (session 16's yardstick) where, as played, it leaves the
-// mix far under the loop as itself at the same moment: brain B3 measured
-// the two holes it found (a pivot struck at 0, the tune alone over a silent
+// A join is a hole (the hole yardstick) where, as played, it leaves the
+// mix far under the loop as itself at the same moment. A listening
+// measured the two holes it found (a pivot struck at 0, the tune alone over a silent
 // tune) 30 to 58 dB under and a breath 8 to 13, and asked for about 20; read
 // on each join's own window as played, an arc's breath (every layer out,
 // the tails ringing) sits up to 21.8 dB under (2 of 118 over 47 arcs), the
@@ -333,8 +332,8 @@ function frameDepths(piece, loop, rate, from, to) {
 }
 
 /**
- * How far under the loop as itself each of a piece's joins leaves the mix
- * (session 16): for every unit whose join, as played (`playedJoins`: the
+ * How far under the loop as itself each of a piece's joins leaves the mix:
+ * for every unit whose join, as played (`playedJoins`: the
  * join the loop can play of the plan's, at the wander's amount 0, as the
  * renders here are made), does more than glide (a pivot or a fill, or a
  * join that takes out a note there: one of a layer it takes out, not
@@ -387,8 +386,8 @@ export function joinDepths(seed, request, count, start, piece, loop, rate) {
     const before = median(frameDepths(piece, loop, rate, from - beat, from));
     const deep = frames >= HOLE_DB;
     const made = !(frames - before < HOLE_DB / 2);
-    // (How long the window sits HOLE_DB under, in beats: session 16b's
-    // three places are held to half a beat.)
+    // (How long the window sits HOLE_DB under, in beats: the
+    // three places found by ear are held to half a beat.)
     const under = Math.min(each.filter((d) => d >= HOLE_DB).length * FRAME, end - from) / beat;
     out.push({ t: from, section: u.section, phrase: u.phrase, join: u.join, depth: own - powerDb(piece, a, b), frames, before, under, hole: deep && made, inherited: deep && !made });
   }
@@ -518,7 +517,7 @@ function lufsOf(data, rate, stretches) {
 }
 
 /**
- * An arc as heard (queue item 102c): play `request` of `seed` for its
+ * An arc as heard: play `request` of `seed` for its
  * whole round and `extra` seconds of the next (at the wander's amount
  * `wander`: 1 the app's, 0 the plan alone with no breathing; 22.05 kHz), and read, unit by unit, its loudness by ear and its
  * brightness (the spectrum's centroid) beside the map's energy and role;
@@ -584,7 +583,7 @@ export function arcChecks(seed, request, { extra = 20, rate = 44100, wander = 1 
   let later = 0;
   for (const line of calls.split('\n')) {
     const p = line.split(' ');
-    // (Struck notes only: one at velocity 0 is silent, session 15.)
+    // (Struck notes only: one at velocity 0 is silent.)
     if (p[0] !== 'note' || p[2] !== '1' || !(num(p[6]) > 0)) continue;
     const at = num(p[3]);
     if (at >= landT && at < landT + 0.4) {
@@ -600,7 +599,7 @@ export function arcChecks(seed, request, { extra = 20, rate = 44100, wander = 1 
   dlrender(['--seed', String(seed), '--request', itself(seed, rest), '--seconds', String(seconds), '--rate', String(rate), '--wander', String(wander), '--wav', wavFile]);
   const loop = readWav(wavFile).data;
   fs.rmSync(wavFile, { force: true });
-  // Each join against the loop as itself there (session 16: never a hole).
+  // Each join against the loop as itself there (never a hole).
   const depths = joinDepths(seed, request, Math.max(1, sections), start, data, loop, rate);
   const whole = spans.map(([a, b], i) => b - a >= 0.99 * units[i].bars * barSeconds * rate);
   const ownLufs = lufsOf(loop, rate, spans.map(([a, b]) => [a, Math.max(a + 1, b)]));
@@ -615,15 +614,15 @@ export function arcChecks(seed, request, { extra = 20, rate = 44100, wander = 1 
   // A whole, at home): there the loop as itself is the arc's reference
   // note for note. A unit in another key, a fragment (half of each phrase
   // a rest) or another tune plays other notes than the loop does in those
-  // bars (session 14), so its step is what the notes are, not only what
+  // bars, so its step is what the notes are, not only what
   // the arc adds to them.
   const plain = units.map((u) => u.theme === 'A' && !u.fragment && !u.calls && u.key.relation === 'home' && !['answered', 'stretched', 'reharmonized'].includes(u.variation));
   const stepOwn = Math.max(0, ...lufs.slice(1).map((l, i) => (whole[i] && whole[i + 1] && plain[i] && plain[i + 1] ? Math.abs(l - ownLufs[i + 1] - (lufs[i] - ownLufs[i])) : 0)));
-  // The units that sound the loop's own notes in its own voice and register
-  // (session 14): a return an octave up or in another voice is brighter or
+  // The units that sound the loop's own notes in its own voice and register:
+  // a return an octave up or in another voice is brighter or
   // darker than the loop there by what the variation is, not by the arc's
   // energy, so the brightness order is reported on these beside all units.
-  // (A lift's or a peak's register is session 13's double: its own.)
+  // (A lift's or a peak's register is a double: its own.)
   const ownTone = units.map((u) => u.theme === 'A' && !u.fragment && !u.calls && u.key.relation === 'home' && (['plain', 'outline'].includes(u.variation) || (u.variation === 'register' && ['lift', 'peak'].includes(u.role))));
   const keep = (_, i) => body[i];
   // The arc's own shape: each unit against the loop as itself there.
@@ -659,7 +658,7 @@ function spearman(x, y) {
 }
 
 /**
- * What `arcChecks` measured, judged (queue item 102c's yardsticks): the
+ * What `arcChecks` measured, judged (the arc's yardsticks): the
  * loudness and the brightness rise from the opening to the peak and fall
  * from it to the close, in the planned order (each above the opening's and
  * the close's at the peak, and following the plan's energy role by role:
@@ -730,17 +729,17 @@ export function arcVerdict(r) {
   const rings = r.rms.length > 2 && top - r.rms.at(-1) >= 15 && Math.max(...falls) <= 12;
   // No step past 2 LU between neighboring units in what the arc adds (the
   // loop's own form moves as it always did, and is reported beside).
-  // (Session 14: 2 LU where both units play the loop's own notes; 3 LU
+  // (2 LU where both units play the loop's own notes; 3 LU
   // where one plays other notes, a fragment, another key or another tune.)
   const jumps = r.stepOwn <= 2 && r.step <= 3;
   const heard = (m, list) => m.peak > m.opening && m.peak > m.close && spearman(roleEnergy, byRole(list)) >= 0.5;
   return {
     loud, tilt, lift, brighter, loudOrder, brightOrder, unitOrder,
     loudRises: rises(lift, loudOrder), brightRises: rises(brighter, brightOrder), brightOwn,
-    // The arc's own job (session 15): darker at the opening and the close
+    // The arc's own job: darker at the opening and the close
     // than at the peak, the roles between apart (a return an octave up, a
     // lift in another voice, a release in outline read brighter or darker
-    // on purpose since session 14).
+    // on purpose).
     brightEnds: brighter.peak > brighter.opening && brighter.peak > brighter.close,
     loudHeard: heard(loud, lufs), brightHeard: heard(tilt, bright),
     over: lift.peak - lift.opening, overHeard: loud.peak - loud.opening,
@@ -750,7 +749,7 @@ export function arcVerdict(r) {
 }
 
 /**
- * An arc's joins (queue item 102c): `request` of `seed` and the same seed
+ * An arc's joins: `request` of `seed` and the same seed
  * as a plain loop, each played `seconds` at the wander's amount 0 (the
  * plan with no breathing, so the two play the same notes but for the
  * plan's), at 44.1 kHz; at every unit's line, from 20 ms before it to 300
@@ -781,7 +780,7 @@ export function arcJoins(seed, request, seconds) {
       const [a, b] = [Math.round((t - 0.02) * rate), Math.round((t + 0.3) * rate)];
       joins.push({ t, piece: stepMax(piece.data, a, b), loop: stepMax(loop.data, a, b) });
     }
-    // Where a join begins inside the unit (session 15): `[longform joins]`'s
+    // Where a join begins inside the unit: `[longform joins]`'s
     // length before the line, a breath's share of it, the last beat for a
     // fill; the same window, held the same way.
     const len = Math.min(JOIN.bars, JOIN.share * u.bars) * bar;
@@ -793,13 +792,13 @@ export function arcJoins(seed, request, seconds) {
     }
     t += u.bars * bar;
   }
-  // Each join against the loop as itself there (session 16: never a hole).
+  // Each join against the loop as itself there (never a hole).
   joins.depths = joinDepths(seed, request, Math.ceil(seconds / (form.sectionBars * bar)) + 1, start, piece.data, loop.data, rate);
   return joins;
 }
 
 /**
- * An ending that lands (session 15; the brief's "Endings that land"):
+ * An ending that lands (the brief's "Endings that land"):
  * `request` of `seed` played with the length slider set to `bars` bars
  * (`dlrender --track`: at the track's end the core's own next loop follows,
  * as in the app), at the wander's amount `wander`. Read: the stop (the

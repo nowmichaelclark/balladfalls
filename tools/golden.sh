@@ -1,5 +1,5 @@
 #!/bin/sh
-# The golden renders on one target (queue item 42): render every note list
+# The golden renders on one target: render every note list
 # in core/golden/ on TARGET and compare the hashes with the ones kept for it.
 #
 #   tools/golden.sh [TARGET]            render, compare with core/golden/TARGET.hashes
@@ -15,14 +15,14 @@
 #                                       block size does (1, 64, 128, 441 and 1,024 frames a
 #                                       call, and a different number every call): the
 #                                       speaker output must be the plain render's, to the
-#                                       bit. Three short lists, or all of them (queue item 45)
+#                                       bit. Three short lists, or all of them
 #   tools/golden.sh --rates [--update] [TARGET]
 #                                       render the lists in core/golden/rates.txt at the
 #                                       sample rates it names and compare with
 #                                       core/golden/rates.hashes, one file for every target:
 #                                       the same code makes the same samples at any rate,
-#                                       everywhere (queue item 45)
-#   tools/golden.sh --stereo ...        any of the above on the stereo render (queue item 64):
+#                                       everywhere
+#   tools/golden.sh --stereo ...        any of the above on the stereo render:
 #                                       both sides hashed, kept in core/golden/TARGET.stereo.hashes
 #                                       (and rates.stereo.hashes) beside the mono files
 #   tools/golden.sh --diff DIR_A DIR_B  how the WAVs written by two --wav runs differ,
@@ -35,7 +35,7 @@
 # defaults to this machine's. The others are built with the pinned
 # toolchain and run directly (x86_64) or under QEMU's user mode, as
 # core/.cargo/config.toml says. Each target is held to its own file, and
-# since the core carries its own math (queue item 43) every file must equal
+# since the core carries its own math every file must equal
 # wasm32's: --strict, which CI runs, fails on any difference. Rendering
 # twice in one process must give the same hashes on every target; that is
 # checked on every run.

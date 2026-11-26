@@ -1,4 +1,4 @@
-// The album's zip (js/zip.js, item 121): CRC-32 against zlib's, a patch's
+// The album's zip (js/zip.js): CRC-32 against zlib's, a patch's
 // checksum folded in against the patched bytes' own, and a zip of a few
 // entries (one dropped, one patched, UTF-8 names) read back here from the
 // spec and, where it is installed, by `unzip` (its test and its listing).

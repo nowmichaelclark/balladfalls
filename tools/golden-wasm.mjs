@@ -1,4 +1,4 @@
-// The golden renders on the WebAssembly target (queue item 42): every note
+// The golden renders on the WebAssembly target: every note
 // list in core/golden/ rendered through js/dlplayer.wasm in Node, with the
 // same exports the worklet calls, and hashed.
 //
@@ -13,7 +13,7 @@
 //                                               output is not the plain render's
 //   node tools/golden-wasm.mjs --wasm FILE      render through another build (the 192 kHz
 //                                               one, tools/build-core.sh --wide)
-//   node tools/golden-wasm.mjs --stereo         the stereo render (queue item 64): both sides
+//   node tools/golden-wasm.mjs --stereo         the stereo render: both sides
 //                                               hashed, as the native host's --stereo
 //
 // tools/golden.sh compares the lines with core/golden/wasm32-unknown-unknown.hashes.

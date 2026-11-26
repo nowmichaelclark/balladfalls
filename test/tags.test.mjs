@@ -1,4 +1,4 @@
-// An exported file's tags (js/tags.js, item 121): the tags a loop and an
+// An exported file's tags (js/tags.js): the tags a loop and an
 // album's track get, FLAC's VORBIS_COMMENT and PICTURE blocks read back
 // from the format's spec, Opus's picture comment, a picture's size from its
 // bytes, and OpusTags with a cover over several Ogg pages (js/ogg.js) joined

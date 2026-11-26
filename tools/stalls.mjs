@@ -1,4 +1,4 @@
-// Stalls while hidden (queue item 39): the real app, playing in headless
+// Stalls while hidden: the real app, playing in headless
 // Chromium with the tab hidden and the CPU throttled, while the clock's
 // ticks are held back on purpose -- what a locked phone does to a page when
 // it throttles its worker, parks its CPU or freezes its renderer for a
@@ -10,8 +10,7 @@
 // the harness runs before the page's own (as tools/rows.mjs injects
 // its hooks), so nothing here ships:
 //
-//   ticks      the page's Workers (the page's own clock was one, until
-//              queue item 97; the cover's is another). Their
+//   ticks      the page's Workers (the cover's is one). Their
 //              messages are dropped while a stall is on, as a throttled
 //              worker would send none. Each stall pattern runs `--each`
 //              times: "now and then" (a stall, then 6 s of normal ticks) and
@@ -20,8 +19,8 @@
 //              starved of CPU): the ticks queue up and arrive together.
 //   freeze     the page frozen (Page.setWebLifecycleState) for the stall's
 //              length, where Chromium allows it.
-//   hidden     no stall: the tab stays hidden for the stall's length (queue
-//              item 94b's minute), as it is throughout.
+//   hidden     no stall: the tab stays hidden for the stall's length (a
+//              minute), as it is throughout.
 //   jumps      no stall: Next, Previous and Pause then Play, from the media
 //              keys (the same calls the lock screen's and a headset's
 //              buttons make), each checked for acting at once: how long
@@ -70,12 +69,12 @@ export const LOOPS = {
   shatter: { name: 'shatter-glein-fei', code: 'EY676JASAw4ji4xm-9sJfSBohq0xus0o-EfSC6-1nw6kkpkiBhBsq' },
   cinder: { name: 'cinder-da-yoan', code: 'E-M5dYBSAwi0oj94ox8JfSB4tuzg2l6ks2ChBSC6tujg33ntqPhBPF' },
   hollow: { name: 'hollow-laith-hu', code: 'E6SNCEDSA0gloz1lp15HfSBi5oio03onjKfSC6-1nw6kkpkiBhBjW' },
-  // Shatter's seed as a piece of 32,768 bars and as Endless (queue item 95:
+  // Shatter's seed as a piece of 32,768 bars and as Endless (the
   // long pieces and Endless play from the core alone).
   piece: { name: 'glein-fei', code: 'EY676JAF__fSAw4ji4xm-9sJfSBohq0xus0o-EfSC6-1nw6kkpkiBhBm4' },
   endless: { name: 'glein-fei', code: 'EY676JAGSAw4ji4xm-9sJfSBohq0xus0o-EfSC6-1nw6kkpkiBhBiv' },
-  // (Those two draw the wander.) An arc of 32,768 bars and an Endless arc
-  // (session 15): brum-yei (corpus 20261009 #17), its kit, its two themes,
+  // (Those two draw the wander.) An arc of 32,768 bars and an Endless arc:
+  // brum-yei (corpus 20261009 #17), its kit, its two themes,
   // its keys and its joins; the codes carry no journey, and its seed draws
   // the arc at both.
   arc: { name: 'brum-yei', code: 'ElG_oEBF__fSAqwi2j07hotBdSBk-w7k1r-lyIfSCi2vlw31wmsYhBeb' },
@@ -136,7 +135,7 @@ export function findChrome(explicit) {
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// The app's URL. There is one engine, the core's player (queue item 97).
+// The app's URL. There is one engine, the core's player.
 export function engineUrl(port) {
   return `http://127.0.0.1:${port}/`;
 }
@@ -276,7 +275,7 @@ export const INSTRUMENT = `(() => {
     if (m && m.type === 'note' && S.ctx) S.notes.push([m.time, S.ctx.currentTime]);
     if (m && m.type === 'cancel' && S.ctx) {
       S.cancels.push(S.ctx.currentTime);
-      // A cancel from a time (queue item 40): when it was sent, and the time.
+      // A cancel from a time: when it was sent, and the time.
       if (m.from != null) (S.froms = S.froms || []).push([S.ctx.currentTime, m.from]);
     }
     return post.call(this, m, ...rest);
@@ -344,7 +343,7 @@ export async function openTab(b, url, throttle, { sources = [], setup = null } =
     }
     const late = String(out.engine || '').match(/late: (\d+)/);
     out.coreLate = late ? Number(late[1]) : null;
-    // The page's own measure of the audio thread (queue item 87b): the
+    // The page's own measure of the audio thread: the
     // busiest quarter-second as a share of real time, over the last 20 s and
     // the last 60 s. Over 100% the output runs dry: an underrun. Chromium
     // 153 has no `playoutStats`, so this is what the tool has for them.

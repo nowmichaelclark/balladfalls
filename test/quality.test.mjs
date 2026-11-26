@@ -1,5 +1,4 @@
-// "Lighter on processor" chosen by the app on slow devices (queue item 87b,
-// js/quality.js): the measurements kept only while the loop plays, the rule
+// "Lighter on processor" chosen by the app on slow devices (js/quality.js): the measurements kept only while the loop plays, the rule
 // (full to lite past OVER, or at once for a render that falls behind; lite to
 // full once, only from the first guess), the listener's choice never
 // overridden, no back and forth, the boundaries a switch waits for, and the
@@ -139,7 +138,7 @@ console.log('too slow even on lite (queue item 100)');
   for (let t = 0; t < 40; t += 2) busy.add({ max: 1.2, behind: 8, windows: 8, seconds: 2 }, true, t);
   busy.add({ max: 0.2, behind: 0, windows: 8, seconds: 2 }, false);
   check('a pause starts the count again', q.stuck({ quality: 'lite', busy }) === null);
-  // The Android app (session 27): the line can't show there, however the
+  // The Android app: the line can't show there, however the
   // native core's reports read.
   const app = new q.Busy();
   for (let t = 0; t < 40; t += 2) app.add({ max: 1.2, behind: 8, windows: 8, seconds: 2 }, true, t, t * 4);

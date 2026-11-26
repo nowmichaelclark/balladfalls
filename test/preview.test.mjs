@@ -1,5 +1,5 @@
-// Links, the album from one seed and the link preview (queue item 105c;
-// session 24), through the page's own modules: a link is the address with
+// Links, the album from one seed and the link preview,
+// through the page's own modules: a link is the address with
 // the code after "#c=" and reads back to the code; a pasted link is its
 // code; an album of one seed of 12 tracks has a code under 20 characters
 // and the same 12 tracks every time it is read; and the preview's tags in

@@ -1,6 +1,6 @@
-// The audio export's yardsticks in Node (queue item 104b): the export's own
+// The audio export's yardsticks in Node: the export's own
 // render (js/export-render.js, what js/export-worker.js runs) on the app's
-// module (js/dlplayer.wasm, with the FLAC writer since session 20).
+// module (js/dlplayer.wasm, with its FLAC writer).
 //
 //   node tools/export.mjs                  the null checks and the sizes
 //   node tools/export.mjs --hours H        also H hours exported to a file,
@@ -11,7 +11,7 @@
 //                                          tools/export-long.mjs writes both)
 //   node tools/export.mjs --sizes N        N corpus loops for the sizes (24)
 //
-// The small format (queue item 104c) is checked here as far as Node can: the
+// The small format is checked here as far as Node can: the
 // same render at 48 kHz (`format: 'opus'`, the samples the browser's encoder
 // is given) nulls against a straight render at 48 kHz, float for float; and
 // `--file F.opus --job J` checks an Opus file the app exported (the encoder
@@ -39,7 +39,7 @@
 // mono and stereo; the most of them is what js/export.js plans with
 // (BYTES_PER_SECOND), and the check fails if any loop takes more.
 //
-// The tags and the album (item 121): an album of four tracks exported both
+// The tags and the album: an album of four tracks exported both
 // ways (one zip, a file a track) in both formats, as the Worker writes them
 // (js/tags.js's blocks and comments, js/zip.js's zip), each file decoding
 // with ffmpeg, its tags read back by ffprobe (title, album, track N/4, the
@@ -388,7 +388,7 @@ async function opusFileCheck(file, { job, stop, fade }) {
   const lags = [-1, 0, 1];
   const sig = [0, 0, 0];
   const err = [0, 0, 0];
-  // The audio alone (an exported file carries its cover too, item 121).
+  // The audio alone (an exported file carries its cover too).
   const ff = spawn('ffmpeg', ['-v', 'warning', '-i', file, '-map', '0:a', '-f', 'f32le', '-'], { stdio: ['ignore', 'pipe', 'pipe'] });
   let warnings = '';
   ff.stderr.on('data', (d) => { warnings += d; });

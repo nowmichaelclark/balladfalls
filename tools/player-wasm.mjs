@@ -1,4 +1,4 @@
-// Loops from their seeds on the player in WebAssembly (queue item 82):
+// Loops from their seeds on the player in WebAssembly:
 // js/dlplayer.wasm in Node, through the exports the worklet calls with
 // `?engine=player`, printing the same hash lines `dlrender --seed` prints
 // natively, so the two can be held to each other (every target renders the
@@ -8,12 +8,12 @@
 //        [--seconds 45] [--rate 44100] [--lite] [--stereo] [--wander 1]
 //        [--vibes ID,...] [--request TEXT] [--wasm FILE]
 //                       one line a loop, as `dlrender --seed` prints it
-//                       (--request: queue item 85's request as text,
+//                       (--request: a request as text,
 //                       "glacial=0.7,bpm=70-85", as `dlrender --request`)
 //   ... --costs         what each block costs (the load spread across blocks,
 //                       as a real-time host plays it; each block's least time
 //                       over three runs, or --runs N), as `dlrender --costs` measures it
-//   ... --changes N     what changes of loop cost (queue item 86): corpus loop
+//   ... --changes N     what changes of loop cost: corpus loop
 //                       pairs from --corpus SEED:2N, each played, then changed
 //                       at a moment (the five kinds in turn, `dl_play_change`,
 //                       crossfade --crossfade S, default 1), its blocks timed

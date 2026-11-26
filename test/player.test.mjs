@@ -1,5 +1,5 @@
-// The page's reader of the core's generator (js/gen.js, queue item 97) and
-// the player's commands and events in js/dlplayer.wasm (queue item 94a),
+// The page's reader of the core's generator (js/gen.js) and
+// the player's commands and events in js/dlplayer.wasm,
 // against the core's own account of the same loop (tools/gen-lib.mjs: the
 // canonical texts the generation goldens hash, from the tools' build): the
 // page's record of a loop is the core's spec, field for field; its notes are
@@ -30,7 +30,7 @@ try {
 const CASES = casesOf(fs.readFileSync(fileURLToPath(new URL('../core/golden/generation.hashes', import.meta.url)), 'utf8'));
 
 // The page's record of `seed` with `request` (text or null), its `edit.`
-// items made as the app makes them (queue item 94a): a re-roll as
+// items made as the app makes them: a re-roll as
 // `rerollLayer` makes it (a copy, the layer's seed, `forceLayers`), a seed
 // alone, the Sound panel's tone, the tempo slider's bpm.
 function edited(seed, request) {
@@ -219,7 +219,7 @@ function describes(label, x, spec, c) {
 // The next few passes' grids, read as each pass begins (in a piece, any
 // loop with a length asked, each section, as it wanders a section at a
 // time), against the core's wandered passes (the goldens' `passes`, pass 1
-// on, at the app's default amount), as heard (session 30b): the kit and the
+// on, at the app's default amount), as heard: the kit and the
 // bass silent until the late floor brings them in, and rising as they come.
 // The first pass is not among them: it plays the loop as composed but for
 // what its own pass draws (the goldens hold it through the player's renders,
@@ -256,7 +256,7 @@ console.log('\nThe page\'s record, its notes and the grid, against the core (24 
     const x = start(c.seed);
     const spec = edited(c.seed, null);
     describes(c.name, x, spec, c);
-    // A long piece drawn with nothing asked (queue item 117) plays its
+    // A long piece drawn with nothing asked plays its
     // sections heard (its plan rests and thins layers), which the goldens'
     // passes don't hold: tests/longform.rs and tools/longform.mjs do.
     if (spec.length == null) grids(c.name, x, spec, c, i < 10 ? 3 : 1);

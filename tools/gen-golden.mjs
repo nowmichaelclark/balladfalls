@@ -1,8 +1,8 @@
-// The generation goldens (queue item 77): for a fixed set of seeds and
+// The generation goldens: for a fixed set of seeds and
 // requests, hashes of everything the generator decides. They were taken from
-// the JavaScript generator, and the Rust port (phase 2, items 79-82) was held
-// to them step by step; since item 97 the core's generator is the only one,
-// and the file holds it where it is: nothing that is generated moves unless
+// the JavaScript generator, and the Rust port was held to them step by step.
+// Now the core's generator is the only one, and the file holds it where it
+// is: nothing that is generated moves unless
 // a PR means it to and says so.
 //
 //   node tools/gen-golden.mjs              write the hashes of every case in
@@ -27,7 +27,7 @@
 //   SET:INDEX SEED VIBES spec=H plan=H form=H drums=H bass=H chords=H melody=H
 //     texture=H meta=H choices=H load=H passes=H1,...,H8
 //
-// SEED is the loop's seed (unsigned), VIBES the request (queue item 85) as
+// SEED is the loop's seed (unsigned), VIBES the request as
 // its text (`Request::parse`): the vibes asked for, in the frozen order,
 // comma-separated, each with its weight or not
 // ("glacial=0.7"), the tempo ("bpm=77", "bpm=70-85"), the theme
@@ -42,8 +42,8 @@
 // core/src/generator/canon.rs). Each H is an FNV-1a 64 hash (16 hex digits)
 // of a canonical text (below) of:
 //   spec     the spec (and, in the edit cases, with its edits made);
-//   plan     what render plans before any layer plays (`planOf`, queue item
-//            79): the development's sections (null for a loop that does not
+//   plan     what render plans before any layer plays (`planOf`):
+//            the development's sections (null for a loop that does not
 //            develop), the harmony as drawn, before the register work moves
 //            it, and the entry schedules (null for none) and gaps as drawn,
 //            before the repairs;
@@ -55,7 +55,7 @@
 //            applied);
 //   meta     render's meta (the voices, bass style, kit, melody cell,
 //            texture);
-//   choices  item 54's per-loop choices (`drawChoices`, through render);
+//   choices  the per-loop choices (`drawChoices`, through render);
 //   load     what the engine draws and keeps at load (`Engine.load`):
 //            glassScale, stab, organ, wash, arc, kick, subDuck, padSweep,
 //            bassLift, late (lateFloor), space, echoBeats and pumpAmount
@@ -100,49 +100,49 @@
 //                   tempo pinned, ranged, weighted vibes, six or seven vibes,
 //                   vibes with a pin, weights past 1 with a range;
 //   pins:0-239      240 seeds from Rng(8502), each with pins of the kind its
-//                   index picks (gen-golden-lib.mjs, `pinCase`; queue item
-//                   85b): a choice, several choices, the arc's settings, the
+//                   index picks (gen-golden-lib.mjs, `pinCase`):
+//                   a choice, several choices, the arc's settings, the
 //                   kick's, subDuck's and lateFloor's, padSweep's, the echo's
 //                   and the space's, and pins with vibes and a tempo;
 //   theme:0-239     240 seeds from Rng(8504), each with a theme of the kind
-//                   its index picks (gen-golden-lib.mjs, `themeCase`; queue
-//                   item 85d): the loop's own seed alone, with vibes, with a
+//                   its index picks (gen-golden-lib.mjs, `themeCase`):
+//                   the loop's own seed alone, with vibes, with a
 //                   tempo, with pins, and another seed with vibes;
 //   rest:0-23       24 themes whose own loop rests, each on a seed whose loop
-//                   draws a choir (gen-golden-lib.mjs, `restCases`; queue
-//                   item 85f): the brain's case first, then from Rng(8506),
+//                   draws a choir (gen-golden-lib.mjs, `restCases`):
+//                   the brain's case first, then from Rng(8506),
 //                   alone, with vibes, weighted vibes or a tempo.
 //   length:0-239    240 seeds from Rng(88), each with a length of the kind its
-//                   index picks (gen-golden-lib.mjs, `lengthCase`; queue item
-//                   88): 1 to 32 bars (the loop's own), 1, 2 or 3 bars, a long
+//                   index picks (gen-golden-lib.mjs, `lengthCase`):
+//                   1 to 32 bars (the loop's own), 1, 2 or 3 bars, a long
 //                   piece (33 to 40,000 bars, or 32,768), Endless, and short
 //                   or long with vibes, a tempo, pins or a theme.
 //   key:0-239       240 seeds from Rng(89), each with a key and a mode of the
-//                   kind its index picks (gen-golden-lib.mjs, `keyCase`; queue
-//                   item 89): one key, a set of keys, one mode, a set of
+//                   kind its index picks (gen-golden-lib.mjs, `keyCase`):
+//                   one key, a set of keys, one mode, a set of
 //                   modes, one of each, sets of both with vibes, one of each
 //                   with a tempo and pins, and a theme with a key or a mode.
 //   style:0-239     240 seeds from Rng(90), each with a style of the kind its
-//                   index picks (gen-golden-lib.mjs, `styleCase`; queue item
-//                   90): one profile, a set of two to five, one with vibes,
+//                   index picks (gen-golden-lib.mjs, `styleCase`):
+//                   one profile, a set of two to five, one with vibes,
 //                   with a tempo, a set with a key and a mode, one with pins,
 //                   and a theme with a style asked.
 //   voice:0-239     240 seeds from Rng(91), each with voices and layers of the
-//                   kind its index picks (gen-golden-lib.mjs, `voiceCase`;
-//                   queue item 91): one voice of a layer, a set, voices of
+//                   kind its index picks (gen-golden-lib.mjs, `voiceCase`):
+//                   one voice of a layer, a set, voices of
 //                   several layers, a layer off, a layer on, voices and layers
 //                   with a style and a key, with vibes and a tempo, and a theme
 //                   with voices and a layer.
 //   edit:0-239      240 seeds from Rng(94), each with a code's edits of the
-//                   kind its index picks (gen-golden-lib.mjs, `editCase`;
-//                   queue item 94a): a layer re-rolled (`edit.roll.drums=N`),
+//                   kind its index picks (gen-golden-lib.mjs, `editCase`):
+//                   a layer re-rolled (`edit.roll.drums=N`),
 //                   two, a layer's seed alone (`edit.seed.bass=N`), the tone
 //                   (`edit.warmth=0.6`, `edit.space`, `edit.wobble`), the
 //                   tempo the slider set (`edit.bpm=88`), and re-rolls with
 //                   vibes, a request, a length or a theme. The spec is the
 //                   request's, the edits then made on it as the app makes
 //                   them (`edited`).
-//   farEnds:0-7     batch 6's far ends pinned (queue item 101a), on corpus
+//   farEnds:0-7     batch 6's far ends pinned, on corpus
 //                   loops (corpus seed 20261009): subDuck's deep with the
 //                   sketch's 14 dB and 0.6 s (the recovery held to the kick
 //                   spacing on #45's 129 bpm), the approved duck with deep's

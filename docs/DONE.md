@@ -118,3 +118,8 @@ repository.
   file's comments without queue, item and session tags, and long ones split
   into lists. Only full-line comments change (proved by comparing the code
   with those lines removed). Nothing to hear.
+- balladfalls #21, the plain style, the comments in tools/ and test/: the
+  history tags leave the comments of 75 files, and the lines that leaned on
+  them are reworded. Stale lines fixed (gate.sh's "until 1.0",
+  build-core.sh's second module). Only comment lines change. Nothing to
+  hear.

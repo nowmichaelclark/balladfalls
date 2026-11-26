@@ -1,4 +1,4 @@
-// The core's generator, whole, for the tools (queue item 97): everything it
+// The core's generator, whole, for the tools: everything it
 // decides about a loop, read back from its canonical texts (the generation
 // goldens' parts, tools/gen-golden.mjs). The page's own reader (js/gen.js)
 // asks the module that plays for a loop's record and its notes; a tool that
@@ -25,15 +25,14 @@
 //                            eight)
 //   hashes(seed, request)    each part's hash, as the goldens' line has them
 //   pieceMap(seed, request, from, count)
-//                            a long piece's plan (queue item 102;
-//                            core/src/generator/longform.rs): { form, units },
+//                            a long piece's plan
+//                            (core/src/generator/longform.rs): { form, units },
 //                            a unit a section (or a phrase of one), each
 //                            { section, phrase, role, theme, key, energy,
 //                            changed, ... }; null for a loop that is no long
 //                            piece. What `dlgen --map` prints
 //
-// There was a JavaScript generator beside the core's until item 97, held to
-// it by the goldens; this reads the one there is.
+// The core's generator is the only one. This reads it.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -168,13 +167,13 @@ export function pieceMap(seed, request = null, from = 0, count = 64) {
 const MAP_CHUNK = 200;
 
 /**
- * A long piece's joins as played (`dl_gen_played`, session 16): for `count`
+ * A long piece's joins as played (`dl_gen_played`): for `count`
  * sections from `from`, each unit's join as `heard` plays it, at the
  * wander's amount 0: `{ section, phrase, join, from, to, out, rests, under }`,
  * `from` and `to` in the section's steps (`steps` a section), `out` the
  * layers it takes out and `rests` those the unit rests, a bit each in
  * LAYERS' order, `under` how far under the unit its notes leave the mix
- * (dB, session 16b: `Heard::under`). The map's join is the plan's; this,
+ * (dB: `Heard::under`). The map's join is the plan's; this,
  * the one heard.
  */
 export function playedJoins(seed, request = null, from = 0, count = 64) {

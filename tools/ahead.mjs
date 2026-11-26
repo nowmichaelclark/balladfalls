@@ -1,4 +1,4 @@
-// Rendering ahead on the web host (queue item 87): the player in
+// Rendering ahead on the web host: the player in
 // js/dlplayer.wasm, in Node and in headless Chromium.
 //
 //   node tools/ahead.mjs [--loops vei-koan,...] [--seconds S] [--runs N] [--rate HZ]

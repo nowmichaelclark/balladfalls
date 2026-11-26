@@ -2,7 +2,7 @@
 //
 // Run with:  node tools/stats.mjs [--n 2000] [--seed 1] [--lift-low] [--lift-high]
 //
-// Roadmap item 1 asks for the measurement harnesses to stop living in
+// The roadmap asked for the measurement harnesses to stop living in
 // throwaway scripts. This is the generation half of that: it draws a corpus
 // of loops from the core's generator (tools/gen-lib.mjs, the tools' build:
 // tools/build-core.sh --tools) -- newSpec() then render() -- and reports
@@ -224,7 +224,7 @@ function parseArgs(argv) {
       case '--choices':
         opts.choices = true;
         break;
-      // Since item 97 there is one generator, the core's: the old flag asks for nothing.
+      // There is one generator, the core's: the old flag asks for nothing.
       case '--core':
         break;
       case '--write-baseline':
@@ -314,7 +314,7 @@ function measure(spec, pattern = render(spec)) {
     // layers ended up on one voice.
     separation: null,
     sameVoice: null,
-    // Drawn on purpose (item 12) rather than by collision. A loop can have
+    // Drawn on purpose rather than by collision. A loop can have
     // sameVoice without this, and that is exactly the case the item was
     // written to stop forcing into unison.
     choir: !!pattern.meta.choir,
@@ -525,7 +525,7 @@ function summarise(records) {
     figureRepeat: mean(records.filter((r) => r.figureRepeat != null), (r) => r.figureRepeat),
     audibleRepeat: mean(records.filter((r) => r.audibleRepeat != null), (r) => r.audibleRepeat),
     separation: mean(records.filter((r) => r.separation != null), (r) => r.separation),
-    // Item 4's guarantee, and the split is by the choir rather than by the
+    // The register guarantee, and the split is by the choir rather than by the
     // drawn voice on purpose. A collision takes the separated path now, so
     // counting it as exempt would hide exactly the regression this line
     // exists to catch.
@@ -548,7 +548,7 @@ function summarise(records) {
     choirRate: records.length ? records.filter((r) => r.choir).length / records.length : NaN,
     choirLoops: records.filter((r) => r.choir).length,
     // Loops where the two pools still collide. Nothing is done about these
-    // any more; the figure is kept because it is the thing item 12 stopped
+    // any more; the figure is kept because it is the thing the choir work stopped
     // acting on, and a silent return to acting on it would be a bug.
     collisionLoops: records.filter((r) => r.sameVoice === true && !r.choir).length,
   };
@@ -706,9 +706,9 @@ const LOCKED = [
   ['motif survival', 'audibleRepeat', 'bars quoting it audibly', (s) => s.audibleRepeat],
   ['choir', 'choirRate', 'deliberate choir rate', (s) => s.choirRate],
   // Two readings of "keys against melody collide". The register one is
-  // item 4's guarantee: outside a choir, the keys and the tune are kept
+  // the register guarantee: outside a choir, the keys and the tune are kept
   // apart. The voice one is the pools drawing the same voice by accident,
-  // which item 12 stopped acting on; it is locked so that a change to what
+  // which the choir work stopped acting on; it is locked so that a change to what
   // collides is noticed, and it is the figure most likely to move when a
   // new profile puts one voice in both pools -- which would be a reason to
   // rewrite the baseline, not a bug.
@@ -888,7 +888,7 @@ function check(opts) {
 
 // ------------------------------------------------------------- the quiz
 
-// Item 12's acceptance line is "a listener who did not know the feature
+// The choir's acceptance line is "a listener who did not know the feature
 // existed can pick the choir loops out of twenty by ear", and it says
 // outright that this is not a number stats.mjs can produce. What it can do
 // is set the test up so somebody can actually sit it: draw a corpus, take
@@ -1056,7 +1056,7 @@ function drumVariety(opts) {
 
 // ------------------------------------------------------------ --depth
 
-// Queue item 12's yardstick, by loop length: how many of a loop's bars
+// The choir's yardstick, by loop length: how many of a loop's bars
 // carry a melody, how many of those bars differ from each other, the same
 // for the chords, and the melody's span in semitones. Read off what plays:
 // after the entry schedules and gaps, and with every layer's own cycle
@@ -1256,13 +1256,13 @@ function vibeEachReport(opts) {
   return out.join('\n');
 }
 
-// The per-loop choices (queue item 54) over --n loops (10,000 unless given).
+// The per-loop choices over --n loops (10,000 unless given).
 function choicesReport(opts) {
   const n = opts.nGiven ? opts.n : 10000;
   const master = new Rng(opts.seed || 1);
   const byCount = new Map();
   const byOption = new Map();
-  // The arc's shapes (queue item 63b), among the loops that draw it.
+  // The arc's shapes, among the loops that draw it.
   const shapes = new Map();
   for (let i = 0; i < n; i++) {
     const spec = newSpec(master.seed32());

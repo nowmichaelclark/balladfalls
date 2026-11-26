@@ -33,7 +33,7 @@ export function pages(bytes) {
         cur = 0;
       }
     }
-    // A packet that goes on to the next page (item 121: OpusTags with a
+    // A packet that goes on to the next page (OpusTags with a
     // cover): its part on this page, for `joined`.
     const tail = open ? bytes.slice(p, p + cur) : null;
     out.push({

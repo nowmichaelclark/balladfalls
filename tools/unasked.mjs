@@ -1,4 +1,4 @@
-// What never comes unasked (queue item 117; session 30i): over the corpus's
+// What never comes unasked: over the corpus's
 // loops with nothing picked, every value the generator can draw and how
 // often it came, against the list of everything it can draw, and the values
 // that never came.
@@ -34,7 +34,7 @@
 // --n: shown with its expected share where the data says it), or
 // **never** (a bug: the data lists it and nothing draws it).
 //
-// `--check` holds item 117's yardsticks: with nothing asked, 9% to 11% of
+// `--check` holds the yardsticks: with nothing asked, 9% to 11% of
 // loops are long pieces, every one 64 to 512 bars with a journey, and no
 // loop is Endless.
 

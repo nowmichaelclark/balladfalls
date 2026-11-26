@@ -1,4 +1,4 @@
-// Fitting the words to the dials (queue item 35a).
+// Fitting the words to the dials.
 //
 // Run through ranks.mjs:  node tools/ranks.mjs <file.jsonl> --fit [--dials <file.json>] [--json <out>]
 //
@@ -38,7 +38,7 @@ export const NEVER = 0.1;
 // and which trial it came from (the bootstrap resamples trials). Five-word
 // trials: answered, not skipped, not a repeat (a repeat is there to be
 // compared with its original and would count one loop twice). Word-album
-// answers (item 37): fits or doesn't; "not sure" left out.
+// answers: fits or doesn't; "not sure" left out.
 export function observations(lines, tapWeights = TAP_WEIGHTS) {
   const obs = [];
   const counts = { pools: {}, albums: 0, skipped: 0, repeats: 0, unsure: 0 };

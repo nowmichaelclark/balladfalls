@@ -1,5 +1,5 @@
 // A Library saved by the build before version 2 codes (v183) opens on this
-// one with its loops playing as they did (session 23): test/library-v183.json
+// one with its loops playing as they did: test/library-v183.json
 // is twenty loops as v183 kept them in localStorage, made by v183's build,
 // each with the hash of the notes v183 played. Here, on this build: the
 // Library's records are read as they are (nothing converts: a record is its
@@ -36,7 +36,7 @@ for (const e of fixture.saves) {
   // A name travels composed (NFC): the same text to the eye.
   check(`  shared and opened (${code.length} characters): the same notes, name, mutes and salt`, hash(back) === was.notes && back.name === e.spec.name.normalize('NFC')
     && JSON.stringify(back.mutes) === JSON.stringify(e.spec.mutes) && (back.wanderSalt || 0) === (e.spec.wanderSalt || 0)
-    // The length asked: one the seed draws with none asked (queue item 117)
+    // The length asked: one the seed draws with none asked
     // is drawn again, and no code carries it.
     && (back.lengthDrawn ? undefined : back.length) === e.spec.length && back.askJourney === e.spec.askJourney, `${code}: ${back.name}`);
   check('  the code is the 64 characters', /^[A-Za-z0-9_-]+$/.test(code) && codeKind(code) === 'song');
@@ -105,7 +105,7 @@ console.log('\nAn album carries how long each track plays (session 24b; a time w
   const opened = decodeAlbum(paced);
   check('  and each opens to play two minutes, fading out, then the next', opened.specs.every((s) => s.track && s.track.secs === 120 && s.track.fadeOut && !s.track.fadeIn) && opened.specs.every((s, k) => hash(s) === hash(plain[k])));
   check('  with none set, every track plays on until moved on', decodeAlbum(before).specs.every((s) => !s.track));
-  // A loop saved before session 30c: its passes or bars as the time they
+  // A loop saved in the old form: its passes or bars as the time they
   // came to at its tempo, and nothing of the old fields left.
   const old = { ...specs[0], bpm: 80, stepsPerBar: 16, bars: 4, playFor: 3 };
   delete old.length;
@@ -124,7 +124,7 @@ console.log('\nAn album carries how long each track plays (session 24b; a time w
 
 console.log('\nSaved with what was taken out');
 {
-  // Twang's slow and bright (item 105e): a loop saved from a v193 code that
+  // Twang's slow and bright: a loop saved from a v193 code that
   // pins either plays soft, as that code now does.
   const soft = decodeSong('ENqAy3DQWBWo');
   for (const [word, code] of [['slow', 'ENqAy3DQWCXo'], ['bright', 'ENqAy3DQWDYo']]) {

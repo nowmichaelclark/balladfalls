@@ -1,4 +1,4 @@
-// Building a word album (queue item 35b).
+// Building a word album.
 //
 // Run with:
 //   node tools/wordalbum.mjs --word cozy --target "warmth>0.7,lift 0.55-0.8,energy<0.5"
@@ -7,8 +7,8 @@
 // One word, about eight loops: six guesses, as close to the word's target as
 // the corpus has, and two decoys far from it on its main dials, shuffled. The
 // brain sends it to Mikey as "Cozy?" and he says which tracks don't fit
-// (item 37 on /rank, or as a plain album). The target is either the word's
-// fitted region (item 35a, from an export) or dial ranges the brain writes
+// (on /rank, or as a plain album). The target is either the word's
+// fitted region (from an export) or dial ranges the brain writes
 // itself where the data is thin. --seed makes it reproducible, so the key
 // (which track is which) is re-derived by running the same line again and
 // never needs writing down.
@@ -117,7 +117,7 @@ export function buildAlbum({ word, target, guesses = 6, decoys = 2, n = 3000, se
   const tracks = new Rng(((seed ^ 0x41b) >>> 0) || 1).shuffle([...near, ...far]);
   for (const t of tracks) {
     // About `seconds` a track: whole passes of the loop as composed, as a
-    // time to the second (session 30c), fading out.
+    // time to the second, fading out.
     const loopSeconds = patternSteps(t.spec) * (60 / t.spec.bpm / 4);
     setTrack(t.spec, { secs: Math.round(Math.max(1, Math.round(seconds / loopSeconds)) * loopSeconds) });
   }

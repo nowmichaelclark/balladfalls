@@ -1,4 +1,4 @@
-// Tests for the ten dials (queue item 34, tools/dials.mjs).
+// Tests for the ten dials (tools/dials.mjs).
 // Run with:  node test/dials.test.mjs
 
 import { newSpec, render } from '../js/gen.js';

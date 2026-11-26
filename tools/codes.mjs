@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Share codes, version 2 (queue item 105), from the command line, on the
+// Share codes, version 2, from the command line, on the
 // core's own reader and writer (`core/src/code.rs`, the tools' build:
 // `tools/build-core.sh --tools`). For the brain's albums and for looking
 // inside a code; core/README.md, "Share codes", is the format.
@@ -13,8 +13,7 @@
 //   node tools/codes.mjs album [--name T] CODE...
 //                                   an album of loops' codes, in order, each
 //                                   with how long it plays before the next
-//                                   after it where it has one (session 24b,
-//                                   a time since 30c: CODE:t5025 1:23:45, i
+//                                   after it where it has one (a time: CODE:t5025 1:23:45, i
 //                                   and o after it for its fades, CODE:i on
 //                                   and on fading in)
 //   node tools/codes.mjs seed-album SEED COUNT [REQUEST] [--name T]

@@ -1,4 +1,4 @@
-// Tests for the golden renders' JavaScript side (queue item 42): the note-list
+// Tests for the golden renders' JavaScript side: the note-list
 // text and the hash, which the native host
 // (core/examples/dlrender/notelist.rs) has its own copies of. Each is pinned
 // to the same answers there, so the two cannot drift apart. Needs no browser.
@@ -92,7 +92,7 @@ console.log('\nThe committed goldens');
   // (generation.hashes is the generator's, not a target's: tools/gen-golden.mjs;
   // seeds.hashes the player's, below.)
   for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.hashes') && !f.startsWith('rates.') && f !== 'generation.hashes' && f !== 'seeds.hashes')) {
-    // A stereo file (queue item 64) has both sides of the output and the bus.
+    // A stereo file has both sides of the output and the bus.
     const names = file.endsWith('.stereo.hashes') ? STEREO_SIGNALS : SIGNALS;
     const rows = fs.readFileSync(path.join(dir, file), 'utf8').split('\n').filter((l) => l.trim() && !l.startsWith('#'));
     const ok = rows.length === lists.length && rows.every((r) => {
@@ -105,7 +105,7 @@ console.log('\nThe committed goldens');
 }
 
 {
-  // The lists at other sample rates (queue item 45): one line for each list
+  // The lists at other sample rates: one line for each list
   // and rate rates.txt names, in the golden hashes' form, NAME@RATE.
   const rates = fs.readFileSync(path.join(dir0(), 'rates.txt'), 'utf8').split('\n');
   const names = rates.find((l) => l.startsWith('lists ')).slice(6).trim().split(/\s+/);
@@ -119,7 +119,7 @@ console.log('\nThe committed goldens');
   }
 }
 {
-  // The player's loops from their seeds (queue item 82, tools/seeds.sh): the
+  // The player's loops from their seeds (tools/seeds.sh): the
   // corpus's first 80, a line each as dlrender --corpus 1:80 prints it, in
   // order.
   const master = new Rng(1);

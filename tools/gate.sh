@@ -1,6 +1,5 @@
 #!/bin/sh
-# The fast gate (queue item 103): the checks that hold a merge until the app
-# is 1.0 and on F-Droid, in parts that CI runs side by side
+# The fast gate: the checks that hold a merge, in parts that CI runs side by side
 # (.github/workflows/core.yml) and a session runs here before it pushes.
 #
 #   tools/gate.sh                 every part, one after another
@@ -16,10 +15,8 @@
 #                                 moved"); PARTS as baseline.mjs --only takes
 #                                 them, so CI can run them side by side
 #   tools/gate.sh flac            the FLAC writer on real renders against
-#                                 the reference decoder (queue item 104a,
-#                                 tools/flac.mjs; needs flac or ffmpeg), and
-#                                 the app's audio export (item 104b,
-#                                 tools/export.mjs: its files decode and null
+#                                 the reference decoder (tools/flac.mjs; needs flac or ffmpeg), and
+#                                 the app's audio export (tools/export.mjs: its files decode and null
 #                                 against straight renders, and its sizes)
 #   tools/gate.sh docs            the live docs' sizes
 #
@@ -28,8 +25,7 @@
 # rendering ahead's sweep and the other sample rates. A red nightly is fixed
 # by the next session that sees it.
 #
-# Nothing here needs a browser: the baseline plays the player in Node (queue
-# item 96).
+# Nothing here needs a browser: the baseline plays the player in Node.
 
 set -eu
 
@@ -39,7 +35,7 @@ cd "$root"
 core() {
   tools/build-core.sh --check
   (cd core && cargo test --locked)
-  # Additions leave old codes as they sound (queue item 105): the dummy
+  # Additions leave old codes as they sound: the dummy
   # build's members at a later version move no golden.
   (cd core && cargo test --locked --features dummy --test dummy)
   (cd core && rustup component add clippy >/dev/null 2>&1 || true

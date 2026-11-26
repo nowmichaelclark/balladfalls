@@ -1,5 +1,5 @@
 // Listening clips from the core's own player, with the levers a sketch or an
-// A/B needs (queue item 83).
+// A/B needs.
 //
 //   node tools/clips.mjs JOBS.json OUTDIR [--opus] [--bin PATH] [--no-build]
 //
@@ -22,33 +22,33 @@
 //     "layout": 2,                   // 2 stereo, 1 mono (default 2)
 //     "wander": 1,                   // "Let the loop wander" amount; 0 off (default 1)
 //     "vibes": ["peaceful"],         // vibe ids, as the app's panel picks them
-//     "request": "bpm=180",          // a request as text (item 85: dlrender --request)
+//     "request": "bpm=180",          // a request as text (dlrender --request)
 //     "track": "bars=120",           // the length slider (dlrender --track: bars=N or passes=N),
 //                                    //   the core's own next loop after its end, as in the app
 //     "lite": false,                 // the lite mix (a phone's)
-//     "force": { "lateFloor": "on" },        // choices forced ("today": none); tripletKit and dottedPulse are (item 101d)
+//     "force": { "lateFloor": "on" },        // choices forced ("today": none); tripletKit and dottedPulse are
 //     "set": { "bass.LIFT_DB": 3 },          // constants moved (core/src/tuning.rs)
 //     "pin": { "sub_duck.depth": 0.5 },      // a channel block's setting pinned
-//     "space": { "spread-chords": 1.4 },     // a space setting pinned, past its range if you like (item 99);
+//     "space": { "spread-chords": 1.4 },     // a space setting pinned, past its range if you like;
 //                                            //   "0.6:1.2" draws it from a range instead
 //     "route": { "sketch": "drums" },        // a layer's signal into the sketch block's mod ("sketch.1" for
-//                                            //   mod 1); the sketch must declare MODS (item 99)
+//                                            //   mod 1); the sketch must declare MODS
 //     "sketch": true,                        // core/sketch/block.rs on, where.txt says where
 //     "stem": "bass" }                       // one layer's channel as it goes into the mix, mono,
-//                                            //   instead of the speakers (item 101a; any build)
+//                                            //   instead of the speakers (any build)
 //
-// "force" also takes the levers that are not in the data (item 99; core/src/levers.rs):
-//   "planingSevenths": "on"                  the loop planes as if it drew it (item 101f: every chord a major
+// "force" also takes the levers that are not in the data (core/src/levers.rs):
+//   "planingSevenths": "on"                  the loop planes as if it drew it (every chord a major
 //                                            seventh, roots a step or a minor third apart, the tune following;
 //                                            "request": "progression.kind=today" holds a loop that drew it off)
-// and "set" takes these constants (core/src/tuning.rs, item 99):
+// and "set" takes these constants (core/src/tuning.rs):
 //   "latefloor.SECONDS_MAX": 90              the longest lateFloor wait, in seconds (the data's is 30)
 //   "latefloor.FADE": 12                     seconds the kit and bass take to rise once they arrive (0: at once)
 //   "master.CENTS": -25                      the whole loop's tuning against A440, in cents
 //   "chords.RETUNE": 1                       the chords channel hears a retune to each whole chord, with no organ
 //
 // Forced choices, levers, constants, pins, spaces and routes are the sketch
-// build's: "force" moves onto the request once item 85 lands. A clip with
+// build's. A clip with
 // none of them is the player's plain render, bit for bit run to run (and the
 // same bits as the build without the feature: the sketch slot is off unless
 // a job turns it on, and so is every lever). The index lists the options a

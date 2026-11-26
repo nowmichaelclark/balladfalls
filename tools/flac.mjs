@@ -1,4 +1,4 @@
-// The FLAC writer's yardsticks (queue item 104a): the core's own encoder
+// The FLAC writer's yardsticks: the core's own encoder
 // (core/src/flac/) against the reference decoder, on real renders.
 //
 //   node tools/flac.mjs                 the whole check (CI's `flac` job,

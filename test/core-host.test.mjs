@@ -2,7 +2,7 @@
 // the real module, with a stub for the AudioWorkletNode it builds.
 // Run with:  node test/core-host.test.mjs
 //
-// What they pin down (queue item 32): why a browser cannot run the core, and
+// What they pin down: why a browser cannot run the core, and
 // that a disposed host hears nothing more from its node (a processor error
 // queued just before a rebuild must not reach an output that is gone).
 
@@ -89,7 +89,7 @@ console.log('\nA context faster than the core holds (queue item 45)');
   check(`the limit is the web build's, ${CORE_MAX_RATE} Hz`, CORE_MAX_RATE === 96000);
 }
 
-// The space recipe's settings as js/pins.js copies them (queue item 85b):
+// The space recipe's settings as js/pins.js copies them:
 // the core's, by number, name and range (core/src/space.rs, SETTINGS).
 {
   const { SPACE_SETTINGS } = await import('../js/pins.js');

@@ -1,5 +1,4 @@
-// Tests for the Android app's transport to its native core (session 27,
-// js/native.js) that need no browser and no device: a stub bridge in place
+// Tests for the Android app's transport to its native core (js/native.js) that need no browser and no device: a stub bridge in place
 // of the app's `DriftloomNative`, the real CoreHost and Output on it.
 // Run with:  node test/native.test.mjs
 //

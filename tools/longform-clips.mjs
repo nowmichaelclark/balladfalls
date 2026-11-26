@@ -1,30 +1,29 @@
 #!/usr/bin/env node
-// The long pieces' listening set (queue item 102e, session 15): excerpts of
+// The long pieces' listening set: excerpts of
 // about 40 s where something happens in a piece (its start, B's entry, the
 // peak, the return, a breath, a close the length slider made, the close and
 // its landing; a wander's moves; Endless's first twenty minutes), one
-// 64-bar piece whole, and blind pairs (the same seed and length before
-// item 102 and now, level-matched, named honestly before and after: brain
-// B3 makes them blind on its page). Each excerpt's place is read from the
-// piece's map (`tools/gen-lib.mjs`'s `pieceMap`), not written in by hand,
-// so the set can be made again after session 16's tuning.
+// 64-bar piece whole, and blind pairs (the same seed and length before the
+// long pieces were built and now, level-matched, named honestly before and
+// after: the listening page makes them blind). Each excerpt's place is read
+// from the piece's map (`tools/gen-lib.mjs`'s `pieceMap`), not written in by
+// hand, so the set can be made again after a tuning.
 //
 //   node tools/longform-clips.mjs OUTDIR [--before PATH] [--only NAME]
 //   node tools/longform-clips.mjs OUTDIR --fixes PATH
 //   node tools/longform-clips.mjs OUTDIR --holes PATH
 //
-// `--fixes` makes session 16's shorter set instead (102f): only what
-// changed, the two holes brain B3 found, each excerpt now and as PATH (a
-// dlrender built at v164, 88c98be) plays it, not blind and not
-// level-matched: a chord now sounds where a hole was. `--holes PATH` makes
-// session 16b's (102g) the same way: the three holes session 05 found on
-// Endless arcs, now and as PATH (a dlrender built at v168) plays them.
+// `--fixes` makes the shorter fixes set instead: only what changed, the two
+// holes that a listening found, each excerpt now and as PATH (a dlrender
+// built at v164, 88c98be) plays it. It is not blind and not level-matched:
+// a chord now sounds where a hole was. `--holes PATH` makes the holes set
+// the same way: the three holes found by ear on Endless arcs, now and as
+// PATH (a dlrender built at v168) plays them.
 //
 // OUTDIR gets NAME.opus (stereo, 96 kbps, ffmpeg's libopus) for each clip,
 // and index.md and index.json: each clip's piece (seed and request), where
 // in it, how long, and one line on what to listen for. `--before` is a
-// dlrender built at the commit before session 12 (dfe78c3: the plan as
-// code, nothing of it heard), for the pairs' before; without it the pairs
+// dlrender built at dfe78c3 (the plan as code, nothing of it heard), for the pairs' before; without it the pairs
 // are left out. Renders are the player's (`dlrender --seed`, at the app's
 // wander amount 1, 44.1 kHz, stereo), the tools' build for the maps
 // (`tools/build-core.sh --tools`) and the release dlrender (built first).
@@ -68,8 +67,8 @@ const first = (p, pick, after = 0) => p.units.find((u) => u.t >= after && pick(u
 const role = (name) => (u) => u.role === name;
 const mmss = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
-// The pieces (session 15's choice; `docs/notes/for-mikey.md` says how they
-// were chosen), each with its excerpts: a name, where it starts (a
+// The pieces (the wiki's "Ballad Falls/Long pieces" says how they were
+// chosen), each with its excerpts: a name, where it starts (a
 // function of the piece's timed map), how long, and what to listen for.
 const PIECES = [
   {
@@ -184,8 +183,8 @@ const PIECES = [
   },
 ];
 
-// The blind pairs: the same seed and request, rendered before item 102
-// (dfe78c3: the loop's wandered sections) and now.
+// The blind pairs: the same seed and request, rendered before the long
+// pieces were built (dfe78c3: the loop's wandered sections) and now.
 const PAIRS = [
   { name: 'pair-1', seed: 1151594917, request: 'bars=256,journey=arc', at: 55, len: 45, what: 'brum-yei, 256 bars, from 0:55: the build into the second theme now, the loop wandering before' },
   { name: 'pair-2', seed: 7, request: 'bars=endless,journey=wander', at: 320, len: 45, what: 'glor-ti, Endless, from 5:20: the kit fading out over 24 s now, the loop wandering before' },
@@ -212,7 +211,7 @@ const cut = (file, name, at, len, { tail = false, gain = 0 } = {}) => {
   return out;
 };
 
-// Session 16's set (102f): where the two holes were, found from the maps.
+// The fixes set: where the two holes were, found from the maps.
 // The join is the plan's last bar before the line (`[longform joins]`).
 const FIXED = [
   {
@@ -237,7 +236,7 @@ const FIXED = [
   },
 ];
 
-// Session 16b's set (102g): the three holes session 05 found on Endless
+// The holes set: the three holes found by ear on Endless
 // arcs, each from its unit's line back, the join as the map plans it and as
 // it is played now (`playedJoins`).
 const HOLED = [

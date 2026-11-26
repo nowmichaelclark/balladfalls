@@ -1,5 +1,5 @@
-// The safe area's insets and the bar that scrolls away (session 30f;
-// Mikey, 2026-11-22), with no browser.
+// The safe area's insets and the bar that scrolls away (Mikey,
+// 2026-11-22), with no browser.
 // Run with:  node test/viewport.test.mjs
 //
 // What it pins down: insets a browser already laid the page clear of are

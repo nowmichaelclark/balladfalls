@@ -1,4 +1,4 @@
-// The codes frozen at 1.0 (queue item 108, session 31): version 2 codes made
+// The codes frozen at 1.0: version 2 codes made
 // on 1.0's build, each with what it decodes to, so a code made today plays
 // the same loop on every build after it. core/golden/frozen-codes.txt is the
 // list; this test reads every code there and fails on any difference:

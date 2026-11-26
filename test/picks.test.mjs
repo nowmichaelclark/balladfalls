@@ -1,5 +1,5 @@
-// Tests for the next picks (Painter session 6, design/next-picks.md): the
-// words the pills show, and the request the picks make (queue item 88: any
+// Tests for the next picks (design/next-picks.md): the
+// words the pills show, and the request the picks make (any
 // length, the loop's own up to 32 bars, sections past that, or Endless).
 // Run with:  node test/picks.test.mjs
 
@@ -61,8 +61,8 @@ console.log('\nThe request (queue items 85 and 88)');
 {
   let ok = true, bad = '';
   for (let s = 0; s < 60; s++) {
-    // With nothing asked a loop is sometimes a long piece of its own (queue
-    // item 117): its loop is the same, and that is what is compared.
+    // With nothing asked a loop is sometimes a long piece of its own:
+    // its loop is the same, and that is what is compared.
     const { length: _drawnLength, lengthDrawn: _drawnMark, ...drawn } = newSpec(9100 + s);
     const spec = newSpec(9100 + s, requestFor({ vibes: [], picks: { tempo: null, length: 4096 } }));
     const piece = pieceOf(spec);

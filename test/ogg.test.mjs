@@ -1,4 +1,4 @@
-// The Ogg writer for Opus (js/ogg.js, queue item 104c): the CRC, the pages,
+// The Ogg writer for Opus (js/ogg.js): the CRC, the pages,
 // the headers, the granule positions and the pre-skip, read back by a reader
 // written here from the specs; and, where ffmpeg is installed, real Opus
 // packets (from libopus) written into a file by the writer, which ffprobe

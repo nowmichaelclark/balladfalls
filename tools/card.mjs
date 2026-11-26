@@ -1,4 +1,4 @@
-// The info card, measured (queue item 112, session 30d): every view of the
+// The info card, measured: every view of the
 // card, at the widths and text sizes a listener meets, and a check that
 // every line it shows is whole -- nothing cut off, clipped, overlapping,
 // wrapped in the middle of a fact or set in tiny type -- and that what is
@@ -98,7 +98,7 @@ export function cases() {
   loop('long name', named(newSpec(11, BUSY), LONG));
   loop('Thai name', named(newSpec(125, BUSY), THAI));
   loop('emoji name', named(newSpec(125, BUSY), EMOJI));
-  // Each track its own length (session 30c): the card's track length line,
+  // Each track its own length: the card's track length line,
   // the first left off.
   const tracks = [setTrack(named(newSpec(125, BUSY), 'First'), { secs: 5025 }), setTrack(newSpec(24), { secs: 90 }), newSpec(37, { tempo: 60 })];
   out.push({ name: 'album on the card', album: encodeAlbum('Rainy Day Mix', tracks), open: 'card', specs: tracks });

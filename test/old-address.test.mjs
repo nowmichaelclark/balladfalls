@@ -1,4 +1,4 @@
-// The old address (session 31a): its Worker (old-address/worker.js) sends
+// The old address: its Worker (old-address/worker.js) sends
 // every path on to the same path on the new one, gives a page visit the page
 // that offers the Library once, and gives the installed app a last service
 // worker; the Library it packs into the link reads back here (js/storage.js's

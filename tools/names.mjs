@@ -1,5 +1,5 @@
-// Every control named for a screen reader (session 30e, queue item 113:
-// fewer words on screen is never fewer for a listener who can't see it).
+// Every control named for a screen reader (fewer
+// words on screen are never fewer for a listener who can't see it).
 // The real app in headless Chromium, taken through every screen and state a
 // listener meets, and on each:
 //
@@ -8,7 +8,7 @@
 //                 word or a number in it (Chromium's own computed name, not
 //                 the markup's)
 //   switches      every switch and tick says whether it is on, a layer's as
-//                 its row shows it (session 30k: a speaker on the screen)
+//                 its row shows it (a speaker on the screen)
 //   descriptions  a control whose explainer left the screen still has it as
 //                 its computed description (DESCRIBED below)
 //   markup        every control in the page, shown or not, has something to
@@ -284,7 +284,7 @@ async function checkScreen(page, cdp, where) {
       fail(where, `${c.what} has no name (${JSON.stringify(name)})`);
       continue;
     }
-    // A switch or a tick says whether it is on (session 30k: the layers' on
+    // A switch or a tick says whether it is on (the layers' on
     // and off are a speaker now, the word only a screen reader's).
     const role = node.role && node.role.value;
     if (role === 'switch' || role === 'checkbox') {

@@ -1,5 +1,5 @@
-// An arc's themes, variations and keys as they are played (queue item 102d,
-// session 14; docs/LONGFORM.md, "How an arc's themes are heard").
+// An arc's themes, variations and keys as they are played
+// (docs/LONGFORM.md, "How an arc's themes are heard").
 //
 // Run with:  node tools/longform-themes.mjs [--seeds 40] [--long 6] [--one SEED REQUEST]
 //
@@ -15,7 +15,7 @@
 //   second     where the map says theme B, the tune is another tune (under
 //              0.9 of theme A's notes kept), or theme A in the unit's key
 //              where the second theme's own loop has no tune (a theme
-//              that rests stays resting, queue item 85f: counted, one in
+//              that rests stays resting: counted, one in
 //              five at most), never silent
 //   return     theme A comes home changed: the share of the loop's own tune
 //              kept in the return's first unit (the same step and pitch
@@ -29,7 +29,7 @@
 //              no higher than over theme A's own statements
 //   octave     where the loop keeps its tune's centre five semitones from
 //              its chords', so does every unit
-//   gap        (reported, queue item 84b) the tune's centre less the
+//   gap        (reported) the tune's centre less the
 //              chords' in each unit, by kind: theme A at home, in a related
 //              key, theme B, a return, a register variation (which moves an
 //              octave on purpose); and how many units sit more than an

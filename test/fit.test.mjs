@@ -1,4 +1,4 @@
-// Tests for fitting the words and building word albums (queue item 35).
+// Tests for fitting the words and building word albums.
 // Run with:  node test/fit.test.mjs
 
 import { newSpec } from '../js/gen.js';

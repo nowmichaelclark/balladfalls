@@ -5,9 +5,9 @@ This folder is the **design spec** for the one-screen phone app. It is not part 
 ## What this is
 
 - **The app has moved on (session 30f, v196 to v198):** a second layout for a phone on its side, the panel's height steps, and the accessibility pass (`docs/PAINTER.md`, "What the final pass settled"). Bake again before designing on the file below.
-- **Current file:** `driftloom_v20.html` (v20, Painter session 6: the vibe key, and any and ∞ in the Length picker; v19 is in `archive/`). One phone, exactly as the app draws it, at 340 × 780. Use it like the app: the bottom keys move between views, **Library › More** picks the theme, Play starts the playhead. Review controls beside the phone switch the view, text size (100 / 130 / 150 / 200%), insets (iPhone, Android, this device), touch-target outlines and reduced motion, and an audit line re-measures the phone after every change.
+- **Current file:** `driftloom_v20.html` (v20, Painter session 6: the vibe key, and any and ∞ in the Length picker; v19 is archived: `docs/archived.txt`). One phone, exactly as the app draws it, at 340 × 780. Use it like the app: the bottom keys move between views, **Library › More** picks the theme, Play starts the playhead. Review controls beside the phone switch the view, text size (100 / 130 / 150 / 200%), insets (iPhone, Android, this device), touch-target outlines and reduced motion, and an audit line re-measures the phone after every change.
 - **It is baked from the app (since v18, Painter session 5).** `test-kit/bake.mjs` runs the real app in headless Chromium, seeds a library, plays an album, visits every view at each text size and copies what the app drew. The phone's stylesheet is `css/style.css` itself. So the spec stays in step with the app as long as it is baked again after every change to the look.
-- **Until v17 it went the other way:** the spec was drawn by hand (nine phones, one per theme) and the app followed it. v17 and its full handover (sessions 1–12, v13–v17) are kept unchanged in `archive/driftloom_v17_library.html`.
+- **Until v17 it went the other way:** the spec was drawn by hand (nine phones, one per theme) and the app followed it. v17 and its full handover (sessions 1–12, v13–v17) were kept unchanged in `archive/driftloom_v17_library.html`, now archived (`docs/archived.txt`).
 
 ## How to change it
 
@@ -70,15 +70,13 @@ The chosen next-picks design (`next-picks.md`) is in the app and baked as three 
 - New: the Vibes key and view, Sound, Save and Share.
 - Fixed in the app (build v96): two reduced-motion blocks in `css/style.css` damaged when v17 was brought in. Because of them no key sank when pressed (for everybody), and under reduced motion the glint, transitions and panel-key drops kept going.
 
-## Reference images (`reference/`)
+## Reference images and old versions (removed after 1.0)
 
-- `v20_vibe_any_infinity_100.png`, `v20_vibe_any_infinity_200.png`: Now Playing outside an album, the Vibe panel, and the Length picker with any lit and with ∞ lit, in all nine themes, at 100% and 200% text (from the app, `test-kit/picks_shots.mjs`).
-- `v19_next_picks_nine_themes_100.png`, `v19_next_picks_nine_themes_200.png`: the three next-picks places (Now Playing outside an album, New loops, Length) in all nine themes, at 100% and 200% text, baked from the app.
-- `next_picks_1_everyday_nocturne.png`, `next_picks_2_long_ellipsis_dawn.png`, `next_picks_3_nothing_endless_dark.png`: the brief's three renders of the chosen next picks (the brief's text wins where they differ).
-- `v18_nine_themes_layers.png`: Layers in all nine themes.
-- `v18_every_view_nocturne.png`: every place in Nocturne.
-- `v18_text_sizes_now.png`: Now Playing in Dawn at 100, 130, 150 and 200%.
-- The `v16_*` and `v17_*` images belong to the archived v17 file.
+The reference pictures (`reference/`, 20 PNGs) and the old spec versions
+(`archive/`: v17, its handover, v18 and v19) left the tree in the slim after
+1.0 (2026-11-26). `docs/archived.txt` says where they still read. To see the
+app as it is, bake again (`test-kit/bake.mjs`) and take new sheets
+(`test-kit/sheet18.mjs`, `test-kit/picks_shots.mjs`).
 
 ## How Mikey likes to work
 
@@ -92,7 +90,7 @@ The chosen next-picks design (`next-picks.md`) is in the app and baked as three 
 - **Favor plain over metaphor.** Of 20 Next-picks directions (café menu, dice, radio, magnets…), Mikey chose the quietest: one small line on Now Playing that opens a plain list. Themed metaphors read as gimmicks.
 - **Exact values, not just presets.** People want to pick exactly how many bars, not choose from five sizes; presets can sit beside an exact control.
 - **Next picks, settled so far (round three, 2026-10-13):** the New loops panel has five lines, like Layers, with Tempo and Length sharing one line. Labels are optional where the value says what it is ("16 bars", "70–85 bpm", "any key"). The panel's key reads "close", not "‹ Now". Loop length runs from 1 to 32,768 bars, or endless, and gets its own picker view. Colored backdrops behind values are liked; colored dots, "+3 any" and pencil marks are not needed.
-- **Next picks are chosen (2026-10-13):** see `next-picks.md` for the brief, and `reference/next_picks_*.png`.
+- **Next picks are chosen (2026-10-13):** see `next-picks.md` for the brief (its three renders, `reference/next_picks_*.png`, are archived).
 - **Round four (2026-10-13):** Now Playing shows the new-loop picks only outside an album. While an album plays, the album is what comes next, so the picks stay hidden. More than three moods end in an ellipsis ("merry, tender, dreamy…"). The length picker sits centered rather than top-heavy and has no explainer text ("tap the number to type", "plays until you skip").
 
 ## Open items

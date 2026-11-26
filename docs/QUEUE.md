@@ -2,9 +2,9 @@
 
 Written by the brain for Claude Code (the hands). Work top to bottom. Only
 what is live is here: the status, the standing rules, the open items, the
-known issues and the merge policy. Finished items, the old notes and the
-Done list are in `docs/archive/` and `docs/DONE.md`; `docs/README.md` is the
-map of all the docs. Mikey's ears come later, in listening albums the brain
+known issues and the merge policy. A finished item leaves this file (its PR
+keeps the text; `docs/DONE.md` has its line); the history before 1.0 is on
+`docs/archived.txt`; `docs/README.md` is the map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
 **Status, 2026-11-26: 1.0 is out.** Ballad Falls 1.0 is released (the
@@ -15,9 +15,9 @@ release. The old address forwards every link to the new one (the
 repository is archived. The F-Droid merge request
 ([fdroid/fdroiddata!59136](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/59136))
 waits for review, its recipe on #7's merge (the listing's screenshots). Done:
-every item to 122, and the sessions before them (`docs/sessions/README.md`;
-every merge has its line in `docs/DONE.md`; the older status paragraphs are in
-`docs/archive/queue-items.md`, "Old status notes"). Open: the F-Droid review
+every item to 122, and the sessions before them (every merge has its line in
+`docs/DONE.md`; the sessions and the older status paragraphs are on
+`docs/archived.txt`). Open: the F-Droid review
 and then `APP_LINK` (item 107 below), 75 (low priority), 37 (on hold) and the
 known issues; **the first item after 1.0 is the known issue "The app drops a
 code's version", before any new sound.** A new Claude Code session starts
@@ -75,8 +75,40 @@ tracks").
   before #277 are in `docs/archive/done.md`.)
 - **Items that touch `core/`** also follow `core/AGENTS.md` (the core's
   standing rules, and the rules for sound items).
-- **Finished items** are in `docs/archive/queue-items.md`, by number: an
-  older item cited as "item 46" is the text there.
+- **Finished items** leave this file. An item cited as "item 46" from
+  before 1.0 is the text in `docs/archive/queue-items.md` (on
+  `docs/archived.txt`: read it at the commit that file names).
+
+The rules the sessions to 1.0 kept, still in force (from
+`docs/sessions/README.md`, removed in the slim after 1.0):
+
+- **Merge the latest `main` into your branch before merging** (never
+  rebase; force-pushes are refused on Mikey's machine). Where
+  `js/dlplayer.wasm` or `BUILD` / `CACHE` conflict, take main's, rebuild
+  with `tools/build-core.sh`, take the next version after main's, and let
+  CI run again on that last commit.
+- **The nightly first.** Before an item, look at the latest
+  `nightly.yml` run on `main`; if it is red for a reason in the code, fix
+  that first, as its own PR. A PR that moves the core's sound updates the
+  stored render hashes it moves, in the same PR.
+- **Don't stop for Mikey.** What needs his ears, phone, accounts or a
+  decision is one line in `docs/notes/for-mikey.md`, and the work moves on.
+  Stop only for a decision that can't be undone and could go either way.
+- **The tablet's margin.** Mikey's Lenovo tablet, the weakest device he
+  supports, has about 1.8 times headroom on lite (`js/quality.js`).
+  Anything that adds work on the audio thread reports the baseline's costs
+  and keeps them within 5% unless the PR says why.
+- **The app's name from one place:** the page's name constant and the
+  manifest, Android's one resource, fastlane's title; never in the code
+  format.
+- **The long pieces hold** (brain B3, 2026-11-14). A sound change that
+  moves what a loop plays (a note, a hit, a velocity: not a width or a
+  tone) passes the full `node tools/longform.mjs` and keeps every check it
+  kept on `main`. Read it from CI (`.github/workflows/longform.yml`, eight
+  shards, against main's table), never locally. Say in the PR what moved.
+- **Sound items** name, in their Done line, two corpus loops (corpus seed
+  20261009) that draw the new sound, with a time, so the brain can build
+  the album without searching.
 
 ## 75. The reverb, rate-true for steady tones (low priority, after the batch)
 

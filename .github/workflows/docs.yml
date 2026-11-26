@@ -2,7 +2,8 @@
 # loads only its own docs and the claude.ai Project syncs some of them, so
 # AGENTS.md, core/AGENTS.md, docs/QUEUE.md, docs/BRAIN.md and
 # docs/DECISIONS.md each have a size limit (tools/check-docs.mjs). Over one,
-# the fix is to archive the finished parts.
+# the fix is to take the finished parts out. The same script fails on a
+# pointer into docs/ or design/ that is gone (docs/archived.txt).
 name: docs
 
 on:

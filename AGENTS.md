@@ -53,9 +53,9 @@ that changes how it sounds.
   where a musical choice is open and mark it "for Mikey's ears". If a
   check can't be met or a decision is needed, stop and leave a note in
   `docs/notes/<item>-<name>.md`.
-- **Keep the docs small:** the live docs hold what is live; finished
-  items, old notes and history go to `docs/archive/`. CI enforces sizes
-  (`node tools/check-docs.mjs`).
+- **Keep the docs small:** live docs hold what is live; finished items
+  and answered notes leave (git keeps them; older: `docs/archived.txt`).
+  CI checks sizes and pointers (`node tools/check-docs.mjs`).
 
 ## Build and test
 

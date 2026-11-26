@@ -384,7 +384,7 @@ seeds 1-3; each pair kept 2 or more on every seed.
 
 Glacial's arc: deep 72% of its arcs, 5-8 minutes alone and 8-12 with an
 adjacent vibe. Drawn among the choices (x2.5) it reached only 31% of its
-loops, so, by the brain's answer to `docs/notes/76b-vibes.md`, a glacial
+loops, so, by the brain's answer to `docs/archive/notes/76b-vibes.md`, a glacial
 loop that didn't draw it plays it anyway with chance 0.6 x glacial's
 weight (`ARC.glacialChance`, `arcPlays`), outside the choices: 72% of
 glacial loops alone (1,000 loops, corpus seeds 7 and 1), about half with

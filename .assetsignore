@@ -27,6 +27,10 @@ node_modules
 # The Android app's project (queue item 107): built in CI, not part of the site.
 android
 
+# F-Droid's listing (its text and screenshots): read by F-Droid from the
+# repository, not part of the site.
+fastlane
+
 # The old address's Worker (session 31a): its own config, deployed under the
 # old name on launch day; not part of this site.
 old-address

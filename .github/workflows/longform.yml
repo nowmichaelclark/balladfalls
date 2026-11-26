@@ -1,4 +1,4 @@
-# The long pieces hold (docs/sessions/README.md's rule): the full
+# The long pieces hold (docs/QUEUE.md's standing rule): the full
 # `node tools/longform.mjs` (about an hour on one core) in eight shards side
 # by side, so a sound change reads it from CI in minutes instead of running
 # it at home. Each shard plays its share of the pieces of work

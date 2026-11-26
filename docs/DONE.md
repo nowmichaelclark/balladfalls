@@ -100,3 +100,7 @@ repository.
   `ROADMAP.md`, items 8, 16 and 17 close (codes version 2, the core, the
   export), and the contribution rules name the core's files, not the retired
   JavaScript. Nothing to hear.
+- balladfalls #17, the plain style, the brain and the queue (docs only):
+  `docs/BRAIN.md` and `docs/QUEUE.md` rewritten. The brain's "State" keeps
+  only where things stand now; the standing rules are grouped by topic; the
+  known issue that session 30 fixed leaves. Nothing to hear.

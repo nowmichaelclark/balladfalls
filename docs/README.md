@@ -39,7 +39,7 @@ the work needs now.
 | `docs/DECISIONS.md` | What Mikey decided: one dated line for each decision, by topic. | brain, hands |
 | `ROADMAP.md` | What is still ahead, what was decided against, and the rules for contributions. | brain |
 | `docs/CORE.md` | The core's charter: ten promises, each with its measure. | brain, hands (core) |
-| `docs/LONGFORM.md` | Long pieces: the design, the piece map and how to read it, and the pieces to hear. | hands, brain |
+| `docs/LONGFORM.md` | Long pieces: the design as built, the piece map and how to read it. The history and the pieces to hear are in the wiki. | hands, brain |
 | `docs/MOODS.md`, `docs/VIBES.md` | The mood words, and the vibe recipes. The source of the vibes is `data/vibes.txt`; `docs/VIBES.md` says how to edit one. | brain |
 | `docs/ALBUMS.md` | The listening albums that wait for Mikey's answers. | brain |
 | `docs/PAINTER.md`, `design/` | What there is to design, the design spec, and the brief for the picks. | Painter |

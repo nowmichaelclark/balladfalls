@@ -87,3 +87,16 @@ repository.
 - balladfalls #15, the plain style, the entry docs (docs only): `docs/README.md`
   and `core/AGENTS.md` rewritten, and small fixes in `tools/README.md`.
   Nothing to hear.
+- balladfalls #16, the plain style, the core's guide (docs only):
+  `core/README.md` is now a short guide with a table of the parts, and the
+  detail moves to `core/docs/` (`blocks.md`, `player.md`, `codes.md`).
+  Nothing to hear.
+- balladfalls #16, the plain style, the Android guide (docs only):
+  `android/README.md` rewritten, with a short "How it works" first. Nothing
+  to hear.
+- balladfalls #16, the plain style, the charter and the roadmap (docs only):
+  `docs/CORE.md` keeps the eleven promises and their measures, with a table
+  of the phases and where each stands; its history is on the wiki. In
+  `ROADMAP.md`, items 8, 16 and 17 close (codes version 2, the core, the
+  export), and the contribution rules name the core's files, not the retired
+  JavaScript. Nothing to hear.

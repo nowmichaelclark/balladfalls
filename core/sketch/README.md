@@ -7,8 +7,8 @@ file and one line of data, built only with the `sketch` feature, so the app's
 
 ## Drop one in
 
-1. **`block.rs`** here: the kit's interface (`core/README.md`, "Adding a
-   building block"), and nothing else. It defines `pub struct Sketch` (with a
+1. **`block.rs`** here: the kit's interface (`core/README.md`, "Add a
+   block"), and nothing else. It defines `pub struct Sketch` (with a
    `const fn new()` of all zeros and `Default`), `pub const REST` (the
    settings it starts with), `impl Block for Sketch` (at least one probe)
    and `impl Channel for Sketch {}` (`WHOLE` when it works on the whole

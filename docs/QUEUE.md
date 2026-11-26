@@ -7,21 +7,29 @@ keeps the text; `docs/DONE.md` has its line); the history before 1.0 is on
 `docs/archived.txt`; `docs/README.md` is the map of all the docs. Mikey's ears come later, in listening albums the brain
 builds from the Done list.
 
-**Status, 2026-11-26: 1.0 is out.** Ballad Falls 1.0 is released (the
-`v1.0` tag on d723b80, 2026-11-25) at <https://balladfalls.com/>, with its
-APK signed by GitHub from the repository's secrets (#4) and attached to the
-release. The old address forwards every link to the new one (the
-`driftloom` Worker from `old-address/`, #5 and #6), and the driftloom
-repository is archived. The F-Droid merge request
-([fdroid/fdroiddata!59136](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/59136))
-waits for review, its recipe on #7's merge (the listing's screenshots). Done:
-every item to 122, and the sessions before them (every merge has its line in
-`docs/DONE.md`; the sessions and the older status paragraphs are on
-`docs/archived.txt`). Open: the F-Droid review
-and then `APP_LINK` (item 107 below), 75 (low priority), 37 (on hold) and the
-known issues; **the first item after 1.0 is the known issue "The app drops a
-code's version", before any new sound.** A new Claude Code session starts
-here: read the standing rules and the merge policy, then take the next item.
+## Status
+
+Updated 2026-11-26. Write this section again each time; do not add to its
+end. It holds one line for each open item, and `node tools/check-docs.mjs`
+holds it to 40 lines (as Broken Friends holds `plan/STATE.md`). The full
+text of each item is below; the order of the table is the order of work.
+
+**1.0 is out** (2026-11-25, the `v1.0` tag on d723b80): balladfalls.com,
+the signed APK on the release, the old address forwarding, driftloom
+archived. F-Droid's review is open
+([fdroid/fdroiddata!59136](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/59136),
+its recipe on #7's merge). A new session starts here: read the standing
+rules and the merge policy, then take the first ready line.
+
+| # | Item | Type | Model, effort | Status |
+|---|---|---|---|---|
+| K1 | The app keeps a code's version (known issue "The app drops a code's version") | Fix | not yet written | **first** after 1.0, before any new sound |
+| 107 | `APP_LINK` to the F-Droid listing | Build | any, low | waiting on F-Droid's review |
+| 75 | The reverb, rate-true for steady tones | Build | Opus 5.5, high | ready, low priority |
+| 37 | Word albums on `/rank` | Build | not yet written | on hold |
+
+The types are in `docs/briefs/README.md`. Ideas for later go in
+`docs/inbox.md`, one line each.
 
 **Two tracks:** app work (fixes, redesigns, vibe tuning, new controls) goes
 on alongside the core track, as separate PRs; app-track sessions stay out of
@@ -202,35 +210,7 @@ didn't work, skip this item.**
 
 ## Later, not queued
 
-Each sound's share, vibe by vibe (Mikey, 2026-11-17, after the Batch 6
-Album): how often a sound plays is tuned mood by mood across the vibes, some
-leaning into it (the soft twang, say) and some away, and the real share of
-loops follows from that; not before the vibes are looked at one by one.
-84b's 88 far-off held chords: maybe a later item, maybe never ("having
-differing kinds of music is okay"); a flip-free way to read their octave if
-it is ever wanted.
-
-Mikey liked the fiddle, accordion and drone as they are, and may want
-more nuance in them later. Not now. New instruments are welcome again
-(Mikey, 2026-10-09; the 2026-09-25 pause was temporary): the ears-approved
-sounds are queued after the core becomes the default, built in the core
-one at a time with the refusal and level checks (`docs/BRAIN.md`, State).
-Inspiration comes only from wholesome, comforting music.
-
-SIMD in the core (brain, 2026-11-02): four samples at once in the voices,
-filters and mix, in wasm (SIMD128) and natively (NEON, SSE2), for promise 2
-and the weaker phones (87's tablet). Bit-identity holds only with the same
-operations in the same order per lane (no fused multiply-add, no reordered
-sums), proven on the goldens on every target; worth an item once phase 3
-is done, or sooner if a phone needs it. A native Android app's own audio
-(AAudio through Oboe, a fast core, a high priority) is its platform phase's.
-
-The melody twang (Mikey, 2026-11-11: after 1.0): batch 6's twang voice
-playing the tune, beside session 09's chord twang.
-
-A sketch voice for a layer (archive/notes/83-sketch-voice.md): option 1, sketches
-stay channel sources until an ears session needs a voice's note-by-note play
-(brain, 2026-10-31).
+Ideas for later are in `docs/inbox.md`, one line each; the brain sorts them.
 
 ## Known issues
 

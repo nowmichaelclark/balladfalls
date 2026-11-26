@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 const KB = 1024;
 // File -> limit in KB. docs/README.md is the map of who reads what.
 const LIMITS = {
-  'AGENTS.md': 6,
+  'AGENTS.md': 9, // 6 until the voice rules shared with Broken Friends (2026-11-26)
   'core/AGENTS.md': 10,
   'docs/QUEUE.md': 80,
   'docs/BRAIN.md': 50,
@@ -43,6 +43,18 @@ for (const [file, limit] of Object.entries(LIMITS)) {
   const over = bytes > limit * KB;
   if (over) failed = true;
   console.log(`${over ? 'OVER   ' : 'ok     '} ${file.padEnd(20)} ${kb(bytes)}  (limit ${limit} KB)${over ? '  over by ' + kb(bytes - limit * KB).trim() : ''}`);
+}
+// The queue's status (from "## Status" to the next "## ") is the short page a
+// session reads first, as Broken Friends' plan/STATE.md is: 40 lines at most.
+const STATUS_LINES = 40;
+{
+  const queue = readFileSync(join(root, 'docs/QUEUE.md'), 'utf8').split('\n');
+  const start = queue.findIndex((line) => line.startsWith('## Status'));
+  const end = queue.findIndex((line, i) => i > start && line.startsWith('## '));
+  const lines = start < 0 ? 0 : (end < 0 ? queue.length : end) - start;
+  const over = start < 0 || lines > STATUS_LINES;
+  if (over) failed = true;
+  console.log(`${over ? 'OVER   ' : 'ok     '} ${'docs/QUEUE.md status'.padEnd(20)} ${String(lines).padStart(6)} lines (limit ${STATUS_LINES})${start < 0 ? '  no "## Status" section' : ''}`);
 }
 if (process.argv.includes('--list')) {
   console.log('');

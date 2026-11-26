@@ -13,7 +13,7 @@ parts work go to the Workshop Wiki's Ballad Falls pages
 |---|---|---|
 | Any agent | `AGENTS.md` (the root) | the role's start below |
 | Brain | `docs/BRAIN.md`, "Start here" | `docs/DECISIONS.md`, `docs/QUEUE.md`, `ROADMAP.md` |
-| Hands | `docs/QUEUE.md` | `core/AGENTS.md` for `core/`; `docs/notes/` for open notes |
+| Hands | `docs/QUEUE.md`, "Status" | the brief for the line's type (`docs/briefs/`); `core/AGENTS.md` for `core/`; `docs/notes/` for open notes |
 | Ears | `docs/ears/sessions.md` | `docs/ears/plan.md`, `docs/EARS.md`, `tools/ears/README.md` |
 | Painter | `docs/PAINTER.md` | `design/README.md`, `design/next-picks.md` |
 
@@ -23,10 +23,12 @@ parts work go to the Workshop Wiki's Ballad Falls pages
 |---|---|---|
 | `AGENTS.md`, `CLAUDE.md` | What Ballad Falls is, the roles, the rules that hold everywhere, build and test. `CLAUDE.md` imports it. | everyone |
 | `core/AGENTS.md` | The core's standing rules, and the rules for sound items. | hands (core) |
-| `docs/QUEUE.md` | The work queue: status, standing rules, the open items, known issues, the merge policy. | hands, brain |
+| `docs/QUEUE.md` | The work queue: status (40 lines at most), standing rules, the open items, known issues, the merge policy. | hands, brain |
 | `docs/DONE.md` | One line for each merged PR since #277. | hands (to add), brain |
 | `docs/archived.txt` | Every path removed at the slim after 1.0, and where its text still reads (the commit before the slim; the driftloom repository). | anyone following an old pointer |
-| `tools/README.md` | The toolbox: what earlier sessions learned about the tools. | hands |
+| `docs/briefs/` | The session types (Build, Fix, Tune by ear, Hygiene, Research), the cycle, and a short brief for each. | hands |
+| `docs/inbox.md` | Ideas for later, one line each; the brain sorts them. | anyone (to add), brain |
+| `tools/README.md` | The toolbox: every tool, what to use it for, how to run it and its limits; what earlier sessions learned. | hands |
 | `docs/notes/` | One file for each note from the hands (`<item>-<name>.md`); `for-mikey.md` is the one list of what waits for Mikey's ears, phone, accounts or a decision. | brain, Mikey |
 | `docs/BRAIN.md` | How the work is organized, getting oriented, "Start here", listening albums, methods, tools. | brain |
 | `docs/DECISIONS.md` | What Mikey has decided: one dated line each, by topic. | brain, hands |

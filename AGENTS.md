@@ -24,8 +24,10 @@ that changes how it sounds.
   merges only docs-only changes (and `data/vibes.txt`, the vibes). Starts at
   `docs/BRAIN.md`, "Start here".
 - **Hands** (Claude Code): write code, open PRs, measure, merge, report.
-  Start at `docs/QUEUE.md`: status, standing rules, the next item. A
-  session that touches `core/` also reads `core/AGENTS.md`.
+  Start at `docs/QUEUE.md`: status, standing rules, the next item. Then
+  read the brief for its type (`docs/briefs/`). A session that touches
+  `core/` also reads `core/AGENTS.md`. Ideas for later go in
+  `docs/inbox.md`, one line each.
 - **Ears** (claude.ai chats): measure records Mikey loves against Ballad Falls
   and write findings and sketches, never app or core code. Start at
   `docs/ears/sessions.md`, then `docs/ears/plan.md`.
@@ -56,6 +58,48 @@ that changes how it sounds.
 - **Keep the docs small:** live docs hold what is live; finished items
   and answered notes leave (git keeps them; older: `docs/archived.txt`).
   CI checks sizes and pointers (`node tools/check-docs.mjs`).
+
+## How Claude talks to Mikey
+
+These rules are the same in Broken Friends (its `CLAUDE.md`), so that
+both projects feel like one workflow.
+
+- **Ask Mikey only about listening and taste.** Do not ask him
+  technical questions. Read what the app already reports (Diagnostics,
+  the measuring tools). If the data you need is not there, add a probe
+  or a check, and add a line to `docs/notes/for-mikey.md` only for what
+  needs his ears, his phone or his accounts.
+- **Report facts that you checked.** Say what you ran, read or
+  measured, and what it showed. If you did not check a statement,
+  mark it `[unverified]`.
+- **A behavior that agrees with the queue or a decision is not a weak
+  spot.** If you think that the item or the decision is wrong, ask
+  Mikey about it as a taste question.
+- **If you cannot tell if a behavior is intended, say so.** Name the
+  item or the decision that does not answer it.
+- **End a session's summary with Weak spots:** the real problems that
+  you found, or "none". Do not write a fixed number.
+
+## Writing style: about 80% Simplified Technical English
+
+Write docs, explanations, PR text, session summaries and doc comments
+about 80% of the way to ASD-STE100 (Simplified Technical English). Use
+its main rules. If a rule makes the text unclear or unnatural, do not
+use that rule.
+
+- Keep sentences short: steps 20 words at most, descriptions 25.
+- Write one instruction in each sentence, and start it with a verb.
+- Use the active voice and the present tense when possible.
+- Use simple, common words, each with one meaning ("use," not
+  "utilize"). Explain a technical name the first time a doc uses it.
+- Keep "the," "a" and "this." Do not write in note-style fragments.
+- Write about one topic in each paragraph, 6 sentences at most.
+- Use a numbered list for steps in order, a bullet list for the rest.
+- Put a condition before its instruction: "If the build fails, read
+  the log."
+
+This style is for prose only, not for code or for Mikey's own files.
+When you edit an old doc, write the parts that you change in this style.
 
 ## Build and test
 
@@ -98,7 +142,8 @@ that changes how it sounds.
   the export workflow).
 - Icons (item 120): every size from `icons/icon.svg` by `node tools/icons.mjs`
   (`--check` the safe zones; ImageMagick 7 with librsvg).
-- Docs: `node tools/check-docs.mjs`.
+- Docs: `node tools/check-docs.mjs`. The toolbox, every tool with its
+  limits: `tools/README.md` (look there before you check a thing by hand).
 - Android (item 107): `cd android && ./gradlew assembleDebug` (needs the NDK
   `android/gradle.properties` pins and rustup; the core is built native by
   `android/native/build.sh`); `cd android/native && cargo test`;

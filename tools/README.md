@@ -6,7 +6,8 @@ what it checks. `AGENTS.md`, "Build and test", names the ones that CI and
 the gate run.
 
 ## The tools
-Each tool's header says more. "Limits" says what the tool cannot do, or what it needs.
+
+The "Limits" column says what a tool cannot do, or what it needs.
 
 ### The gate and the docs
 
@@ -102,8 +103,7 @@ Each tool's header says more. "Limits" says what the tool cannot do, or what it 
 
 ## What earlier sessions learned
 
-These notes came from the sessions to 1.0 (`docs/sessions/README.md`,
-removed in the slim after 1.0; see `docs/archived.txt`).
+The sessions before 1.0 learned these things. They still hold.
 
 - A line added above shipped Rust code changes `js/dlplayer.wasm`'s bytes
   even when it is compiled out (`core/AGENTS.md` says how to avoid it).
@@ -152,7 +152,7 @@ removed in the slim after 1.0; see `docs/archived.txt`).
   to hear a loop without one of them, pin the filled one off too.
   `tools/gen-lib.mjs`'s `parts()` shows it (`choices`, and the `load`
   part's `tuning`, `lowBell`, `lowBellDrops`, `twang`).
-- There is one generator and one engine, the core's (item 97). A change to
+- There is one generator and one engine, the core's. A change to
   what is generated is made once, in `core/src/generator/`, with its data
   in `data/*.txt`; the page only reads.
 - In a cloud session GitHub's API may be closed to the session while a

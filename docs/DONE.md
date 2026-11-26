@@ -81,3 +81,9 @@ repository.
   only): queue item H1 starts the history again at 1.0 once F-Droid lists
   1.0, with a bundle of the old history on the `v1.0` release. Nothing to
   hear.
+- balladfalls #14, the plain style, a sample (Mikey, 2026-11-26: "everything
+  looks good"): the README and the comments of `js/player.js` in the Broken
+  Friends style. The code is the same. Nothing to hear.
+- balladfalls #15, the plain style, the entry docs (docs only): `docs/README.md`
+  and `core/AGENTS.md` rewritten, and small fixes in `tools/README.md`.
+  Nothing to hear.

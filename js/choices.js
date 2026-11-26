@@ -1,8 +1,9 @@
-// The per-loop choices' tables, as the page reads them (queue items 54 and
-// 78): data/choices.txt's choices and settings, for the pins a request or a
-// share code carries (js/pins.js: which options a choice has, which range a
-// setting takes). Which changes a loop gets, and every draw, is the core's
-// (`core/src/generator/choices.rs`, the same file compiled in).
+// The per-loop choices' tables, as the page reads them: the choices and
+// settings of data/choices.txt. The page needs them for the pins that a
+// request or a share code carries (js/pins.js): which options a choice has,
+// and which range a setting takes. The core decides which changes a loop
+// gets, and makes every draw (`core/src/generator/choices.rs`, with the
+// same file compiled in).
 
 import { blockOf, blocksOf, readBlock } from './data.js';
 
@@ -10,19 +11,19 @@ const WHERE = 'data/choices.txt';
 const setting = (name, schema) => readBlock(blockOf('choices', 'setting', name), schema, WHERE);
 
 // The data of every choice: { options, weight?, vibes?, optionVibes?,
-// ownStream?, alone? } (ownStream: the option is drawn on a stream of its
-// own, queue item 101; alone: the choice is drawn by itself, not among the
-// changes, item 101b).
+// ownStream?, alone? }. `ownStream`: the option is drawn on a random stream
+// of its own. `alone`: the choice is drawn by itself, not among the
+// changes.
 const CHOICE_DATA = Object.fromEntries(blocksOf('choices', 'choice').map((b) => [b.name, readBlock(b, {
   options: 'pool', weight: 'num', vibes: 'table', 'optionVibes.*': 'table', ownStream: 'num', alone: 'num',
 }, WHERE)]));
 const choiceData = (id) => CHOICE_DATA[id];
 
-// The arc's settings (queue items 63 and 63b): every variable of the arc,
-// named, with the range a loop draws it from, in this one place, so phase 2's
-// requests can pin them (docs/CORE.md, promises 9 and 11) and a later slider
-// or a game host can set them. The core draws a loop's from them and
-// plays it (core/src/blocks/arc.rs). The file says what each is.
+// The arc's settings: every variable of the arc, named, with the range that
+// a loop draws it from, in this one place. So a request can pin them
+// (docs/CORE.md, promises 9 and 11), and a later slider or a game host can
+// set them. The core draws a loop's arc from them and plays it
+// (core/src/blocks/arc.rs). The file says what each one is.
 export const ARC = {
   weight: choiceData('arc').weight,
   vibes: choiceData('arc').vibes,
@@ -32,9 +33,9 @@ export const ARC = {
   }),
 };
 
-// The tuned kick's settings (queue item 67): every variable of it, named,
-// with its range, as ARC's are. The core draws a loop's from them, works
-// out its level at load and plays it (core/src/blocks/kick.rs).
+// The tuned kick's settings: every variable of it, named, with its range,
+// as ARC's are. The core draws a loop's kick from them, works out its level
+// at load, and plays it (core/src/blocks/kick.rs).
 export const KICK = {
   options: choiceData('tunedKick').options,
   optionVibes: choiceData('tunedKick').optionVibes,
@@ -43,9 +44,9 @@ export const KICK = {
   }),
 };
 
-// subDuck's settings (queue item 68): the bass channel alone dips at each
-// kick and comes back, so the kick and the sub take turns; `deep` is
-// deepDuck's own ranges (item 101a). The core draws a loop's and plays it
+// subDuck's settings. The bass channel alone dips at each kick and comes
+// back, so the kick and the sub take turns. `deep` holds deepDuck's own
+// ranges. The core draws a loop's settings and plays them
 // (core/src/blocks/sub_duck.rs).
 export const SUBDUCK = {
   weight: choiceData('subDuck').weight,
@@ -53,10 +54,9 @@ export const SUBDUCK = {
   ...setting('subduck', { depth: 'range', recover: 'range', beat: 'num', 'deep.*': 'range' }),
 };
 
-// lateFloor's settings (queue item 69): after a load the kit and the bass sit
-// out a while, then arrive; `slow` is slowOpening's wait and fade (item
-// 101a). The core draws a loop's and its player plays it
-// (core/src/player/sequencer.rs).
+// lateFloor's settings. After a load, the kit and the bass sit out a while,
+// then arrive. `slow` holds slowOpening's wait and fade. The core draws a
+// loop's settings, and its player plays them (core/src/player/sequencer.rs).
 export const LATEFLOOR = {
   weight: choiceData('lateFloor').weight,
   vibes: choiceData('lateFloor').vibes,
@@ -66,10 +66,10 @@ export const LATEFLOOR = {
   }),
 };
 
-// padSweep's settings (queue item 72): a lowpass on the chord layer swings
-// open and shut while the rest stays as bright as it was; `wide` and `fast`
-// are wideSweep's two, each the same four ranges (item 101a). The core draws
-// a loop's and plays it (core/src/blocks/pad_sweep.rs).
+// padSweep's settings. A lowpass on the chord layer swings open and shut,
+// while the rest stays as bright as it was. `wide` and `fast` are
+// wideSweep's two sets, each of the same four ranges. The core draws a
+// loop's settings and plays them (core/src/blocks/pad_sweep.rs).
 export const PADSWEEP = {
   weight: choiceData('padSweep').weight,
   vibes: choiceData('padSweep').vibes,
@@ -78,27 +78,27 @@ export const PADSWEEP = {
   }),
 };
 
-// echoTime's settings (queue item 73): the echo's time drawn per loop, in
-// beats. Drawn for every loop as the sketch drew it, outside the list of
-// choices and not counted among a loop's changes.
+// echoTime's settings: the echo's time, drawn for each loop, in beats. It is
+// drawn for every loop, outside the list of choices, and is not counted
+// among a loop's changes.
 export const ECHO = setting('echo', { beats: 'numpool', 'vibes.*': 'table' });
 
-// tuningOffset's settings (queue item 101b): how often a loop plays a little
-// off A440, and how far, drawn per loop outside the list of choices, as
-// echoTime is. The page reads them for the tuning pin's range.
+// tuningOffset's settings: how often a loop plays a little off A440, and how
+// far. It is drawn for each loop, outside the list of choices, as echoTime
+// is. The page reads them for the tuning pin's range.
 export const TUNING = setting('tuning', { share: 'num', cents: 'range', vibes: 'table' });
 
-// lowBell's draw (queue item 101g): how often a loop plays the low bell and
-// its kinds, drawn per loop outside the list of choices, as tuningOffset is.
-// The page reads its kinds for the pin's words.
+// lowBell's draw: how often a loop plays the low bell, and its kinds. It is
+// drawn for each loop, outside the list of choices, as tuningOffset is. The
+// page reads its kinds for the pin's words.
 export const LOWBELL = setting('lowbell', {
   share: 'num', kinds: 'pool', 'kindVibes.*': 'table', regap: 'num', spotlight: 'num', spotlightVibes: 'table', spotlightLeast: 'num',
 });
 
-// twang's draw (queue item 101h): how often a loop that may play it does,
-// its versions, drawn per loop outside the list of choices, as the low bell
+// twang's draw: how often a loop that may play it does, and its versions.
+// It is drawn for each loop, outside the list of choices, as the low bell
 // is. The page reads its versions for the pin's words.
 export const TWANG = setting('twang', { share: 'num', kinds: 'pool', drawn: 'pool', 'kindVibes.*': 'table', regap: 'num', spread: 'num', kitMost: 'num' });
 // Every choice, in the file's order (the pins' order): its id and its
-// options, today's first.
+// options, the default first.
 export const CHOICES = Object.keys(CHOICE_DATA).map((id) => ({ id, ...CHOICE_DATA[id] }));

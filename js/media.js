@@ -32,16 +32,15 @@
 //
 // The music itself goes straight to the speakers, untouched.
 //
-// In the Android app (session 28) none of this is the browser's: the core
-// plays natively and a foreground service of the app's own holds the audio
-// focus, the notification and a MediaSession, so what the page tells the
-// phone (what is playing, the loop's name and its own cover, whether it
-// plays) goes to the app (js/app.js), and the lock screen's, the
-// notification's and a headset's buttons come back as the page's own Play,
-// Pause, Next and Previous.
+// In the Android app, none of this is the browser's. The core plays
+// natively, and a foreground service of the app's own holds the audio focus,
+// the notification and a MediaSession. So what the page tells the phone
+// (what is playing, the loop's name and its own cover, if it plays) goes to
+// the app (js/app.js). The buttons of the lock screen, the notification and
+// a headset come back as the page's own Play, Pause, Next and Previous.
 //
-// In a browser the artwork is the playing loop's own cover too (Mikey,
-// 2026-11-22, session 30f): the title at once, the picture when it is drawn.
+// In a browser, the artwork is the playing loop's own cover too (Mikey,
+// 2026-11-22): the title at once, and the picture when it is drawn.
 
 import { appLink } from './app.js';
 import { coverPng } from './covers.js';
@@ -133,7 +132,7 @@ export class MediaBridge {
     this.app = null;
     // Told of every change in what the phone is told is playing: the
     // session's state as the app sets it, and the keepalive element stopping
-    // or starting (Diagnostics' "while hidden", queue item 39).
+    // or starting (Diagnostics' "while hidden").
     this.onchange = null;
   }
 
@@ -145,9 +144,9 @@ export class MediaBridge {
     // The synth already reaches the speakers on its own. Nothing is
     // re-routed here any more; re-routing was the mistake.
     this.source = sourceNode;
-    // The Android app (session 27): the core plays natively, and the WebView
-    // plays no audio of its own, the keepalive included. The lock screen's
-    // controls there are the app's own service's (session 28).
+    // The Android app: the core plays natively, and the WebView plays no
+    // audio of its own, the keepalive included. The lock screen's controls
+    // there belong to the app's own service.
     if (this.ctx && this.ctx.native) {
       this.mode = 'native';
       this.app = appLink();

@@ -16,36 +16,35 @@ import * as share from './share.js';
 // Build stamp. Shown in Diagnostics so that after a deploy you can confirm
 // in one glance which version you are actually running, rather than
 // guessing whether a change landed. Bump it with CACHE in sw.js.
-const BUILD = 'v223';
-// The version the listener reads (1.0 since session 31, 2026-11-25): the last
+const BUILD = 'v224';
+// The version the listener reads (1.0 since 2026-11-25). It is the last
 // line of Advanced and the first of Diagnostics. The APK's versionName
 // (android/gradle.properties) is the same, and android/fdroid/check-metadata.mjs
 // holds the two together; BUILD stays the cache's own counter.
 const VERSION = '1.0';
 
-// A test's slow device (queue item 87b): `?burn=1200` adds that many
+// A test's slow device: `?burn=1200` adds that many
 // microseconds of work to every block the core renders, so the measuring and
 // the rule that picks "lighter on processor" can be tried on a fast machine
 // (tools/perf.mjs --burn). Nothing else reads it.
 const BURN = Number(new URLSearchParams(location.search).get('burn')) || 0;
 
-// The app plays the core's player (queue item 94b): the core decides every
-// note on the audio thread, and js/player.js sends it commands and draws its
-// events. There is nothing else to play on (queue item 97): a browser whose
-// core will not run is told so in a plain line, in the info card's place
-// (Mikey, 2026-11-07; shorter in session 30e, the same meaning).
+// The app plays the core's player. The core decides every note on the audio
+// thread, and js/player.js sends it commands and draws its events. There is
+// nothing else to play on. If the core will not run in a browser, a plain
+// line says so in the info card's place (Mikey, 2026-11-07).
 const CANT_PLAY = "Can't play here. Try recent Chrome, Firefox or Safari.";
 // And where the browser could run the core but the core did not arrive (a
 // first visit with no connection, a server error): not the browser's fault,
 // so not the line above.
 const NOT_LOADED = 'Please refresh.';
-// And one that plays it, but too slowly even on lite (queue item 100; Mikey,
+// And a browser that plays it, but too slowly even on lite (Mikey,
 // 2026-11-10): the line, and where the Android app is. The link is empty
-// until the Android app has a page (F-Droid, queue item 107); the second
-// sentence shows only when it is set.
+// until the Android app has a page on F-Droid. The second sentence shows
+// only when the link is set.
 const TOO_SLOW = 'Browser too slow.';
-// The app's name, where the page needs it (the app is renamed at 1.0:
-// session 31a changes it here). Since session 30e no popup names it.
+// The app's name, where the page needs it. To rename the app, change it
+// here. No popup names it.
 const APP_NAME = 'Ballad Falls';
 // The app's address, where a link to a loop has none of the page's own (the
 // Android app's files are inside it). Renamed with the app; index.html's
@@ -58,9 +57,9 @@ const NEWER_CODE = ['Needs update', `That code needs a newer ${APP_NAME}.`];
 const NOT_A_CODE = ['Bad code', `That doesn't look like a ${APP_NAME} code.`];
 const NOT_A_BACKUP = ['Bad backup', `That doesn't look like a ${APP_NAME} backup.`];
 // The core's refusal for a code that names an instrument this device does
-// not have (it can't say so yet: today it says "needs a newer version" for
-// any id it lacks, and session B4 settles whether it plays something close
-// instead). share.codeKind answers 'instrument' for such a refusal.
+// not have. It can't say so yet: today it says "needs a newer version" for
+// any id it lacks. Whether it plays something close instead is not decided.
+// share.codeKind answers 'instrument' for such a refusal.
 const INSTRUMENT_CODE = ['Missing instrument', "That code needs an instrument this device doesn't have."];
 // A link whose code is damaged (cut short, or a character changed).
 const BAD_LINK = ['Bad link', "That link's code can't be read."];
@@ -72,9 +71,9 @@ const APP_LINK = '';
 // Reported in Diagnostics. Declared here rather than beside the registration
 // at the foot of the file so it is initialised before anything can read it.
 let swState = 'unsupported';
-// Every change in the service worker's state, with when it came (queue
-// item 41): a field report said `installing` while the music played, and
-// one word cannot tell a stuck install from a finished one.
+// Every change in the service worker's state, with when it came. A field
+// report said `installing` while the music played, and one word cannot tell
+// a stuck install from a finished one.
 const swEvents = [];
 function swEvent(what) {
   if (swEvents.length >= 12) swEvents.splice(1, 1);
@@ -82,7 +81,7 @@ function swEvent(what) {
 }
 
 // The GPU the browser draws with, as WebGL names it, and whether that is
-// a real one (queue item 41). Asked once, on a context let go at once.
+// a real one. Asked once, on a context let go at once.
 let gpuInfo = null;
 function gpuReport() {
   if (gpuInfo) return gpuInfo;
@@ -130,7 +129,7 @@ const state = {
   view: 'now',
   lastView: 'now',
   lastEdit: 'layers',
-  // The listener's vibes (queue item 38b), in VIBE_IDS order. Every new
+  // The listener's vibes, in VIBE_IDS order. Every new
   // loop leans toward them; saved in the prefs.
   vibes: [],
   // The other next picks (design/next-picks.md): a tempo range and a
@@ -140,7 +139,7 @@ const state = {
   lastAlbum: null,
   // Now Playing's last audible position, in steps, held while paused.
   nowSteps: 0,
-  // The rail pressed (session 30h): { id, f } while a finger or the pointer
+  // The rail pressed: { id, f } while a finger or the pointer
   // is down on it, and the step the keys last asked for (and when).
   railDrag: null,
   railAsked: null,
@@ -150,34 +149,34 @@ const state = {
   passCount: 0,
   frameHandle: null,
   lite: false,
-  // Lighter on processor chosen by the app (queue item 87b, js/quality.js):
+  // Lighter on processor chosen by the app (js/quality.js):
   // what the worklet says about how busy the audio thread is, whether the
   // loop played through the last report, whether the first guess (four
   // cores or fewer) started it on lite, and the switch under way, if one is.
   busy: new quality.Busy(),
   busyPlaying: false,
-  // Set once lite is past the line (queue item 100): { at, why }.
+  // Set once lite is past the line: { at, why }.
   slow: null,
   liteGuess: false,
   switching: null,
-  // The Mono switch (queue item 66): the listener's, kept in the prefs and
+  // The Mono switch: the listener's, kept in the prefs and
   // never in a share code or a backup. Off plays the stereo render.
   mono: false,
-  // The letter keys switch (session 30n, item 122): kept as Mono is.
+  // The letter keys switch: kept as Mono is.
   letterKeys: true,
   // The volume M brings back.
   unmuteTo: null,
   media: null,
-  // The audio export's sheet and its Worker (queue item 104b, js/export.js).
+  // The audio export's sheet and its Worker (js/export.js).
   audioExport: null,
   // The Rust core for this context, once loaded (js/core.js), and when
   // (ms since the page began).
   core: null,
   coreAt: null,
   coreError: null,        // why it will not come, if it will not
-  // The last time the page was hidden, for Diagnostics (queue item 39).
+  // The last time the page was hidden, for Diagnostics.
   away: null,
-  // The picks as sent to the core (queue item 95): each sending numbered,
+  // The picks as sent to the core: each sending numbered,
   // what it held (the vibes, the picks, the request read, and whether only
   // the vibes could be sent), the last sent, and the one the core says it
   // holds, which Now Playing's pills and the panel's line show.
@@ -203,7 +202,7 @@ let cells = null;
 // takes it from the start.
 function prepareAudio() {
   if (state.ctx) return;
-  // In the Android app the core plays natively (session 27, js/native.js):
+  // In the Android app the core plays natively (js/native.js):
   // its context is a stand-in on the core's clock, and the WebView makes no
   // audio of its own.
   const bridge = nativeBridge();
@@ -253,7 +252,7 @@ function ensureAudio() {
 
 // An output, its media bridge and an engine on it, at the quality the app is
 // on, wired to the app's controls: what buildAudio installs, and what a
-// quality switch builds beside the one playing (queue item 87b).
+// quality switch builds beside the one playing.
 function makeAudio() {
   // A core that has failed (loading, or while playing) stays failed for the
   // session: the new output is not handed it, and says why.
@@ -280,10 +279,10 @@ function makeAudio() {
   engine.onStep = onStep;
   engine.onLoop = onLoop;
   engine.onTrackEnd = onTrackEnd;
-  // The core's own loops and its answer to the picks (queue item 95).
+  // The core's own loops and its answer to the picks.
   engine.onOwn = onOwn;
   engine.onPicks = onPicksHeld;
-  // A jump held while paused (session 30h): the place drawn when it is said.
+  // A jump held while paused: the place drawn when it is said.
   engine.onPlace = () => { if (state.view === 'now') renderNow(); };
   if (state.lastPicks) engine.setPicks(state.lastPicks.ask, state.lastPicks.tag);
   engine.visualOffset = (parseInt(ui.el('playheadSync').value, 10) || 0) / 1000;
@@ -308,15 +307,15 @@ function buildAudio() {
   // A quality switch under way is overtaken: the old output (the one
   // playing) goes now, at the quality already chosen.
   state.switching = null;
-  // The play's wander salt (queue item 92) goes on under the new engine.
+  // The play's wander salt goes on under the new engine.
   const salt = state.engine ? state.engine.salt : null;
   dropAudio({ output: state.output, media: state.media, engine: state.engine });
   ({ output: state.output, media: state.media, engine: state.engine } = makeAudio());
   if (salt != null) state.engine.salt = salt;
   state.busy.reset();
   if (state.spec) {
-    // The same loop, resumed under the new engine (queue item 69: its
-    // late floor doesn't wait again).
+    // The same loop, resumed under the new engine. Its late floor does not
+    // wait again.
     state.pattern = state.engine.load(state.spec, { resume: true });
     armNext();
     if (wasPlaying) {
@@ -333,12 +332,12 @@ function buildAudio() {
 
 // ------------------------------------------------- lighter on processor
 
-// A report from the worklet of how busy the audio thread was (queue item
-// 87b): kept while the loop played through it, and held to the rule.
+// A report from the worklet of how busy the audio thread was. It is kept if
+// the loop played through it, and held to the rule.
 function onBusy(output, report) {
   if (output !== state.output || state.switching) return;
   const playing = !!(state.engine && state.engine.playing);
-  // An audio export running (queue item 104b): the report is the export's
+  // An audio export running: the report is the export's
   // (a busy audio thread slows it), and never moves the app to lite: the
   // export's load is not the device's.
   if (state.audioExport && state.audioExport.watchBusy(report)) {
@@ -348,7 +347,7 @@ function onBusy(output, report) {
   state.busy.add(report, playing && state.busyPlaying, performance.now() / 1000, fillIns());
   state.busyPlaying = playing;
   if (!output.core || output.core.failed) return;
-  // Too slow even on lite (queue item 100): said once, in the card's place.
+  // Too slow even on lite: said once, in the card's place.
   // Play goes on.
   if (!state.slow && !state.coreError) {
     const s = quality.stuck({ quality: output.quality, busy: state.busy, native: !!state.ctx.native });
@@ -366,9 +365,8 @@ function onBusy(output, report) {
 // The app moves to lite (or, once, up to full): kept as its own choice,
 // apart from the listener's, and heard at the next pass (or bar): the old
 // quality fades out to it, and the new one takes the loop from its top
-// (`quality.handOff` says why it is built only then). On the player as on
-// the page's engine (queue item 94b; a crossfade is a later item): the new
-// core starts the loop again, its lateFloor not waited out again.
+// (`quality.handOff` says why it is built only then). The new core starts
+// the loop again, and does not wait out its lateFloor again.
 function autoQuality({ lite, why, at }) {
   store.setPrefs({ liteAuto: { lite, why, at: new Date().toISOString() } });
   state.lite = lite;
@@ -381,11 +379,11 @@ function autoQuality({ lite, why, at }) {
 // The output rebuilt at the quality now chosen (`state.lite`), the loop
 // playing handed over without a cut: the old one fades out and is let go
 // once it is silent, and the new one takes the loop from its top. The app's
-// own switch waits for the next pass (or bar, `at`); the listener's ('now',
-// session 30g, step 4) fades at once, briefly: letting the old output go
-// at once cut the sound mid-note (a step in the samples; android/native's
-// `a_switch_by_hand_or_by_itself_goes_over_without_a_step`). A switch
-// already under way builds at the quality chosen when it ends.
+// own switch waits for the next pass (or bar, `at`). The listener's switch
+// ('now') fades at once, briefly. To let the old output go at once cut the
+// sound mid-note, a step in the samples (android/native's test
+// `a_switch_by_hand_or_by_itself_goes_over_without_a_step`). If a switch is
+// already under way, it builds at the quality chosen when it ends.
 function switchQuality(at) {
   const engine = state.engine;
   if (!engine || !engine.playing || !state.spec) {
@@ -519,7 +517,7 @@ function updateHistoryButtons() {
 function loadSpec(spec, { keepPosition = false, id = null, pushToHistory = false } = {}) {
   ensureAudio();
   // A bar of 6/8 is twelve cells and 5/4 is twenty, so the grid has to be
-  // rebuilt whenever the metre changes. Without this the cursor indexes a
+  // rebuilt whenever the meter changes. Without this the cursor indexes a
   // sixteen-cell grid against twelve steps of music and drifts away from it.
   const spb = spec.stepsPerBar || 16;
   if (spb !== state.gridSteps) {
@@ -544,9 +542,8 @@ function loadSpec(spec, { keepPosition = false, id = null, pushToHistory = false
   armNext();
 }
 
-// The loop that follows when the track ends, where a length is set (queue
-// item 94b): the album's next, the history's next, or a new loop drawn
-// ahead. The core's player is armed with it, so it starts on the line with
+// The loop that follows when the track ends, where a length is set: the
+// album's next, the history's next, or a new loop drawn ahead. The core's player is armed with it, so it starts on the line with
 // the page asleep; onTrackEnd then takes the same one.
 function nextForEnd() {
   const spec = state.spec;
@@ -558,8 +555,8 @@ function nextForEnd() {
     return entry ? cloneSpec(entry.spec) : null;
   }
   if (state.historyIndex < state.history.length - 1) return cloneSpec(state.history[state.historyIndex + 1]);
-  // The next new loop is the core's own, with the picks it holds (queue
-  // item 95): nothing of the page's is armed.
+  // The next new loop is the core's own, with the picks it holds. Nothing
+  // of the page's is armed.
   return null;
 }
 
@@ -569,7 +566,7 @@ function armNext() {
 
 // ------------------------------------------------------- while hidden
 
-// A field report for the screen off (queue item 39), because nobody here
+// A field report for the screen off, because nobody here
 // has the phones it goes wrong on. Begun each time the page is hidden and
 // kept as it stood when it is shown again, so a tester can lock the phone
 // for a couple of minutes, unlock, and copy it from Diagnostics: how long
@@ -581,7 +578,7 @@ function coreLate() {
   return state.output && state.output.core ? state.output.core.late : null;
 }
 
-// The core's late and dropped notes by kind (queue item 41), for the views'
+// The core's late and dropped notes by kind, for the views'
 // report; null without the core.
 function coreCounts() {
   const c = state.output && state.output.core;
@@ -613,7 +610,7 @@ function awayEnd() {
   a.to = performance.now();
   a.lateTo = coreLate();
   a.fillsTo = fillIns();
-  // Every hidden spell, not only the last (queue item 47).
+  // Every hidden spell, not only the last.
   awayAll.spells++;
   awayAll.ms += a.to - a.from;
   if (a.late != null && a.lateTo != null) awayAll.late += Math.max(0, a.lateTo - a.late);
@@ -648,7 +645,7 @@ function awayReport() {
 
 // ------------------------------------------------- jumps and late notes
 
-// When the page was hidden, shown, frozen and put away (queue item 47), on
+// When the page was hidden, shown, frozen and put away, on
 // its own clock, so the log of the render-ahead's jumps and late notes can
 // say where each fell: hidden or visible, and whether within a second of a
 // change. The tester's late notes fell in neither the views' report nor the
@@ -684,7 +681,7 @@ function pageLog() {
 
 // ------------------------------------------------------- per view
 
-// A field report for the screen on (queue item 40): since Diagnostics was
+// A field report for the screen on: since Diagnostics was
 // last copied, for each view, how long it was on screen and what happened
 // meanwhile -- the main thread's long tasks (the page doing something for
 // more than 50 ms at a go), the notes that reached the core late, those the
@@ -696,7 +693,7 @@ function viewStats(view) {
   if (!views.stats[view]) {
     views.stats[view] = {
       ms: 0, longTasks: 0, longestTask: 0, lateNotes: 0, fillIns: null,
-      // Queue item 41: the late notes by why, and the dropped ones by cause.
+      // The late notes by why, and the dropped ones by cause.
       missed: 0, dropped: 0, droppedBy: DROP_CAUSES.map(() => 0),
     };
   }
@@ -775,11 +772,10 @@ function syncMediaMetadata() {
   state.media.setMetadata(state.spec.name, `${state.spec.bpm} bpm`, state.spec);
 }
 
-// Track length (session 30c, queue item 111): its view, opened from the Vibe
-// panel's pace line (`from` 'vibe') or from the export when nothing would
-// end it ('export').
-// From an album's export ('album', item 121) it opens on the first track
-// that plays on, and its time goes to the album's export, not to a loop.
+// Track length: its view. It opens from the Vibe panel's pace line (`from`
+// 'vibe'), or from the export when nothing would end it ('export'). From an
+// album's export ('album'), it opens on the first track that plays on, and
+// its time goes to the album's export, not to a loop.
 function openTrackView(from, spec = state.spec) {
   if (!spec) return;
   tracklen.openTrack(spec, from);
@@ -802,7 +798,7 @@ function setTrackLength(track) {
 }
 
 // The playing loop's cover on the card. Drawn off the main thread
-// (js/covers.js, queue item 41) and kept there, so neither a new loop nor
+// (js/covers.js) and kept there, so neither a new loop nor
 // going back to one -- leaving an album, changing the Library's tab, a code
 // for the loop that is playing -- holds the page; the card keeps the last
 // cover until the new one is in.
@@ -865,7 +861,7 @@ function refreshCard() {
 // which album is playing, as a reminder of where Next goes.
 function renderLoopWords() {
   const pl = state.playlist;
-  // The track length set (session 30c), as a time.
+  // The track length set, as a time.
   const t = tracklen.trackOfSpec(state.spec);
   ui.renderReadout(state.spec, state.pattern, {
     album: pl && pl.ids.length ? `${pl.title} ${pl.index + 1}/${pl.ids.length}` : '',
@@ -1043,9 +1039,9 @@ function setView(view) {
 
 // ----------------------------------------------------------------- vibes
 
-// Queue item 38b. The Vibe panel's mood line opens this view in its
-// place; Close goes back. No limit on how many: past five, each new loop
-// picks five of them (generator.js, `newSpec`).
+// The Vibe panel's mood line opens this view in its place, and Close goes
+// back. There is no limit on how many vibes. Past five, each new loop picks
+// five of them (the core's `new_spec`).
 function renderVibes() {
   const list = ui.el('vibesList');
   if (!list.children.length) {
@@ -1102,7 +1098,7 @@ function setPicks(next) {
   if (state.view === 'vibe') picks.renderPanel();
 }
 
-// The panel's request sent to the core as a command (queue item 95): it holds
+// The panel's request sent to the core as a command: it holds
 // it for every loop it makes itself. Each sending is numbered, so a loop the
 // core made says which picks it took (`onOwn`); a request the reader can't
 // read goes as its vibes alone, as the page's own draw kept the moods of one
@@ -1141,7 +1137,7 @@ function heldRequest(entry) {
   return entry.vibesOnly || entry.met === false ? entry.vibes.slice() : entry.request;
 }
 
-// A loop the core made itself has started (queue item 95): at Next, or where
+// A loop the core made itself has started: at Next, or where
 // the track length's time ran out with nothing of the page's armed. The
 // page draws the same spec for its card, history and share codes from the
 // seed and the picks the core took (the generation goldens hold the two
@@ -1158,7 +1154,7 @@ function onOwn(seed, tag) {
     }
     state.playlist = null;
     // A new track made (Next, or the core's own at a track's end): the
-    // album's way back goes until another album is left (session 30h).
+    // album's way back goes until another album is left.
     state.lastAlbum = null;
     if (state.spec) {
       const last = state.history[state.history.length - 1];
@@ -1181,7 +1177,7 @@ function clearPickLine(line) {
   else if (line === 'voices') setPicks({ voices: null, layers: null });
 }
 
-// Clear all (session 30j): every pick back to chance, the moods with them,
+// Clear all: every pick back to chance, the moods with them,
 // for loops still to come. The Track length is the loop playing's, not a
 // pick: it stays.
 function clearAllPicks() {
@@ -1312,13 +1308,13 @@ function updateNowClock() {
   const pos = state.nowSteps || 0;
   let text;
   let frac;
-  // A set track length counts down to where it hands over (queue item 88b:
-  // whole passes, or a phrase line inside one); a loop's own length, however
-  // long, never ends it. Today's clock: the long-piece display waits for a
+  // A set track length counts down to where it hands over: whole passes, or
+  // a phrase line inside one. A loop's own length, however long, never ends
+  // it. Today's clock: the long-piece display waits for a
   // Painter session.
   const span = railSpan();
   const drag = state.railDrag;
-  // Pressed (session 30h): the rail and the clock show where a let-go goes.
+  // Pressed: the rail and the clock show where a let-go goes.
   const at = drag && span ? railStep(span, drag.f) : pos;
   if (span.track) {
     text = `\u2212${clock(Math.max(0, span.to - at) * e.stepDur)}`;
@@ -1330,13 +1326,13 @@ function updateNowClock() {
   setNowText(text);
   ui.el('nowFill').style.transform = `scaleX(${frac.toFixed(4)})`;
   sayRail(span, at);
-  // A long piece's line and where you are (queue item 106b).
+  // A long piece's line and where you are.
   piece.updatePiece();
 }
 
-// ------------------------------------------------ the rail (session 30h)
+// ------------------------------------------------ the rail
 
-// What a short loop's rail spans (queue item 116), in steps from the load:
+// What a short loop's rail spans, in steps from the load:
 // the track, from where its count began to where it ends, where a Track
 // length is set; else the round playing, the loop's pass (a short piece's
 // whole length, where its bars picker set one). Null with nothing loaded.
@@ -1405,10 +1401,11 @@ function sayRail(span, at) {
   rail.setAttribute('aria-valuetext', text);
 }
 
-// The rail's pointer, finger and keys (session 30h, as the long piece's
-// line): press or drag shows where, let go goes there; the arrows a bar each
-// way, Page Up and Down a phrase (four bars), Home its start, End its last
-// bar.
+// The rail's pointer, finger and keys, the same as the long piece's line:
+// - Press or drag shows where, and let go goes there.
+// - The arrows move a bar each way, and Page Up and Page Down a phrase (four
+//   bars).
+// - Home goes to its start, and End to its last bar.
 function wireRail() {
   const rail = ui.el('nowRail');
   const frac = (ev) => {
@@ -1510,7 +1507,7 @@ function startRename() {
   input.focus();
   input.select();
 
-  // The box takes only what a share code can carry (session 23): a
+  // The box takes only what a share code can carry: a
   // character the code refuses (an invisible or a control one, a direction
   // override, a pile of marks) or a name past its room is not taken, and the
   // box keeps what it had. Spaces are tidied at the end, and an input
@@ -1615,7 +1612,7 @@ async function offerCode(code, label, what = 'Code') {
     out.hidden = true;
     ui.toast('Copied', `${what} copied`);
   } catch {
-    // The box, only now (session 30e), holds the code alone, so all of it
+    // The box, only now, holds the code alone, so all of it
     // selected is the code. It lives under Save > Share; take them to it.
     out.textContent = code;
     out.setAttribute('aria-label', `${what} to copy: ${label}`);
@@ -1664,11 +1661,11 @@ async function seedAlbum(asLink) {
   }
 }
 
-// The album of one seed saved to the Library (item 121; Mikey, 2026-11-23:
-// "Add 'save'"): named as a new album is, its tracks drawn from a fresh seed
-// with the picks now set, and kept as its code plays them (the code made,
-// then read back as a pasted one is), so the album played from the Library
-// is the album its code would bring.
+// The album of one seed, saved to the Library (Mikey, 2026-11-23: "Add
+// 'save'"). It is named as a new album is. Its tracks come from a fresh seed
+// with the picks now set. It is kept as its code plays them: the code is
+// made, then read back as a pasted one is. So the album played from the
+// Library is the album that its code would bring.
 function seedAlbumSave() {
   const count = Number(ui.el('seedCount').value) || 12;
   const name = library.askAlbumName();
@@ -1755,7 +1752,7 @@ function onStep(step) {
   ui.moveCursor(lights, cells, step % spb);
 }
 
-// The layers' bar `bar` (session 30b): while playing, as heard (each step
+// The layers' bar `bar`: while playing, as heard (each step
 // the core has decided as it sounded, the rest of the bar as the pass's plan
 // will have it heard; js/heard.js); else the loop as composed.
 function drawLayers(bar) {
@@ -1815,9 +1812,9 @@ function advancePlaylist(step, play = true) {
 
 // The loop the page opens on, and Play before any loop exists, lean toward
 // the vibes: drawn here, since there is no core before a tap. Every other
-// new loop is the core's own (`newLoop`). The picks are its request (queue
-// item 85); one the generator cannot meet (the panel says so) is left out,
-// the moods kept.
+// new loop is the core's own (`newLoop`). The picks are its request. A
+// pick that the generator cannot meet (the panel says so) is left out, and
+// the moods are kept.
 function newSpec() {
   let spec;
   try {
@@ -1871,12 +1868,12 @@ function setPlayButton(playing) {
 
 function newLoop() {
   // Making something new is leaving the album, and its way back goes
-  // (session 30h).
+  //.
   state.playlist = null;
   state.lastAlbum = null;
   if (state.view === 'now') renderNow();
   ensureAudio();
-  // The core makes it (queue item 95), with the picks it holds; the page
+  // The core makes it, with the picks it holds; the page
   // catches up when it starts (`onOwn`), which keeps the history and says
   // its name.
   const was = state.engine.playing;
@@ -1927,14 +1924,13 @@ function toggleMute(layer) {
   }
   state.spec.mutes[layer] = !state.spec.mutes[layer];
   // The channel goes quiet at once either way; back on, its notes are
-  // decided again from now (on the page's engine, not after what the core
-  // holds: queue item 40).
+  // decided again from now, not after what the core holds.
   state.engine.setMute(layer, state.spec.mutes[layer]);
   drawLayers(Math.max(0, state.bar));
 }
 
 // The loop playing as its code carries it: with the wander's salt of this
-// play when it wanders across the slider's upper range (queue item 92), so
+// play when it wanders across the slider's upper range, so
 // the code says which play it was shared from. Opening it draws a play's
 // own salt, as any play does.
 function sharedSpec() {
@@ -1984,7 +1980,7 @@ function openLink() {
   openCode(code, { play: false, link: true });
 }
 
-// The Library from the old address (session 31a): its page packs the backup
+// The Library from the old address: its page packs the backup
 // into this link, "#move=...", with the link it was opened by after it
 // ("&then=c=..."). Added as a restore adds, then that link opens.
 async function takeLibrary() {
@@ -2022,9 +2018,9 @@ function keepAlbum(title, specs) {
 // link (ready, not playing).
 function openCode(text, { play, link = false }) {
   const kind = share.codeKind(text);
-  // A version 1 code (session 23: the app speaks version 2 only), or one
-  // from a newer build, or one that needs what this device lacks: one plain
-  // line each, not an error.
+  // A version 1 code (the app speaks version 2 only), a code from a newer
+  // build, or one that needs what this device lacks: one plain line each,
+  // not an error.
   if (kind === 'old') { ui.toast(...OLD_CODE); return; }
   if (kind === 'newer') { ui.toast(...NEWER_CODE); return; }
   if (kind === 'instrument') { ui.toast(...INSTRUMENT_CODE); return; }
@@ -2180,7 +2176,7 @@ function watchTextSize(changed) {
 
 // ------------------------------------------------------------ the keyboard
 
-// The keyboard as music players have it (session 30n, item 122): the map,
+// The keyboard as music players have it: the map,
 // what each key follows and what a key never does are js/shortcuts.js's.
 
 // The volume a step (Up and Down, YouTube's 5%), and mute (M): the Sound
@@ -2429,17 +2425,17 @@ function wire() {
     clearAll: clearAllPicks,
     openPicker: (kind) => { pickers.openPicker(kind); setView(kind); },
   });
-  // The tempo, key, style and voices pickers (session 30j, queue item 118).
+  // The tempo, key, style and voices pickers.
   pickers.wirePickers({ state, setView, setPicks });
   ui.el('vibesClear').addEventListener('click', () => {
     setVibes([]);
     // It goes dim with nothing picked: the focus to close beside it.
     ui.el('vibesClose').focus({ preventScroll: true });
   });
-  // A short loop's rail moves the playhead (session 30h).
+  // A short loop's rail moves the playhead.
   wireRail();
-  // A long piece on Now Playing (queue item 106b): its line, where you are,
-  // and the jump (session 17's command).
+  // A long piece on Now Playing: its line, where you are, and the jump (the
+  // core's jump command).
   piece.wirePiece({
     jump: (kind, at) => !!(state.engine && state.engine.jumpTo && state.engine.jumpTo(kind, at)),
     spec: () => state.spec,
@@ -2466,7 +2462,7 @@ function wire() {
     else setView(state.lastEdit);
   });
 
-  // The details of the card: a tap shows the rest of them (session 30d).
+  // The details of the card: a tap shows the rest of them.
   ui.el('metaMore').addEventListener('click', () => ui.moreDetails());
   const nameEl = ui.el('loopName');
   nameEl.addEventListener('click', startRename);
@@ -2480,7 +2476,7 @@ function wire() {
 
   ui.el('playBtn').addEventListener('click', togglePlay);
   ui.el('exportMidi').addEventListener('click', () => exportMidi());
-  // Share's two views (session 30e): Export, and an album from one seed.
+  // Share's two views: Export, and an album from one seed.
   // The focus goes in on the title and comes back on the key.
   for (const [key, view, id, back] of [['goExport', 'export', 'viewExport', 'exportBack'], ['goSeedAlbum', 'seed', 'viewSeed', 'seedBack']]) {
     ui.el(key).addEventListener('click', () => {
@@ -2493,16 +2489,16 @@ function wire() {
       ui.el(key).focus({ preventScroll: true });
     });
   }
-  // Exporting audio (queue item 104b): the Export view, the loop
+  // Exporting audio: the Export view, the loop
   // playing as the core plays it, "lighter on processor" its speed.
   state.audioExport = new AudioExport({
     spec: () => state.spec,
     engine: () => state.engine,
     mono: () => state.mono,
     lite: () => state.lite,
-    // Nothing would end the export: how long, first (session 30c).
+    // Nothing would end the export: how long, first.
     openTrack: (from = 'export', spec = state.spec) => openTrackView(from, spec),
-    // An album to export whole (item 121): the one playing, else the one
+    // An album to export whole: the one playing, else the one
     // open in the Library.
     album: () => {
       const id = (state.playlist && state.playlist.albumId) || library.openedAlbum();
@@ -2522,7 +2518,7 @@ function wire() {
   });
   tracklen.wireTrack({
     done: (track, from) => {
-      // An album's export (item 121): the time for its tracks that play on,
+      // An album's export: the time for its tracks that play on,
       // the loops themselves left as they are.
       if (from === 'album') {
         setView('export');
@@ -2626,46 +2622,46 @@ function wire() {
     lines.push(`gpu: ${gpu.renderer}  accelerated: ${gpu.accelerated}`);
     lines.push(`cores: ${navigator.hardwareConcurrency || '?'}  lite: ${state.lite}, ${liteSource()}`);
     // The app's own last move, kept after the listener's choice overrides
-    // it (session 30g: "yours" alone hid why it moved). "reset counters"
-    // clears the line, not the move: the rule still never moves twice.
+    // it, because "yours" alone hid why it moved. "reset counters" clears the
+    // line, not the move: the rule still never moves twice.
     {
       const { liteAuto: auto, liteAutoReset: reset } = store.getPrefs();
       const since = auto && !(reset && (!auto.at || auto.at <= reset));
       lines.push(since ? `lite by itself: last ${auto.lite ? 'on' : 'off'} at ${auto.at || '?'} (${auto.why})` : `lite by itself: never${reset ? ' since reset counters' : ''}`);
     }
-    // "Let the loop wander" (queue item 92): unrepeatable across the
+    // "Let the loop wander": unrepeatable across the
     // slider's upper range, with this play's salt.
     if (state.engine) {
       const e = state.engine;
       const salt = e.wanderSalt;
       lines.push(`wander: ${e.driftOn ? e.driftAmount : 'off'}${salt ? `, unrepeatable (salt ${salt})` : ', repeatable'}`);
     }
-    // How busy the audio thread has been (queue item 87b): the busiest
+    // How busy the audio thread has been: the busiest
     // quarter-second over the rule's spans, while the loop played.
     {
       const b20 = state.busy.busiest(quality.OVER_FOR);
       const b60 = state.busy.busiest(quality.UNDER_FOR);
       const p = (x) => (x === null ? 'not yet' : `${Math.round(x * 100)}%`);
       lines.push(`busiest: ${p(b20)} over ${quality.OVER_FOR} s, ${p(b60)} over ${quality.UNDER_FOR} s (${state.output ? state.output.quality : '?'}; switches to lite past ${Math.round(quality.OVER * 100)}%)`);
-      // Too slow even on lite (queue item 100): how long ago the line was
+      // Too slow even on lite: how long ago the line was
       // shown, and what tripped it.
       lines.push(state.slow ? `slow: lite past the line, ${Math.round((performance.now() - state.slow.at) / 1000)}s (${state.slow.why})` : 'slow: no');
     }
     // The core's player, with the notes it took late, left out or dropped;
     // or why there is none.
     lines.push(`engine: ${state.output ? state.output.engineReport() : state.coreError ? `none (${state.coreError})` : 'rust (loading)'}`);
-    // The Android app's native core (session 27): its stream, as the core's
+    // The Android app's native core: its stream, as the core's
     // side says it.
     if (state.ctx && state.ctx.native) lines.push(`stream: ${state.ctx.streamReport()}`);
     lines.push(`core: ${state.core ? `loaded ${state.coreAt} ms after the page began` : state.coreError ? 'not loaded' : 'loading'}`);
     const host = state.output && state.output.core && !state.output.core.failed ? state.output.core : null;
     lines.push(`layout: ${host ? (host.layout === 2 ? 'stereo' : 'mono') : '-'}  mono switch: ${state.mono ? 'on' : 'off'}`);
-    // What the core's render costs this device, each layout apart (queue
-    // item 66; docs/CORE.md, promise 9: stereo must not double it).
+    // What the core's render costs this device, for each layout
+    // (docs/CORE.md, promise 9: stereo must not double it).
     if (host) lines.push(`render: ${host.costReport()}`);
-    // One loop in thirty is a deliberate doubling (roadmap item 12), and
-    // "is this one of them?" is otherwise only answerable by ear, which is
-    // no use at all when the question is whether it fired.
+    // One loop in thirty is a deliberate doubling. Without this line, only
+    // the ear can tell if a loop is one of them, and that is no use when the
+    // question is whether it fired.
     lines.push(`choir: ${state.pattern && state.pattern.choir ? 'yes' : 'no'}`);
     if (state.media) push(state.media.report());
     else lines.push('media: not built yet (press Play)');
@@ -2685,7 +2681,7 @@ function wire() {
     // The core's late, missed and dropped notes read from here (the engine
     // line): the page's start again, the core's own run on.
     if (state.output && state.output.core && !state.output.core.native) state.output.core.resetCounts();
-    // The Android app's native counts (session 30g): the stream's, too.
+    // The Android app's native counts: the stream's, too.
     if (state.ctx && state.ctx.native) state.ctx.resetCounts();
     store.setPrefs({ liteAutoReset: new Date().toISOString() });
     renderDiag();
@@ -2804,8 +2800,8 @@ function wire() {
   // The picks go to the core as it starts (and survive a reload as prefs).
   sendPicks();
   updateVibesKey();
-  // The listener's choice; else the app's own, if it has moved (queue item
-  // 87b); else the first guess, from the cores.
+  // The listener's choice; else the app's own, if it has moved; else the
+  // first guess, from the cores.
   state.liteGuess = (prefs.lite === undefined || prefs.lite === null) && !prefs.liteAuto && cores <= 4;
   state.lite = prefs.lite ?? (prefs.liteAuto ? prefs.liteAuto.lite : cores <= 4);
   setLiteSwitch(state.lite);
@@ -2825,7 +2821,7 @@ function wire() {
   ui.el('syncVal').textContent = `${sync} ms`;
 
   state.spec = newSpec();
-  // Build the grid for the metre of the loop that is actually on screen,
+  // Build the grid for the meter of the loop that is actually on screen,
   // not for an assumed 4/4.
   state.gridSteps = state.spec.stepsPerBar || 16;
   lights = ui.buildPlayhead(state.gridSteps);
@@ -2881,7 +2877,7 @@ if (noGenerator) {
 }
 
 if (nativeBridge()) {
-  // The Android app (session 27): its files are inside it, so no worker.
+  // The Android app: its files are inside it, so no worker.
   swState = 'none (the app holds its own files)';
 } else if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   swState = 'registering';

@@ -1,9 +1,8 @@
 // Standard MIDI File writer, format 1.
 //
-// This is the escape hatch: whatever the browser synth sounds like, the
-// notes themselves can go into a DAW, a Volca, an MPC, anything with a
-// MIDI in. Written by hand because the whole spec we need is about
-// eighty bytes of structure.
+// This is the escape hatch: the notes themselves can go into a DAW, a
+// Volca, an MPC, or anything with a MIDI in. It is written by hand, because
+// the part of the spec that it needs is about eighty bytes of structure.
 
 const PPQ = 480;
 
@@ -21,7 +20,7 @@ function str(s) {
   return Array.from(s, (c) => c.charCodeAt(0));
 }
 
-// A meta event's text (item 121: the loop's name as the track's name): its
+// A meta event's text (for example, the loop's name as the track's name): its
 // UTF-8 bytes after their length, so a Thai or emoji name arrives whole.
 const utf8 = new TextEncoder();
 function metaText(type, text) {

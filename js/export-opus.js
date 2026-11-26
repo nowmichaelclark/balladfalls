@@ -1,27 +1,31 @@
-// The small format's encoder (queue item 104c): Opus through the browser's
-// own encoder (WebCodecs' AudioEncoder, in the export's Worker), the packets
-// written into an Ogg file as they come (js/ogg.js). No library, no server.
+// The small format's encoder: Opus through the browser's own encoder
+// (WebCodecs' AudioEncoder, in the export's Worker). The packets go into an
+// Ogg file as they come (js/ogg.js). It uses no library and no server.
 //
-// Where the browser has no such encoder, `opusWorks` says so and the sheet
-// hides the choice: there is no other way to make the small file (a
-// fallback encoder in script could fail on a weak phone, and an export must
-// never break anything). A browser that offers AAC and not Opus gets the
-// choice hidden too: one format, done properly.
+// If the browser has no such encoder, `opusWorks` says so, and the sheet
+// hides the choice. There is no other way to make the small file. A fallback
+// encoder in script could fail on a weak phone, and an export must never
+// break anything. A browser that offers AAC and not Opus also gets the
+// choice hidden: one format, done properly.
 //
-// The render is js/export-render.js's, in its 'opus' format: the core at
-// 48 kHz, a chunk of samples at a time. Each chunk goes into the encoder
-// (which queues and encodes off this thread's work), and the packets that
-// have come out go through the Ogg writer into bytes for the file, so memory
-// stays the same for a minute or three hours: the encoder's queue is held to
-// a few chunks (`settle`), and nothing else accumulates.
+// The render is js/export-render.js's 'opus' format: the core at 48 kHz, a
+// chunk of samples at a time.
+// 1. Each chunk goes into the encoder, which queues and encodes off this
+//    thread's work.
+// 2. The packets that come out go through the Ogg writer into bytes for the
+//    file.
+// The encoder's queue is held to a few chunks (`settle`), and nothing else
+// grows. So memory stays the same for a minute or for three hours.
 //
-// The file's length is exact to the sample: the encoder is given silence
-// after the last sample, as much as its lead-in and no more than a frame
-// beyond (so what it has made covers the audio and not a packet too much,
-// which Ogg Opus's end trimming allows), and the file's last granule
-// position says where the audio ends, so a player cuts the rest. (Measured
-// in Chromium: its encoder gives only whole frames, dropping a partial last
-// one, so the silence also brings the total to a whole number of frames.)
+// The file's length is exact to the sample:
+// - After the last sample, the encoder gets silence: as much as its lead-in,
+//   and no more than one frame beyond. So its packets cover the audio and at
+//   most one packet more, which Ogg Opus's end trimming allows.
+// - The file's last granule position says where the audio ends, so a
+//   player cuts the rest.
+// Measured in Chromium: its encoder gives only whole frames, and drops a
+// partial last one. So the silence also brings the total to a whole number
+// of frames.
 
 import { OggOpus, GRANULE_RATE } from './ogg.js';
 import { OPUS_RATE, CHUNK } from './export-render.js';
@@ -98,7 +102,7 @@ const nothing = new Uint8Array(0);
 
 export class OpusMaker {
   // `render`: an export-render.js Render in 'opus'. `comments`: the file's
-  // tags as OpusTags holds them (item 121, js/tags.js's opusComments), or
+  // tags as OpusTags holds them (js/tags.js's opusComments), or
   // null for the title alone (`title`, the loop's name).
   constructor(render, { comments = null, title = '' } = {}) {
     if (OPUS_RATE !== GRANULE_RATE) throw new Error('the render and the Ogg writer count at different rates');

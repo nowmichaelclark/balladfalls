@@ -8,12 +8,13 @@
 // uniform density and no empty space, so after about ten you had seen the
 // trick. Noise is not composition.
 //
-// So a cover is now built the way a picture is: a ground colour, one to
+// So a cover is now built the way a picture is: a ground color, one to
 // three *masked* fields combined with blend modes, a crop that sometimes
 // pushes far into the detail, geometry set against the organic parts, and a
-// posterising pass that turns smooth gradients into something graphic. Large
-// areas are deliberately left empty. Two covers of the same style can look
-// nothing alike because the composition, crop and palette rotation differ.
+// posterizing pass that turns smooth gradients into something graphic. Large
+// areas are left empty on purpose. Two covers of the same style can look
+// nothing alike, because the composition, the crop and the palette's
+// rotation differ.
 //
 // Cost is kept down by rendering the fields small and letting the upscale
 // soften them; only the cheap passes run at full resolution.
@@ -64,7 +65,7 @@ const STYLE_BIAS = {
 // and where it deliberately is not.
 const COMPOSITIONS = ['horizon', 'orb', 'stack', 'split', 'aperture', 'drift', 'shard', 'full'];
 
-// ------------------------------------------------------------------ colour
+// ------------------------------------------------------------------- color
 
 function hexToRgb(c) {
   return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
@@ -271,7 +272,7 @@ export function coverParams(spec) {
       alpha: i === 0 ? 1 : rng.range(0.35, 0.85),
       // Cropping stops every cover reading at the same distance. Capped,
       // though: zooming four times into smooth noise lands in a featureless
-      // patch, and the result is a flat square of colour.
+      // patch, and the result is a flat square of color.
       zoom: rng.chance(0.42) ? rng.range(1.35, 2.4) : 1,
       panX: rng.f(),
       panY: rng.f(),
@@ -282,13 +283,13 @@ export function coverParams(spec) {
     seed,
     composition: finalComposition,
     layers,
-    // Key rotates the palette; twelve roots, twelve different colourways.
+    // Key rotates the palette: twelve roots, twelve different colorways.
     hueTurn: ((spec.root || 0) / 12) * 0.7 + rng.range(-0.04, 0.04),
     saturation: 0.55 + feel.energy * 0.75,
     groundStop: rng.chance(0.5) ? 0 : 1,
     brightness: 0.45 + feel.lift * 0.42,
     contrast: 0.7 + feel.energy * 0.8,
-    // Fewer levels reads as print rather than render. Stillness posterises
+    // Fewer levels reads as print rather than render. Stillness posterizes
     // hardest, which suits the quiet profiles.
     posterize: rng.chance(0.55) ? Math.round(3 + feel.energy * 9 + rng.f() * 3) : 0,
     grain: 0.02 + (1 - feel.warmth) * 0.07,
@@ -406,7 +407,7 @@ function renderField(layer, ramp, p) {
 // The fields are most of a cover's cost, and the same at any size, so the
 // ones drawn lately are kept: an album's art in its row and on the card,
 // or a loop's cover drawn again, cost only the cheap passes the second
-// time (queue item 40). A field depends only on what goes into it here,
+// time. A field depends only on what goes into it here,
 // and each caller gets a copy of its own, since the mask cuts into it.
 const fields = new Map();
 function fieldFor(layer, ramp, p) {
@@ -540,7 +541,7 @@ function drawGeometry(ctx, p, size, ramp) {
       ctx.stroke();
     }
   } else if (kind === 'rays') {
-    // Rotational order comes from the metre.
+    // Rotational order comes from the meter.
     const cx = size / 2;
     const cy = size / 2;
     const n = p.symmetry * (1 + Math.floor(r.f() * 3));

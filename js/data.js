@@ -1,10 +1,10 @@
-// The generation data's text format, and its reader (queue item 78).
+// The generation data's text format, and its reader.
 //
-// Profiles, vibes, moods, the voice table and the choice tables are plain
-// text in data/, one format, read the same way by the JavaScript here and by
-// the Rust generator (phase 2). Nothing here depends on a library, and the
-// format needs nothing a `no_std` parser lacks: split lines, split on
-// spaces and commas, parse a number.
+// The profiles, vibes, moods, the voice table and the choice tables are
+// plain text in data/, in one format. The page reads them here, and the
+// Rust core reads them the same way, compiled in (core/build.rs). Nothing
+// here depends on a library. The format needs nothing that a `no_std`
+// parser lacks: split lines, split on spaces and commas, parse a number.
 //
 // The format. Plain ASCII; one thing at a time:
 //
@@ -14,11 +14,11 @@
 //       more tokens              a line that starts with a space or a tab
 //                                continues the entry above it
 //
-// A value is rows separated by commas; a row is tokens separated by spaces.
-// A token is any run of printable ASCII but space, comma and '#'. A key is
-// letters, digits, '_' and '.' (a dot names a part: `tone.warmth`). Entries
-// keep their order, and a key may not repeat in a block. What a token means
-// is up to the reader of that key, with these shared readings:
+// A value is rows separated by commas. A row is tokens separated by spaces.
+// A token is any run of printable ASCII except space, comma and '#'. A key
+// is letters, digits, '_' and '.' (a dot names a part: `tone.warmth`).
+// Entries keep their order, and a key may not repeat in a block. The reader
+// of a key decides what a token means, with these shared readings:
 //
 //   number   decimal ('0.05', '-3', '1e-3'), read as the one nearest double,
 //            as any JavaScript literal is; or a ratio of two integers
@@ -27,15 +27,15 @@
 //   word     the token as it stands ('dorian', 'Dust', '3/4')
 //   flag     'true' or 'false'
 //
-// So `scales = dorian 3, aeolian 3` is two rows of a word and a number, a
-// weighted pool (the weights are relative), and `bpm = 61 88` one row of two
-// numbers, a range. The readers in js/characters.js, js/vibes.js,
-// js/moods.js and js/choices.js say, per key, which they
-// expect, and fail with the file, block and key when something is not.
+// So `scales = dorian 3, aeolian 3` is two rows of a word and a number: a
+// weighted pool (the weights are relative). `bpm = 61 88` is one row of two
+// numbers: a range. The readers in js/characters.js, js/vibes.js,
+// js/moods.js and js/choices.js say, for each key, what they expect. If an
+// entry is not that, they fail, and name the file, the block and the key.
 //
-// The numbers parse to exactly the doubles the old tables in code held, and
-// a value that was computed (a ratio) stays one: the generation goldens
-// (tools/gen-golden.mjs) hold the loops to that.
+// A number parses to exactly one double, and a computed value (a ratio)
+// stays one. The generation goldens (tools/gen-golden.mjs) hold the loops
+// to that.
 
 const FILES = ['characters', 'vibes', 'moods', 'voices', 'choices'];
 

@@ -1,28 +1,34 @@
-// The request's pins (queue item 85b): the named settings a host may fix for
-// the loops it asks for, beside the vibes and the tempo (js/request.js,
-// `readRequest`). The game's and the ears' levers: any of item 54's choices
-// to one of its options, and the settings each choice draws by (the arc, the
-// tuned kick, subDuck, lateFloor, padSweep), the echo's time, the loop's
-// tuning (0 holds it at A440), the progression's kind, lowBell's kind, twang's version and the space recipe's 40 (core/src/space.rs). `core/src/generator/request.rs` reads the
-// same table, in the same order.
+// The request's pins: the named settings that a host may fix for the loops
+// it asks for, beside the vibes and the tempo (`readRequest` in
+// js/request.js). They are the levers for a game and for research:
+// - any of the per-loop choices, set to one of its options;
+// - the settings that each choice draws by (the arc, the tuned kick,
+//   subDuck, lateFloor, padSweep);
+// - the echo's time, and the loop's tuning (0 holds it at A440);
+// - the progression's kind, lowBell's kind and twang's version;
+// - the space recipe's 40 settings (core/src/space.rs).
+// `core/src/generator/request.rs` reads the same table, in the same order.
 //
 // **A pin chooses within what the loop could draw.** Every setting is held
-// to the range (or the list) the data draws it from, so a pinned loop is one
-// the seed could have made; a value outside it is refused with a short plain
-// line. Widening past the data is the sketch build's `--set`, not a request.
+// to the range (or the list) that the data draws it from. So a pinned loop
+// is one that the seed could have made. A value outside it is refused with a
+// short plain line. To widen past the data, use the sketch build's `--set`,
+// not a request.
 //
-// **A pin shapes, it doesn't draw.** The loop's own draws are all made as
-// they always are, on their own streams, and a pin then overrules one value,
-// so nothing else moves. A choice pinned to today's option is today's, even
-// where the loop drew a change (and `arc=today` keeps a glacial loop's arc
-// away too); pinned to a change, the loop plays it where its eligibility
-// test allows (Mikey's rules for each: subDuck needs a kick and a bass line,
-// lateFloor something else from the first second; padSweep's fast a kit as
-// well), and today's where not: a request bends the music, never breaks it.
-// A setting pinned shapes its choice when the loop plays it; it does not
-// turn the choice on. Where a choice's options draw a setting from ranges of
-// their own (item 101a), the pin takes any of them and the loop holds it to
-// the range of the option it plays.
+// **A pin shapes, but does not draw.** The loop's own draws are all made as
+// always, on their own streams. Then a pin overrules one value, so nothing
+// else moves.
+// - A choice pinned to the default option plays the default, even where the
+//   loop drew a change. (`arc=today` also keeps a glacial loop's arc away.)
+// - A choice pinned to a change plays it where its eligibility test allows,
+//   and the default where not. Mikey's rules: subDuck needs a kick and a bass
+//   line; lateFloor needs something else from the first second; padSweep's
+//   fast also needs a kit. A request bends the music, but never breaks it.
+// - A pinned setting shapes its choice when the loop plays it. It does not
+//   turn the choice on.
+// - Where a choice's options draw a setting from ranges of their own, the
+//   pin takes any of them, and the loop holds it to the range of the option
+//   that it plays.
 //
 // As text: `organ=on`, `tunedKick=long`, `arc.shape=deep`, `arc.period=240`,
 // `echo.beats=1`, `tuning.cents=0`, `space.room=0.8` (numbers as JavaScript
@@ -32,9 +38,10 @@ import { ARC, CHOICES, ECHO, KICK, LATEFLOOR, LOWBELL, PADSWEEP, SUBDUCK, TUNING
 
 export class RequestError extends Error {}
 
-// The space recipe's settings, by number (core/src/space.rs, `SETTINGS`):
-// each name and the range a loop draws it from (one number where the two are
-// equal). test/core-host.test.mjs holds this copy to the core's.
+// The space recipe's settings, by number (`SETTINGS` in core/src/space.rs):
+// each name, and the range that a loop draws it from (one number where the
+// two ends are equal). test/core-host.test.mjs holds this copy to the
+// core's.
 export const SPACE_SETTINGS = [
   ['room-weight', 0.64, 0.64], ['ensemble-weight', 0.5, 0.5], ['room', 0.7, 0.9],
   ['spread-chords', 0.3, 0.5], ['spread-texture', 0.35, 0.6], ['spread-light-texture', 0.15, 0.3],
@@ -47,10 +54,10 @@ export const SPACE_SETTINGS = [
   ['ceiling-busy', -7, -7], ['ceiling-sparse', -9, -9], ['ceiling-very-sparse', -12, -12],
   ['dense', 0.5, 0.5], ['sparse', 0.15, 0.15], ['wash', 1, 1],
   ['wash-follows-width', 1, 1], ['wash-cutoff', 200, 200],
-  // widePad's (item 101c): its kind, which its choice sets (0 the baseline,
-  // 1 wide, 2 opening late; pin the choice, `widePad=late`, to have it), the
-  // chords' spread, its most, the ceilings and the chords' cutoff, and how
-  // long the late kind takes to open, in seconds.
+  // widePad's settings: its kind, which its choice sets (0 the baseline,
+  // 1 wide, 2 opening late; to have it, pin the choice, `widePad=late`), the
+  // chords' spread and its most, the ceilings and the chords' cutoff, and
+  // how long the late kind takes to open, in seconds.
   ['wide', 0, 0], ['wide-chords', 1.4, 1.4], ['wide-max', 2, 2],
   ['wide-ceiling-busy', -4, -4], ['wide-ceiling-sparse', -5, -5], ['wide-ceiling-very-sparse', -7, -7],
   ['wide-cutoff', 250, 250], ['wide-open', 60, 120],
@@ -58,19 +65,21 @@ export const SPACE_SETTINGS = [
 
 const periods = Object.values(ARC.period);
 const ids = (pool) => pool.map(([id]) => id);
-// A setting a choice's options each draw from their own range (queue item
-// 101a: subDuck's deep, lateFloor's slow, padSweep's wide and fast) takes any
-// of them; the core then holds it to the range of the option the loop plays.
+// A setting that a choice's options each draw from their own range
+// (subDuck's deep, lateFloor's slow, padSweep's wide and fast) takes any of
+// them. Then the core holds it to the range of the option that the loop
+// plays.
 const span = (...ranges) => [Math.min(...ranges.map((r) => r[0])), Math.max(...ranges.map((r) => r[1]))];
 const sweep = (key) => span(PADSWEEP[key], PADSWEEP.wide[key], PADSWEEP.fast[key]);
 
-// Every pin, in its frozen order (append only: a share code writes them by
-// name, the core's hosts by number): the choices in CHOICES' order, then the
-// settings, then the space recipe's. Each { name, number, words } (the
-// words it takes, by number) or { name, number, range, whole } or { name,
-// number, values }. The numbers come in blocks, so a choice or a setting
-// added later moves none already given: the choices from 0 (room for
-// CHOICE_PINS), the settings from SETTING_PINS, the space's from SPACE_PINS.
+// Every pin, in its frozen order (append only). A share code writes them by
+// name, and the core's hosts by number. The choices come first, in CHOICES'
+// order, then the settings, then the space recipe's. Each pin is { name,
+// number, words } (the words it takes, by number), { name, number, range,
+// whole } or { name, number, values }. The numbers come in blocks, so that
+// a choice or a setting added later moves none of the numbers already
+// given: the choices from 0 (room for CHOICE_PINS), the settings from
+// SETTING_PINS, and the space's from SPACE_PINS.
 export const CHOICE_PINS = 16;
 export const SETTING_PINS = 16;
 export const SPACE_PINS = 48;
@@ -92,24 +101,24 @@ const SETTINGS = [
   { name: 'padSweep.period', range: sweep('period') },
   { name: 'padSweep.q', range: sweep('q') },
   { name: 'echo.beats', values: ECHO.beats.map(([b]) => b) },
-  // slowOpening's fade, in seconds (item 101a): shapes the slow kind only.
+  // slowOpening's fade, in seconds. It shapes only the slow kind.
   { name: 'lateFloor.fade', range: LATEFLOOR.slow.fade },
-  // tuningOffset, in cents off A440 either way (item 101b); 0 holds a loop
-  // at A440, as a game's own sounds may need.
+  // tuningOffset, in cents off A440 either way. 0 holds a loop at A440, as
+  // a game's own sounds may need.
   { name: 'tuning.cents', range: [-TUNING.cents[1], TUNING.cents[1]] },
-  // The progression's kind (item 101f): today's, or planingSevenths' major
-  // sevenths sliding a step or a minor third (core/src/generator/planing.rs).
+  // The progression's kind: the default, or planingSevenths' major sevenths
+  // that slide a step or a minor third (core/src/generator/planing.rs).
   { name: 'progression.kind', words: ['today', 'planing'] },
-  // lowBell's kind (item 101g): none, struck or swelling, for a loop that
-  // plays a chord (core/src/blocks/low_bell.rs).
+  // lowBell's kind: none, struck or swelling, for a loop that plays a chord
+  // (core/src/blocks/low_bell.rs).
   { name: 'lowBell.kind', words: ['today', ...ids(LOWBELL.kinds)] },
-  // dropSpotlight (item 101g): the bell on every chord (today), or struck in
-  // the floor drops alone ('on'), for a loop that plays it.
+  // dropSpotlight: the bell on every chord (the default), or struck only in
+  // the floor drops ('on'), for a loop that plays it.
   { name: 'lowBell.drops', words: ['today', 'on'] },
-  // twang's version (item 101h): none or soft (item 105e took slow and
-  // bright out), for a loop that plays a chord and has no kit busier than a
-  // soft one (core/src/blocks/twang.rs). The core numbers them by place.
-  // A loop saved with a word since gone plays what a code holding it does
+  // twang's version: none or soft (slow and bright were taken out), for a
+  // loop that plays a chord and has no kit busier than a soft one
+  // (core/src/blocks/twang.rs). The core numbers them by place. A loop saved
+  // with a word that is gone now plays what a code that holds it plays
   // (data/codes.txt).
   { name: 'twang.kind', words: ['today', ...ids(TWANG.kinds)], gone: { slow: 'soft', bright: 'soft' } },
 ];
@@ -126,19 +135,20 @@ export const NO_SUCH_SETTING = 'no such setting';
 export const BAD_SETTING = 'a bad setting';
 export const SETTING_OUT = 'a setting outside its range';
 
-// Whether `name` is a pin's (a choice's id, or a dotted setting's) rather
-// than a vibe's.
+// True if `name` is a pin's (a choice's id, or a dotted setting's), not a
+// vibe's.
 export function isPinName(name) {
   return BY_NAME.has(name) || name.includes('.');
 }
 
 const NUMBER_TEXT = /^-?\d+(\.\d+)?(e[-+]?\d+)?$/;
 
-// The word a pin plays for `value`: itself, or the stand-in of one taken out.
+// The word that a pin plays for `value`: itself, or the stand-in for one
+// that was taken out.
 const standIn = (p, value) => (p.gone && Object.hasOwn(p.gone, value) ? p.gone[value] : value);
 
-// The value pin `name` takes from `value` (text, a number or a word), or a
-// refusal.
+// The value that pin `name` takes from `value` (text, a number or a word),
+// or a refusal.
 export function pinValue(name, value) {
   const i = BY_NAME.get(name);
   if (i == null) throw new RequestError(NO_SUCH_SETTING);
@@ -164,7 +174,7 @@ export function pinValue(name, value) {
 }
 
 // Pins read from an object ({ name: value }) into their canonical form: the
-// same, in the table's order, every value checked; null for none.
+// same pins, in the table's order, with every value checked. Null for none.
 export function readPins(input) {
   if (input == null) return null;
   if (typeof input !== 'object' || Array.isArray(input)) throw new RequestError(BAD_SETTING);
@@ -187,7 +197,7 @@ export function pinItems(pins) {
 }
 
 // A pin as the core's hosts send it (`dl_play_pin`): its number, and its
-// value as a number (a word by its place in the pin's list).
+// value as a number (a word as its place in the pin's list).
 export function pinNumbers(pins) {
   const framed = framedPins(pins);
   if (!framed) return [];

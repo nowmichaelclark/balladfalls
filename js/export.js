@@ -1,43 +1,48 @@
-// Exporting audio (queue item 104b; docs/PAINTER.md, "Exporting audio"): the
-// Export view (from Save's Share tab: export audio), and the Worker that makes the file
-// (js/export-worker.js, its own instance of the core).
+// Exporting audio: the Export view and the Worker that makes the file.
+// The view opens from Save's Share tab ("export audio"). The Worker
+// (js/export-worker.js) runs its own instance of the core.
+// docs/PAINTER.md, "Exporting audio", describes the view.
 //
-// Safety first (Mikey, 2026-10-13): an export must never crash or break
-// anything, whatever the device. So the file is written as it is made (the
-// save picker where the browser has it, else the site's private file
-// system and a download at the end), the free space is checked before
-// anything starts, a browser that can do neither is told the most it can
-// keep in memory before it starts, Cancel and every failure leave no file
-// behind, and the music playing is never touched: the export's core is
-// another instance on another thread, and "lighter on processor" makes it
-// gentle (a quarter of one core). While it runs, the audio thread's busy
-// reports are the export's to read (`watchBusy`): a busy audio thread moves
-// it to gentle, and they never move the app to lite (the export's load is
-// not the device's).
+// Safety comes first (Mikey, 2026-10-13). An export must never crash or
+// break anything, on any device. So:
+// - The file is written as it is made: to the save picker where the
+//   browser has one, else to the site's private file system, with a
+//   download at the end.
+// - The free space is checked before anything starts.
+// - A browser that can do neither is told the most it can keep in memory.
+// - Cancel and every failure leave no file behind.
+// - The music that plays is never touched. The export's core is another
+//   instance on another thread. "Lighter on processor" makes it gentle
+//   (a quarter of one core).
+// While an export runs, it reads the audio thread's busy reports
+// (`watchBusy`). A busy audio thread makes the export gentle. The reports
+// never move the app to lite, because the export's load is not the device's.
 //
-// The format is chosen each time, by the key that starts it (session 30e:
-// "export flac", "export opus"): Lossless (FLAC, the core's own writer) or
-// Small (queue item 104c: Opus through the browser's own encoder, written
-// into an Ogg file by js/ogg.js, in the Worker). Small shows only where the
-// Worker says the browser can encode Opus (never a fallback that could fail
-// on a weak phone); a browser with AAC and not Opus has it hidden too.
+// The key that starts an export picks its format: "export flac" or
+// "export opus".
+// - Lossless is FLAC, from the core's own writer.
+// - Small is Opus from the browser's own encoder, put into an Ogg file by
+//   js/ogg.js in the Worker. Small shows only where the Worker says that
+//   the browser can encode Opus. There is no fallback that could fail on a
+//   weak phone, so a browser with AAC and no Opus does not show Small.
 //
-// Every file is tagged (item 121, js/tags.js): its name, the album's and its
-// place in it, the app, the day, its code, and its cover as the picture.
+// Every file is tagged (js/tags.js): its name, its album and its place in
+// it, the app, the day, its code, and its cover as the picture.
 //
-// An album exported whole (item 121; Mikey, 2026-11-23: "On the share
-// screen, there should be a way to export an album"): when an album plays,
-// or is open in the Library, the view offers loop or album, and for the
-// album one zip or a file a track ("let the user choose"). Its tracks are
-// made one at a time, each as long as its track length (a track that plays
-// on asks how long once, for all of them), in one calm progress with Cancel.
-// The space for the whole album is checked first. One zip goes where a
-// single file goes (the save picker, Android's picker, the private file and
-// a download at the end, memory); a file a track goes into a folder chosen
-// once (the browser's folder picker, Android's own), or downloads as each
-// is made (the browser asks once whether the site may download several
-// files). A track that fails is said, and the rest kept; Cancel or a full
-// disk keeps no zip, and keeps the tracks already saved as files.
+// A whole album can be exported (Mikey, 2026-11-23). When an album plays or
+// is open in the Library, the view offers loop or album. For an album, the
+// listener picks one zip or one file for each track.
+// - The tracks are made one at a time, each as long as its track length.
+//   If tracks play on, the view asks once how long, for all of them.
+// - One progress line with Cancel covers the whole album.
+// - The space for the whole album is checked first.
+// - One zip goes where a single file goes: the save picker, Android's
+//   picker, the private file with a download at the end, or memory.
+// - Files for each track go into a folder picked once (the browser's folder
+//   picker, or Android's own). Else each downloads when it is made, and the
+//   browser asks once if the site may download several files.
+// - If a track fails, the view says so and keeps the rest. Cancel or a full
+//   disk keeps no zip, but keeps the tracks that are already saved as files.
 
 import { askOf } from './player.js';
 import { coreTrack, trackOfSpec, setTrack } from './tracklen.js';
@@ -59,7 +64,7 @@ const MEMORY_BYTES = 160 * 1024 * 1024;
 // The bytes a second of FLAC takes, for the size shown and the space
 // checked, by lanes: the most any of 24 corpus loops of a minute took
 // (tools/export.mjs --sizes, 44.1 kHz 16-bit at full quality: 27,688 mono
-// and 47,662 stereo, the medians 18,212 and 32,505; session 20), with a
+// and 47,662 stereo, the medians 18,212 and 32,505), with a
 // third more. And the margin the free space must hold beyond it.
 const BYTES_PER_SECOND = { 1: 36000, 2: 64000 };
 // And of Small's Opus, by lanes: its bit rates (js/export-opus.js: 64 and 96
@@ -76,7 +81,7 @@ const COVER = 600;
 // gently for the rest of its run.
 const BUSY_LINE = 0.5;
 
-// The sheet's words (for Mikey to approve: docs/notes/for-mikey.md).
+// The sheet's words. Mikey approves them (docs/notes/for-mikey.md).
 export const WORDS = {
   sized: (format, s) => `${format} ~${s}`,
   memoryLong: (t) => `${t} max`,
@@ -92,7 +97,7 @@ export const WORDS = {
   memoryFull: 'Too long. Nothing saved.',
   failed: 'Export failed. Nothing saved.',
   cant: "Can't export audio here.",
-  // An album's (item 121).
+  // The words for an album.
   albumSized: (n, t, sizes) => `${n} tracks · ${t} · ${sizes}`,
   albumProgress: (i, n, pct, left) => `${i}/${n} · ${pct}%${left ? ` · ${left} left` : ''}`,
   savedFiles: (k, size, t) => `Saved ${k} files · ${size} · ${t}`,
@@ -101,8 +106,8 @@ export const WORDS = {
   zipLarge: 'Too big for one zip. Try files.',
 };
 
-// What the format keys' description says to a screen reader (session 30e:
-// fewer words on screen, never fewer for a listener who can't see it).
+// What the format keys' description says to a screen reader. The screen
+// shows few words, but a listener who can't see it never gets fewer.
 const SPOKEN = {
   whole: (t) => `The whole piece, ${t}.`,
   track: (t) => `As long as the track: ${t}.`,
@@ -143,12 +148,13 @@ export function size(bytes) {
 
 const bar = (spec) => (spec.stepsPerBar || 16) * (60 / spec.bpm / 4);
 
-// What an export of `spec` is (session 30c: the export is the track
-// length; Mikey, 2026-11-18): { key, seconds, track }, the track as the core
-// takes it ([kind, count]). The time the Track length view set, with its
-// fades; with none, a finite piece whole (its fade in, if set); else null:
-// a loop that plays on and on, or Endless, asks how long first (the export
-// key opens the Track length view).
+// What an export of `spec` is: { key, seconds, track }. The export is as
+// long as the track length (Mikey, 2026-11-18). `track` is the track in the
+// form the core takes ([kind, count]).
+// - If the Track length view set a time, it is that time, with its fades.
+// - Else a finite piece is exported whole, with its fade in if one is set.
+// - Else it is null. A loop that plays on, or Endless, asks how long first:
+//   the export key opens the Track length view.
 export function planOf(spec) {
   const t = trackOfSpec(spec);
   if (t.secs != null) return { key: 'track', seconds: t.secs, track: coreTrack(spec) };
@@ -176,7 +182,7 @@ function loopName(spec) {
   return safeName(shownName(spec), 'loop');
 }
 
-// An album's track's file: "NN name.ext" (item 121), numbered to sort.
+// The file name of an album's track: "NN name.ext", numbered to sort.
 export function trackFileName(i, n, spec, ext) {
   return `${String(i + 1).padStart(n >= 100 ? 3 : 2, '0')} ${loopName(spec)}.${ext}`;
 }
@@ -201,7 +207,7 @@ async function freeHandle(dir, name) {
 export const FORMATS = {
   lossless: { ext: 'flac', type: 'audio/flac', description: 'FLAC', bytes: BYTES_PER_SECOND },
   small: { ext: 'opus', type: 'audio/ogg', description: 'Opus', bytes: SMALL_BYTES_PER_SECOND },
-  // An album as one file (item 121).
+  // An album as one file.
   zip: { ext: 'zip', type: 'application/zip', description: 'Zip' },
 };
 
@@ -217,18 +223,19 @@ export class AudioExport {
   constructor(host) {
     this.host = host;
     this.worker = null;
-    // How the file is written here: 'app' (the Android app's own picker, its
-    // bytes handed to the app as they are made: session 28), 'picker',
-    // 'private' or 'memory'; null until the Worker has said, false if it
+    // How the file is written here: 'app', 'picker', 'private' or 'memory'.
+    // 'app' is the Android app's own picker: the bytes go to the app as they
+    // are made. It is null until the Worker says, and false if this browser
     // can't export at all.
     this.mode = null;
     // The format chosen ('lossless' or 'small'), and whether this browser can
     // make Small (the Worker says: false until it has).
     this.format = 'lossless';
     this.opus = false;
-    // What is exported (item 121): 'loop' or 'album', and an album as one
-    // 'zip' or 'files'; the time asked for an album's tracks that play on
-    // ({ id, track }); the album's specs, kept by its tracks' ids.
+    // What is exported: 'loop' or 'album'. An album goes as one 'zip' or as
+    // 'files'. `albumTrack` is the time asked for the album's tracks that
+    // play on ({ id, track }). `albumKept` holds the album's specs by their
+    // ids.
     this.scope = 'loop';
     this.box = 'zip';
     this.albumTrack = null;
@@ -312,8 +319,8 @@ export class AudioExport {
   }
 
   receive(m) {
-    // An album's run (item 121): its progress here, its tracks' ends to the
-    // run waiting for them.
+    // While an album runs, its progress comes here, and each track's end
+    // goes to the run that waits for it.
     if (this.running && this.running.album && m.type !== 'hello') {
       if (m.type === 'relay') this.relay(m);
       else if (m.type === 'progress') this.albumProgress(m);
@@ -344,8 +351,8 @@ export class AudioExport {
     }
   }
 
-  // The app's file (session 28): the Worker's bytes go to the app, which
-  // writes them where the listener chose, and the answer goes back.
+  // The Android app's file. The Worker's bytes go to the app, which writes
+  // them where the listener chose, and the answer goes back.
   relay(m) {
     this.app.request({ type: `save-${m.op}`, data: m.data, at: m.at || 0 }).then((r) => {
       if (this.worker) this.worker.postMessage({ type: 'ack', id: m.id, ok: !!(r && r.ok), why: r && r.why });
@@ -372,7 +379,7 @@ export class AudioExport {
     }
     // Small shows only where it works.
     document.querySelector('[data-format="small"]').hidden = !this.opus;
-    // Loop or album (item 121): offered while there is an album.
+    // Loop or album: offered while there is an album.
     const album = this.albumNow();
     if (!album) this.scope = 'loop';
     el('exportScope').hidden = !album;
@@ -529,7 +536,7 @@ export class AudioExport {
       this.fail('render', 'no core');
       return;
     }
-    // Its tags and its cover (item 121).
+    // Its tags and its cover.
     const tags = tagsOf({ loop: { name: shownName(spec), code: this.host.code ? this.host.code(spec) : '' }, artist: this.host.appName || '', date: new Date() });
     const picture = await this.picture(spec);
     const job = {
@@ -643,7 +650,7 @@ export class AudioExport {
   }
 
   // The album exported, `track` the time the Track length view gave for its
-  // tracks that play on (item 121).
+  // tracks that play on.
   async startAlbum(track = null) {
     if (this.running || !this.mode) return;
     const album = this.albumNow();

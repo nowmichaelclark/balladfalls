@@ -1,21 +1,26 @@
-// An album as one zip (item 121; Mikey, 2026-11-23: "let the user choose"),
-// written as each track is made: stored, not compressed (FLAC and Opus are
-// compressed already), so the zip is the tracks' bytes and a few headers,
-// and nothing is held but one track's place and checksum.
+// An album as one zip, written as each track is made. Mikey asked for a
+// choice of one zip or one file for each track (2026-11-23).
 //
-// A track is an entry: its local header (with its checksum and size left 0),
-// its bytes as they come, then the header written again with them known (a
-// write at its place, as FLAC's own header is: the private file, a chosen
-// file, Android's file and memory can all do it). The central directory and
-// its end come after the last track. Names are UTF-8 (the flag says so), the
-// time the export's. No Zip64: an album over 4 GB is refused before it
-// starts (js/export.js says so), and an entry or the whole is held under it.
+// The tracks are stored, not compressed, because FLAC and Opus are already
+// compressed. So the zip is the tracks' bytes and a few headers. Nothing is
+// held but one track's place and checksum.
 //
-// FLAC's header is written again too, once its length and MD5 are known,
-// inside the entry (`patch`): the checksum the entry carries is of the bytes
-// as they end, so the change is folded in by CRC-32's linearity (zlib's
-// crc32_combine: the difference's checksum moved past the bytes after it),
-// never by reading the file back.
+// A track is one entry, written in three parts:
+// 1. Its local header, with its checksum and size left at 0.
+// 2. Its bytes, as they come.
+// 3. The header again, with the checksum and size known. This is a write at
+//    its place, as FLAC's own header is. The private file, a chosen file,
+//    Android's file and memory can all do it.
+// The central directory and its end come after the last track. Names are
+// UTF-8 (the flag says so), and the time is the export's. There is no
+// Zip64: js/export.js refuses an album over 4 GB before it starts, and each
+// entry and the whole zip stay under it.
+//
+// FLAC's header is also written again inside the entry, once its length and
+// MD5 are known (`patch`). The entry's checksum must be of the final bytes.
+// So the change is folded in by CRC-32's linearity (zlib's crc32_combine:
+// the difference's checksum moved past the bytes after it). The file is
+// never read back.
 //
 // A track that fails mid-way (`drop`) keeps its bytes where they are, but
 // the central directory leaves it out: a reader sees the tracks that were

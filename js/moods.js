@@ -1,10 +1,10 @@
-// The mood vocabulary, in one place (queue items 16 and 78).
+// The mood vocabulary, in one place.
 //
-// Everything that names a mood reads it from here: the generator's regions
-// of the feeling space, the numbers a share code writes and the words the
-// readout shows. The moods themselves are data, data/moods.txt, which has
-// the rules for a mood's code and word; adding, renaming or merging a mood
-// is an edit to that file (and, for a merge, FORMER_CODES below).
+// Everything on the page that names a mood reads it from here: the regions
+// of the feeling space, the numbers that a share code writes, and the words
+// that the readout shows. The moods themselves are data, in data/moods.txt,
+// which has the rules for a mood's code and word. To add, rename or merge a
+// mood, edit that file (and, for a merge, FORMER_CODES below).
 
 import { blocksOf, readBlock } from './data.js';
 
@@ -12,9 +12,9 @@ const SCHEMA = { code: 'num', word: 'word', lift: 'num', energy: 'num', warmth: 
 
 export const MOODS = Object.fromEntries(blocksOf('moods', 'mood').map((b) => [b.name, readBlock(b, SCHEMA, 'data/moods.txt')]));
 
-// Codes of moods that have been merged away, and the mood each now reads
-// as, so share codes written before the merge still open. Empty until a
-// merge happens.
+// The codes of moods that were merged away, and the mood that each one now
+// reads as, so that share codes written before the merge still open. Empty
+// until a merge happens.
 const FORMER_CODES = {};
 
 // What a share code's mood number reads as. An unknown number is a code
@@ -32,10 +32,10 @@ export function moodWord(key) {
   return MOODS[key] ? MOODS[key].word : key;
 }
 
-// A word for a feeling saved as a single point, before feelings became
-// mixtures. Rows by energy, from the top; each row is its word for low,
-// middle and high lift. 'restless' has never been one of the moods above:
-// only these old saves can show it.
+// A word for a feeling that was saved as a single point, before feelings
+// became mixtures. The rows go by energy, from the top. Each row gives its
+// word for low, middle and high lift. 'restless' was never one of the moods
+// above: only these old saves can show it.
 const POINT_LIFT = [0.38, 0.66];
 const POINT_WORDS = [
   [0.68, ['restless', 'refreshing', 'enthusiastic']],

@@ -1,27 +1,27 @@
-// The Rust core's host in the browser (queue item 21, roadmap 16).
+// The Rust core's host in the browser.
 //
-// One AudioWorkletProcessor around one instance of js/dlplayer.wasm: the
-// core with its generator and its player (queue items 82 and 94b). The
-// player decides every note itself, here on the audio thread, a block at a
-// time before the block is rendered; the page sends commands (a loop's
-// seed and request, a change, the controls) and is posted what the player
-// decided as events (js/player.js draws them). Nothing the page does can
-// make a note late: there are no notes on the page (queue item 97).
+// This is one AudioWorkletProcessor around one instance of js/dlplayer.wasm:
+// the core with its generator and its player. The player decides every note
+// itself, here on the audio thread, one block at a time, before the block is
+// rendered. The page sends commands (a loop's seed and request, a change,
+// the controls). The worklet posts what the player decided as events, and
+// js/player.js draws them. Nothing that the page does can make a note late,
+// because there are no notes on the page.
 //
-// The module arrives as bytes in processorOptions and is compiled here,
-// synchronously: passing a compiled WebAssembly.Module across is less
-// certain on iOS Safari, the target. No SharedArrayBuffer, no threads,
-// nothing that needs special headers.
+// The module arrives as bytes in processorOptions, and is compiled here,
+// synchronously. Passing a compiled WebAssembly.Module across is less
+// certain on iOS Safari, the target. There is no SharedArrayBuffer, no
+// thread and nothing that needs special headers.
 //
-// The node has no inputs and one output: the whole of the core's mix
+// The node has no inputs and one output: the whole of the core's mix,
 // through its master chain, for the speakers.
 //
-// Stereo (queue item 64): with `layout: 2` in processorOptions the core
-// renders its stereo render, and the output carries two channels, left
-// then right; otherwise it renders mono into every channel the output
-// has. A `layout` message switches it while it plays (queue item 66, the
-// listener's Mono switch): the core fades the side in or out, and the
-// output follows the lanes it renders (`dl_lanes`).
+// Stereo: with `layout: 2` in processorOptions, the core renders in stereo,
+// and the output carries two channels, left then right. Otherwise it
+// renders mono into every channel that the output has. A `layout` message
+// switches it while it plays (the listener's Mono switch). The core fades
+// the side in or out, and the output follows the lanes that it renders
+// (`dl_lanes`).
 
 const QUANTUM = 128;
 
@@ -31,10 +31,10 @@ function runs(buffer, at, n) {
 }
 // The causes Core::dropped_by counts, in its order.
 const CAUSES = 3;
-// The player's events (core/src/player/events.rs, queue item 94a): the most
-// that wait, the kinds by number (`Kind::ALL`), and the layers a grid has.
-// They are posted to the page every EVENTS_EVERY seconds of audio: a step's
-// event is made up to the player's lookahead (0.25 s) before it is heard.
+// The player's events (core/src/player/events.rs): the most that wait, the
+// kinds by number (`Kind::ALL`), and the layers that a grid has. The worklet
+// posts them to the page every EVENTS_EVERY seconds of audio. A step's event
+// is made up to the player's lookahead (0.25 s) before it is heard.
 const EVENTS_MAX = 256;
 const STEP = 0;
 const PASS = 1;
@@ -42,31 +42,32 @@ const SECTION = 2;
 const LOOP = 4;
 const REVISED = 5;
 const JUMP = 8;
-// What each layer sounded on a step, as heard (session 30b): a step's
-// companion, posted with the steps rather than at once.
+// What each layer sounded on a step, as heard. It goes with a step's event,
+// and is posted with the steps, not at once.
 const HEARD = 9;
 const LAYER_COUNT = 5;
 const EVENTS_EVERY = 0.05;
 // A change at the track's end (`Moment::End`).
 const END = 5;
-// The core's output lanes (core/src/master.rs, OUT): its out buffer holds
-// this many runs whatever it renders.
+// The core's output lanes (OUT in core/src/master.rs). Its out buffer holds
+// this many runs, whatever it renders.
 const LANES = 2;
-// How often it says what rendering costs (queue item 66), in seconds of
-// audio: the time spent in process() against the audio it made, mono and
+// How often, in seconds of audio, the worklet reports what rendering costs:
+// the time spent in process() against the audio it made, for mono and
 // stereo apart. The worklet's clock is the platform's: performance.now()
-// where the scope has it, else Date.now(), whose whole milliseconds still
-// add up to the time spent over many blocks (each call's start falls
-// anywhere within its millisecond).
+// where the scope has it, else Date.now(). Whole milliseconds still add up
+// to the time spent over many blocks, because each call's start falls
+// anywhere within its millisecond.
 const COST_EVERY = 2;
-// How busy the audio thread is (queue item 87b): the time process() took
-// over each quarter-second of audio, as a share of that quarter-second (the
-// mean block's cost against its deadline). The worklet's clock is whole
-// milliseconds in Chromium (no performance.now() in an AudioWorklet), too
-// coarse for one block of 2.7 ms but exact on average over a window's
-// hundred-odd blocks. Each cost report carries the busiest window since the
-// last, and how many windows took longer than the audio they made (the
-// render falling behind for its own cost).
+// How busy the audio thread is: the time that process() took over each
+// quarter-second of audio, as a share of that quarter-second (the mean
+// block's cost against its deadline).
+// - In Chromium the worklet's clock is whole milliseconds (an AudioWorklet
+//   has no performance.now()). That is too coarse for one block of 2.7 ms,
+//   but exact on average over a window's hundred-odd blocks.
+// - Each cost report carries the busiest window since the last report, and
+//   how many windows took longer than the audio they made. Such a window
+//   means that the render fell behind because of its own cost.
 const BUSY_WINDOW = 0.25;
 const clock = typeof globalThis.performance?.now === 'function' ? () => globalThis.performance.now() : () => Date.now();
 
@@ -77,25 +78,25 @@ class DriftloomCore extends AudioWorkletProcessor {
     this.core = null;
     this.views = null;
     // What rendering has cost since the node was built, mono then stereo:
-    // milliseconds spent, and seconds of audio made.
+    // the milliseconds spent, and the seconds of audio made.
     this.cost = { ms: [0, 0], seconds: [0, 0] };
     this.costAt = 0;
-    // The window being counted, and since the last report: the busiest
-    // window's share, the windows over their whole time, and how many.
+    // The window that is being counted. Since the last report: the busiest
+    // window's share, and how many windows went over their whole time.
     this.busy = { ms: 0, frames: 0, max: 0, behind: 0, windows: 0 };
-    // A test's slow device (queue item 87b, `?burn=` in the page): this
-    // many microseconds of plain arithmetic added to every block, inside the
-    // timed render, so the measuring and the rule see an audio thread that
-    // much slower. The count of operations follows the clock as it goes
-    // (every 64 blocks, the time they took against the time asked), since
-    // the browser's compiler speeds the loop up as it runs.
+    // A slow device for a test (`?burn=` in the page). This many
+    // microseconds of plain arithmetic go into every block, inside the timed
+    // render, so the measuring and the Lite rule see a slower audio thread.
+    // The count of operations follows the clock as it goes (every 64 blocks,
+    // the time they took against the time asked), because the browser's
+    // compiler makes the loop faster as it runs.
     this.burnUs = Number(options.processorOptions && options.processorOptions.burn) || 0;
     this.burn = 0;
     this.burnMs = 0;
     this.burnBlocks = 0;
     this.sink = 1;
     if (this.burnUs > 0) {
-      // A first count from ten milliseconds of it, as the node starts.
+      // A first count, from ten milliseconds of it, as the node starts.
       let n = 0;
       let x = 1;
       const t0 = clock();
@@ -117,20 +118,20 @@ class DriftloomCore extends AudioWorkletProcessor {
       if (options.processorOptions.layout === 2 && !this.core.dl_layout(2)) {
         throw new Error('no stereo render');
       }
-      // The player's events waiting to be posted, the grids read with them,
-      // the requests it refused, and when the events are next posted.
+      // The player's events that wait to be posted, the grids read with
+      // them, the requests it refused, and when the events are next posted.
       this.events = [];
       this.grids = [];
       this.urgent = false;
       this.eventsAt = 0;
       this.refused = 0;
       if (typeof this.core.dl_play_attach !== 'function') throw new Error('no player in this module');
-      // The core's player on the core: it decides each block's steps
+      // The core's player, on the core. It decides each block's steps
       // before the block (dl_play_process).
       this.core.dl_play_attach(options.processorOptions.quality === 'lite' ? 0 : 1);
     } catch (err) {
-      // Too old a browser for the module, most likely (it needs Safari 15
-      // or later). The page hears this and says it cannot play.
+      // Most likely, the browser is too old for the module (it needs Safari
+      // 15 or later). The page hears this and says that it cannot play.
       this.core = null;
       this.port.postMessage({ type: 'failed', message: String(err && err.message || err) });
     }
@@ -140,8 +141,8 @@ class DriftloomCore extends AudioWorkletProcessor {
   receive(m) {
     const core = this.core;
     switch (m.type) {
-      // The listener's Mono switch (queue item 66): Core::set_layout, which
-      // fades while the core plays.
+      // The listener's Mono switch: Core::set_layout, which fades while the
+      // core plays.
       case 'layout':
         if (core) core.dl_layout(m.channels);
         return;
@@ -155,20 +156,18 @@ class DriftloomCore extends AudioWorkletProcessor {
         if (core) core.dl_param(m.id, m.op, m.value, m.time, m.tau);
         return;
       case 'dispose':
-        // Clear everything, and let go of the instance so its memory can be
-        // reclaimed: a browser holds only so many WebAssembly memories at
-        // once (about 128 in Chromium), and a page that builds synth after
-        // synth -- the measure harness renders hundreds -- would otherwise
-        // run out.
+        // Clear everything, and let go of the instance, so that its memory
+        // can be reclaimed. A browser holds only so many WebAssembly memories
+        // at once (about 128 in Chromium). A page that builds synth after
+        // synth (the measure harness renders hundreds) would run out.
         if (core) core.dl_clear();
         this.alive = false;
         this.core = null;
         this.views = null;
         this.port.onmessage = null;
         return;
-      // The core's player (queue items 82 and 94b; CoreHost.playLoad and
-      // the rest): what a loop asks for (`ask`), then the load, the change or
-      // the re-roll that takes it.
+      // The core's player (CoreHost.playLoad and the rest): what a loop asks
+      // for (`ask`), then the load, the change or the re-roll that takes it.
       case 'playLoad':
         if (core) {
           this.ask(m.ask);
@@ -188,8 +187,8 @@ class DriftloomCore extends AudioWorkletProcessor {
           core.dl_play_revise(m.seed >>> 0);
         }
         return;
-      // The track length (queue item 94b; a time since session 30c), and the loop
-      // that follows when it has run (a change at the track's end, 5).
+      // The track length (passes, bars or a time), and the loop that follows
+      // when it has run (a change at the track's end, 5).
       case 'playTrack':
         if (core) {
           core.dl_play_track(m.kind >>> 0, m.count >>> 0);
@@ -200,10 +199,10 @@ class DriftloomCore extends AudioWorkletProcessor {
       case 'playArm':
         if (core) this.arm(m.arm);
         return;
-      // The picks (queue item 95): the New loops panel's request, held by the
-      // core for every loop it makes itself, numbered by the page. The page
-      // hears whether they could be met whole (if not, the core holds their
-      // vibes only) and why not, in the core's own words.
+      // The picks: the Vibe panel's request, numbered by the page. The core
+      // holds it for every loop it makes itself. The page hears if the picks
+      // could be met whole, and if not, why not, in the core's own words.
+      // If not, the core holds only their vibes.
       case 'playPicks':
         if (core) {
           this.ask(m.ask, false);
@@ -213,7 +212,7 @@ class DriftloomCore extends AudioWorkletProcessor {
           this.port.postMessage({ type: 'picks', tag: m.tag >>> 0, met, why });
         }
         return;
-      // The seed the core draws its own loops' seeds from (queue item 95).
+      // The seed that the core draws its own loops' seeds from.
       case 'playDraws':
         if (core) core.dl_play_draws(m.seed >>> 0);
         return;
@@ -225,8 +224,8 @@ class DriftloomCore extends AudioWorkletProcessor {
           this.urgent = true;
         }
         return;
-      // A jump within the loop playing (session 17, item 106a): a section,
-      // a bar or a time from the piece's start (`Player::jump`).
+      // A jump within the loop that plays: to a section, a bar or a time
+      // from the piece's start (`Player::jump`).
       case 'playJump':
         if (core) {
           core.dl_play_jump(m.kind >>> 0, m.at);
@@ -247,7 +246,7 @@ class DriftloomCore extends AudioWorkletProcessor {
             player: { state: core.dl_play_state(), step: core.dl_play_step(), time: core.dl_play_time() },
             trackEnd: core.dl_play_track_end(), nextChange: core.dl_play_next_change(), lost: core.dl_play_events_lost(), refused: this.refused,
             picksTag: core.dl_play_picks_tag(),
-            // A time's track: the second it ends on, the core's clock (session 30c).
+            // A track of a time: the second it ends on, on the core's clock.
             trackAt: core.dl_play_track_at(),
           });
         } else {
@@ -263,7 +262,7 @@ class DriftloomCore extends AudioWorkletProcessor {
       case 'playWander':
         if (core) {
           core.dl_play_wander(m.amount);
-          // And its salt (queue item 92): 0, every code's own wander.
+          // And its salt: 0, every code's own wander.
           core.dl_play_wander_salt((m.salt || 0) >>> 0);
         }
         return;
@@ -277,7 +276,7 @@ class DriftloomCore extends AudioWorkletProcessor {
         if (core) core.dl_play_volume(m.volume);
         return;
       case 'ping':
-        // Every message before this one has been taken: the measure
+        // The worklet has taken every message before this one. The measure
         // harness waits for this before it renders.
         this.port.postMessage({
           ...this.counts(),
@@ -287,11 +286,11 @@ class DriftloomCore extends AudioWorkletProcessor {
           // The compressors' `reduction`, in dB: the bus compressor's and
           // the ceiling's.
           reduction: core ? [core.dl_reduction(0), core.dl_reduction(1)] : [0, 0],
-          // And how hard the signal has pressed each since the last ping:
-          // the deepest its curve has gone under the line.
+          // And how hard the signal has pressed each one since the last
+          // ping: the deepest its curve has gone under the line.
           deepest: core ? [core.dl_deepest(0), core.dl_deepest(1)] : [0, 0],
-          // The core's player (queue item 82): where it is (0 idle, 1 making a
-          // loop, 2 its first pass, 3 playing) and the step it decides next.
+          // The core's player: where it is (0 idle, 1 making a loop, 2 its
+          // first pass, 3 playing), and the step it decides next.
           player: core ? { state: core.dl_play_state(), step: core.dl_play_step(), time: core.dl_play_time() } : null,
         });
         return;
@@ -299,48 +298,47 @@ class DriftloomCore extends AudioWorkletProcessor {
     }
   }
 
-  // What a loop asks for (queue item 94b; `askOf` in js/player.js): the
-  // request, then a code's edits, each a call the core may refuse (counted
-  // in `refused`, for Diagnostics, unless `count` is false: the picks say
+  // What a loop asks for (`askOf` in js/player.js): the request, then a
+  // code's edits. The core may refuse each call. A refusal is counted in
+  // `refused`, for Diagnostics, unless `count` is false (the picks report
   // their own refusals).
   ask(a, count = true) {
     const core = this.core;
     if (!core || !a) return;
     let refused = 0;
     const take = (ok) => { if (!ok) refused++; };
-    // Each vibe with its weight, or none (a listener's pick, queue item 95),
-    // the tempo (queue item 85).
+    // Each vibe with its weight, or none (a listener's pick), and the tempo.
     for (const [i, w] of a.vibes || []) take(w == null ? core.dl_play_vibe(i) : core.dl_play_weight(i, w));
     if (a.tempo) take(core.dl_play_ask_tempo(a.tempo[0], a.tempo[1]));
-    // Its pins (queue item 85b): [number, value] pairs.
+    // Its pins: [number, value] pairs.
     for (const [i, v] of a.pins || []) take(core.dl_play_pin(i, v));
-    // Its theme (queue item 85d): a seed.
+    // Its theme: a seed.
     if (a.theme != null) core.dl_play_theme(a.theme >>> 0);
-    // Its length (queue item 88): bars, or Endless.
+    // Its length: bars, or Endless.
     if (a.length != null) take(core.dl_play_length(a.length === 'endless' ? Infinity : a.length));
-    // Its journey (queue item 106b): 1 an arc, 2 a wander.
+    // Its journey: 1 an arc, 2 a wander.
     if (a.journey) take(core.dl_play_journey(a.journey));
-    // Its keys and modes (queue item 89), and styles (90): a bit each.
+    // Its keys, modes and styles: a bit each.
     if (a.keys) take(core.dl_play_keys(a.keys));
     if (a.scales) take(core.dl_play_scales(a.scales));
     if (a.styles) take(core.dl_play_styles(a.styles));
-    // Its voices and layers (queue item 91): a mask and a state for each
-    // layer, in the layers' order.
+    // Its voices and layers: a mask and a state for each layer, in the
+    // layers' order.
     (a.voices || []).forEach((mask, layer) => { if (mask) take(core.dl_play_voices(layer, mask)); });
     (a.layers || []).forEach((state, layer) => { if (state) take(core.dl_play_layer(layer, state)); });
-    // A code's edits (queue item 94a): each layer's seed, re-rolled or not,
-    // the tone and the tempo the slider set.
+    // A code's edits: each layer's seed, re-rolled or not, the tone, and the
+    // tempo that the slider set.
     for (const [layer, seed, rolled] of a.seeds || []) take(core.dl_play_seed(layer, seed >>> 0, rolled ? 1 : 0));
     (a.tone || []).forEach((v, which) => take(core.dl_play_edit_tone(which, v)));
     if (a.bpm != null) take(core.dl_play_edit_bpm(a.bpm));
     if (count) this.refused += refused;
   }
 
-  // The loop that follows when the track ends (queue item 94b): a change
-  // waiting for the track's end, the old loop falling to nothing over `fade`
-  // at a phrase line inside a pass (ringing out at a pass's end), with the
-  // track that loop plays (`track`, [kind, count]; queue item 95). None
-  // (null) drops the one waiting, so the core's own loop follows instead.
+  // The loop that follows when the track ends: a change that waits for the
+  // track's end, with the track that the loop plays (`track`, [kind,
+  // count]). The old loop falls to nothing over `fade`, at a phrase line
+  // inside a pass, or rings out at a pass's end. Null drops the one that
+  // waits, so the core's own loop follows.
   arm(arm) {
     const core = this.core;
     if (!core) return;
@@ -353,12 +351,12 @@ class DriftloomCore extends AudioWorkletProcessor {
     else core.dl_play_change(arm.seed >>> 0, END, arm.fade);
   }
 
-  // The player's events from the block just rendered (queue item 94b): taken
-  // after every block, so none is lost, and posted to the page every
-  // EVENTS_EVERY seconds of audio, or at once with one that is not a step.
-  // With an event that begins a pass (a pass, a section, a new loop, a
-  // re-roll), the layers' grid of that pass, read now (`Player::grid` is the
-  // pass being decided).
+  // The player's events from the block just rendered. They are taken after
+  // every block, so that none is lost. They are posted to the page every
+  // EVENTS_EVERY seconds of audio, or at once if one is not a step. An event
+  // that begins a pass (a pass, a section, a new loop, a re-roll) carries
+  // the layers' grid of that pass, read now (`Player::grid` is the pass
+  // being decided).
   takeEvents(block) {
     const core = this.core;
     const n = core.dl_play_events();
@@ -392,10 +390,10 @@ class DriftloomCore extends AudioWorkletProcessor {
     this.grids = [];
   }
 
-  // Where the loop playing is as heard (session 17, `Player::place`): the
-  // bar from the piece's start of `bars` (null for Endless), the seconds
-  // played and left (null for none), and the section; null with nothing
-  // playing, or a module with no place to say.
+  // Where the loop that plays is, as heard (`Player::place`): the bar from
+  // the piece's start, of `bars` (null for Endless), the seconds played and
+  // left (null for none), and the section. Null if nothing plays, or if the
+  // module cannot say.
   place() {
     const core = this.core;
     if (!core || typeof core.dl_play_place !== 'function' || !core.dl_play_place()) return null;
@@ -419,8 +417,8 @@ class DriftloomCore extends AudioWorkletProcessor {
     };
   }
 
-  // What the block just rendered cost, counted with the lanes it had; and
-  // every COST_EVERY seconds of audio, the totals so far.
+  // What the block just rendered cost, counted with the lanes it had. Every
+  // COST_EVERY seconds of audio, report the totals so far.
   costReport(lanes, ms, block) {
     const i = lanes === 2 ? 1 : 0;
     this.cost.ms[i] += ms;
@@ -449,8 +447,8 @@ class DriftloomCore extends AudioWorkletProcessor {
     this.port.postMessage({ ...this.counts(), type: 'cost', ms: this.cost.ms.slice(), seconds: this.cost.seconds.slice(), player, busy });
   }
 
-  // The test's slow device (`burn`): arithmetic the optimizer can't drop,
-  // its count kept to the time asked.
+  // The test's slow device (`burn`): arithmetic that the optimizer can't
+  // drop, its count kept to the time asked.
   burnFor() {
     const t0 = clock();
     let x = this.sink;
@@ -470,9 +468,9 @@ class DriftloomCore extends AudioWorkletProcessor {
     if (!this.alive) return false;
     const core = this.core;
     if (!core) return true;
-    // Views onto the core's buffers, made once: the buffers never move, and
-    // the memory never grows, since nothing allocates after init. A new
-    // view every block would be garbage every block.
+    // Views onto the core's buffers, made once. The buffers never move, and
+    // the memory never grows, because nothing allocates after init. A new
+    // view every block would make garbage every block.
     if (!this.views || this.views.buffer !== core.memory.buffer) {
       const buffer = core.memory.buffer;
       this.views = {
@@ -481,26 +479,27 @@ class DriftloomCore extends AudioWorkletProcessor {
       };
     }
     const views = this.views;
-    // The block to render: `currentFrame`, unless it says a block the core
-    // has already rendered. Chromium sometimes hands a process() call the
-    // last block's frame while it renders the next (seen in offline
-    // renders: 9088 again where 9216 was due, then 9344), and a block
-    // rendered as the last one would play every envelope in it 128 frames
-    // late. A real gap -- a block the node was not asked for -- still moves
-    // the core on. Time never goes backward, however stale the clock is for
-    // however long: a block rendered again starts the voices that began in
-    // it a second time, and the pads' and leads' filters spiked to thirty
-    // times their level (queue item 32). A count the clock never catches up
-    // with is a lead, and costs nothing but the few notes scheduled inside
-    // it counted late.
+    // The block to render: `currentFrame`, unless it names a block that the
+    // core has already rendered.
+    // - Chromium sometimes gives a process() call the last block's frame
+    //   while it renders the next (seen in offline renders: 9088 again where
+    //   9216 was due, then 9344). A block rendered as the last one would play
+    //   every envelope in it 128 frames late.
+    // - A real gap (a block that the node was not asked for) still moves the
+    //   core on.
+    // - Time never goes backward, however stale the clock is. A block
+    //   rendered again starts its voices a second time, and the pads' and
+    //   leads' filters once spiked to thirty times their level.
+    // - A count that the clock never catches up with is a lead. It costs
+    //   nothing but the few notes inside it, counted late.
     const block = this.next !== undefined && this.next > currentFrame ? this.next : currentFrame;
     this.next = block + QUANTUM;
     const began = clock();
     core.dl_play_process(block);
     this.takeEvents(block);
     if (this.burn) this.burnFor();
-    // Each of the output's channels from a lane the core rendered: the
-    // mono render in every one, or left and right.
+    // Fill each of the output's channels from a lane that the core rendered:
+    // the mono render in every one, or left and right.
     const lanes = core.dl_lanes();
     const out = outputs[0];
     if (out) {

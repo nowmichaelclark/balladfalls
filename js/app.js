@@ -1,7 +1,7 @@
-// What the Android app does for the page that a browser does itself (session
-// 28, queue item 107d): the app puts an object in the page, `DriftloomApp`
-// (android/app/src/main/kotlin/app/loops/AppBridge.kt), a second bridge beside
-// the core's (js/native.js). Plain JSON text both ways:
+// What the Android app does for the page that a browser does itself. The
+// app puts an object in the page, `DriftloomApp`
+// (android/app/src/main/kotlin/app/loops/AppBridge.kt): a second bridge,
+// beside the core's (js/native.js). It carries plain JSON text both ways:
 //
 //   to the app    media { playing, name, subtitle }   what is playing, for
 //                                  the service, the notification and the
@@ -19,8 +19,8 @@
 //                                  does)
 //                 reply { id, ok, ... }  to each request that has an id
 //
-// In a browser there is no such object and none of this runs: the page uses
-// the browser's media session and its own downloads. This file imports
+// In a browser there is no such object, and none of this runs: the page
+// uses the browser's media session and its own downloads. This file imports
 // nothing (ui.js reads it), and loads the cover's drawing only when asked.
 
 // The app's bridge, or null in a browser (and in an app whose WebView is too

@@ -8,7 +8,7 @@ export const el = (id) => document.getElementById(id);
 
 // ------------------------------------------------------------- readout
 
-// The grid is rebuilt whenever the metre changes, because a bar of 6/8 is
+// The grid is rebuilt whenever the meter changes, because a bar of 6/8 is
 // twelve cells, not sixteen with four dead ones on the end.
 export function buildPlayhead(steps = STEPS_PER_BAR) {
   const host = el('playhead');
@@ -50,9 +50,9 @@ function mixParts(spec) {
 }
 
 function feelParts(spec) {
-  // A loop drawn with vibes (queue item 38b) shows what it was steered by,
-  // weights included, in place of the mood line. Steered, not measured:
-  // the honest share of the sound comes with the dials (items 34-35).
+  // A loop drawn with vibes shows what it was steered by, weights included,
+  // in place of the mood line. This is what steered it, not a measure: an
+  // honest share of the sound would come from the dials (docs/MOODS.md).
   if (spec.vibes && Object.keys(spec.vibes).length) {
     const parts = asMixParts(spec.vibes, (k) => k);
     if (parts.length) return parts;
@@ -68,8 +68,8 @@ function feelParts(spec) {
 // the blend, the feeling, the key, the tempo, the meter and the bars. The
 // card is as tall as its art and as wide as its column, so a loop with a
 // lot to say shows what fits and leaves the rest off, whole, in a fixed
-// order of what matters least (session 30d, item 112); a tap on the details
-// shows the rest in the same place, and a quiet mark says there is more.
+// order of what matters least. A tap on the details shows the rest in the
+// same place, and a quiet mark says that there is more.
 // Every fact is always in the page for a screen reader (`#loopFacts`).
 //
 // A fact is atoms (the tempo and the loop's shape word; the meter and the
@@ -78,7 +78,7 @@ function feelParts(spec) {
 // their own. In that order of rank:
 //   key, tempo, bars, meter, the first style, the album playing, the first
 //   feeling, the second style, the second feeling, the shape word, the
-//   third style, the third feeling, the track length set (session 30c).
+//   third style, the third feeling, the track length set.
 // The first three are the loop (never off before the rest), the last is
 // what goes first.
 const RANK = {
@@ -119,7 +119,7 @@ function albumAlts(line) {
 }
 
 // The card's words for a loop: `extra` adds the album being played and the
-// track length when one is set ("track 1:23:45", session 30c: the time set);
+// track length when one is set ("track 1:23:45": the time set);
 // both are what someone glancing at the card would otherwise have to go
 // looking for.
 export function renderReadout(spec, pattern, extra = {}) {
@@ -159,7 +159,7 @@ export function renderAlbumCard(title, specs, extra = {}) {
   setFacts(facts);
 }
 
-// How many bars the loop is, as the card shows it (queue item 88b): the
+// How many bars the loop is, as the card shows it: the
 // number the Bars picker asked for ("33 bars", "1,024 bars"), or Endless;
 // else the loop's own.
 function barsText(spec) {
@@ -168,7 +168,7 @@ function barsText(spec) {
   return `${String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} ${n === 1 ? 'bar' : 'bars'}`;
 }
 
-// A piece's length for a Library list (queue item 106b): its bars and, where
+// A piece's length for a Library list: its bars and, where
 // a length was asked, its duration at its tempo, from "4 bars · 12s" to
 // "32,768 bars · 27h 18m"; "endless" for Endless.
 export function lengthLine(spec) {
@@ -527,8 +527,8 @@ export function buildLayers(handlers, steps = STEPS_PER_BAR) {
     mute.setAttribute('role', 'switch');
     mute.setAttribute('aria-checked', 'true');
     mute.setAttribute('aria-labelledby', name.id);
-    // The state is the switch's own (a screen reader says on or off); the
-    // speaker shows it (session 30k).
+    // The state is the switch's own (a screen reader says on or off), and
+    // the speaker shows it.
     setIcon(mute, 'speaker');
     mute.addEventListener('click', () => handlers.onMute(layer));
 
@@ -577,11 +577,11 @@ export function renderGrids(cells, pattern, bar, mutes) {
   renderRows(cells, { loud, share: null }, mutes);
 }
 
-// How bright a dot is drawn for the share of its level it is heard at
-// (session 30b): its own at a full share, dimmer as a long piece's plan, a
-// late arrival or a fade has it softer, never under SHADE_LEAST (still a
-// note). In tenths, so a gliding level writes a dot's style only when it
-// moves a tenth. For Mikey's eyes.
+// How bright a dot is drawn for the share of its level that it is heard at:
+// its own brightness at a full share, and dimmer as a long piece's plan, a
+// late arrival or a fade makes it softer. Never under SHADE_LEAST (it is
+// still a note). In tenths, so that a gliding level writes a dot's style only
+// when it moves a tenth. For Mikey's eyes.
 const SHADE_LEAST = 0.3;
 function shadeOf(share) {
   if (share == null || !(share < 0.95)) return '';
@@ -642,7 +642,7 @@ export function resetCursor() {
 
 // Only the column being left and the column being entered change: the lit
 // cell on the card, and the halo on each layer's dot in that column. The
-// lit colour and glow are pseudo-elements and shadows switched by class,
+// lit color and glow are pseudo-elements and shadows switched by class,
 // with no fade, so a step is a handful of class writes.
 export function moveCursor(lights, cells, index) {
   if (index === lastCursor) return;
@@ -657,9 +657,9 @@ export function moveCursor(lights, cells, index) {
   lastCursor = index;
 }
 
-// The layers' column follows the music only while Layers is on screen
-// (queue item 40: nothing animates in a view that is hidden). Shown
-// again, it is put where the cursor is.
+// The layers' column follows the music only while Layers is on screen,
+// because nothing animates in a hidden view. When it shows again, it is put
+// where the cursor is.
 let columnsLive = true;
 export function setColumnsLive(on) {
   if (on === columnsLive) return;
@@ -669,10 +669,10 @@ export function setColumnsLive(on) {
 
 // --------------------------------------------------------------- misc
 
-// A plain line in the info card's place (queue item 97; Mikey, 2026-11-07):
-// what a browser that cannot run the core is told, or one too slow to play
-// it smoothly (queue item 100), with a second sentence that is a link
-// (`link`: { text, href }) where there is one. `null` brings the card back.
+// A plain line in the info card's place (Mikey, 2026-11-07): what a browser
+// that cannot run the core is told, or one that is too slow to play it
+// smoothly. A second sentence is a link (`link`: { text, href }) where there
+// is one. `null` brings the card back.
 export function plainLine(text, link = null) {
   const line = el('plainLine');
   line.textContent = text || '';
@@ -697,8 +697,8 @@ export function toast(message, said = message) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
 }
 
-// Said to a screen reader and not shown (session 30e; Mikey, 2026-11-22,
-// the popups too): what the screen shows already needs no popup.
+// Said to a screen reader, and not shown (Mikey, 2026-11-22, for the popups
+// too): what the screen already shows needs no popup.
 export function announce(said) {
   const status = el('announce');
   // The same words again are a change only if the status was empty between.
@@ -718,8 +718,8 @@ export function download(blob, filename) {
     .replace(/\s+/g, ' ')
     .replace(/^[.\s]+/, '')
     .slice(0, 120) || 'balladfalls.dat';
-  // The Android app has no downloads: the file goes through its own picker
-  // (js/app.js, session 28).
+  // The Android app has no downloads, so the file goes through its own
+  // picker (js/app.js).
   const app = appLink();
   if (app) {
     app.saveBlob(blob, safe).then((r) => {
@@ -769,16 +769,16 @@ const ICONS = {
   sounds: '<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>'
     + '<circle class="solid" cx="9" cy="6" r="2"/><circle class="solid" cx="15" cy="12" r="2"/><circle class="solid" cx="7" cy="18" r="2"/>',
   layers: '<path d="M12 3.5 21 8l-9 4.5L3 8z"/><path d="m3 12.5 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/>',
-  // A die (session 30k, item 119: Mikey, "a die that is 3d like a dice
-  // emoji"): a cube seen from a corner, three faces and their pips, one,
-  // two and three, the shaded face a little darker for depth. Roll again.
+  // A die (Mikey: "a die that is 3d like a dice emoji"): a cube seen from a
+  // corner, with three faces and their pips (one, two and three), the shaded
+  // face a little darker for depth. Roll again.
   dice: '<path d="M12 11.6 21 6.8v10.4L12 22z" fill="currentColor" fill-opacity="0.22"/>'
     + '<path d="M12 2 21 6.8 12 11.6 3 6.8z"/><path d="M3 6.8v10.4L12 22V11.6"/><path d="M21 6.8v10.4L12 22"/>'
     + '<ellipse class="solid" stroke="none" cx="12" cy="6.8" rx="1.7" ry="1"/>'
     + [[5.7, 11.4], [9.3, 17.4]].map(([x, y]) => `<circle class="solid" stroke="none" cx="${x}" cy="${y}" r="1.15"/>`).join('')
     + [[14.25, 13], [16.5, 14.4], [18.75, 15.8]].map(([x, y]) => `<circle class="solid" stroke="none" cx="${x}" cy="${y}" r="1"/>`).join(''),
-  // A layer on and off (session 30k, item 119): a speaker, its sound
-  // waves when on and a cross when off, so the state is a shape too.
+  // A layer on and off: a speaker, with its sound waves when on and a cross
+  // when off, so that the state is a shape too.
   speaker: '<path d="M3.5 9.5h3.2L11.5 5v14l-4.8-4.5H3.5z"/><path d="M15 9.2a4 4 0 0 1 0 5.6"/><path d="M17.9 6.3a8.2 8.2 0 0 1 0 11.4"/>',
   muted: '<path d="M3.5 9.5h3.2L11.5 5v14l-4.8-4.5H3.5z"/><path d="m15.5 9.5 5 5"/><path d="m20.5 9.5-5 5"/>',
   arrowLeft: '<path d="M19 12H5"/><path d="m11 6-6 6 6 6"/>',

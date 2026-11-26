@@ -1,18 +1,17 @@
-// The core's generator, on the page (queue item 97).
+// The core's generator, on the page.
 //
-// What a loop is, the core decides: its name, key, tempo, mix and moods, its
-// notes. The core that plays is in an AudioWorklet and exists only after a
-// tap, but the page shows a loop before that (the card it opens on) and
+// The core decides what a loop is: its name, key, tempo, mix, moods and
+// notes. The core that plays is in an AudioWorklet, and it exists only after
+// a tap. But the page shows a loop before that (the card it opens on) and
 // beside it (a loop from the Library or a code, a re-roll's new grid, the
 // MIDI export). So the page keeps one more instance of the same module
-// (js/dlplayer.wasm), here on its own thread, and asks it what a seed and a
-// request make. It plays nothing: a loop is made at once (`dl_play_ready`),
-// read, and left. Making one takes a millisecond or two.
+// (js/dlplayer.wasm), on the main thread, and asks it what a seed and a
+// request make. This instance plays nothing. It makes a loop at once
+// (`dl_play_ready`), reads it, and leaves it. A loop takes a millisecond or
+// two to make.
 //
 // It is the same generator as the one that plays, byte for byte, so what
-// the card says is what is heard. Until item 97 the page had a generator of
-// its own in JavaScript (js/generator.js), held to the core's by the
-// generation goldens; there is now one.
+// the card says is what is heard.
 //
 //   newSpec(seed, request, edits)
 //                            the loop a seed and a request make (and a
@@ -23,12 +22,12 @@
 //   loopCode, readLoopCode, albumCode, seedAlbumCode, albumTracks, codeKind,
 //   nameRefusal
 //                            share codes, version 2, written and read by the
-//                            core (session 23; js/share.js is the page's
-//                            side, core/README.md the format)
+//                            core (js/share.js is the page's side,
+//                            core/docs/codes.md the format)
 //   render(spec)             that record's notes, layer by layer, as the
 //                            grid and the MIDI export read them
 //   pieceMarks(spec, opts)   a long piece's marks: where its movements and
-//                            its roles, themes and keys begin (session 17)
+//                            its roles, themes and keys begin
 //
 // In Node the module is read from disk (the tests and the tools).
 
@@ -50,9 +49,9 @@ async function bytes() {
   return fetchCore();
 }
 
-// The instance, or why there is none (`unavailable`): a browser without
-// WebAssembly, or a module that did not arrive. The page then shows no loop
-// and says so (js/main.js).
+// The instance, or the reason that there is none (`unavailable`): a
+// browser without WebAssembly, or a module that did not arrive. Then the
+// page shows no loop and says so (js/main.js).
 let x = null;
 let why = null;
 try {
@@ -67,16 +66,16 @@ try {
   why = String((err && err.message) || err);
 }
 
-// Why the page has no generator, or null.
+// The reason that the page has no generator, or null.
 export const unavailable = why;
 
 const text = (at, length) => String.fromCharCode(...new Uint8Array(x.memory.buffer, at, length));
 const utf8 = new TextEncoder();
 const fromUtf8 = new TextDecoder();
 
-// Hand the core what is asked of the next loop, call by call: the same
-// calls, in the same order, as js/worklet.js's `ask` makes for the core that
-// plays. Returns whether every part was taken.
+// Give the core what is asked of the next loop, call by call. Use the same
+// calls in the same order as `ask` in js/worklet.js makes for the core that
+// plays. Returns true if the core took every part.
 function ask(a) {
   let ok = true;
   const take = (taken) => { if (!taken) ok = false; };
@@ -97,8 +96,8 @@ function ask(a) {
   return ok;
 }
 
-// The loop of `seed` as `a` asks, made now. What the core refused, if it
-// refused, as a RequestError with the core's own line.
+// Make the loop of `seed` as `a` asks, now. If the core refuses part of
+// it, throw a RequestError with the core's own line.
 function make(seed, a) {
   if (!x) throw new Error(`no generator: ${why}`);
   x.dl_play_stop();
@@ -106,8 +105,8 @@ function make(seed, a) {
   const n = x.dl_play_refusal();
   const refusal = n ? text(x.dl_play_refusal_at(), n) : null;
   if (!ok || refusal) {
-    // The request asked so far is dropped with the load below: nothing of
-    // it reaches the next loop.
+    // The load below drops the request asked so far, so none of it reaches
+    // the next loop.
     x.dl_play_load(seed >>> 0, 0);
     x.dl_play_stop();
     throw new RequestError(refusal || "can't do that");
@@ -125,28 +124,29 @@ function about() {
 const weights = (s) => Object.fromEntries((s || '').split('|').filter(Boolean).map((p) => [p.slice(0, p.indexOf(':')), Number(p.slice(p.indexOf(':') + 1))]));
 const numbers = (s) => (s || '').split('|').map(Number);
 
-// The loop `seed` and `request` make (js/request.js's `readRequest` says
-// what a request is; a list of vibe names is a listener's selection): the
-// page's record of it. `edits`, a code's ({ seeds: [[layer, seed, rolled]],
-// tone: [warmth, space, wobble] with null for one not edited, bpm }), are
-// made with it, as the core makes a code's loop. A request the core cannot
-// meet throws a RequestError with the core's line for it.
+// The page's record of the loop that `seed` and `request` make.
+// `readRequest` in js/request.js says what a request is. A list of vibe
+// names is a listener's selection. `edits` are a code's edits ({ seeds:
+// [[layer, seed, rolled]], tone: [warmth, space, wobble] with null for a
+// dial not edited, bpm }). They are made with the loop, as the core makes a
+// code's loop. If the core cannot meet the request, this throws a
+// RequestError with the core's line.
 export function newSpec(seed = randomSeed(), request = null, edits = null) {
   const asked = readRequest(request);
   make(seed, edits ? { ...askFor(asked), ...edits } : askFor(asked));
   return record(asked);
 }
 
-// The record of the loop a record plays: made from its seed, request and
-// edits (`askOf`), as the Library, the player and a share code make it, and
-// read back. Its own request is kept as the record had it.
+// The record of the loop that a record plays. It is made from the record's
+// seed, request and edits (`askOf`), as the Library, the player and a share
+// code make it, and read back. The request stays as the record had it.
 export function playedSpec(spec) {
   make(spec.seed, askOf(spec));
   return record(readRequest(requestOf(spec)));
 }
 
-// What the core said of the loop just made, and `asked`, as the page's
-// record.
+// What the core said about the loop just made, with `asked`, as the
+// page's record.
 function record(asked) {
   const d = about();
   const [lift, energy, warmth] = numbers(d.feel);
@@ -170,7 +170,8 @@ function record(asked) {
     mutes: Object.fromEntries(LAYERS.map((l) => [l, false])),
     tone: Object.fromEntries(TONE.map((k, i) => [k, tone[i]])),
   };
-  // The layers a code's edits re-rolled, played whatever their chances draw.
+  // The layers that a code's edits re-rolled. They play whatever their
+  // chances draw.
   if (d.rolled) spec.forceLayers = Object.fromEntries(d.rolled.split('|').map((l) => [l, true]));
   // Each layer's own cycle in steps, for a loop whose layers drift apart.
   if (d.cycles) spec.cycles = Object.fromEntries(LAYERS.map((l, i) => [l, numbers(d.cycles)[i] || null]));
@@ -179,15 +180,15 @@ function record(asked) {
     spec.vibes = weights(d.vibes);
     spec.vibeStrength = Number(d.strength);
   }
-  // What was asked, kept: the loop is made again from its record, and a
+  // What was asked, kept. The loop is made again from its record, and a
   // share code carries it.
   if (asked.tempo) spec.tempo = asked.tempo.slice();
   if (asked.pins) spec.pins = { ...asked.pins };
   if (asked.length != null) spec.length = asked.length;
-  // With none asked, the core sometimes draws a long piece from the seed
-  // (queue item 117): its length is the piece's, as an asked one is, for
-  // everything that shows or counts the piece; marked drawn so its request,
-  // and so a share code, leaves it to the seed (`requestOf`).
+  // If no length is asked, the core sometimes draws a long piece from the
+  // seed. Then the length is the piece's, as an asked one is, for all that
+  // shows or counts the piece. It is marked drawn, so that its request (and
+  // so a share code) leaves the length to the seed (`requestOf`).
   else if (d.length) {
     spec.length = d.length === 'endless' ? 'endless' : Number(d.length);
     spec.lengthDrawn = true;
@@ -198,8 +199,8 @@ function record(asked) {
   if (asked.voices) spec.askVoices = Object.fromEntries(Object.entries(asked.voices).map(([l, v]) => [l, v.slice()]));
   if (asked.layers) {
     spec.askLayers = { ...asked.layers };
-    // A layer asked off is a layer muted, as the listener's mute button
-    // would (and unmutes the same way).
+    // A layer asked off is a muted layer, as with the listener's mute
+    // button, and it unmutes the same way.
     for (const [layer, state] of Object.entries(asked.layers)) if (state === 'off') spec.mutes[layer] = true;
   }
   if (asked.key) spec.askKey = asked.key.slice();
@@ -233,9 +234,9 @@ function track(layer) {
 }
 
 // The loop of a record, as composed: { spec, stepsPerBar, totalSteps,
-// cycles, tracks, form, choir }. Made from the record's seed, request and
-// edits (`askOf`), exactly as the core that plays it is asked. `form` is
-// whether its layers come and go (an airy loop), `choir` whether it is one
+// cycles, tracks, form, choir }. It is made from the record's seed, request
+// and edits (`askOf`), exactly as the core that plays it is asked. `form`
+// is true if its layers come and go (an airy loop). `choir` is true for one
 // of the rare choir loops.
 export function render(spec) {
   make(spec.seed, askOf(spec));
@@ -261,26 +262,28 @@ export const THEMES = ['rest', 'A', 'B', 'recall'];
 export const RELATIONS = ['home', 'fifthAbove', 'fifthBelow', 'relative', 'parallel'];
 export const MOVEMENTS = ['full', 'gentle', 'light', 'interlude'];
 const MARK = 8;
-// The most marks one call gives (`dl_play_marks`): ask again from the
-// section after the last for more.
+// The most marks that one call gives (`dl_play_marks`). For more, ask
+// again from the section after the last one.
 export const MARKS_MOST = 2048;
 
-// A long piece's marks for the page (session 17, queue item 106a): the
-// units of `count` sections from section `from` where something a listener
-// would see marked begins, read straight from the piece's plan, nothing
-// before them walked: the first unit, then each where its role, theme, key
-// or movement changes ({ bar, section, role, theme, root, relation,
-// energy, movement }, `bar` from the piece's start, `root` 0 for C to 11,
-// `energy` 0 to 1). With `coarse`, a movement's start alone: a 32,768-bar
-// piece's whole run of movements costs a few milliseconds, so the page can
-// draw the whole piece's movements and ask a window of roles around the
-// playhead; Endless is asked a window at a time (`count` sections, 64
-// unless asked; a finite piece's whole round unless asked). Null for a loop
-// that is no long piece. At most MARKS_MOST a call.
+// A long piece's marks for the page. The marks are the units, in `count`
+// sections from section `from`, where something that a listener would see
+// marked begins: the first unit, then each unit where the role, the theme,
+// the key or the movement changes. They are read straight from the piece's
+// plan, with nothing before them walked.
+// - Each mark is { bar, section, role, theme, root, relation, energy,
+//   movement }: `bar` from the piece's start, `root` 0 for C to 11,
+//   `energy` 0 to 1.
+// - With `coarse`, only a movement's start is marked. A 32,768-bar piece's
+//   whole run of movements costs a few milliseconds. So the page can draw
+//   all of the movements, and ask for a window of roles around the playhead.
+// - Endless is asked a window at a time: `count` sections, 64 if not asked.
+//   A finite piece gives its whole round if not asked.
+// - Null for a loop that is not a long piece. At most MARKS_MOST a call.
 export function pieceMarks(spec, { from = 0, count = null, coarse = false } = {}) {
   make(spec.seed, askOf(spec));
-  // A piece's sections, once round (the core gives a round at most); for
-  // Endless, a window: 64 sections unless asked.
+  // A piece's sections, one round (the core gives a round at most). For
+  // Endless, a window: 64 sections if not asked.
   const sections = Number.isFinite(spec.length) && spec.bars > 0 ? Math.ceil(spec.length / spec.bars) : 64;
   const n = x.dl_play_marks(from, count == null ? sections : count, coarse ? 1 : 0);
   if (!n) return null;
@@ -295,12 +298,12 @@ export function pieceMarks(spec, { from = 0, count = null, coarse = false } = {}
 
 // ------------------------------------------------------------ share codes
 
-// Share codes, version 2 (session 23; core/src/code.rs, core/README.md's
-// "Share codes"): the core writes and reads them, the page hands it a
-// loop's seed, what was asked and changed, the mutes, the wander's salt and
-// a name of its own, and reads the same back. Names are UTF-8 both ways.
-// A refusal is a CodeError whose message is the core's plain line ("not a
-// code", "needs a newer version", "a name a code can't carry").
+// Share codes, version 2 (core/src/code.rs, core/docs/codes.md). The core
+// writes and reads them. The page gives it a loop's seed, what was asked and
+// changed, the mutes, the wander's salt and a name of its own, and reads the
+// same back. Names are UTF-8 both ways. A refusal is a CodeError whose
+// message is the core's plain line ("not a code", "needs a newer version",
+// "a name a code can't carry").
 
 export class CodeError extends Error {}
 
@@ -316,8 +319,8 @@ function refused() {
   return new CodeError(n ? codeText(n) : 'not a code');
 }
 
-// The request asked so far dropped, so nothing of a code reaches the next
-// loop made.
+// Drop the request asked so far, so that nothing of a code reaches the
+// next loop made.
 function dropAsked(seed) {
   x.dl_play_load(seed >>> 0, 0);
   x.dl_play_stop();
@@ -356,10 +359,11 @@ export function readLoopCode(code) {
   return out;
 }
 
-// An album's code: the loops' codes in their order, each with how long it
-// plays before the next after it where it has one (`CODE:t5025` 1:23:45,
-// `i` and `o` after the seconds for its fades, `CODE:i` on and on fading in:
-// core/src/code.rs's `paced`), named `name` ('' for none).
+// An album's code, named `name` ('' for none): the loops' codes in their
+// order. A loop that has a pace says after it how long it plays before the
+// next (`paced` in core/src/code.rs). For example, `CODE:t5025` is 1:23:45;
+// `i` and `o` after the seconds are its fades; `CODE:i` is on and on,
+// fading in.
 export function albumCode(codes, name = '') {
   need();
   const head = utf8.encode(name);
@@ -372,9 +376,10 @@ export function albumCode(codes, name = '') {
   return codeText(n);
 }
 
-// An album of `count` tracks drawn from `seed`, each asked what `a` asks (the
-// core's numbers: js/request.js's askFor; edits have no place in it), named
-// `name` ('' for none): its code, a few characters whatever the count.
+// The code of an album of `count` tracks drawn from `seed`, named `name`
+// ('' for none). Each track is asked what `a` asks (the core's numbers:
+// askFor in js/request.js; edits have no place in it). The code is a few
+// characters, whatever the count.
 export function seedAlbumCode(seed, count, a, name = '') {
   need();
   x.dl_play_stop();
@@ -387,10 +392,10 @@ export function seedAlbumCode(seed, count, a, name = '') {
   return code;
 }
 
-// An album's { name, tracks, paces }: each track a loop's code, and how long
-// it plays before the next as [kind, count], as the player takes it
-// (js/tracklen.js's coreTrack: 0 on and on, 3 a time in seconds, with the
-// fades' bits).
+// An album's { name, tracks, paces }. Each track is a loop's code. Its
+// pace is how long it plays before the next, as [kind, count], in the form
+// the player takes (coreTrack in js/tracklen.js: 0 on and on, 3 a time in
+// seconds, with the fades' bits).
 export function albumTracks(code) {
   need();
   const len = input(utf8.encode(String(code)));
@@ -422,16 +427,16 @@ export function codeKind(text) {
     dropAsked(x.dl_code_seed());
     return 'loop';
   }
-  // A newer build's code says so from its head, loop or album; a code that
-  // names an instrument this device does not have (the core says so in
-  // words with "instrument" in them, once it can) its own line.
+  // A code from a newer build says so in its head, loop or album. A code
+  // that names an instrument this device does not have gets its own line.
+  // The core says so in words with "instrument" in them, once it can.
   const why = refused().message;
   return why === NEWER ? 'newer' : /instrument/i.test(why) ? 'instrument' : null;
 }
 
 const NEWER = 'needs a newer version';
 
-// Why a code can't carry `name` (the core's line), or null if it can.
+// The reason that a code can't carry `name` (the core's line), or null.
 export function nameRefusal(name) {
   need();
   return x.dl_code_name_ok(input(utf8.encode(String(name)))) ? null : refused().message;

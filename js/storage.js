@@ -13,10 +13,10 @@ export function loadAll() {
     if (!raw) return [];
     const list = JSON.parse(raw);
     if (!Array.isArray(list)) return [];
-    // A loop kept before session 30c played for whole passes or bars: its
-    // length becomes the time it came to, to the second, at its tempo, and
-    // the list is written back so this happens once (nothing of the old
-    // fields is kept: Mikey, 2026-10-29).
+    // A loop kept by an older build played for whole passes or bars. Its
+    // length becomes the time that it came to, to the second, at its tempo.
+    // The list is written back, so this happens once. Nothing of the old
+    // fields is kept (Mikey, 2026-10-29).
     let moved = false;
     for (const e of list) if (e && fromOldLength(e.spec)) moved = true;
     if (moved) persist(list);
@@ -76,10 +76,10 @@ export function exportAll() {
   });
 }
 
-// The Library handed over from the old address (session 31a: its Worker,
-// old-address/worker.js, packs exportAll's backup into the link): the backup's
-// JSON, deflated where the browser could ("z") or as it is ("j"), in
-// base64url. Returns the backup, for importAll; throws if it isn't one.
+// The Library handed over from the old address. Its Worker
+// (old-address/worker.js) packs exportAll's backup into the link: the
+// backup's JSON, deflated where the browser could ("z") or as it is ("j"),
+// in base64url. Returns the backup, for importAll. Throws if it isn't one.
 export async function unpackMove(text) {
   const kind = text[0];
   const bin = atob(text.slice(1).replace(/-/g, '+').replace(/_/g, '/'));
@@ -118,8 +118,8 @@ export function importAll(json) {
   for (const e of incoming) {
     if (!e || have.has(e.id)) continue;
     if (!usable(e)) { rejected++; continue; }
-    // Defaults for anything a very old save predates; a length in passes or
-    // bars as its time (session 30c).
+    // Defaults for anything that a very old save predates, and a length in
+    // passes or bars made into its time.
     e.spec.mutes = e.spec.mutes || { drums: false, bass: false, chords: false, melody: false, texture: false };
     e.spec.stepsPerBar = e.spec.stepsPerBar || 16;
     fromOldLength(e.spec);

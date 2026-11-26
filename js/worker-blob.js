@@ -1,20 +1,21 @@
-// A module Worker for the Android app (session 28, queue item 107d).
+// A module Worker for the Android app.
 //
-// In a browser a module Worker loads its imports itself. In the app's
-// WebView it can't: the files are the app's own (served to the page from
-// inside the APK by `shouldInterceptRequest`), and a Worker's own requests
-// (its imports, a `fetch`) never reach that, so they fail as network loads
+// In a browser, a module Worker loads its imports itself. In the app's
+// WebView it can't. The files are the app's own, served to the page from
+// inside the APK by `shouldInterceptRequest`. A Worker's own requests (its
+// imports, a `fetch`) never reach that, so they fail as network loads that
 // the app blocks. Measured on the emulator (Chromium 124): a Worker's own
-// script loads, a module Worker with no imports loads, and one that imports
-// a file of the app does not, whatever headers the files answer with.
+// script loads, and a module Worker with no imports loads. A Worker that
+// imports a file of the app does not load, whatever headers the files send.
 //
-// So the page does the loading: `moduleWorkerUrl` reads the Worker's file and
-// every file it imports (the page's requests are served), rewrites each
-// static import to a Blob URL of that file made the same way, and gives back
-// a Blob URL for the Worker, which loads because the Blobs are the page's.
-// Only static imports of relative files are followed (a dynamic `import()`
-// stays as written: the Worker never runs it); and a Worker file may not use
-// `import.meta` (none does).
+// So the page does the loading. `moduleWorkerUrl` reads the Worker's file
+// and every file that it imports (the page's requests are served). It
+// rewrites each static import to a Blob URL of that file, made the same
+// way. Then it gives back a Blob URL for the Worker, which loads because the
+// Blobs are the page's.
+// - Only static imports of relative files are followed. A dynamic
+//   `import()` stays as written, because the Worker never runs it.
+// - A Worker file may not use `import.meta` (none does).
 
 // `import ... from './x.js'`, `export ... from './x.js'` and `import './x.js'`.
 const STATIC = /(\bfrom\s+|\bimport\s+)(['"])(\.{1,2}\/[^'"]+)\2/g;

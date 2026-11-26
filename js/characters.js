@@ -1,22 +1,22 @@
 // Sound profiles.
 //
-// A profile is a set of constraints -- tempo band, scale pool, instruments,
-// density, metre, form -- that move together. On their own they would be
-// sixteen boxes. They are not used that way: every loop draws a *weight*
-// across several of them, so the palette is a continuous space rather than
-// sixteen points, and a loop can be mostly one thing with three others
-// colouring it.
+// A profile is a set of limits that move together: a tempo band, a scale
+// pool, instruments, density, meter and form. On their own they would be
+// sixteen boxes, but they are not used that way. Every loop draws a
+// *weight* across several of them. So the palette is a continuous space,
+// not sixteen points, and a loop can be mostly one thing with three others
+// coloring it.
 //
-// Names are deliberately about the sound rather than where it came from.
+// The names are about the sound, on purpose, not about where it came from.
 
 import { blocksOf, number, readBlock } from './data.js';
 
-// The profiles themselves are data (queue item 78): data/characters.txt, one
-// [character id] block each, in this order; docs/VIBES.md and the file's own
-// comments say how to edit one.
+// The profiles themselves are data: data/characters.txt, one [character id]
+// block each, in this order. The file's own comments say how to edit one,
+// and docs/VIBES.md says how the same format works for a vibe.
 
-// What each key of a profile holds (js/data.js, READ): a number, a range, a
-// weighted pool, and so on. A key not named here is an error.
+// What each key of a profile holds (READ in js/data.js): a number, a range,
+// a weighted pool, and so on. A key that is not named here is an error.
 const SCHEMA = {
   label: 'word',
   groove: 'word',
@@ -38,8 +38,9 @@ for (const k of ['scales', 'chordVoices', 'melodyVoices', 'bassStyles', 'bassVoi
 for (const k of ['weight', 'level', 'airy', 'drums', 'restBar', 'flatSeven', 'quartal', 'pointillist', 'skipStep',
   'glide', 'dubEcho', 'rolls', 'fourFloor', 'pump', 'drone', 'ornament', 'harmonize', 'chug']) SCHEMA[k] = 'num';
 
-// A scale degree in a progression: a number, or a chord that is spelled out,
-// '4M' (degree 4, a major chord) and '6fM' (degree 6 flattened, major).
+// A scale degree in a progression: a number, or a chord that is spelled
+// out, such as '4M' (degree 4, a major chord) or '6fM' (degree 6 flattened,
+// major).
 function degree(token) {
   const m = /^(\d+)(f?)(M?)$/.exec(token);
   if (!m) throw new Error(`'${token}' is not a degree`);
@@ -54,7 +55,7 @@ export const CHARACTERS = Object.fromEntries(blocksOf('characters', 'character')
   (b) => [b.name, readBlock(b, SCHEMA, 'data/characters.txt')],
 ));
 
-// Saved loops from before the rename still resolve.
+// Saved loops from before a profile's rename still resolve.
 export const LEGACY_NAMES = {
   tape: 'dust',
   hyrule: 'glade',
@@ -69,22 +70,23 @@ export function resolveKey(key) {
   return LEGACY_NAMES[key] || 'dust';
 }
 
-// The profiles in their frozen order (append only): the order a share code
-// numbers them in, and a request's set of styles is written in (queue item
-// 90). The Rust core's `request::PROFILE_ORDER` is the same list.
+// The profiles in their frozen order (append only). A share code numbers
+// them in this order, and a request's set of styles is written in it. The
+// Rust core's `request::PROFILE_ORDER` is the same list.
 export const PROFILE_ORDER = [
   'dust', 'glade', 'thaw', 'haven', 'bloom', 'vapor',
   'halcyon', 'clockwork', 'shatter', 'undertow',
   'grove', 'hollow', 'shrine', 'tide', 'cinder', 'wayfare',
 ];
 
-// The voices a request can ask for, by layer, each in its frozen order
-// (append only): the order a share code numbers them in, and a request's
-// set of voices is written in (queue item 91). The names a layer's pools
+// The voices that a request can ask for, by layer, each in its frozen order
+// (append only). A share code numbers them in this order, and a request's
+// set of voices is written in it. They are the names that a layer's pools
 // draw from, less the choir's (vowel, hum and choir): the rarities stay
 // rare, and are not offered until Mikey says so. The Rust core's
 // `request::VOICE_ORDER` is the same lists. For the drums the voice is the
-// kit, for the texture its kind (less "none": that is the layer left out).
+// kit. For the texture it is its kind, less "none" (that is the layer left
+// out).
 export const VOICE_ORDER = {
   drums: ['brush', 'tape', 'hand'],
   bass: ['sub', 'round', 'pluckbass', 'moogbass', 'fifths', 'rhodesbass'],

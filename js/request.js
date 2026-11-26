@@ -1,15 +1,18 @@
-// A loop's record and its request, as the page keeps and sends them (queue
-// item 97; this was the part of js/generator.js that decided no notes).
+// A loop's record and its request, as the page keeps and sends them.
 //
-// The page keeps a loop as a spec: its seed, what the core said it made of
-// it (js/gen.js: the name, the key, the tempo, the mix and the rest, for the
-// card, the cover, the Library and a share code), what was asked of it (the
-// request: vibes, tempo, pins, a theme, a length, keys, modes, styles,
-// voices, layers) and what a listener changed since (a layer re-rolled, the
-// tone, the tempo, the mutes). Here: reading a request (strictly, with the
-// core's own short lines for what can't be met), writing it as the numbers
-// the core's commands take, and the few sums about a piece's length the
-// pickers show. Nothing here draws anything: the core's generator does.
+// The page keeps a loop as a spec, which holds:
+// - its seed;
+// - what the core said that it made of it (js/gen.js): the name, the key,
+//   the tempo, the mix and the rest, for the card, the cover, the Library
+//   and a share code;
+// - what was asked of it (the request): vibes, tempo, pins, a theme, a
+//   length, keys, modes, styles, voices and layers;
+// - what a listener changed since: a layer re-rolled, the tone, the tempo,
+//   the mutes.
+// This module reads a request (strictly, with the core's own short lines
+// for what can't be met), writes it as the numbers that the core's commands
+// take, and does the few sums about a piece's length that the pickers show.
+// Nothing here draws anything: the core's generator does.
 
 import { randomSeed } from './rng.js';
 import { NOTE_NAMES, SCALE_ORDER } from './theory.js';
@@ -18,9 +21,9 @@ import { VIBES, VIBE_IDS } from './vibes.js';
 import { RequestError, isPinName, pinValue, readPins, framedPins, pinItems, pinNumbers } from './pins.js';
 import { blockOf, readBlock } from './data.js';
 
-// The layers, in the order the core draws and the app lists them, and the
-// label each shows: data/voices.txt (queue item 78). Share codes freeze
-// their own copy of the order (js/share.js), on purpose.
+// The layers, in the order that the core draws them and the app lists them,
+// and the label that each shows (data/voices.txt). Share codes freeze their
+// own copy of the order (js/share.js), on purpose.
 const LAYER_DATA = readBlock(blockOf('voices', 'voices', 'layers'), { order: 'words', 'label.*': 'word' }, 'data/voices.txt');
 export const LAYERS = LAYER_DATA.order;
 export const LAYER_LABELS = LAYER_DATA.label;
@@ -31,13 +34,13 @@ export const STEPS_PER_BAR = 16;
 
 // ---------------------------------------------------------------- pieces
 
-// A piece of a length asked (promise 11, queue item 88;
-// `core/src/generator/piece.rs`). A short length is the loop's own; past the
-// longest any profile draws, and for 'endless', the loop keeps the bars its
-// profile drew and the piece is that loop played section after section.
+// A piece of an asked length (promise 11; `core/src/generator/piece.rs`). A
+// short length is the loop's own. Past the longest that any profile draws,
+// and for 'endless', the loop keeps the bars that its profile drew, and the
+// piece is that loop, played section after section.
 
-// The piece of the loop of `spec`, or null for a loop that is no piece (no
-// length asked, and none drawn: queue item 117):
+// The piece of the loop of `spec`, or null for a loop that is not a piece
+// (no length asked, and none drawn):
 // { bars: a section's, sections: a round's (Infinity for 'endless'), last:
 // the bars a round's last section plays }.
 export function pieceOf(spec) {
@@ -50,18 +53,18 @@ export function pieceOf(spec) {
   return { bars, sections, last: rest || bars };
 }
 
-// The bars a pass of the loop of `spec` plays (queue item 88b): the piece's
-// length, asked or drawn (Infinity for 'endless'), else the loop's own. What the card shows,
-// and what a track of whole passes counts one as.
+// The bars that a pass of the loop of `spec` plays: the piece's length,
+// asked or drawn (Infinity for 'endless'), else the loop's own. The card
+// shows it, and a track of whole passes counts a pass as this.
 export function loopBars(spec) {
   if (!spec) return 0;
   if (spec.length === 'endless') return Infinity;
   return typeof spec.length === 'number' ? spec.length : spec.bars;
 }
 
-// How long `bars` bars of `stepsPerBar` steps play at `bpm`, in seconds (the
-// Rust's `piece::seconds`, the same operations in the same order): what the
-// Bars picker shows, so the app and the core never disagree.
+// How long `bars` bars of `stepsPerBar` steps play at `bpm`, in seconds.
+// It does the same operations in the same order as `piece::seconds` in the
+// core. The Bars picker shows it, so the app and the core never disagree.
 export function pieceSeconds(bars, stepsPerBar, bpm) {
   return bars * stepsPerBar * (60 / bpm / 4);
 }
@@ -75,7 +78,7 @@ export function pieceTime(bars, stepsPerBar, tempo) {
 // ------------------------------------------------------------- vibes
 
 // The listener's selection, in the frozen order: known names only, each
-// once, and the order they were tapped in does not change the loop.
+// once. The order that they were tapped in does not change the loop.
 export function vibeSelection(selection) {
   if (!selection) return [];
   const list = Array.isArray(selection) ? selection : Object.keys(selection);
@@ -85,16 +88,18 @@ export function vibeSelection(selection) {
 
 // ------------------------------------------------------------- the request
 
-// Queue item 85 (promise 11): what a host asks of the next loop, beside its
-// seed. One shape for the app's picks, a developer's code and a game's
-// events, read the same way by the Rust generator (`core/src/generator/
-// request.rs`): the vibes, with or without weights, the tempo, pinned or a
-// range, the theme (queue item 85d: a seed whose loop this one bends) and
-// the pins (queue item 85b, js/pins.js) and the length (queue item 88: a
-// number of bars or 'endless', `pieceOf`), the key and the mode (queue item
-// 89: each one, or a set to choose from) and the style (queue item 90: the
-// profiles, one or a set). Whatever is not asked is drawn
-// from the seed as ever, and a request of nothing is the loop the seed makes.
+// What a host asks of the next loop, beside its seed (promise 11). There is
+// one shape for the app's picks, a developer's code and a game's events.
+// The Rust generator reads it the same way (`core/src/generator/request.rs`):
+// - the vibes, with or without weights;
+// - the tempo, pinned or a range;
+// - the theme: a seed whose loop this one bends;
+// - the pins (js/pins.js);
+// - the length: a number of bars or 'endless' (`pieceOf`);
+// - the key and the mode: each one, or a set to choose from;
+// - the style: the profiles, one or a set.
+// Whatever is not asked is drawn from the seed, as always. A request of
+// nothing is the loop that the seed makes.
 //
 // It comes as:
 //   - nothing (null), or a list of vibe names (a listener's selection: names
@@ -112,9 +117,10 @@ export function vibeSelection(selection) {
 //     value }, length a whole number of bars or 'endless', key a note's name
 //     or number (C is 0) or a list of them, scale a mode's name or a list,
 //     style a profile's name or a list.
-// Text and objects are read strictly: a name the core does not have, a bad
-// weight or a tempo out of the core's range is refused (a RequestError, its
-// message the short plain ASCII line "can't do that" shows), never guessed.
+// Text and objects are read strictly. A name that the core does not have, a
+// bad weight or a tempo out of the core's range is refused, never guessed.
+// The refusal is a RequestError, and its message is the short plain ASCII
+// line that "can't do that" shows.
 //
 // Read, it is { vibes, tempo, theme, pins, length, key, scale, style }: vibes null
 // or [id, weight] pairs in the frozen order (the weight null where none was
@@ -124,7 +130,8 @@ export function vibeSelection(selection) {
 // first), scale null or modes' names in their frozen order, style null or
 // profile names in theirs.
 
-// The tempos the core plays, in bpm: what the share code's tempo byte holds.
+// The tempos that the core plays, in bpm: what the share code's tempo byte
+// holds.
 export const TEMPO_LIMIT = [32, 190];
 
 export { RequestError };
@@ -141,7 +148,8 @@ export function readRequest(input) {
   if (!['vibes', 'tempo', 'theme', 'pins', 'length', 'key', 'scale', 'style', 'voices', 'layers', 'journey'].some((k) => k in input)) return { ...out, vibes: lenientVibes(Object.keys(input)) };
   const vibes = input.vibes;
   if (Array.isArray(vibes) && vibes.some(Array.isArray)) {
-    // The read form's own pairs, so a request read is read the same again.
+    // The read form's own pairs, so that a request read is read the same
+    // again.
     const asked = new Map();
     for (const [id, w] of vibes) asked.set(knownVibe(id), w == null ? null : weightOf(w));
     out.vibes = framed(asked);
@@ -155,22 +163,22 @@ export function readRequest(input) {
     const t = input.tempo;
     out.tempo = Array.isArray(t) ? tempoOf(t[0], t.length > 1 ? t[1] : t[0]) : tempoOf(t, t);
   }
-  // The theme (queue item 85d): a seed.
+  // The theme: a seed.
   if (input.theme != null) out.theme = themeOf(input.theme);
-  // The pins (queue item 85b; js/pins.js), { name: value }.
+  // The pins (js/pins.js), { name: value }.
   out.pins = readPins(input.pins);
-  // The length (queue item 88): bars, or 'endless'.
+  // The length: bars, or 'endless'.
   if (input.length != null) out.length = lengthOf(input.length);
-  // The key and the mode (queue item 89): a name or a set of them.
+  // The key and the mode: a name or a set of them.
   if (input.key != null) out.key = keysOf(input.key);
   if (input.scale != null) out.scale = scalesOf(input.scale);
-  // The style (queue item 90): a profile or a set of them.
+  // The style: a profile or a set of them.
   if (input.style != null) out.style = stylesOf(input.style);
-  // The voices (queue item 91): { layer: a voice or a set }, and the layers
-  // on or off: { layer: 'on' | 'off' }.
+  // The voices: { layer: a voice or a set }, and the layers on or off:
+  // { layer: 'on' | 'off' }.
   if (input.voices != null) out.voices = voicesOf(input.voices);
   if (input.layers != null) out.layers = layersOf(input.layers);
-  // The journey a long piece takes (queue item 106b; core: `Journey`).
+  // The journey that a long piece takes (the core's `Journey`).
   if (input.journey != null) out.journey = journeyOf(input.journey);
   return out;
 }
@@ -212,7 +220,7 @@ export function parseRequest(text) {
     } else if (name.startsWith('layer.')) {
       layers[name.slice(6)] = value == null ? '' : value;
     } else if (isPinName(name)) {
-      // A pin (queue item 85b): a choice's id, or a dotted setting.
+      // A pin: a choice's id, or a dotted setting.
       if (value == null) throw new RequestError('a bad setting');
       pins[name] = pinValue(name, value);
     } else {
@@ -245,9 +253,9 @@ export function requestText(request) {
   return items.length ? items.join(',') : '-';
 }
 
-// What makes a spec's loop again: its seed with this request (the player's
-// `?engine=player`, a share code's loop on the core). Its own vibes with the
-// weights it drew, and the tempo it was asked for.
+// What makes a spec's loop again: its seed with this request (a share
+// code's loop on the core, too). Its own vibes with the weights it drew,
+// and the tempo that it was asked for.
 export function requestOf(spec) {
   const v = vibesOf(spec);
   return {
@@ -255,8 +263,8 @@ export function requestOf(spec) {
     tempo: spec && Array.isArray(spec.tempo) ? spec.tempo.slice() : null,
     theme: spec && spec.theme != null ? spec.theme : null,
     pins: spec && spec.pins ? { ...spec.pins } : null,
-    // A length the seed drew (queue item 117) is not asked: the seed draws
-    // it again.
+    // A length that the seed drew is not asked, because the seed draws it
+    // again.
     length: spec && spec.length != null && !spec.lengthDrawn ? spec.length : null,
     key: spec && Array.isArray(spec.askKey) ? spec.askKey.slice() : null,
     scale: spec && Array.isArray(spec.askScale) ? spec.askScale.slice() : null,
@@ -276,8 +284,8 @@ export function scaleMask(scales) {
   return scales ? scales.reduce((m, k) => m | (1 << SCALE_ORDER.indexOf(k)), 0) : 0;
 }
 
-// A style or a set of styles (queue item 90), by profile name ("tide"), a
-// list or names written with "|" between; read in the profiles' frozen order.
+// A style or a set of styles: a profile name ("tide"), a list, or names
+// written with "|" between. Read in the profiles' frozen order.
 function stylesOf(x) {
   const list = Array.isArray(x) ? x : typeof x === 'string' ? x.split('|') : [x];
   if (!list.length) return null;
@@ -289,10 +297,9 @@ function stylesOf(x) {
   return PROFILE_ORDER.filter((k) => asked.has(k));
 }
 
-// The voices asked (queue item 91), { layer: a voice, a list, or names
-// written with "|" between }: each layer's names from its own list
-// (`VOICE_ORDER`), read in that list's frozen order. A layer with none is
-// nothing asked.
+// The voices asked: { layer: a voice, a list, or names written with "|"
+// between }. Each layer's names come from its own list (`VOICE_ORDER`), read
+// in that list's frozen order. A layer with none asks nothing.
 function voicesOf(x) {
   if (typeof x !== 'object' || Array.isArray(x)) throw new RequestError('no such layer');
   const out = {};
@@ -312,8 +319,8 @@ function voicesOf(x) {
   return Object.keys(out).length ? out : null;
 }
 
-// The layers asked on or off (queue item 91), { layer: 'on' | 'off' }. All
-// five off is the one request that cannot be met.
+// The layers asked on or off: { layer: 'on' | 'off' }. All five off is the
+// one request that cannot be met.
 function layersOf(x) {
   if (typeof x !== 'object' || x === null || Array.isArray(x)) throw new RequestError('no such layer');
   for (const k of Object.keys(x)) if (!LAYERS.includes(k)) throw new RequestError('no such layer');
@@ -364,10 +371,9 @@ const KEY_NAMES = {
   C: 0, 'C#': 1, Db: 1, D: 2, 'D#': 3, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6, G: 7, 'G#': 8, Ab: 8, A: 9, 'A#': 10, Bb: 10, B: 11,
 };
 
-// A key or a set of keys (queue item 89): a note's name ("D", "Eb"), its
-// number from 0 (C) to 11, a list of them, or names written with "|" between
-// ("D|G"). Read as the numbers, once each, low first; an empty list is
-// nothing asked.
+// A key or a set of keys: a note's name ("D", "Eb"), its number from 0 (C)
+// to 11, a list of them, or names written with "|" between ("D|G"). Read as
+// the numbers, once each, low first. An empty list asks nothing.
 function keysOf(x) {
   const list = Array.isArray(x) ? x : typeof x === 'string' ? x.split('|') : [x];
   if (!list.length) return null;
@@ -381,8 +387,8 @@ function keysOf(x) {
   return [...keys].sort((a, b) => a - b);
 }
 
-// A mode or a set of modes (queue item 89), by name ("dorian"), a list or
-// names written with "|" between; read in the modes' frozen order.
+// A mode or a set of modes: a name ("dorian"), a list, or names written
+// with "|" between. Read in the modes' frozen order.
 function scalesOf(x) {
   const list = Array.isArray(x) ? x : typeof x === 'string' ? x.split('|') : [x];
   if (!list.length) return null;
@@ -415,8 +421,9 @@ function framed(asked) {
   return list.length ? list : null;
 }
 
-// The longest length a request holds, in bars (`LENGTH_MOST`): 2^53 - 1,
-// so a length written longer never rounds into range. No cap on the music.
+// The longest length that a request holds, in bars (`LENGTH_MOST`):
+// 2^53 - 1, so that a longer length never rounds into range. The music has
+// no cap.
 export const LENGTH_MOST = Number.MAX_SAFE_INTEGER;
 
 // A length: a whole number of bars from 1 to LENGTH_MOST, or 'endless'.
@@ -446,8 +453,8 @@ function tempoOf(a, b) {
 
 // How far a band [lo, hi] sits from a tempo asked [a, b], in bpm: 0 where
 
-// What a spec says it was steered by, or null. Unknown names (a recipe
-// renamed since) are left out rather than guessed at.
+// What a spec says that it was steered by, or null. Unknown names (a
+// recipe renamed since) are left out, not guessed at.
 export function vibesOf(spec) {
   if (!spec || !spec.vibes) return null;
   const vibes = {};
@@ -460,8 +467,8 @@ export function vibesOf(spec) {
 
 // ------------------------------------------------------------- edits
 
-// A layer drawn again: a new seed for it, and marked re-rolled, so the core
-// plays it whatever its own chances draw (queue item 94a).
+// A layer drawn again: a new seed for it, marked re-rolled, so that the
+// core plays it whatever its own chances draw.
 export function rerollLayer(spec, layer) {
   const next = cloneSpec(spec);
   next.layerSeeds[layer] = randomSeed();
@@ -476,13 +483,15 @@ export function cloneSpec(spec) {
 // ------------------------------------------------- what the core is asked
 
 // What the core is asked for a spec's loop (`CoreHost.playLoad` and the
-// rest): its request (`requestOf`: the vibes with the weights it drew, so the
-// loop a selection of five or fewer made, the tempo, pins, theme, length,
-// keys, modes, styles, voices and layers), and a code's edits (queue item
-// 94a): every layer's seed, with whether it was re-rolled, the tone and the
-// tempo. The edits are sent whole, whether or not they differ from what the
-// seed draws: an edit to the value drawn makes the same loop
-// (test/player.test.mjs holds it), and the page need not draw the loop to
+// rest):
+// - its request (`requestOf`): the vibes with the weights it drew (so, the
+//   loop that a selection of five or fewer made), the tempo, pins, theme,
+//   length, keys, modes, styles, voices and layers;
+// - a code's edits: every layer's seed, with whether it was re-rolled, the
+//   tone and the tempo.
+// The edits are sent whole, whether or not they differ from what the seed
+// draws. An edit to the value drawn makes the same loop
+// (test/player.test.mjs holds it), so the page need not draw the loop to
 // tell.
 export function askOf(spec) {
   const asked = requestOf(spec);
@@ -528,10 +537,10 @@ export function askFor(asked) {
   };
 }
 
-// The New loops panel's request as the core takes it (queue item 95,
-// `Player::set_picks`): the request read and put in the core's numbers, the
-// vibes a listener's selection, each with no weight. A request that can't be
-// read is sent as its vibes alone, the moods kept: { ask, vibesOnly, why }.
+// The Vibe panel's request, as the core takes it (`Player::set_picks`): the
+// request read and put in the core's numbers, with the vibes as a
+// listener's selection, each with no weight. If the request can't be read,
+// it is sent as its vibes alone, so the moods stay: { ask, vibesOnly, why }.
 export function picksAsk(request) {
   try {
     return { ask: askFor(readRequest(request)), vibesOnly: false, why: null };

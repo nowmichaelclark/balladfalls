@@ -1,6 +1,6 @@
-// An exported file's tags (item 121; Mikey, 2026-11-23: "that album and its
-// songs should be properly tagged with things like track number, etc."):
-// what a music player shows of a loop or an album's track, written beside
+// An exported file's tags (Mikey, 2026-11-23: "that album and its songs
+// should be properly tagged with things like track number, etc."): what a
+// music player shows of a loop or an album's track. They are written beside
 // the samples, never in them.
 //
 //   FLAC  a VORBIS_COMMENT block and a PICTURE block after STREAMINFO (the
@@ -11,15 +11,18 @@
 //         how Ogg players read a cover
 //   MIDI  the track's name (js/midi.js)
 //
-// The tags (`tagsOf`): TITLE (the loop's name), ARTIST and ALBUMARTIST (the
-// app's one name constant, handed in: never written here), ALBUM,
-// TRACKNUMBER and TRACKTOTAL (an album's), DATE (the day it was exported),
-// and COMMENT (the loop's code, so the file says how to play it again). All
-// UTF-8 (Thai and emoji names travel whole). The picture is the loop's own
-// cover, drawn by js/cover.js as the Library draws it.
+// The tags (`tagsOf`):
+// - TITLE: the loop's name;
+// - ARTIST and ALBUMARTIST: the app's one name constant, given in (never
+//   written here);
+// - ALBUM, TRACKNUMBER and TRACKTOTAL: an album's;
+// - DATE: the day it was exported;
+// - COMMENT: the loop's code, so that the file says how to play it again.
+// All are UTF-8, so Thai and emoji names travel whole. The picture is the
+// loop's own cover, drawn by js/cover.js as the Library draws it.
 //
-// Pure: no DOM, no file. The export's Worker and tools/export.mjs both use
-// it; test/tags.test.mjs holds the bytes.
+// This module is pure: no DOM, no file. The export's Worker and
+// tools/export.mjs both use it, and test/tags.test.mjs holds the bytes.
 
 const utf8 = new TextEncoder();
 
@@ -32,8 +35,9 @@ const FRONT_COVER = 3;
 // What a file's vendor string says made it.
 export const VENDOR = 'dlcore';
 
-// The tags for a file: `loop` { name, code }, `album` { title, track, total }
-// or null for a single loop, `artist` the app's name, `date` a Date.
+// The tags for a file. `loop` is { name, code }. `album` is { title, track,
+// total }, or null for a single loop. `artist` is the app's name. `date` is
+// a Date.
 export function tagsOf({ loop, album = null, artist = '', date = new Date() }) {
   const t = [];
   const put = (key, value) => {
@@ -139,8 +143,8 @@ export function flacBlocks(tags, picture = null) {
   return out;
 }
 
-// The core's file header (`fLaC` and STREAMINFO, 42 bytes) with STREAMINFO
-// no longer the last block: blocks follow it. A copy.
+// A copy of the core's file header (`fLaC` and STREAMINFO, 42 bytes), with
+// STREAMINFO no longer the last block, so that blocks can follow it.
 export function notLast(header) {
   const h = Uint8Array.from(header);
   if (h.length >= 5 && h[0] === 0x66 && h[1] === 0x4c && h[2] === 0x61 && h[3] === 0x43) h[4] &= 0x7f;
@@ -154,8 +158,8 @@ export function base64(bytes) {
   return btoa(text);
 }
 
-// The comments OpusTags holds: the tags, and the picture as Ogg players
-// read one.
+// The comments that OpusTags holds: the tags, and the picture as Ogg
+// players read one.
 export function opusComments(tags, picture = null) {
   const list = comments(tags);
   if (picture) list.push(`METADATA_BLOCK_PICTURE=${base64(pictureBody(picture))}`);

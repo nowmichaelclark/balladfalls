@@ -1,0 +1,1256 @@
+//! The C face of the core (`include/dlcore.h`; `docs/CORE.md`, promise 4),
+//! in a build with the `capi` feature: today the player's calls,
+//! so a C host plays a loop from its seed with nothing but the header
+//! and the library. `examples/c/seed.c` is such a host, a seed to a WAV,
+//! and CI holds it to `dlrender --seed`'s samples.
+//!
+//! Build the library with
+//! `cargo rustc --release --lib --features capi --crate-type staticlib`
+//! and link `target/release/libdlcore.a`. The core never allocates: the
+//! host hands each player its memory (`dl_player_size` bytes, aligned to
+//! `dl_player_align`), and nothing else is kept anywhere, so a host may
+//! play as many players as it gives memory for. A player is used from one
+//! thread at a time.
+
+use core::ffi::{CStr, c_char, c_int, c_void};
+use core::mem::{align_of, size_of};
+use core::ptr;
+
+use crate::Core;
+use crate::flac::Flac;
+use crate::generator::{LAYERS, Layer};
+use crate::player::{Handover, Moment, Player, Request, State};
+
+/// What the C library does if the core panics: nothing reachable from these
+/// calls can (`lib.rs`), but a `no_std` library must say. It aborts, as C
+/// code that cannot go on does.
+#[cfg(not(test))]
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    unsafe extern "C" {
+        safe fn abort() -> !;
+    }
+    abort()
+}
+
+/// The unwinder's hook, which the prebuilt `compiler_builtins` names though
+/// nothing here unwinds (the library is built with `panic = "abort"`): never
+/// called, but a C linker wants it.
+#[cfg(not(test))]
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_eh_personality() {}
+
+/// A `dl_player`: a core, the player on it, and what the next load asks for.
+pub struct Engine {
+    core: Core,
+    player: Player,
+    request: Request,
+    channels: u32,
+}
+
+/// A core as `Core::new` makes one, and a player as `Player::new` does,
+/// built when the library is: a new `dl_player` is copied from them into
+/// the host's memory, so starting one never builds megabytes on a stack.
+/// The core's is all zeros (`lib.rs`), so it costs the library's file
+/// nothing; the player's is a megabyte and a half of it.
+struct Template<T>(T);
+
+// Never written to: they are only ever copied from.
+unsafe impl<T> Sync for Template<T> {}
+
+static CORE: Template<Core> = Template(Core::new());
+static PLAYER: Template<Player> = Template(Player::new());
+
+/// The host's player, or `None` for a null pointer.
+fn engine<'a>(player: *mut Engine) -> Option<&'a mut Engine> {
+    // SAFETY: the host passes what `dl_player_start` returned, used from one
+    // thread at a time (the header's promise), or null.
+    unsafe { player.as_mut() }
+}
+
+/// The bytes a player takes: the memory `dl_player_start` is given.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_size() -> usize {
+    size_of::<Engine>()
+}
+
+/// The alignment that memory needs.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_align() -> usize {
+    align_of::<Engine>()
+}
+
+/// Start a player in `memory` (`bytes` long, at least `dl_player_size`,
+/// aligned to `dl_player_align`): a core at `rate` Hz rendering `channels`
+/// channels (1 mono, 2 stereo), the full mix (`full` not 0) or lite's.
+/// Null if the memory is too small or misaligned, or the rate or layout is
+/// one the core does not take; the memory is then left as it was.
+///
+/// # Safety
+///
+/// `memory` is `bytes` writable bytes the host keeps for the player's life.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_start(memory: *mut c_void, bytes: usize, rate: f64, channels: u32, full: c_int) -> *mut Engine {
+    let p = memory.cast::<Engine>();
+    if p.is_null() || bytes < size_of::<Engine>() || !p.is_aligned() {
+        return ptr::null_mut();
+    }
+    if (channels != 1 && channels != 2) || !(crate::MIN_RATE..=crate::MAX_RATE).contains(&rate) {
+        return ptr::null_mut();
+    }
+    // SAFETY: room and alignment checked above, and each field written
+    // before the whole is used; the templates are plain data (no pointers
+    // but to statics), so their copies are a core and a player of their own.
+    unsafe {
+        ptr::copy_nonoverlapping(&raw const CORE.0, &raw mut (*p).core, 1);
+        ptr::copy_nonoverlapping(&raw const PLAYER.0, &raw mut (*p).player, 1);
+        (&raw mut (*p).request).write(Request::new());
+        (&raw mut (*p).channels).write(channels);
+    }
+    let Some(e) = engine(p) else { return ptr::null_mut() };
+    match e.player.start(&mut e.core, rate, channels, full != 0) {
+        Ok(()) => p,
+        Err(_) => ptr::null_mut(),
+    }
+}
+
+/// Add the vibe called `id` ("glacial", as `data/vibes.txt` names it) to
+/// what the next `dl_player_load` asks for. 1 if the core has it, else 0.
+///
+/// # Safety
+///
+/// `id` is a NUL-terminated string, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_vibe(player: *mut Engine, id: *const c_char) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    if id.is_null() {
+        return 0;
+    }
+    // SAFETY: NUL-terminated (the caller's promise).
+    let id = unsafe { CStr::from_ptr(id) };
+    match id.to_str().ok().and_then(|id| e.request.with_vibe(id)) {
+        Some(r) => {
+            e.request = r;
+            1
+        }
+        None => 0,
+    }
+}
+
+/// A refusal's line as C text (the request's `&'static str` lines,
+/// NUL-terminated): plain ASCII, static, never freed.
+fn line(refused: &'static str) -> *const c_char {
+    use crate::generator::request::{
+        ALL_LAYERS_OFF, BAD_LAYER, BAD_LENGTH, BAD_SETTING, BAD_TEMPO, BAD_THEME, BAD_WEIGHT, NO_SUCH_KEY, NO_SUCH_LAYER, NO_SUCH_SCALE,
+        NO_SUCH_SETTING, NO_SUCH_STYLE, NO_SUCH_VOICE, NO_SUCH_VIBE, SETTING_OUT, TEMPO_OUT,
+    };
+    let c: &'static CStr = match refused {
+        NO_SUCH_VIBE => c"no such vibe",
+        BAD_WEIGHT => c"a bad weight",
+        BAD_TEMPO => c"a bad tempo",
+        TEMPO_OUT => c"tempo must be 32 to 190 bpm",
+        NO_SUCH_SETTING => c"no such setting",
+        BAD_SETTING => c"a bad setting",
+        SETTING_OUT => c"a setting outside its range",
+        BAD_THEME => c"a bad theme",
+        BAD_LENGTH => c"a bad length",
+        NO_SUCH_KEY => c"no such key",
+        NO_SUCH_SCALE => c"no such scale",
+        NO_SUCH_STYLE => c"no such style",
+        NO_SUCH_LAYER => c"no such layer",
+        NO_SUCH_VOICE => c"no such voice",
+        BAD_LAYER => c"a bad layer",
+        ALL_LAYERS_OFF => c"all layers off",
+        crate::code::NEEDS_NEWER => c"needs a newer version",
+        crate::code::NOT_A_CODE => c"not a code",
+        crate::code::NO_ROOM => c"no room for the code",
+        crate::code::NOT_AT_VERSION => c"asks for something its version does not have",
+        crate::code::BAD_NAME => c"a name a code can't carry",
+        crate::code::BAD_ALBUM => c"a bad album",
+        crate::generator::request::BAD_VERSION => c"a bad version",
+        _ => c"can't do that",
+    };
+    c.as_ptr()
+}
+
+/// `text` as a string, if it is one (null, or not UTF-8, is not).
+///
+/// # Safety
+///
+/// `text` is a NUL-terminated string, or null.
+unsafe fn text<'a>(text: *const c_char) -> Option<&'a str> {
+    if text.is_null() {
+        return None;
+    }
+    // SAFETY: NUL-terminated (the caller's promise).
+    unsafe { CStr::from_ptr(text) }.to_str().ok()
+}
+
+/// Add the vibe called `id` at `weight` (the share of the loop it steers:
+/// `Request::with_weight`) to what the next `dl_player_load` asks for. Null
+/// if it can be met; else the line saying why not (static, plain ASCII),
+/// and the request is left as it was.
+///
+/// # Safety
+///
+/// `id` is a NUL-terminated string, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_weight(player: *mut Engine, id: *const c_char, weight: f64) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    // SAFETY: the caller's promise, passed on.
+    let Some(index) = unsafe { text(id) }.and_then(crate::generator::data::vibe_index) else {
+        return line(crate::generator::request::NO_SUCH_VIBE);
+    };
+    match e.request.with_weight(index, weight) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask the next `dl_player_load` for a tempo: `lo` to `hi` bpm (equal to
+/// pin it; `Request::with_tempo`). Null if it can be met; else the line
+/// saying why not, and the request is left as it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_ask_tempo(player: *mut Engine, lo: f64, hi: f64) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    match e.request.with_tempo(lo, hi) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Pin setting `number` at `value` for the next `dl_player_load`
+/// (`Request::with_pin`, `request::Pins`: a word by its place in
+/// the pin's list). Null if it can be met; else the line saying why not,
+/// and the request is left as it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_pin(player: *mut Engine, number: u32, value: f64) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    match e.request.with_pin(number as usize, value) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask the next `dl_player_load` to bend the loop of `seed`
+/// (`Request::with_theme`): the loop made keeps that loop's profile mix,
+/// key and mode, metre and tune. Any seed is a theme.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_theme(player: *mut Engine, seed: u32) {
+    if let Some(e) = engine(player) {
+        e.request = e.request.with_theme(seed);
+    }
+}
+
+/// Ask the next `dl_player_load` for a piece `bars` bars long, a whole
+/// number from 1 up, or for Endless with `bars` infinite
+/// (`Request::with_length`, `generator::piece`). Null if it can be met; else
+/// the line saying why not, and the request is left as it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_length(player: *mut Engine, bars: f64) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    let length = if bars == f64::INFINITY { crate::generator::request::Length::Endless } else { crate::generator::request::Length::Bars(bars) };
+    match e.request.with_length(length) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask the next `dl_player_load` for the home notes in `keys`, a bit each
+/// with C the lowest, or for nothing in particular with 0
+/// (`Request::with_keys`). Null if it can be met; else the line saying why
+/// not, and the request is left as it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_keys(player: *mut Engine, keys: u32) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    match e.request.with_keys(keys) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask the next `dl_player_load` for the modes in `scales`, a bit each by
+/// its place in the core's list of modes, or for nothing in particular with
+/// 0 (`Request::with_scales`). Null if it can be met; else the
+/// line saying why not, and the request is left as it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_scales(player: *mut Engine, scales: u32) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    match e.request.with_scales(scales) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask the next `dl_player_load` for the profiles in `styles`, a bit each by
+/// its place in the frozen order, or for no style in particular with 0
+/// (`Request::with_styles`). Null if it can be met; else the
+/// line saying why not, and the request is left as it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_styles(player: *mut Engine, styles: u32) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    match e.request.with_styles(styles) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask the next `dl_player_load` for the voices in `voices` of layer `layer`
+/// (0 to 4: drums, bass, chords, melody, texture), a bit each by its place in
+/// the layer's list, or for none in particular with 0
+/// (`Request::with_voices`). Null if it can be met; else the line saying why
+/// not, and the request is left as it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_voices(player: *mut Engine, layer: u32, voices: u32) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    match e.request.with_voices(layer as usize, voices) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask the next `dl_player_load` for layer `layer` (0 to 4) to be left to
+/// chance (`state` 0), always played (1) or left out (2):
+/// `Request::with_layer`. Null if it can be met ("all layers off" for the
+/// fifth left out); else the line saying why not, and the request is left as
+/// it was.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_layer(player: *mut Engine, layer: u32, state: u32) -> *const c_char {
+    use crate::generator::request::{BAD_LAYER, LayerAsk};
+    let Some(e) = engine(player) else { return line("") };
+    let ask = match state {
+        0 => LayerAsk::Chance,
+        1 => LayerAsk::On,
+        2 => LayerAsk::Off,
+        _ => return line(BAD_LAYER),
+    };
+    match e.request.with_layer(layer as usize, ask) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask the next `dl_player_load` for what `request` says, as text
+/// ("glacial=0.7,misty=0.3,bpm=70-85": `Request::parse`), in place of what
+/// was asked since the last load. Null if it can be met; else the line
+/// saying why not, and the request is left as it was.
+///
+/// # Safety
+///
+/// `request` is a NUL-terminated string, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_ask(player: *mut Engine, request: *const c_char) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    // SAFETY: the caller's promise, passed on.
+    let Some(t) = (unsafe { text(request) }) else { return line("") };
+    match Request::parse(t) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Ask for the loop of `seed`, with what was asked since the last load
+/// (`Player::load`): it is made a stage a block over the blocks rendered
+/// next, and starts when made. A loop playing stops being decided now.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_load(player: *mut Engine, seed: u32) {
+    if let Some(e) = engine(player) {
+        e.player.load(seed, &e.request);
+        e.request = Request::new();
+    }
+}
+
+/// Change to the loop of `seed`, with what was asked since the last load,
+/// at `moment` of the loop playing (`DL_NOW`, `DL_BEAT`, `DL_BAR`,
+/// `DL_PHRASE`, `DL_PASS`), the old loop crossfading over `crossfade`
+/// seconds (`DL_CROSSFADE` the default), or ringing out for a negative one
+/// (`Player::change`): no reset, no second core. Several
+/// changes may wait, one a kind of moment, the latest for a boundary
+/// winning. 1 if it was asked, 0 for a moment with no such number.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_change(player: *mut Engine, seed: u32, moment: u32, crossfade: f64) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    let Some(m) = Moment::of(moment) else { return 0 };
+    let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
+    e.player.change(seed, &e.request, m, handover);
+    e.request = Request::new();
+    1
+}
+
+/// `dl_player_change`, and how long the loop's track plays once it starts
+/// (`Player::change_with_track`): `kind` and `count` as
+/// `dl_player_track` takes them. 1 if it was asked, 0 for a moment or a kind
+/// with no such number.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_change_track(player: *mut Engine, seed: u32, moment: u32, crossfade: f64, kind: u32, count: u32) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    let Some(m) = Moment::of(moment) else { return 0 };
+    let Some(track) = crate::player::Track::of(kind, count) else { return 0 };
+    let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
+    e.player.change_with(seed, &e.request, m, handover, Some(track));
+    e.request = Request::new();
+    1
+}
+
+/// A new loop of the core's own at `moment` (`Player::next`):
+/// its seed the next drawn from `dl_player_draws`', with the picks
+/// (`dl_player_picks`), crossfading as `dl_player_change` does. 1 if asked;
+/// 0 for no such moment, or with no seed given to draw from.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_next(player: *mut Engine, moment: u32, crossfade: f64) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    let Some(m) = Moment::of(moment) else { return 0 };
+    let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
+    c_int::from(e.player.next(m, handover))
+}
+
+/// Drop the change waiting for `moment` (`Player::drop_change`). 1 if there
+/// is such a moment.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_drop(player: *mut Engine, moment: u32) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    let Some(m) = Moment::of(moment) else { return 0 };
+    e.player.drop_change(m);
+    1
+}
+
+/// Hold what was asked since the last load as the picks, numbered `tag`
+/// (`Player::set_picks`): every loop the core makes itself
+/// asks them, and its `DL_OWN` event carries `tag`.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_picks(player: *mut Engine, tag: u32) {
+    if let Some(e) = engine(player) {
+        e.player.set_picks(&e.request, tag);
+        e.request = Request::new();
+    }
+}
+
+/// Give the core a seed to draw its own loops' seeds from
+/// (`Player::set_draws`); 0, none of its own.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_draws(player: *mut Engine, seed: u32) {
+    if let Some(e) = engine(player) {
+        e.player.set_draws(seed);
+    }
+}
+
+/// When the next change waiting starts its loop, in seconds on the core's
+/// clock (`Player::next_change`; a host lining up a picture with it); -1
+/// if none is worked out yet (it is by the next block rendered).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_next_change(player: *mut Engine) -> f64 {
+    engine(player).and_then(|e| e.player.next_change()).unwrap_or(-1.0)
+}
+
+/// Make what is left of the loop asked for, now (`Player::ready`): for a
+/// host with no deadline (an offline render, a loading screen). The loop
+/// starts on the next block.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_ready(player: *mut Engine) {
+    if let Some(e) = engine(player) {
+        e.player.ready(&mut e.core);
+    }
+}
+
+/// Render the next `frames` frames into `out`: one pointer for each channel
+/// of the layout, each to `frames` floats. Any number of frames a call;
+/// the same samples whatever the split. 0, or -1 for a null player or
+/// channel (nothing rendered).
+///
+/// # Safety
+///
+/// `out` holds a pointer for each channel, each to `frames` writable floats.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_render(player: *mut Engine, out: *const *mut f32, frames: usize) -> c_int {
+    let Some(e) = engine(player) else { return -1 };
+    if out.is_null() {
+        return -1;
+    }
+    let mut lanes: [&mut [f32]; 2] = [&mut [], &mut []];
+    let n = if e.channels == 2 { 2 } else { 1 };
+    for (c, lane) in lanes.iter_mut().enumerate().take(n) {
+        // SAFETY: a pointer for each channel (the caller's promise).
+        let p = unsafe { *out.add(c) };
+        if p.is_null() {
+            return -1;
+        }
+        // SAFETY: `frames` writable floats (the caller's promise).
+        *lane = unsafe { core::slice::from_raw_parts_mut(p, frames) };
+    }
+    match e.player.render(&mut e.core, &mut lanes[..n]) {
+        Ok(()) => 0,
+        Err(_) => -1,
+    }
+}
+
+/// The frames from the last rendered to the end of the pass playing
+/// (`Player::pass_frames`): the chunk a host rendering a pass
+/// at a time asks for next. -1 while no loop plays.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_pass_frames(player: *mut Engine) -> i64 {
+    engine(player).and_then(|e| e.player.pass_frames(&e.core)).and_then(|n| i64::try_from(n).ok()).unwrap_or(-1)
+}
+
+/// How long the next `frames` frames will take to render, in microseconds
+/// on the reference host (`Player::estimate`): a host scales
+/// it by its own speed, timed on a chunk. -1 for a null player.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_estimate(player: *mut Engine, frames: u64) -> f64 {
+    engine(player).map_or(-1.0, |e| e.player.estimate(&e.core, frames))
+}
+
+/// Stop deciding (a pause): the loop stays loaded, and what was handed over
+/// plays out.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_stop(player: *mut Engine) {
+    if let Some(e) = engine(player) {
+        e.player.stop();
+    }
+}
+
+/// Go on with the loop stopped, from where it stood, on the next block.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_resume(player: *mut Engine) {
+    if let Some(e) = engine(player) {
+        e.player.resume(0.0);
+    }
+}
+
+/// How far each pass wanders: 0 plays the loop as composed, 1 is the
+/// app's default, up to 2.4 (`Player::set_wander`).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_wander(player: *mut Engine, amount: f64) {
+    if let Some(e) = engine(player) {
+        e.player.set_wander(amount);
+    }
+}
+
+/// The salt on the wander's stream, from the next pass
+/// (`Player::set_wander_salt`): a new one each play makes a loop wander
+/// differently each time; 0, the default, is every code's own wander.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_wander_salt(player: *mut Engine, salt: u32) {
+    if let Some(e) = engine(player) {
+        e.player.set_wander_salt(salt);
+    }
+}
+
+/// Mute layer `layer` (`DL_DRUMS` to `DL_TEXTURE`) or bring it back (`muted`
+/// 0). It holds, across loads, until brought back.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_mute(player: *mut Engine, layer: u32, muted: c_int) {
+    let Some(e) = engine(player) else { return };
+    if let Some(&l) = LAYERS.get(layer as usize) {
+        let l: Layer = l;
+        e.player.set_mute(&mut e.core, l, muted != 0);
+    }
+}
+
+/// The tempo, in beats a minute, from the next step decided.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_tempo(player: *mut Engine, bpm: f64) {
+    if let Some(e) = engine(player) {
+        e.player.set_tempo(&mut e.core, bpm);
+    }
+}
+
+/// The listener's volume, 0 to 1 (0.85 until set).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_volume(player: *mut Engine, volume: f64) {
+    if let Some(e) = engine(player) {
+        e.player.set_volume(&mut e.core, volume);
+    }
+}
+
+/// Where the player is: `DL_IDLE`, `DL_LOADING`, `DL_WANDERING` (its first
+/// pass being drawn) or `DL_PLAYING`.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_state(player: *mut Engine) -> u32 {
+    match engine(player).map(|e| e.player.state()) {
+        None | Some(State::Idle) => 0,
+        Some(State::Loading) => 1,
+        Some(State::Wandering) => 2,
+        Some(State::Playing) => 3,
+    }
+}
+
+/// The loop's name, plain ASCII, into `out` (`size` bytes, NUL-terminated,
+/// cut short if it must be). Returns the name's whole length.
+///
+/// # Safety
+///
+/// `out` is `size` writable bytes, or null with `size` 0.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_name(player: *mut Engine, out: *mut c_char, size: usize) -> usize {
+    let Some(e) = engine(player) else { return 0 };
+    let name = e.player.generator().spec().name.as_str().as_bytes();
+    if !out.is_null() && size > 0 {
+        let n = name.len().min(size - 1);
+        // SAFETY: `size` writable bytes (the caller's promise), n < size.
+        unsafe {
+            ptr::copy_nonoverlapping(name.as_ptr().cast::<c_char>(), out, n);
+            *out.add(n) = 0;
+        }
+    }
+    name.len()
+}
+
+/// Notes the core could not play as asked since the start: dropped (no
+/// voice free, or no room), taken late, or left out. 0 in every render the
+/// player makes.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_trouble(player: *mut Engine) -> u32 {
+    engine(player).map_or(0, |e| e.core.dropped().saturating_add(e.core.late()).saturating_add(e.core.missed()))
+}
+
+/// Layer `layer`'s seed set to `seed` for the next load, change or re-roll,
+/// re-rolled (always played) with `rolled` not 0 (`Request::with_layer_seed`;
+/// a code's edit): null if it can be met, else why not.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_seed(player: *mut Engine, layer: u32, seed: u32, rolled: c_int) -> *const c_char {
+    let Some(e) = engine(player) else { return ptr::null() };
+    match e.request.with_layer_seed(layer as usize, seed, rolled != 0) {
+        Ok(r) => {
+            e.request = r;
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// The loop playing made again with what was asked since the last load, in
+/// its place (`Player::revise`; a re-roll).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_revise(player: *mut Engine, seed: u32) {
+    if let Some(e) = engine(player) {
+        e.player.revise(seed, &e.request);
+        e.request = Request::new();
+    }
+}
+
+/// The tone from now (`Player::set_tone`).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_tone(player: *mut Engine, warmth: f64, space: f64, wobble: f64) {
+    if let Some(e) = engine(player) {
+        e.player.set_tone(&mut e.core, [warmth, space, wobble]);
+    }
+}
+
+/// How long the track plays (`Player::set_track_with`): `kind` 0 on and
+/// on, 1 `count` passes, 2 `count` bars, 3 `count` seconds, with 4 added
+/// for a fade in and 8 for a fade out (`Track::of`). 1 if it
+/// is a kind there is.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_track(player: *mut Engine, kind: u32, count: u32) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    let Some((track, fades)) = crate::player::Track::of(kind, count) else { return 0 };
+    e.player.set_track_with(&e.core, track, fades);
+    1
+}
+
+/// The step from the loop's load the track ends at (`Player::track_end`);
+/// -1 while it plays on.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_track_end(player: *mut Engine) -> i64 {
+    engine(player).and_then(|e| e.player.track_end()).and_then(|s| i64::try_from(s).ok()).unwrap_or(-1)
+}
+
+/// Go on from somewhere else in the loop playing
+/// (`Player::jump`): `kind` 0 a section (`at`, a whole number), 1 a bar, 2 a
+/// time in seconds, each from the piece's start, landing on the phrase line
+/// at or before it; 3 a step from the load, exactly (`Jump::of`). Stopped,
+/// it is held and lands at the resume. 1 if it was asked; 0 with nothing
+/// playing or stopped, for no such kind, or a place that is not a number.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_jump(player: *mut Engine, kind: u32, at: f64) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    crate::player::Jump::of(kind, at).map_or(0, |to| c_int::from(e.player.jump(to)))
+}
+
+/// Where the loop playing is, as heard (`Player::place`), as C sees it
+/// (`dl_place`): -1 for a figure there is none of.
+#[repr(C)]
+pub struct CPlace {
+    bar: f64,
+    bars: f64,
+    played: f64,
+    left: f64,
+    section: u64,
+}
+
+/// Where the loop playing is as heard now into `out` (`Player::place`): 1,
+/// or 0 with nothing playing.
+///
+/// # Safety
+///
+/// `out` is a writable `dl_place`, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_place(player: *mut Engine, out: *mut CPlace) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    if out.is_null() {
+        return 0;
+    }
+    let Some(p) = e.player.place(&e.core) else { return 0 };
+    let place = CPlace { bar: p.bar, bars: p.bars.unwrap_or(-1.0), played: p.played, left: p.left.unwrap_or(-1.0), section: p.section };
+    // SAFETY: a writable `dl_place` (the caller's promise), checked not null.
+    unsafe { out.write(place) };
+    1
+}
+
+/// An event as C sees it (`dl_event`).
+#[repr(C)]
+pub struct CEvent {
+    time: f64,
+    kind: u32,
+    number: u64,
+    step: u64,
+}
+
+/// Take the oldest event waiting into `out` (`Player::event`): 1 if one was
+/// taken, 0 if none waits.
+///
+/// # Safety
+///
+/// `out` is a writable `dl_event`, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_event(player: *mut Engine, out: *mut CEvent) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    if out.is_null() {
+        return 0;
+    }
+    let Some(ev) = e.player.event() else { return 0 };
+    // SAFETY: a writable `dl_event` (the caller's promise), checked not null.
+    unsafe { out.write(CEvent { time: ev.time, kind: u32::from(ev.kind as u8), number: ev.number, step: ev.step }) };
+    1
+}
+
+/// Events lost for want of room (`Player::events_lost`).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_events_lost(player: *mut Engine) -> u32 {
+    engine(player).map_or(0, |e| e.player.events_lost())
+}
+
+/// Layer `layer`'s grid into `out` (`size` doubles; `Player::grid`).
+///
+/// # Safety
+///
+/// `out` is `size` writable doubles, or null with `size` 0.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_grid(player: *mut Engine, layer: u32, out: *mut f64, size: usize) -> usize {
+    let Some(e) = engine(player) else { return 0 };
+    let Some(&l) = crate::generator::LAYERS.get(layer as usize) else { return 0 };
+    if out.is_null() || size == 0 {
+        return 0;
+    }
+    // SAFETY: `size` writable doubles (the caller's promise), not null.
+    let out = unsafe { core::slice::from_raw_parts_mut(out, size) };
+    e.player.grid(l, out)
+}
+
+/// Counts what a description would write, and copies what fits.
+struct Text<'a> {
+    out: &'a mut [u8],
+    len: usize,
+}
+
+impl core::fmt::Write for Text<'_> {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        for &b in s.as_bytes() {
+            if let Some(x) = self.out.get_mut(self.len) {
+                *x = b;
+            }
+            self.len += 1;
+        }
+        Ok(())
+    }
+}
+
+/// The loop described into `out` (`size` bytes, NUL-terminated, cut short if
+/// it must be; `Player::describe`); returns its whole length.
+///
+/// # Safety
+///
+/// `out` is `size` writable bytes, or null with `size` 0.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_describe(player: *mut Engine, out: *mut c_char, size: usize) -> usize {
+    let Some(e) = engine(player) else { return 0 };
+    let buf: &mut [u8] = if out.is_null() || size == 0 {
+        &mut []
+    } else {
+        // SAFETY: `size` writable bytes (the caller's promise), not null.
+        unsafe { core::slice::from_raw_parts_mut(out.cast::<u8>(), size - 1) }
+    };
+    let mut t = Text { out: buf, len: 0 };
+    let _ = e.player.describe(&mut t);
+    if !out.is_null() && size > 0 {
+        // SAFETY: as above; the last byte is the NUL's.
+        unsafe { *out.add(t.len.min(size - 1)) = 0 };
+    }
+    t.len
+}
+
+/// How many notes layer `layer` has in the loop as composed
+/// (`Player::notes`).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_player_notes(player: *mut Engine, layer: u32) -> usize {
+    let Some(e) = engine(player) else { return 0 };
+    LAYERS.get(layer as usize).map_or(0, |&l| e.player.notes(l))
+}
+
+/// A note as C sees it (`dl_note`).
+#[repr(C)]
+pub struct CNote {
+    step: f64,
+    dur: f64,
+    vel: f64,
+    micro: f64,
+    count: u32,
+    notes: [f64; 8],
+    drum: [c_char; 16],
+}
+
+// The header's room for a chord's pitches holds every chord the core makes.
+const _: () = assert!(crate::generator::plan::NOTES_MAX <= 8);
+
+/// Layer `layer`'s note `index` into `out` (`Player::note`): 1, or 0 past
+/// the last.
+///
+/// # Safety
+///
+/// `out` is a writable `dl_note`, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_player_note(player: *mut Engine, layer: u32, index: usize, out: *mut CNote) -> c_int {
+    let Some(e) = engine(player) else { return 0 };
+    let Some(&l) = LAYERS.get(layer as usize) else { return 0 };
+    if out.is_null() {
+        return 0;
+    }
+    let Some(n) = e.player.note(l, index) else { return 0 };
+    let mut c = CNote { step: n.step, dur: n.dur, vel: n.vel, micro: n.micro, count: u32::try_from(n.count).unwrap_or(0), notes: [0.0; 8], drum: [0; 16] };
+    for (slot, &p) in c.notes.iter_mut().zip(&n.notes) {
+        *slot = p;
+    }
+    for (slot, &b) in c.drum.iter_mut().take(15).zip(n.drum.as_bytes()) {
+        *slot = c_char::from_ne_bytes([b]);
+    }
+    // SAFETY: a writable `dl_note` (the caller's promise), checked not null.
+    unsafe { out.write(c) };
+    1
+}
+
+// FLAC, the lossless export (`crate::flac`): an encoder in
+// the host's memory, as a player is. The host hands it what the player
+// rendered, a block at a time, and writes the bytes each call gives back.
+
+/// A new encoder, all zeros (so it costs the library's file nothing),
+/// copied into the host's memory by `dl_flac_start`.
+static FLAC: Template<Flac> = Template(Flac::new());
+
+/// The bytes an encoder takes, the same for a minute or three hours: the
+/// memory `dl_flac_start` is given.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_flac_size() -> usize {
+    size_of::<Flac>()
+}
+
+/// The alignment that memory needs.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_flac_align() -> usize {
+    align_of::<Flac>()
+}
+
+/// The host's encoder, or `None` for a null pointer.
+fn flac<'a>(f: *mut Flac) -> Option<&'a mut Flac> {
+    // SAFETY: the host passes what `dl_flac_start` returned, used from one
+    // thread at a time (the header's promise), or null.
+    unsafe { f.as_mut() }
+}
+
+/// Start an encoder in `memory` (`bytes` long, at least `dl_flac_size`,
+/// aligned to `dl_flac_align`): `channels` (1 or 2) of `bits`-bit samples
+/// (16 or 24) at `rate` Hz. Its first bytes, the file's header with the
+/// totals unknown, are at `dl_flac_bytes`. Null if the memory is too small
+/// or misaligned, or the export does not write that rate, layout or depth.
+///
+/// # Safety
+///
+/// `memory` is `bytes` writable bytes the host keeps for the encoder's life.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_flac_start(memory: *mut c_void, bytes: usize, rate: u32, channels: u32, bits: u32) -> *mut Flac {
+    let p = memory.cast::<Flac>();
+    if p.is_null() || bytes < size_of::<Flac>() || !p.is_aligned() {
+        return ptr::null_mut();
+    }
+    // SAFETY: room and alignment checked above; the template is plain data.
+    unsafe { ptr::copy_nonoverlapping(&raw const FLAC.0, p, 1) };
+    let Some(f) = flac(p) else { return ptr::null_mut() };
+    if f.start(rate, channels, bits).is_ok() { p } else { ptr::null_mut() }
+}
+
+/// The bytes the last start, write or finish gave, to append to the file,
+/// and their count into `len`. Valid until the next call on the encoder.
+///
+/// # Safety
+///
+/// `len` is a writable `size_t`, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_flac_bytes(encoder: *mut Flac, len: *mut usize) -> *const u8 {
+    let bytes = flac(encoder).map_or(&[][..], |f| f.bytes());
+    if !len.is_null() {
+        // SAFETY: a writable `size_t` (the caller's promise), not null.
+        unsafe { len.write(bytes.len()) };
+    }
+    bytes.as_ptr()
+}
+
+/// Take the next `frames` frames (at most `DL_FLAC_BLOCK`): `planes` holds a
+/// pointer for each channel, each to `frames` floats, as `dl_player_render`
+/// fills them. The bytes to append (a whole frame when a block filled, else
+/// none) are at `dl_flac_bytes`. 0, or -1 if not started, finished, or too
+/// many frames.
+///
+/// # Safety
+///
+/// `planes` holds a readable pointer to `frames` floats for each of the
+/// encoder's channels.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_flac_write(encoder: *mut Flac, planes: *const *const f32, frames: usize) -> c_int {
+    let Some(f) = flac(encoder) else { return -1 };
+    let channels = f.channels();
+    if planes.is_null() || channels == 0 || frames > crate::flac::BLOCK {
+        return -1;
+    }
+    let mut runs: [&[f32]; 2] = [&[], &[]];
+    for (c, run) in runs.iter_mut().enumerate().take(channels) {
+        // SAFETY: a pointer for each channel, each to `frames` floats (the
+        // caller's promise).
+        let at = unsafe { *planes.add(c) };
+        if at.is_null() {
+            return -1;
+        }
+        // SAFETY: as above.
+        *run = unsafe { core::slice::from_raw_parts(at, frames) };
+    }
+    match f.write(runs.get(..channels).unwrap_or(&[])) {
+        Ok(_) => 0,
+        Err(_) => -1,
+    }
+}
+
+/// End the stream: the last frame's bytes at `dl_flac_bytes`. 0, or -1 if
+/// not started or already finished. Then `dl_flac_header` is finished.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_flac_finish(encoder: *mut Flac) -> c_int {
+    match flac(encoder).map(Flac::finish) {
+        Some(Ok(_)) => 0,
+        _ => -1,
+    }
+}
+
+/// The file's first `DL_FLAC_HEADER` (42) bytes into `out`: after
+/// `dl_flac_finish`, with the length and the MD5, for a host that seeks to
+/// write over the start of its file. 0, or -1 for a null encoder or `out`.
+///
+/// # Safety
+///
+/// `out` is 42 writable bytes, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_flac_header(encoder: *mut Flac, out: *mut u8) -> c_int {
+    let Some(f) = flac(encoder) else { return -1 };
+    if out.is_null() {
+        return -1;
+    }
+    let head = f.header();
+    // SAFETY: 42 writable bytes (the caller's promise), not null.
+    unsafe { ptr::copy_nonoverlapping(head.as_ptr(), out, head.len()) };
+    0
+}
+
+// ------------------------------------------------------------- share codes
+
+/// `code`'s bytes (null is none).
+///
+/// # Safety
+///
+/// `code` is a NUL-terminated string, or null.
+unsafe fn bytes<'a>(code: *const c_char) -> &'a [u8] {
+    if code.is_null() {
+        return &[];
+    }
+    // SAFETY: NUL-terminated (the caller's promise).
+    unsafe { CStr::from_ptr(code) }.to_bytes()
+}
+
+/// Write a code with `write` into `out` (`room` bytes), NUL-terminated: null,
+/// or the line saying why not.
+///
+/// # Safety
+///
+/// `out` is `room` writable bytes, or null.
+unsafe fn written(out: *mut c_char, room: usize, write: impl FnOnce(&mut [u8]) -> Result<usize, &'static str>) -> *const c_char {
+    if out.is_null() || room == 0 {
+        return line(crate::code::NO_ROOM);
+    }
+    // SAFETY: `room` writable bytes (the caller's promise), not null.
+    let buf = unsafe { core::slice::from_raw_parts_mut(out.cast::<u8>(), room) };
+    let (text, _) = buf.split_at_mut(room - 1);
+    match write(text) {
+        Ok(n) => {
+            buf[n] = 0;
+            ptr::null()
+        }
+        Err(why) => {
+            buf[0] = 0;
+            line(why)
+        }
+    }
+}
+
+/// Read a loop's share code (`code::read_loop`): what it
+/// asks becomes what the next `dl_player_load` asks for, and its seed, the
+/// layers it mutes (a bit each, drums lowest) and the wander's salt (0 for
+/// none) are written to `seed`, `mutes` and `salt` (each may be null) for
+/// the host to load, mute (`dl_player_mute`) and salt
+/// (`dl_player_wander_salt`), and its own name (UTF-8, empty for none) to
+/// `name` (`name_room` bytes, NUL-terminated; may be null). Null if it is a
+/// loop's code; else the line saying why not ("needs a newer version", "not
+/// a code"), the request left as it was.
+///
+/// # Safety
+///
+/// `code` is a NUL-terminated string, or null; `seed`, `mutes` and `salt`
+/// each a writable `uint32_t`, or null; `name` `name_room` writable bytes,
+/// or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_code_read(player: *mut Engine, code: *const c_char, seed: *mut u32, mutes: *mut u32, salt: *mut u32, name: *mut c_char, name_room: usize) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    // SAFETY: the caller's promise, passed on.
+    match crate::code::read_loop(unsafe { bytes(code) }) {
+        Ok(l) => {
+            e.request = l.request;
+            for (to, value) in [(seed, l.seed), (mutes, u32::from(l.mutes)), (salt, l.salt)] {
+                if !to.is_null() {
+                    // SAFETY: a writable `uint32_t` (the caller's promise).
+                    unsafe { *to = value };
+                }
+            }
+            // SAFETY: `name_room` writable bytes, or null (the caller's promise).
+            unsafe { name_into(&l.name, name, name_room) };
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Write the share code of the loop of `seed` as asked since the last load
+/// (the request is kept: the host may then load it), with the layers in
+/// `mutes` muted (a bit each), the wander's `salt` (0 for none) and its
+/// own `name` (UTF-8; null or empty for none), into `out` (`room` bytes,
+/// NUL-terminated). Null, or the line saying why not.
+///
+/// # Safety
+///
+/// `name` is a NUL-terminated string, or null; `out` `room` writable
+/// bytes, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_code_write(player: *mut Engine, seed: u32, mutes: u32, salt: u32, name: *const c_char, out: *mut c_char, room: usize) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    // SAFETY: the caller's promise.
+    let Ok(name) = crate::code::Name::new(unsafe { bytes(name) }) else { return line(crate::code::BAD_NAME) };
+    #[allow(clippy::cast_possible_truncation)] // five bits
+    let l = crate::code::Loop { seed, request: e.request, mutes: (mutes & 31) as u8, salt, name };
+    // SAFETY: the caller's promise, passed on.
+    unsafe { written(out, room, |buf| crate::code::write_loop(&l, buf)) }
+}
+
+/// Read an album's share code: how many tracks into `count`, and for an
+/// album drawn from one seed that seed into `seed` and 1 into `from_seed`
+/// (0 for a list of loops); its name (UTF-8) into `name` (`name_room`
+/// bytes, NUL-terminated; empty for none). Each pointer may be null. Null,
+/// or the line saying why not.
+///
+/// # Safety
+///
+/// `code` is a NUL-terminated string, or null; the rest writable, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_album_read(code: *const c_char, count: *mut usize, seed: *mut u32, from_seed: *mut c_int, name: *mut c_char, name_room: usize) -> *const c_char {
+    // SAFETY: the caller's promise, passed on.
+    match crate::code::read_album(unsafe { bytes(code) }) {
+        Ok(a) => {
+            // SAFETY: each writable, or null (the caller's promise).
+            unsafe {
+                if !count.is_null() {
+                    *count = a.count;
+                }
+                if !seed.is_null() {
+                    *seed = a.seed.unwrap_or(0);
+                }
+                if !from_seed.is_null() {
+                    *from_seed = c_int::from(a.seed.is_some());
+                }
+                name_into(&a.name, name, name_room);
+            }
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Write track `index` (from 0) of the album `code` as its own loop's code
+/// into `out` (`room` bytes, NUL-terminated). Null, or the line saying why
+/// not.
+///
+/// # Safety
+///
+/// `code` is a NUL-terminated string, or null; `out` `room` writable bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_album_track(code: *const c_char, index: usize, out: *mut c_char, room: usize) -> *const c_char {
+    // SAFETY: the caller's promise, passed on.
+    let code = unsafe { bytes(code) };
+    // SAFETY: as above.
+    unsafe { written(out, room, |buf| crate::code::album_track(code, index, buf)) }
+}
+
+/// How long track `index` (from 0) of the album `code` plays before the
+/// next, as its maker set it (`code::album_pace`): `kind` and `count` as the
+/// player's track takes them (`dl_player_track`: 0 on and on, 3 a time of
+/// `count` seconds, with `DL_FADE_IN` and `DL_FADE_OUT` added). Null, or the
+/// line saying why not.
+///
+/// # Safety
+///
+/// `code` is a NUL-terminated string, or null; `kind` and `count` each
+/// writable, or null.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_album_pace(code: *const c_char, index: usize, kind: *mut c_int, count: *mut u32) -> *const c_char {
+    // SAFETY: the caller's promise, passed on.
+    match crate::code::album_pace(unsafe { bytes(code) }, index) {
+        Ok(p) => {
+            // SAFETY: each writable, or null (the caller's promise).
+            unsafe {
+                if !kind.is_null() {
+                    *kind = c_int::try_from(p.kind()).unwrap_or(0);
+                }
+                if !count.is_null() {
+                    *count = p.count();
+                }
+            }
+            ptr::null()
+        }
+        Err(why) => line(why),
+    }
+}
+
+/// Write the album of the `count` loops' codes at `codes`, in their order,
+/// named `name` (UTF-8; null for none), into `out`. A code may carry its
+/// track's pace after it (`code::paced`: `:p2` two passes, `:b8` eight
+/// bars; nothing, on and on). Null, or the line saying why not.
+///
+/// # Safety
+///
+/// `codes` is `count` NUL-terminated strings; `name` one, or null; `out`
+/// `room` writable bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_album_write(codes: *const *const c_char, count: usize, name: *const c_char, out: *mut c_char, room: usize) -> *const c_char {
+    if codes.is_null() {
+        return line(crate::code::BAD_ALBUM);
+    }
+    // SAFETY: `count` pointers (the caller's promise).
+    let list = unsafe { core::slice::from_raw_parts(codes, count) };
+    // SAFETY: each NUL-terminated (the caller's promise).
+    if list.iter().any(|&c| crate::code::paced(unsafe { bytes(c) }).is_err()) {
+        return line(crate::code::BAD_PACE);
+    }
+    // SAFETY: as above.
+    let tracks = list.iter().map(|&c| unsafe { bytes(c) }).map(|t| crate::code::paced(t).unwrap_or((t, crate::code::Pace::On)));
+    // SAFETY: the caller's promise.
+    let Ok(name) = crate::code::Name::new(unsafe { bytes(name) }) else { return line(crate::code::BAD_NAME) };
+    // SAFETY: the caller's promise, passed on.
+    unsafe { written(out, room, |buf| crate::code::write_album(tracks, &name, buf)) }
+}
+
+/// Write the album of `count` tracks drawn from `seed`, each asked what the
+/// next load asks for (its edits left out), named `name` (UTF-8; null for
+/// none), into `out`. Null, or the line saying why not.
+///
+/// # Safety
+///
+/// `name` is a NUL-terminated string, or null; `out` `room` writable bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_album_seed(player: *mut Engine, seed: u32, count: usize, name: *const c_char, out: *mut c_char, room: usize) -> *const c_char {
+    let Some(e) = engine(player) else { return line("") };
+    // SAFETY: the caller's promise.
+    let Ok(name) = crate::code::Name::new(unsafe { bytes(name) }) else { return line(crate::code::BAD_NAME) };
+    let picks = e.request;
+    // SAFETY: the caller's promise, passed on.
+    unsafe { written(out, room, |buf| crate::code::write_seed_album(seed, count, &picks, &name, buf)) }
+}
+
+/// Whether `name` (UTF-8, NUL-terminated) is a name a code carries
+/// (`code::Name::new`: at most 60 bytes; no controls, invisible or
+/// direction characters; no piled-up marks): null, or the line saying why
+/// not. A host's rename box asks it, so a name is held to one rule.
+///
+/// # Safety
+///
+/// `name` is a NUL-terminated string, or null (none, which is one).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn dl_code_name_ok(name: *const c_char) -> *const c_char {
+    // SAFETY: the caller's promise.
+    match crate::code::Name::new(unsafe { bytes(name) }) {
+        Ok(_) => ptr::null(),
+        Err(why) => line(why),
+    }
+}
+
+/// A name into `out` (`room` bytes, NUL-terminated; cut to fit, at a
+/// character's edge), if `out` is not null.
+///
+/// # Safety
+///
+/// `out` is `room` writable bytes, or null.
+unsafe fn name_into(name: &crate::code::Name, out: *mut c_char, room: usize) {
+    if out.is_null() || room == 0 {
+        return;
+    }
+    // SAFETY: `room` writable bytes (the caller's promise), not null.
+    let buf = unsafe { core::slice::from_raw_parts_mut(out.cast::<u8>(), room) };
+    let t = name.text();
+    let mut n = t.len().min(room - 1);
+    // Never half a character.
+    while n > 0 && n < t.len() && t[n] & 0xC0 == 0x80 {
+        n -= 1;
+    }
+    buf[..n].copy_from_slice(&t[..n]);
+    buf[n] = 0;
+}

@@ -1,0 +1,126 @@
+// Offline cache. The whole app is a few hundred kilobytes of text (about
+// 130 KB gzipped), so it is cached whole on install -- but served *network
+// first*, with the cache as the fallback when the network is gone. That
+// ordering is deliberate: it is what lets a deployed change show up on the
+// next cold start instead of waiting for a cache bump.
+//
+// CACHE is also the build stamp shown in Diagnostics. Bump it on every
+// change, together with BUILD in js/main.js, so you can tell at a glance
+// which deploy you are listening to. Bumping it also evicts files that
+// have been deleted from FILES, which the network-first path cannot do.
+const CACHE = 'driftloom-v226';
+// './index.html' is deliberately absent. Cloudflare redirects it to './'
+// with a 307, and the Cache API will not store a redirected response --
+// addAll is atomic, so that one entry failing takes the whole install with
+// it and leaves the app with no offline mode at all. './' serves the same
+// document.
+const FILES = [
+  './',
+  './css/style.css',
+  // The two typefaces of design v17, so the app looks the same offline.
+  './fonts/inter-500.woff2',
+  './fonts/inter-600.woff2',
+  './fonts/inter-700.woff2',
+  './fonts/space-grotesk-600.woff2',
+  './js/main.js',
+  './js/ui.js',
+  // The safe area and the browser's bar (session 30f).
+  './js/viewport.js',
+  './js/shortcuts.js',
+  './js/characters.js',
+  './js/media.js',
+  './js/app.js',
+  './js/worker-blob.js',
+  './js/share.js',
+  './js/cover.js',
+  // Covers are drawn on a thread of their own (queue item 41).
+  './js/covers.js',
+  './js/cover-worker.js',
+  // Exporting audio (queue item 104b): the sheet, its Worker and the render;
+  // and (104c) the small format's encoder and its Ogg writer.
+  './js/export.js',
+  './js/export-worker.js',
+  './js/export-render.js',
+  './js/export-opus.js',
+  './js/ogg.js',
+  './js/tags.js',
+  './js/zip.js',
+  './js/library.js',
+  './js/picks.js',
+  './js/pickers.js',
+  // Track length, its own view (session 30c).
+  './js/tracklen.js',
+  './js/piece.js',
+  // Only the FLAC: it is the one every current browser plays, so it is the
+  // one the media element picks, and precaching the WAV beside it cost 240
+  // KB of a first visit for a file that never played. The WAV stays in the
+  // element as a fallback, from the network.
+  './audio/keepalive.flac',
+  // The app's engine on the core's player (queue item 94b), and the core's
+  // node into the speakers.
+  './js/player.js',
+  './js/heard.js',
+  './js/output.js',
+  './js/quality.js',
+  // The core's generator on the page, and a loop's record and request.
+  './js/gen.js',
+  './js/request.js',
+  './js/theory.js',
+  './js/moods.js',
+  './js/vibes.js',
+  // The per-loop choices' tables, for the pins a request carries.
+  './js/choices.js',
+  './js/pins.js',
+  './js/rng.js',
+  // The generation data (queue item 78): the reader, and the text it reads
+  // at start (profiles, vibes, moods, the voice table, the choice tables).
+  './js/data.js',
+  './data/characters.txt',
+  './data/vibes.txt',
+  './data/moods.txt',
+  './data/voices.txt',
+  './data/choices.txt',
+  './js/midi.js',
+  './js/storage.js',
+  // The Rust core with its player, the engine since queue item 94b (665 KB,
+  // about 225 KB gzipped): so it plays offline too.
+  './js/core.js',
+  './js/worklet.js',
+  './js/dlplayer.wasm',
+  // The Android app's transport to its native core (session 27).
+  './js/native.js',
+  './manifest.webmanifest',
+  './icons/icon.svg',
+  './icons/favicon-32.png',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/maskable-512.png',
+];
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (e) => {
+  if (e.request.method !== 'GET') return;
+  e.respondWith(
+    fetch(e.request)
+      .then((res) => {
+        // Keep the offline copy current on the way past.
+        if (res && res.ok && new URL(e.request.url).origin === location.origin) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+        }
+        return res;
+      })
+      .catch(() => caches.match(e.request))
+  );
+});

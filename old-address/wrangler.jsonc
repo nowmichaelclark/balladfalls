@@ -1,0 +1,19 @@
+// The old address's Worker (session 31a): deployed on launch day under the
+// old Worker's name, `driftloom`, so driftloom.nowmichaelclark.workers.dev
+// sends everyone on to the new address. It replaces the old site there (the
+// frozen driftloom repository's build), and it lives here so it can still be
+// fixed after that repository is archived. docs/notes/for-mikey.md says how it
+// is deployed; worker.js says what it answers.
+{
+  "name": "driftloom",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-19",
+  "workers_dev": true,
+  // The page's script is put there from worker.js's own functions: don't let
+  // the bundler wrap them in its __name helper, which the browser lacks.
+  "keep_names": false,
+  "vars": {
+    // Where everything goes: the same path and query on the new address.
+    "NEW_ORIGIN": "https://balladfalls.com"
+  }
+}

@@ -1,0 +1,2150 @@
+//! The player: a loop from a seed, played in the core, with
+//! no JavaScript. Broken Friends' gate (each friend's theme, from a seed),
+//! and the end of phase 2's port.
+//!
+//! It is what the page does between the generator and the core's notes:
+//! the generator (`generator`) makes the loop and what the
+//! engine decides loading it; the sequencer (`sequencer`, `Engine` in
+//! `js/engine.js`) walks it step by step, pass after pass, wandering as the
+//! app's does; and the synth's note calls (`synth`, `Synth` in
+//! `js/synth.js`) ask the voice budget and hand each note to the core with
+//! everything it carries. Proven against the page: the baseline's loops,
+//! played here from their seeds, make the samples the app's own engine
+//! makes in Chromium (`tools/player.mjs`, `tools/baseline.mjs`'s `player`
+//! part), bit for bit.
+//!
+//! **How a host plays one.** It starts a core for the player (`start`),
+//! asks for a loop (`load`: a seed, and a `Request`: the vibes, the tempo) and
+//! renders (`render`, any number of frames a call). Before each block the
+//! core renders, the player decides every step due within `LOOKAHEAD` and
+//! hands its notes over (`decide`, which a host driving `Core::process`
+//! itself calls before each block). Wander, mutes, tempo and volume are
+//! the app's controls, as it has them (`set_wander` and the rest).
+//!
+//! **A change at a moment** (`change`): `change` asks for the
+//! next loop at a beat, bar, phrase or pass of the one playing, handing over
+//! by a crossfade or a ring-out, on the same core with no reset; the new loop
+//! is made in the blocks before the boundary and starts on it.
+//!
+//! **Spread across blocks** (promise 1). A load is stages of work, each run
+//! in a block of its own (`Generator::step`): the spec, the plan, the render
+//! in five parts, what the engine decides at load, the tuned kick's fit in
+//! slices (`choices::KICK_SLICE`), the first pass; then the loop starts. So
+//! a load never spikes one block: its worst stage is about 0.14 ms natively
+//! (a block's deadline is 2.9 ms at 44.1 kHz), and on every target less
+//! than the loop's own worst audio block. A host with no
+//! deadline (an offline render, a loading screen, `dlrender --seed`) runs
+//! them all at once with `ready`, and the loop starts on the next block.
+//! Each pass's wandering is drawn a pass ahead, in a block where no step is
+//! decided.
+//!
+//! **Nothing allocates**: the generator's lists, two passes and the budget
+//! are fixed, in the player, which a host keeps (a static, or boxed: it is
+//! a megabyte and a half, `size_of::<Player>()`).
+
+// The port compares doubles as the JavaScript does (`===`, `!(a > b)` where a
+// NaN must fall through, `(a + b) / 2` in its own order), and keeps its short
+// names and its calls' arguments, so the two read side by side.
+#![allow(
+    clippy::float_cmp,
+    clippy::neg_cmp_op_on_partial_ord,
+    clippy::manual_midpoint,
+    clippy::many_single_char_names,
+    clippy::too_many_arguments
+)]
+
+pub mod about;
+pub mod ahead;
+pub mod budget;
+pub mod change;
+pub mod events;
+pub mod formant;
+pub mod host; #[cfg(feature = "tools")] pub mod probe;
+pub mod sequencer;
+pub mod synth;
+pub mod track;
+
+use crate::generator::js;
+use crate::generator::piece::Piece;
+use crate::generator::plan::Cx;
+use crate::generator::spec::Metre;
+use crate::generator::wander::{AMOUNT, Pass};
+pub use crate::generator::request::Length;
+use crate::generator::{Generator, Layer};
+use crate::{Core, Error, MAX_RATE, MIN_RATE};
+
+use change::{Change, END_SLOT, LOAD_BLOCKS, SLOTS};
+pub use change::{CROSSFADE, END_FADE, Handover, Moment};
+pub use events::{Event, Kind};
+use events::Events;
+use crate::generator::load::Load;
+pub use track::{Fades, Track};
+use host::Host;
+use crate::generator::list::{Biased, Maybe};
+use crate::generator::rng::Rng;
+use sequencer::{Loop, ORGAN_FALL, Sequencer, channel_of};
+use synth::Synth;
+
+/// How far ahead the player decides, in seconds: before the block it
+/// renders next, every step whose time falls before the block's start plus
+/// this is decided and its notes handed over. Room for a step's earliest
+/// note (its graces run 0.06 s ahead of it, a tail's restore 0.12 s) to
+/// reach the core before its block renders; a change (a mute, the tempo)
+/// is heard at most this late. `tools/player.mjs` hands the page's notes
+/// over the same way.
+pub const LOOKAHEAD: f64 = 0.25;
+/// When a loop's first step falls after the block it starts on, in
+/// seconds (the measure harness's 0.05).
+pub const START: f64 = 0.05;
+
+/// How long the track's gain takes back to 1 where a fade left it under:
+/// a new loop after a track that faded out (with no fade in
+/// of its own), or a time set again while it fades. Long enough not to
+/// click, short enough to be heard as the loop's own start.
+pub const GAIN_RETURN: f64 = 0.25;
+
+/// How long a fade in's dip to silence takes where the gain stood above it
+/// (a loop that fades in after one playing at its level, at Next): a dip,
+/// not a click.
+pub const GAIN_DIP: f64 = 0.02;
+
+/// The most points the track's gain plans at once: what is left of one
+/// track's fade, and the next's fade in and fade out.
+const GAIN_POINTS: usize = 8;
+
+/// How long a jump's old notes take to fall to nothing, in seconds:
+/// a short fade, from the jump's first step, under the place it lands.
+pub const JUMP_FADE: f64 = 0.25;
+
+/// Where a jump within the loop playing goes
+/// (`Player::jump`), straight from the seed and the number (promise 11):
+/// nothing before it is made or walked.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Jump {
+    /// The first step of a section of a piece (of a pass, for a loop with
+    /// no length), from the piece's first (0).
+    Section(u64),
+    /// A bar from the piece's start (0), on the phrase line at or before it.
+    Bar(f64),
+    /// A time from the piece's start, in seconds at the tempo playing, on
+    /// the phrase line at or before it.
+    Seconds(f64),
+    /// A step from the load (0), exactly (a
+    /// short loop's rail, which a listener presses anywhere): the step
+    /// asked, not a phrase line, and the track's clock moves with it, so a
+    /// time's track ends as long after it as it would have from that step.
+    Step(u64),
+}
+
+impl Jump {
+    /// The jump a host's two numbers say (`dl_play_jump`, the C host's and
+    /// the native app's same command): `kind` 0 a section (`at` a whole
+    /// number), 1 a bar, 2 a time in seconds, 3 a step from the load (a
+    /// whole number). One place reads them, so every host takes the same.
+    /// None for any other kind, or a section or a step that is no number.
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a whole number, saturating
+    pub fn of(kind: u32, at: f64) -> Option<Jump> {
+        let whole = at.is_finite() && at >= 0.0;
+        match kind {
+            0 if whole => Some(Jump::Section(at as u64)),
+            1 => Some(Jump::Bar(at)),
+            2 => Some(Jump::Seconds(at)),
+            3 if whole => Some(Jump::Step(at as u64)),
+            _ => None,
+        }
+    }
+}
+
+/// Where the loop playing is, as a listener hears it
+/// (`Player::place`): for a piece, in the round playing.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Place {
+    /// The bar heard, from the piece's start (0): whole bars, and the step
+    /// in the bar as a fraction.
+    pub bar: f64,
+    /// The piece's bars (a round's); none for Endless. A loop with no
+    /// length has its own bars.
+    pub bars: Option<f64>,
+    /// The time played from the piece's start, in seconds at the tempo
+    /// playing.
+    pub played: f64,
+    /// The time left: to the track's end where its track length ends it
+    /// sooner, else to the round's end; none for Endless played on.
+    pub left: Option<f64>,
+    /// The section heard (a loop's pass), from the piece's first.
+    pub section: u64,
+}
+
+/// What a host asks for, beside the seed (promise 11's request,
+/// the vibes with or without weights, and the tempo): the generator's
+/// own, `generator::request::Request`, which says how to build one.
+pub use crate::generator::request::Request;
+
+/// Where the player is.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum State {
+    /// Nothing asked for yet.
+    Idle,
+    /// A loop being made, a stage a block.
+    Loading,
+    /// The loop made; its first pass to draw before it starts.
+    Wandering,
+    /// A loop playing.
+    Playing,
+}
+
+/// How the loop being made was asked for: by a load (the app's way, its
+/// first pass drawn at the pass count the last loop reached), or by a change
+/// now or at a moment (its first pass its own first; at a moment, its tone,
+/// level and echo glide in at the boundary rather than when it is made), or
+/// as the loop playing made again in its place (`revise`, a re-roll).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Asked {
+    Load,
+    Now,
+    Moment,
+    InPlace,
+}
+
+/// What `decide` did before a block, so a host timing its blocks (`dlrender
+/// --costs`, `tools/player-wasm.mjs --costs`) can say what each cost.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Work {
+    /// Nothing: no step was due.
+    None,
+    /// A stage of a load (the first pass drawn and the loop's start among
+    /// them).
+    Load,
+    /// The next pass drawn, a pass ahead.
+    Pass,
+    /// Steps decided and their notes handed over: how many.
+    Steps(usize),
+}
+
+/// A loop from a seed, on a core (the module's doc says how).
+// Its flags are each a state of its own (a pass drawn, a loop that played, a
+// lead-in, the quality), not one state spelled in bools.
+#[allow(clippy::struct_excessive_bools)]
+pub struct Player {
+    generator: Generator,
+    /// The pass playing and the next, drawn a pass ahead (with the wander on).
+    passes: [Pass; 2],
+    current: usize,
+    wandering: bool,
+    next_drawn: bool,
+    /// Whether the next pass of a piece is drawn but not yet heard: it is
+    /// heard in a block of its own after it (`decide`).
+    next_unheard: bool,
+    /// Whether the loop playing is a piece whose plan is heard (`journeys`).
+    journeyed: bool,
+    seq: Sequencer,
+    synth: Synth,
+    state: State,
+    /// Whether a loop played before this one began loading.
+    was_playing: bool,
+    rate: f64,
+    /// How far each pass wanders (`Engine.driftAmount`), 0 for the loop as
+    /// composed.
+    wander: Biased<{ AMOUNT.to_bits() }>,
+    /// The host's salt on the wander's stream
+    /// (`set_wander_salt`): 0, every code's own wander.
+    salt: u32,
+    /// When the loop asked for should take its first step, on the core's
+    /// clock (0: as soon as it is made); and, stopped, when to go on.
+    start_at: f64,
+    resume_at: Option<f64>,
+    /// A tempo asked while the loop is being made: it starts at that.
+    tempo: Option<f64>,
+    /// The changes waiting for their boundaries, one for
+    /// each kind of moment but `Now`, and how many have been asked.
+    pending: [Maybe<Change>; SLOTS],
+    asked: u32,
+    /// How the loop being made takes over from the one that played, and
+    /// how it was asked for.
+    handover: Handover,
+    asked_by: Asked,
+    /// The loop playing's beat, in steps (4, or 6 in 6/8).
+    beat: Biased<{ 4.0_f64.to_bits() }>,
+    /// The full mix or lite's, as started (`attach`).
+    full: bool,
+    /// The work the voices asked for, a pass at a time
+    /// (`units`): the budget's `held` when the pass being decided began, and
+    /// its first step's time; and the mean cost units the voices held over
+    /// the last whole pass decided (negative: none yet).
+    pass_held: f64,
+    pass_from: f64,
+    units: Biased<{ (-1.0_f64).to_bits() }>,
+    /// Whether the loop playing began after a lead-in (`START`, a load with
+    /// nothing playing): its first pass, for `pass_frames`, takes it in.
+    lead_in: bool,
+    /// The loop's setups before a re-roll (`revise`), to send again only
+    /// those that differ, as the app's engine does.
+    kept: Maybe<Load>,
+    /// How long the track plays (`set_track`), the step from
+    /// the load it counts from, and whether its end was told.
+    track: Track,
+    count_from: u64,
+    ended: bool,
+    /// The track's fades (`set_track_with`), the second on the
+    /// core's clock a time's track ends on (0 until its loop starts), and
+    /// the track's gain as planned (`TRACK_GAIN`): its points (a time and a
+    /// value, ramped between), how many, whether it ever moved from 1, and
+    /// whether it is written again before the next block. And the time the
+    /// last block decided was at, playing (a resume shifts what came after).
+    fades: Fades,
+    track_at: f64,
+    gain: [(f64, f64); GAIN_POINTS],
+    gain_len: usize,
+    gain_moved: bool,
+    replan: bool,
+    played_to: f64,
+    /// Whether the load being made is a loop resumed on a new core
+    /// (`load_resumed`): it doesn't wait out its lateFloor a second time.
+    resumed: bool,
+    /// The host's picks (`set_picks`): what every loop the
+    /// core makes itself asks, and the number the host gave them.
+    picks: Request,
+    picks_tag: u32,
+    /// The seed of the core's own loops' seeds (`set_draws`; 0, none of its
+    /// own), and how many it has drawn from it.
+    draws: u32,
+    drawn: u32,
+    /// Whether the loop being made is one of the core's own, and the picks'
+    /// number it took (told as `Kind::Own` when it starts).
+    own: bool,
+    own_tag: u32,
+    /// What the player tells the host (`event`).
+    events: Events,
+    /// A jump under way (`jump`): the step from the load it
+    /// lands on, and its stage (0: none; 1, the section's second tune made,
+    /// a stage a block; 2, its pass drawn; 3, the sequencer moved and the
+    /// pass heard; 4, it lands), one a block, as a load is spread.
+    jump_to: u64,
+    jumping: u8,
+    /// A jump asked while stopped (the app's line pressed while
+    /// paused), taken up at the resume: until then `place` reads it.
+    jump_held: bool,
+    /// A step jump moves a time's track (`Jump::Step`): whether this one
+    /// does, and the seconds of the track left from the step it lands on,
+    /// as the track's clock stood when it was asked.
+    jump_timed: bool,
+    jump_left: f64,
+    /// Whether the track's fade in played at its start (a time set as a
+    /// loop plays has none), so a jump back to it plays it again.
+    track_rose: bool,
+}
+
+impl Player {
+    /// A player with nothing loaded, the wander on at the app's default.
+    /// `const`, so a host can keep one in a static.
+    // Built in a `const` for a host's static player, never on a stack at run
+    // time (as `Core::new`).
+    #[allow(clippy::large_stack_arrays)]
+    #[must_use]
+    pub const fn new() -> Self {
+        Player {
+            generator: Generator::new(),
+            passes: [Pass::new(), Pass::new()],
+            current: 0,
+            wandering: false,
+            next_drawn: false,
+            next_unheard: false,
+            journeyed: false,
+            seq: Sequencer::new(),
+            synth: Synth::new(),
+            state: State::Idle,
+            was_playing: false,
+            rate: 0.0,
+            wander: Biased::DEFAULT,
+            salt: 0,
+            start_at: 0.0,
+            resume_at: None,
+            tempo: None,
+            pending: [Maybe::NONE; SLOTS],
+            asked: 0,
+            handover: Handover::RingOut,
+            asked_by: Asked::Load,
+            beat: Biased::DEFAULT,
+            full: false,
+            pass_held: 0.0,
+            pass_from: 0.0,
+            units: Biased::DEFAULT,
+            lead_in: false,
+            kept: Maybe::NONE,
+            track: Track::Always,
+            count_from: 0,
+            ended: false,
+            fades: Fades::NONE,
+            track_at: 0.0,
+            gain: [(0.0, 0.0); GAIN_POINTS],
+            gain_len: 0,
+            gain_moved: false,
+            replan: false,
+            played_to: 0.0,
+            resumed: false,
+            picks: Request::new(),
+            picks_tag: 0,
+            draws: 0,
+            drawn: 0,
+            own: false,
+            own_tag: 0,
+            events: Events::new(),
+            jump_to: 0,
+            jumping: 0,
+            jump_held: false,
+            jump_timed: false,
+            jump_left: 0.0,
+            track_rose: false,
+        }
+    }
+
+    /// Start `core` for the player, as the web host starts one for the page:
+    /// at `rate` Hz, with the full mix or lite's (`full`), rendering
+    /// `channels` channels (1 mono, 2 stereo); then the player's own first
+    /// calls (`attach`).
+    ///
+    /// # Errors
+    ///
+    /// `Error::Layout` for any layout but mono or stereo, `Error::Rate` for
+    /// a rate outside `MIN_RATE` to `MAX_RATE`; the core is left as it was.
+    pub fn start(&mut self, core: &mut Core, rate: f64, channels: u32, full: bool) -> Result<(), Error> {
+        if channels != 1 && channels != 2 {
+            return Err(Error::Layout(channels));
+        }
+        if !(MIN_RATE..=MAX_RATE).contains(&rate) {
+            return Err(Error::Rate);
+        }
+        core.init(rate);
+        core.quality(full);
+        if channels == 2 {
+            core.set_layout(2);
+        }
+        self.attach(core, rate, full);
+        Ok(())
+    }
+
+    /// The player's start on a core just started at `rate` (a host that
+    /// starts its core itself): everything let go, and the synth's first
+    /// calls (its LFOs' start, the master gain). It works out the sung
+    /// voices' references for the rate here, about a millisecond: call it
+    /// before the audio runs.
+    pub fn attach<H: Host>(&mut self, host: &mut H, rate: f64, full: bool) {
+        self.rate = rate;
+        self.seq.reset();
+        self.state = State::Idle;
+        self.was_playing = false;
+        self.wandering = false;
+        self.next_drawn = false;
+        self.next_unheard = false;
+        self.journeyed = false;
+        self.pending = [Maybe::NONE; SLOTS];
+        self.handover = Handover::RingOut;
+        self.asked_by = Asked::Load;
+        self.full = full;
+        self.units.set(-1.0);
+        self.kept = Maybe::NONE;
+        self.picks = Request::new();
+        self.picks_tag = 0;
+        self.draws = 0;
+        self.drawn = 0;
+        self.own = false;
+        self.events.clear();
+        self.jumping = 0;
+        self.jump_held = false;
+        let now = self.now(host);
+        self.synth.start(host, rate, !full, now);
+    }
+
+    /// The core's clock, in seconds: the start of the block it renders next.
+    #[allow(clippy::cast_precision_loss)] // frames, far below 2^53
+    fn now<H: Host>(&self, host: &H) -> f64 {
+        host.frame() as f64 / self.rate
+    }
+
+    /// Ask for the loop of `seed`, with what `request` asks: it is made a
+    /// stage a block from the next block on, and starts when made (or at
+    /// once, with `ready`). A loop playing stops being decided now; what it
+    /// has handed over plays out.
+    pub fn load(&mut self, seed: u32, request: &Request) {
+        self.load_at(seed, request, 0.0);
+    }
+
+    /// `load`, the loop's first step at `at` seconds on the core's clock if
+    /// it is made by then (a host keeping its own clock in step with the
+    /// player's: the app's page, drawing the steps); as soon as it is made
+    /// if not, or for `at` 0. Any change waiting (`change`) is dropped: a
+    /// load starts afresh.
+    pub fn load_at(&mut self, seed: u32, request: &Request, at: f64) {
+        self.pending = [Maybe::NONE; SLOTS];
+        self.handover = Handover::RingOut;
+        self.asked_by = Asked::Load;
+        self.was_playing = self.state == State::Playing || self.was_playing;
+        self.generator.begin_with(seed, request);
+        self.state = State::Loading;
+        self.start_at = if at.is_finite() { at } else { 0.0 };
+        self.resume_at = None;
+        self.tempo = None;
+        self.resumed = false;
+        self.own = false;
+        self.jumping = 0;
+        self.jump_held = false;
+    }
+
+    /// `load_at` for a loop that was already playing on another core
+    /// (the app's automatic switch to "lighter on processor", which
+    /// starts a new core at the other quality and the loop again from its
+    /// top, as `Engine.load(spec, { resume: true })` does): the same, but its
+    /// lateFloor (the kit and the bass sitting out after a load) is not waited
+    /// out a second time.
+    pub fn load_resumed(&mut self, seed: u32, request: &Request, at: f64) {
+        self.load_at(seed, request, at);
+        self.resumed = true;
+    }
+
+    /// Change to the loop of `seed`, with what `request` asks, at a musical
+    /// moment of the loop playing (`change`'s module says
+    /// how): `Moment::Now` as soon as it is made, else on the next beat,
+    /// bar line, phrase or pass it can make (`lead` away at least). The old
+    /// loop hands over by `handover`. No reset, no second core.
+    ///
+    /// A change is an event: several may wait, one for each kind of moment,
+    /// a later one for the same kind (or for the same boundary) in place of
+    /// the earlier; each starts its loop at its own boundary, the ones still
+    /// waiting then worked out against the loop that took over. With nothing
+    /// playing it is a load; while a loop is being made, `Now` makes this
+    /// one in its place (at the same moment), and the others wait for it to
+    /// play.
+    pub fn change(&mut self, seed: u32, request: &Request, moment: Moment, handover: Handover) {
+        self.change_with_track(seed, request, moment, handover, None);
+    }
+
+    /// `change`, and the track its loop plays once it starts (`set_track`,
+    /// counted from its first step), or none to keep the track as it is.
+    /// The app arms the loop that follows a track's end
+    /// this way, with that loop's own length, so a page asleep at the
+    /// boundary leaves the core playing what it would have set.
+    pub fn change_with_track(&mut self, seed: u32, request: &Request, moment: Moment, handover: Handover, track: Option<Track>) {
+        self.change_with(seed, request, moment, handover, track.map(|t| (t, Fades::NONE)));
+    }
+
+    /// `change_with_track`, the track with its fades.
+    pub fn change_with(&mut self, seed: u32, request: &Request, moment: Moment, handover: Handover, track: Option<(Track, Fades)>) {
+        let change = Change {
+            seed,
+            request: *request,
+            handover,
+            asked: 0,
+            target: None,
+            own: false,
+            sets_track: track.is_some(),
+            track: track.map_or(Track::Always, |t| t.0),
+            fades: track.map_or(Fades::NONE, |t| t.1),
+        };
+        self.ask(change, moment);
+    }
+
+    /// Ask for `change` at `moment` (`change`'s doc says how); a change of
+    /// the core's own (`next`) draws its seed and takes the picks here when
+    /// it is for now, and when it starts when it waits.
+    fn ask(&mut self, mut change: Change, moment: Moment) {
+        let making = self.state == State::Loading || self.state == State::Wandering;
+        let live = self.state == State::Playing || making;
+        if change.own && (!live || moment.slot().is_none()) {
+            change.seed = self.draw_seed();
+            change.request = self.picks;
+        }
+        let (seed, handover) = (change.seed, change.handover);
+        match moment.slot() {
+            _ if !live => {
+                self.load_at(seed, &change.request, 0.0);
+                self.handover = handover;
+                self.asked_by = Asked::Now;
+            }
+            None if making => {
+                self.generator.begin_with(seed, &change.request);
+                self.state = State::Loading;
+                self.resumed = false;
+                self.handover = handover;
+                if self.asked_by == Asked::Load {
+                    self.asked_by = Asked::Now;
+                }
+            }
+            None => {
+                let pending = self.pending;
+                self.load_at(seed, &change.request, 0.0);
+                self.pending = pending;
+                self.handover = handover;
+                self.asked_by = Asked::Now;
+            }
+            Some(slot) => {
+                self.asked = self.asked.wrapping_add(1);
+                change.asked = self.asked;
+                if let Some(p) = self.pending.get_mut(slot) {
+                    *p = Maybe::some(change);
+                }
+                return;
+            }
+        }
+        // A change now: it is the loop being made.
+        self.own = change.own;
+        self.own_tag = self.picks_tag;
+        if change.sets_track {
+            self.track = change.track;
+            self.fades = change.fades;
+            self.ended = false;
+        }
+    }
+
+    /// Change to a new loop of the core's own (the app's
+    /// Next, at the end of its history): its seed the next drawn from the
+    /// host's (`set_draws`), with the host's picks (`set_picks`), at
+    /// `moment`, handing over by `handover`; it plays on (its track
+    /// `Track::Always`), as a new loop does in the app until its length
+    /// slider is moved. A change that waits takes its seed and the picks
+    /// when it starts, so a pick made meanwhile is heard in it. The host
+    /// learns its seed from its `Kind::Loop` event, after a `Kind::Own` with
+    /// the picks' number. False, and nothing asked, while the host has given
+    /// no seed to draw from.
+    pub fn next(&mut self, moment: Moment, handover: Handover) -> bool {
+        if self.draws == 0 {
+            return false;
+        }
+        self.ask(Self::own_change(handover), moment);
+        true
+    }
+
+    /// A change for a loop of the core's own, its seed and request to be
+    /// drawn when it is made.
+    fn own_change(handover: Handover) -> Change {
+        Change {
+            seed: 0,
+            request: Request::new(),
+            handover,
+            asked: 0,
+            target: None,
+            own: true,
+            sets_track: true,
+            track: Track::Always,
+            fades: Fades::NONE,
+        }
+    }
+
+    /// Drop the change waiting for `moment` (nothing for
+    /// `Moment::Now`, which never waits). The app drops the one armed for
+    /// the track's end when nothing it holds comes next, so the core's own
+    /// loop follows instead (`set_draws`).
+    pub fn drop_change(&mut self, moment: Moment) {
+        if let Some(p) = moment.slot().and_then(|slot| self.pending.get_mut(slot)) {
+            *p = Maybe::NONE;
+        }
+    }
+
+    /// Hold `request` as the host's picks (the app's New
+    /// loops panel), numbered `tag` by the host: every loop the core makes
+    /// itself from now on asks it (`next`, and a track's end with nothing
+    /// waiting for it). The loop playing never changes for it, nor does a
+    /// change asked already with its own request; a re-roll of the loop
+    /// playing keeps the request that loop was made with, and each pass
+    /// wanders inside it. They hold until set again, across loads.
+    pub fn set_picks(&mut self, request: &Request, tag: u32) {
+        self.picks = *request;
+        self.picks_tag = tag;
+    }
+
+    /// The host's picks and their number (`set_picks`).
+    #[must_use]
+    pub fn picks(&self) -> (&Request, u32) {
+        (&self.picks, self.picks_tag)
+    }
+
+    /// Give the core a seed to draw its own loops' seeds from
+    /// (the app draws one at random each time it starts a core): the loops
+    /// it makes itself are then a pure function of this seed and the picks
+    /// (promise 3). 0 takes the core's own loops away: a track's end with
+    /// nothing waiting for it plays on, as before.
+    pub fn set_draws(&mut self, seed: u32) {
+        self.draws = seed;
+        self.drawn = 0;
+    }
+
+    /// The next seed of the core's own, from the host's (`set_draws`): the
+    /// generator's stream, keyed by the seed and the count, so each is its
+    /// own however the ones before were spent.
+    fn draw_seed(&mut self) -> u32 {
+        let mut r = Rng::new(self.draws ^ self.drawn.wrapping_mul(0x9e37_79b9));
+        self.drawn = self.drawn.wrapping_add(1);
+        r.seed32()
+    }
+
+    /// The loop playing, made again with `request` and kept in its place
+    /// (the app's re-roll, `loadSpec(next, { keepPosition:
+    /// true })`): the seed's loop with a layer's new seed, say
+    /// (`Request::with_layer_seed`). It is made a stage a block as a load is
+    /// and takes over at the next step the old loop would have decided,
+    /// going on from that step and pass; the setups the loop holds (the
+    /// organ, the wash, the arc and the rest) are sent again only where they
+    /// differ, and the lateFloor wait it was in stays. The tempo stays the
+    /// one playing, unless the request edits it. The changes waiting stay.
+    /// With nothing playing it is a change now.
+    pub fn revise(&mut self, seed: u32, request: &Request) {
+        if self.state != State::Playing {
+            self.change(seed, request, Moment::Now, Handover::RingOut);
+            return;
+        }
+        self.kept = Maybe::some(*self.generator.settings());
+        let pending = self.pending;
+        let tempo = self.seq.bpm;
+        self.load_at(seed, request, 0.0);
+        self.pending = pending;
+        self.asked_by = Asked::InPlace;
+        if request.edits().bpm().is_none() {
+            self.tempo = Some(tempo);
+        }
+    }
+
+    /// How long the track plays (the app's track length):
+    /// whole passes or bars (a time: `set_track_with`), counted from the step heard now (the pass
+    /// playing as the first), or from a new loop's first step. It holds
+    /// across loads until set again. When it has run, the player tells the
+    /// host (`Kind::End`) and starts the change waiting for it
+    /// (`Moment::End`), if one does.
+    pub fn set_track<H: Host>(&mut self, host: &H, track: Track) {
+        self.set_track_with(host, track, Fades::NONE);
+    }
+
+    /// `set_track`, with its fades (the app's
+    /// Track length view). A time (`Track::Seconds`) counts on the core's
+    /// clock from the block the core renders next (or from a new loop's
+    /// first step), so a tempo change doesn't move it; its music is done on
+    /// that second. With the fade out, the notes and the mix fall to
+    /// silence over its last `track::FADE_OUT` (a long piece lands its close
+    /// there first, `Heard::stop_at`); without it, nothing is decided from
+    /// that second on and what sounds rings out. The fade in brings a loop
+    /// up from silence as it starts (a track set as it plays has started).
+    /// The track's gain is written before the next block.
+    pub fn set_track_with<H: Host>(&mut self, host: &H, track: Track, fades: Fades) {
+        self.track = track;
+        self.fades = fades;
+        self.ended = false;
+        // A step's jump held counts from the new track, not the old one's clock.
+        self.jump_timed = false;
+        let now = self.now(host);
+        self.track_at = match track {
+            Track::Seconds(n) if self.state == State::Playing => now + f64::from(n),
+            _ => 0.0,
+        };
+        if self.state == State::Playing {
+            self.plan_track(now, false);
+        }
+        let sd = self.seq.step_dur();
+        let ahead = if self.state == State::Playing && sd.is_finite() && sd > 0.0 {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a few steps
+            let n = js::round((self.seq.next_step_time - now) / sd).max(0.0) as u64;
+            n
+        } else {
+            0
+        };
+        self.count_from = self.seq.abs_step.saturating_sub(ahead);
+        if let Some(c) = self.pending.get_mut(END_SLOT).and_then(Maybe::as_mut) {
+            c.target = None;
+        }
+        // A long piece's sections drawn already hear the new stop
+        // (a close that lands where the track ends).
+        if self.state == State::Playing && self.journeyed && self.wandering {
+            self.hear_pass(self.current, self.seq.loop_count);
+            if self.next_drawn {
+                self.hear_pass(1 - self.current, self.seq.loop_count.wrapping_add(1));
+            }
+        }
+    }
+
+    /// The track's length (`set_track`).
+    #[must_use]
+    pub fn track(&self) -> Track {
+        self.track
+    }
+
+    /// The track's fades (`set_track_with`).
+    #[must_use]
+    pub fn fades(&self) -> Fades {
+        self.fades
+    }
+
+    /// The second a time's track ends on, on the core's clock, as it stands;
+    /// none for a count of passes or bars, on and on, or
+    /// before its loop starts.
+    #[must_use]
+    pub fn track_at(&self) -> Option<f64> {
+        (matches!(self.track, Track::Seconds(_)) && self.track_at > 0.0 && self.state == State::Playing).then_some(self.track_at)
+    }
+
+    /// The first step (from the load) at or after `time` on the core's
+    /// clock, at the tempo playing.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // steps, far below 2^53
+    fn step_at(&self, time: f64) -> u64 {
+        let sd = self.seq.step_dur();
+        if !(sd.is_finite() && sd > 0.0) {
+            return self.seq.abs_step;
+        }
+        let ahead = js::ceil((time - self.seq.next_step_time) / sd - 1e-9).max(0.0);
+        self.seq.abs_step + ahead as u64
+    }
+
+    /// The track's gain at `time` as planned: 1 with nothing planned.
+    fn gain_at(&self, time: f64) -> f64 {
+        let points = &self.gain[..self.gain_len];
+        let Some(&(t0, v0)) = points.first() else { return 1.0 };
+        if time <= t0 {
+            return v0;
+        }
+        for w in points.windows(2) {
+            let [(a, va), (b, vb)] = [w[0], w[1]];
+            if time < b {
+                return if b > a { va + (vb - va) * (time - a) / (b - a) } else { vb };
+            }
+        }
+        points[points.len() - 1].1
+    }
+
+    /// Add a point to the gain's plan (none past `GAIN_POINTS`).
+    fn gain_push(&mut self, time: f64, value: f64) {
+        if let Some(p) = self.gain.get_mut(self.gain_len) {
+            *p = (time, value);
+            self.gain_len += 1;
+        }
+    }
+
+    /// The gain's plan from `from` on: what it holds then
+    /// kept, and the track's own fades after it. `fresh` is a loop starting
+    /// at `from` (its fade in plays); else the track was set as it plays.
+    fn plan_track(&mut self, from: f64, fresh: bool) {
+        let (fade_in, fade_out) = self.track.fade_lengths(self.fades);
+        let rises = fresh && fade_in > 0.0;
+        self.track_rose = rises;
+        // A fade in where the gain stands above silence dips there first,
+        // to be at silence on the loop's first step.
+        let dip = if rises && self.gain_at(from) > 0.0 { GAIN_DIP } else { 0.0 };
+        let cut = from - dip;
+        let at = self.gain_at(cut);
+        let keep = self.gain[..self.gain_len].iter().take_while(|p| p.0 < cut).count();
+        self.gain_len = keep;
+        self.gain_push(cut, at);
+        let mut up = from;
+        if rises {
+            if dip > 0.0 {
+                self.gain_push(from, 0.0);
+            }
+            up = from + fade_in;
+            self.gain_push(up, 1.0);
+        } else if at < 1.0 {
+            up = from + GAIN_RETURN;
+            self.gain_push(up, 1.0);
+        }
+        if fade_out > 0.0 && self.track_at > 0.0 && matches!(self.track, Track::Seconds(_)) {
+            let end = self.track_at;
+            let down = (end - fade_out).max(up);
+            if end > down {
+                self.gain_push(down, 1.0);
+            }
+            self.gain_push(end, 0.0);
+        }
+        self.replan = true;
+    }
+
+    /// The gain's plan after a step's jump moved a time's track:
+    /// what it holds at `from` kept, gliding over `GAIN_DIP` to where
+    /// the track's own fades have it on its clock there (part way up its
+    /// fade in, or down its fade out, or at its level), and its fades from
+    /// there as they would have come.
+    fn plan_moved(&mut self, from: f64) {
+        let Track::Seconds(n) = self.track else { return };
+        let (fade_in, fade_out) = self.track.fade_lengths(self.fades);
+        let fade_in = if self.track_rose { fade_in } else { 0.0 };
+        let end = self.track_at;
+        let begun = end - f64::from(n);
+        let level = |t: f64| {
+            let up = if fade_in > 0.0 { ((t - begun) / fade_in).clamp(0.0, 1.0) } else { 1.0 };
+            let down = if fade_out > 0.0 { ((end - t) / fade_out).clamp(0.0, 1.0) } else { 1.0 };
+            js::min(up, down)
+        };
+        let at = self.gain_at(from);
+        let keep = self.gain[..self.gain_len].iter().take_while(|p| p.0 < from).count();
+        self.gain_len = keep;
+        self.gain_push(from, at);
+        let to = from + GAIN_DIP;
+        self.gain_push(to, level(to));
+        let up = begun + fade_in;
+        if up > to {
+            self.gain_push(up, level(up));
+        }
+        if fade_out > 0.0 {
+            let down = end - fade_out;
+            if down > to && down > up {
+                self.gain_push(down, level(down));
+            }
+            if end > to {
+                self.gain_push(end, 0.0);
+            }
+        }
+        self.replan = true;
+    }
+
+    /// Write the gain's plan to the core from `now` (`TRACK_GAIN`): nothing
+    /// while it never moved from 1, so a loop with no fade renders as it
+    /// always did.
+    fn write_gain<H: Host>(&mut self, host: &mut H, now: f64) {
+        self.replan = false;
+        while self.gain_len >= 2 && self.gain[1].0 <= now {
+            self.gain.copy_within(1..self.gain_len, 0);
+            self.gain_len -= 1;
+        }
+        if !self.gain_moved {
+            if self.gain[..self.gain_len].iter().all(|p| p.1 == 1.0) {
+                self.gain_len = 0;
+                return;
+            }
+            self.gain_moved = true;
+        }
+        let g = crate::TRACK_GAIN;
+        host.param(g, crate::mix::CANCEL, 0.0, now, 0.0);
+        host.param(g, crate::mix::SET, self.gain_at(now), now, 0.0);
+        let mut last = now;
+        for &(t, v) in &self.gain[..self.gain_len] {
+            if t > now {
+                // Two points at one time: a step (a fade in from a loop
+                // that played at its level dips first, so it never is).
+                let op = if t > last { crate::mix::LINEAR } else { crate::mix::SET };
+                host.param(g, op, v, t, 0.0);
+                last = t;
+            }
+        }
+    }
+
+    /// A time's fade out under way: every note sounding or
+    /// waiting falls to nothing on the track's last second, the notes
+    /// decided since the last block among them (each fades from where the
+    /// fade has reached), so the room and the echo fall with them.
+    fn fade_notes<H: Host>(&self, host: &mut H, now: f64, last: bool) {
+        let Some(end) = self.track_at() else { return };
+        let (_, fade_out) = self.track.fade_lengths(self.fades);
+        if fade_out > 0.0 && (last || (now + LOOKAHEAD >= end - fade_out && now < end)) {
+            host.fade_all(end - fade_out, end);
+        }
+    }
+
+    /// The step from the loop's load the track ends at, as it stands; none
+    /// while it plays on (or nothing plays, or it has ended).
+    #[must_use]
+    pub fn track_end(&self) -> Option<u64> {
+        // Stopped, where it stood (a jump while paused is told
+        // with the track's end, which the app's rail is drawn to); none once
+        // it has ended.
+        let live = self.state == State::Playing || (self.paused() && !self.ended);
+        if !live {
+            return None;
+        }
+        if matches!(self.track, Track::Seconds(_)) && self.track_at > 0.0 {
+            return Some(self.step_at(self.track_at));
+        }
+        self.track.end_step(self.generator.spec(), self.count_from)
+    }
+
+    /// The tone (warmth, space and wobble, 0 to 1 each), as the Sound panel
+    /// sets it: it glides there from now, and the loop reports it
+    /// (`describe`). A new loop plays its own.
+    pub fn set_tone<H: Host>(&mut self, host: &mut H, tone: [f64; 3]) {
+        if !tone.iter().all(|t| t.is_finite()) {
+            return;
+        }
+        let tone = tone.map(|t| t.clamp(0.0, 1.0));
+        let now = self.now(host);
+        self.synth.set_tone(host, tone, now);
+        // The tone asked holds: a long piece's plan no longer moves it.
+        self.seq.tone_held = true;
+        if self.state == State::Playing || (self.state == State::Idle && self.generator.stage() == crate::generator::Stage::Done) {
+            self.generator.set_tone(tone);
+        }
+    }
+
+    /// The oldest event waiting for the host (`events`' module says what
+    /// they are), taken.
+    pub fn event(&mut self) -> Option<Event> {
+        self.events.pop()
+    }
+
+    /// Events lost for want of room since the player started (0 for a host
+    /// that takes them after each render).
+    #[must_use]
+    pub fn events_lost(&self) -> u32 {
+        self.events.lost()
+    }
+
+    /// How long before its boundary a change begins making its loop, in
+    /// seconds: the lookahead, and `LOAD_BLOCKS` blocks at the core's rate.
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)] // a few thousand frames
+    pub fn lead(&self) -> f64 {
+        LOOKAHEAD + (LOAD_BLOCKS * crate::QUANTUM) as f64 / self.rate
+    }
+
+    /// When the next change waiting starts its loop, in seconds on the
+    /// core's clock, as the loop playing stands (its tempo may still move
+    /// it); none if no change waits or it is not yet worked out (it is,
+    /// before the next block).
+    #[must_use]
+    pub fn next_change(&self) -> Option<f64> {
+        self.soonest().map(|(_, t)| self.time_of(t))
+    }
+
+    /// Stop deciding (the app's Pause): the loop stays loaded, a load under
+    /// way is dropped, and what was handed over plays out (a host that wants
+    /// silence at once cancels it, `Core::cancel`). The changes waiting are
+    /// dropped; a jump under way is held, to land at the resume.
+    pub fn stop(&mut self) {
+        self.pending = [Maybe::NONE; SLOTS];
+        if self.jumping != 0 && self.state == State::Playing {
+            self.jump_held = true;
+        }
+        self.jumping = 0;
+        if self.state == State::Loading || self.state == State::Wandering {
+            self.state = State::Idle;
+            self.was_playing = false;
+        } else if self.state == State::Playing {
+            self.state = State::Idle;
+        }
+        self.resume_at = None;
+    }
+
+    /// Go on with the loop stopped (the app's Play after Pause), from where
+    /// it stood, its next step at `at` seconds on the core's clock (or as
+    /// soon as the next block, if that has passed).
+    pub fn resume(&mut self, at: f64) {
+        if self.paused() {
+            self.resume_at = Some(if at.is_finite() { at } else { 0.0 });
+        }
+    }
+
+    /// Stopped with a loop made (`stop`), which `resume` goes on with.
+    fn paused(&self) -> bool {
+        self.state == State::Idle && self.generator.stage() == crate::generator::Stage::Done && self.seq.bpm > 0.0
+    }
+
+    /// Make what is left of the loop asked for, now, and start it (its first
+    /// step `START` after the block the core renders next): for a host with
+    /// no deadline to keep.
+    pub fn ready<H: Host>(&mut self, host: &mut H) {
+        while self.state == State::Loading || self.state == State::Wandering {
+            self.stage(host);
+        }
+    }
+
+    /// Where the player is.
+    #[must_use]
+    pub fn state(&self) -> State {
+        self.state
+    }
+
+    /// The generator: the loop playing (its spec, its render, what the
+    /// engine decided at load).
+    #[must_use]
+    pub fn generator(&self) -> &Generator {
+        &self.generator
+    }
+
+    /// Force a choice in every loop made from now on (for
+    /// clips): `Generator::force`. The sketch build only.
+    ///
+    /// # Errors
+    /// The choice or the option is not in the data.
+    #[cfg(feature = "sketch")]
+    pub fn force_choice(&mut self, id: &str, option: Option<&str>) -> Result<(), &'static str> {
+        self.generator.force(id, option)
+    }
+
+    /// Where the sequencer is: the loop's step, its pass, and when the next
+    /// step falls.
+    #[must_use]
+    pub fn position(&self) -> (u64, u32, f64) {
+        (self.seq.step, self.seq.loop_count, self.seq.next_step_time)
+    }
+
+    /// Go on from somewhere else in the loop playing:
+    /// a section, a bar or a time of a piece (`Jump`), landing on the
+    /// phrase line at or before it (a round's last line at most, in a piece
+    /// that comes round), reached straight from the seed and the section's
+    /// number (promise 11). Its section is made a stage a block, as a load
+    /// is (its second tune, its pass drawn, the pass heard), and from the
+    /// next block on nothing more is decided where it was: what was handed
+    /// over plays out, falling to nothing over `JUMP_FADE` from the jump's
+    /// first step, `START` after the block it lands in, so it is heard a few
+    /// blocks after it is asked. What plays there is what playing would have
+    /// reached (`Sequencer::jumped` says what that takes); it is told as
+    /// `Kind::Jump`. A change waiting waits on, worked out from the new
+    /// place; the track counts as it did, from the load, but for a step
+    /// (`Jump::Step`), which moves a time's track with it. Stopped (the
+    /// app's Pause), it is held: `place` reads it, and it lands as `resume`
+    /// goes on, from there. False, and nothing moves, with no
+    /// loop playing or stopped, or for a place that is not a number.
+    pub fn jump(&mut self, to: Jump) -> bool {
+        let paused = self.paused();
+        if self.state != State::Playing && !paused {
+            return false;
+        }
+        let spec = self.generator.spec();
+        let spb = spec.steps_per_bar;
+        let sd = self.seq.step_dur();
+        if !(spb >= 1.0 && sd.is_finite() && sd > 0.0) {
+            return false;
+        }
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole steps, below 2^53 (a u64 saturates past it)
+        let target = match to {
+            Jump::Section(n) => Self::section_start(spec, n),
+            Jump::Bar(b) if b.is_finite() && b >= 0.0 => track::phrase_before(spec, (js::floor(b) * spb) as u64),
+            Jump::Seconds(t) if t.is_finite() && t >= 0.0 => track::phrase_before(spec, js::floor(t / sd) as u64),
+            Jump::Step(n) => n,
+            _ => return false,
+        };
+        // A piece that comes round: within its round, its last line at most
+        // (a step is the one asked, in any round).
+        let target = match (Piece::of(spec).and_then(|p| p.end), track::round_steps(spec)) {
+            (Some(_), Some(round)) if target >= round && !matches!(to, Jump::Step(_)) => track::phrase_before(spec, round - 1),
+            _ => target,
+        };
+        // A step moves a time's track: what is left of it from there.
+        let left = if matches!(to, Jump::Step(_)) { self.track_left_at(target) } else { None };
+        self.jump_timed = left.is_some();
+        self.jump_left = left.unwrap_or(0.0);
+        self.jump_to = target;
+        self.jumping = if paused { 0 } else { self.first_stage() };
+        self.jump_held = paused;
+        true
+    }
+
+    /// A jump's first stage (`jump_stage`): the section's second tune for a
+    /// piece with a plan; a loop with none has no tune to make, so it starts
+    /// at its pass, a block sooner (a short loop's rail, heard within 0.06 s).
+    fn first_stage(&self) -> u8 {
+        if self.journeyed { 1 } else { 2 }
+    }
+
+    /// The seconds of a time's track left from step `step` (from the load),
+    /// on the track's clock as it stands: its second, less the time that
+    /// step falls at at the tempo playing. None for any other track, or a
+    /// time not yet counting.
+    #[allow(clippy::cast_precision_loss)] // steps, far below 2^53
+    fn track_left_at(&self, step: u64) -> Option<f64> {
+        let sd = self.seq.step_dur();
+        if !(matches!(self.track, Track::Seconds(_)) && self.track_at > 0.0 && sd.is_finite() && sd > 0.0) {
+            return None;
+        }
+        Some(self.track_at - (self.seq.next_step_time + (step as f64 - self.seq.abs_step as f64) * sd))
+    }
+
+    /// The first step of section `n` (a loop's pass) from the piece's start.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // whole steps, below 2^53
+    fn section_start(spec: &crate::generator::spec::Spec, n: u64) -> u64 {
+        let section = ((spec.bars * spec.steps_per_bar) as u64).max(1);
+        match (Piece::of(spec).and_then(|p| p.end), track::round_steps(spec)) {
+            (Some((sections, _)), Some(round)) => (n / sections).saturating_mul(round).saturating_add((n % sections) * section),
+            _ => n.saturating_mul(section),
+        }
+    }
+
+    /// A stage of the jump under way (`jump`), one a block.
+    fn jump_stage<H: Host>(&mut self, host: &mut H) {
+        let (n, _, _, _) = Sequencer::place_of(self.generator.spec(), self.jump_to);
+        let number = crate::generator::piece::pass_number(n);
+        let wanders = self.wander.get() > 0.0 || self.journeyed;
+        let slot = 1 - self.current;
+        match self.jumping {
+            1 => {
+                if !self.journeyed || self.generator.prepare(n) {
+                    self.jumping = 2;
+                }
+            }
+            2 => {
+                if wanders {
+                    self.draw_unheard(slot, number);
+                }
+                self.jumping = 3;
+            }
+            3 => {
+                self.seq.move_to(self.generator.spec(), self.jump_to);
+                if self.journeyed {
+                    self.hear_pass(slot, number);
+                }
+                self.jumping = 4;
+            }
+            _ => {
+                self.land(host, wanders.then_some(slot));
+                self.jumping = 0;
+            }
+        }
+    }
+
+    /// The jump lands (`jump`): the old place's notes fall, the sequencer
+    /// takes the jump's first step `START` from now, playing pass
+    /// `passes[slot]` (none for the loop as composed).
+    #[allow(clippy::cast_precision_loss)] // a step and a block's frames, far below 2^53
+    fn land<H: Host>(&mut self, host: &mut H, slot: Option<usize>) {
+        let now = self.now(host);
+        // Where in the core's block playing from a load would have it, to the
+        // fraction of a frame: a loop's first step falls `START` after a
+        // block's start, and step `n` that many step lengths on. The core
+        // works some things a block at a time (a param's automation, a
+        // route's signal), so the jump's notes meet them as playing's do.
+        let quantum = crate::QUANTUM as f64;
+        let at = self.jump_to as f64 * self.seq.step_dur() * self.rate;
+        let start = now + START + (at - js::floor(at / quantum) * quantum) / self.rate;
+        host.fade_all(start, start + JUMP_FADE);
+        self.synth.budget.end_by(start);
+        if let Some(slot) = slot {
+            self.current = slot;
+        }
+        self.wandering = slot.is_some();
+        let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
+        self.seq.jumped(host, &mut self.synth, &lp, start, JUMP_FADE);
+        self.seq.next_step_time = start;
+        self.seq.pass_begins(&lp);
+        self.next_drawn = false;
+        self.next_unheard = false;
+        self.lead_in = false;
+        self.pass_held = self.synth.budget.held();
+        self.pass_from = start;
+        self.units.set(-1.0);
+        for c in self.pending.iter_mut().filter_map(Maybe::as_mut) {
+            c.target = None;
+        }
+        // Back before the track's end, it ends again when it comes.
+        let abs = self.seq.abs_step;
+        if self.track.end_step(self.generator.spec(), self.count_from).is_some_and(|end| abs < end) {
+            self.ended = false;
+        }
+        // A step's jump moves a time's track: it ends as long
+        // after the step as it would have from there, its fades with it.
+        if self.jump_timed && matches!(self.track, Track::Seconds(_)) && self.track_at > 0.0 {
+            self.track_at = start + self.jump_left.max(0.0);
+            if self.track_at > start {
+                self.ended = false;
+            }
+            self.plan_moved(start);
+        }
+        self.jump_timed = false;
+        self.events.push(Event { time: start, kind: Kind::Jump, number: abs, step: abs });
+    }
+
+    /// Where the loop playing is as heard now (`Place`), on the core's
+    /// clock; none with nothing playing. The steps decided ahead
+    /// (`LOOKAHEAD`) are not yet heard: it counts back from the next.
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole steps, far below 2^53
+    pub fn place<H: Host>(&self, host: &H) -> Option<Place> {
+        // Stopped with a jump held: where it will go on from.
+        let held = self.jump_held && self.paused();
+        if self.state != State::Playing && !held {
+            return None;
+        }
+        let spec = self.generator.spec();
+        let spb = spec.steps_per_bar;
+        let sd = self.seq.step_dur();
+        if !(spb >= 1.0 && sd.is_finite() && sd > 0.0) {
+            return None;
+        }
+        let ahead = js::ceil((self.seq.next_step_time - self.now(host)) / sd).max(0.0) as u64;
+        let heard = if held { self.jump_to } else { self.seq.abs_step.saturating_sub(ahead) };
+        let endless = Piece::of(spec).is_some_and(|p| p.end.is_none());
+        let round = if endless { None } else { track::round_steps(spec) };
+        let into = round.map_or(heard, |r| heard % r);
+        let (n, _, _, _) = Sequencer::place_of(spec, heard);
+        let end = self.track.end_step(spec, self.count_from).filter(|&e| e > heard).map(|e| e - heard);
+        let left = match (end, round) {
+            (Some(e), Some(r)) => Some(e.min(r - into)),
+            (Some(e), None) => Some(e),
+            (None, Some(r)) => Some(r - into),
+            (None, None) => None,
+        };
+        // A time's track: the seconds to its end, or the round's, sooner.
+        let left = left.map(|l| l as f64 * sd);
+        // Held, the track's clock as it stands at the pause (or, for a
+        // step's jump, as it will stand there).
+        let to = if held {
+            self.track_left_at(if self.jump_timed { self.jump_to } else { self.seq.abs_step })
+        } else {
+            self.track_at().map(|t| t - self.now(host))
+        };
+        let left = match to {
+            Some(to) => {
+                let to = to.max(0.0);
+                Some(match round {
+                    Some(r) => to.min((r - into) as f64 * sd),
+                    None => to,
+                })
+            }
+            None => left,
+        };
+        Some(Place {
+            bar: into as f64 / spb,
+            bars: round.map(|r| r as f64 / spb),
+            played: into as f64 * sd,
+            left,
+            section: n,
+        })
+    }
+
+    /// A long piece's marks for the page: the
+    /// units of `count` sections from section `from` where something a
+    /// listener would see marked begins (`each`, with the unit's first bar
+    /// from the piece's start, its section, and the plan's unit,
+    /// `longform::Span`): the window's first unit, and each unit whose role,
+    /// theme, key or movement differs from the one before; with `coarse`,
+    /// only where a movement begins (an arc, or a kind of movement; a wander
+    /// journey is one movement, its holds its roles). Straight
+    /// from the numbers (`Form::at`, a microsecond or two a unit), nothing
+    /// kept, so a 32,768-bar piece's movements cost a few milliseconds, and
+    /// Endless is asked a window at a time; a round's sections at most a
+    /// call. `each` returns false to stop
+    /// (a host's room full). None for a loop that is no long piece.
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)] // sections and bars, far below 2^53
+    pub fn marks(&self, from: u64, count: u64, coarse: bool, mut each: impl FnMut(f64, u64, &crate::generator::longform::Span) -> bool) -> Option<()> {
+        use crate::generator::longform::Role;
+        let g = &self.generator;
+        let form = g.form()?;
+        let piece = Piece::of(g.spec())?;
+        let section_bar = |n: u64| match piece.end {
+            Some((sections, last)) => (n / sections) as f64 * ((sections - 1) as f64 * piece.bars + last) + (n % sections) as f64 * piece.bars,
+            None => n as f64 * piece.bars,
+        };
+        // A round at most: the rounds after it are the same plan again.
+        let count = piece.end.map_or(count, |(sections, _)| count.min(sections));
+        let mut before: Option<crate::generator::longform::Span> = None;
+        for n in from..from.saturating_add(count) {
+            let mut bar = section_bar(n);
+            for p in 0..form.units_in(n) {
+                let span = form.at(n, p);
+                let marked = before.is_none_or(|b| {
+                    // A movement begins: an arc, or a kind of movement. A
+                    // wander's hold (a wander journey's, or an interlude's)
+                    // is no movement of its own: a wander journey is one.
+                    let wanders = |s: &crate::generator::longform::Span| matches!(s.role, Role::Holding | Role::Turning);
+                    let movement = b.kind != span.kind || (b.part != span.part && !(wanders(&b) && wanders(&span)));
+                    movement || (!coarse && (b.role != span.role || b.theme != span.theme || b.key.root != span.key.root || b.key.relation != span.key.relation))
+                });
+                if marked && !each(bar, n, &span) {
+                    return Some(());
+                }
+                bar += span.bars;
+                before = Some(span);
+            }
+        }
+        Some(())
+    }
+
+    /// The piece of the loop playing (a length asked), or none
+    /// for a loop with no length; `position`'s pass is its section.
+    #[must_use]
+    pub fn piece(&self) -> Option<Piece> {
+        Piece::of(self.generator.spec())
+    }
+
+    /// The pass playing as it wanders (a piece's section), or none for the
+    /// loop as composed: what `Generator::section` draws for its number.
+    #[must_use]
+    pub fn pass(&self) -> Option<&Pass> {
+        if self.state != State::Playing || !self.wandering {
+            return None;
+        }
+        self.passes.get(self.current)
+    }
+
+    /// The steps decided since the loop playing was loaded (`absStep`).
+    #[must_use]
+    pub fn steps(&self) -> u64 {
+        self.seq.abs_step
+    }
+
+    /// Notes the budget could not hold for want of room in its list (0).
+    #[must_use]
+    pub fn budget_full(&self) -> u32 {
+        self.synth.budget.full()
+    }
+
+    /// One stage of a load: the generator's next, then the first pass, then
+    /// the loop's start.
+    fn stage<H: Host>(&mut self, host: &mut H) {
+        match self.state {
+            State::Loading => {
+                if self.generator.step() {
+                    self.state = State::Wandering;
+                }
+            }
+            State::Wandering => {
+                // The first pass, at the pass count the engine still holds
+                // (`_wander(this.loopCount)` before the load resets it); a
+                // change's loop at its own first, so it plays as it does
+                // alone; a piece's at its first section, so
+                // a section is the same however it is reached
+                // .
+                self.current = 0;
+                self.journeyed = self.journeys();
+                self.wandering = self.wander.get() > 0.0 || self.journeyed;
+                if self.wandering {
+                    let piece = self.generator.spec().length.is_some();
+                    let n = if (self.asked_by == Asked::Load && !piece) || self.asked_by == Asked::InPlace { self.seq.loop_count } else { 0 };
+                    self.draw(0, n);
+                }
+                self.begin(host);
+            }
+            State::Idle | State::Playing => {}
+        }
+    }
+
+    /// Draw pass `number` into `passes[slot]`, at the wander's amount, on
+    /// its stream salted as the host asked.
+    fn draw(&mut self, slot: usize, number: u32) {
+        self.draw_unheard(slot, number);
+        // A long piece's plan, heard.
+        if self.journeyed {
+            self.hear_pass(slot, number);
+        }
+    }
+
+    /// `draw`, the pass alone: a long piece's plan is heard after it
+    /// (`hear_pass`).
+    fn draw_unheard(&mut self, slot: usize, number: u32) {
+        // What the section plays beside the loop's own tune:
+        // made in the blocks before, a stage each (`decide`); here only
+        // where the pass is drawn with no blocks to spare (a load's first).
+        if self.journeyed {
+            while !self.generator.prepare(u64::from(number)) {}
+        }
+        let g = &self.generator;
+        let kick = g.settings().kick.map(|k| k.kind);
+        if let Some(p) = self.passes.get_mut(slot) {
+            let cx = Cx::new(g.spec());
+            p.draw_salted(&cx, g.render(), kick, number, self.wander.get(), self.salt);
+        }
+    }
+
+    /// Hear pass `passes[slot]`, section `number` of a long piece: its plan
+    /// (`Heard::hear`), and where the length slider will stop the piece
+    /// before its own close, the close it lands with there
+    /// (`Heard::stop_at`). Again when the slider moves (`set_track`): the
+    /// same section heard again is the same but for the stop.
+    fn hear_pass(&mut self, slot: usize, number: u32) {
+        let stop = self.stop_for(number);
+        let g = &self.generator;
+        let form = g.form();
+        let cx = Cx::new(g.spec());
+        let n = u64::from(number);
+        let second = form.as_ref().and_then(|f| g.second(crate::generator::heard::Tune::of(f, n)));
+        if let Some(p) = self.passes.get_mut(slot) {
+            p.heard.hear(form.as_ref(), &cx, g.render(), second, n);
+            if let (Some(f), Some((at, decided))) = (form.as_ref(), stop) {
+                p.heard.stop_at(f, &cx, g.render(), second, n, at, decided);
+            }
+        }
+    }
+
+    /// Where the track will end, for section `number` (the one playing or
+    /// the next): the steps from the section's first, and the first of its
+    /// steps not yet decided. None while the track plays on, or where it
+    /// ends before the section.
+    fn stop_for(&self, number: u32) -> Option<(f64, f64)> {
+        if self.track == Track::Always {
+            return None;
+        }
+        // A load's first section: the track counts from its first step.
+        let fresh = self.state == State::Wandering && self.asked_by != Asked::InPlace;
+        let end = match self.track {
+            // A time lands its close on the phrase line at or before its
+            // second, and only with its fade out: without,
+            // the piece stops on the second as it stands.
+            Track::Seconds(n) => {
+                if !self.fades.fade_out {
+                    return None;
+                }
+                let spec = self.generator.spec();
+                let at = if fresh {
+                    let sd = 60.0 / self.tempo.unwrap_or(spec.bpm) / 4.0;
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // steps, far below 2^53
+                    let n = js::floor(f64::from(n) / sd).max(0.0) as u64;
+                    n
+                } else {
+                    self.step_at(self.track_at().unwrap_or(0.0))
+                };
+                track::phrase_before(spec, at)
+            }
+            _ => self.track.end_step(self.generator.spec(), if fresh { 0 } else { self.count_from })?,
+        };
+        let here = self.seq.abs_step.saturating_sub(self.seq.step);
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a section's steps
+        let (start, decided) = if fresh {
+            (0, 0)
+        } else if number == self.seq.loop_count {
+            (here, self.seq.step)
+        } else if number == self.seq.loop_count.wrapping_add(1) {
+            (here + self.seq.pass_steps as u64, 0)
+        } else {
+            return None;
+        };
+        #[allow(clippy::cast_precision_loss)] // steps, far below 2^53
+        (end > start).then(|| ((end - start) as f64, decided as f64))
+    }
+
+    /// Whether the loop playing is a piece whose plan is heard (a wander's
+    /// or an arc's), so its sections are drawn as passes
+    /// at any wander setting: the slider is only how much each breathes.
+    fn journeys(&self) -> bool {
+        self.generator.form().is_some()
+    }
+
+
+    /// The loop made starts: what the engine does loading it, at the core's
+    /// clock; its first step `START` on (or, after a loop that was playing,
+    /// where that one's next step would have fallen).
+    fn begin<H: Host>(&mut self, host: &mut H) {
+        if self.asked_by == Asked::InPlace
+            && let Some(was) = self.kept.get()
+        {
+            self.begin_in_place(host, &was);
+            return;
+        }
+        self.kept = Maybe::NONE;
+        // A loop resumed on a new core has waited out its lateFloor already.
+        if self.resumed {
+            self.generator.keep_late(None);
+            self.resumed = false;
+        }
+        let now = self.now(host);
+        let at = self.seq.next_step_time;
+        let sd = self.seq.step_dur();
+        let start = if self.start_at > now {
+            self.start_at
+        } else if self.was_playing && at > now {
+            at
+        } else if self.was_playing && at > 0.0 && sd.is_finite() && sd > 0.0 {
+            // The loop took longer to make than the old one had decided
+            // ahead (a tuned kick's fit can take 90-odd blocks, past the
+            // lookahead), so its next step has passed: the first of its
+            // steps still to come, so the new loop starts on its grid all
+            // the same.
+            at + (js::floor((now - at) / sd) + 1.0) * sd
+        } else {
+            now + START
+        };
+        self.lead_in = start == now + START;
+        // A loop handing over by a crossfade: its organ lets
+        // go over the fade, and everything it handed over falls from the new
+        // loop's first step, before the new loop hands over a note.
+        let fade = if self.was_playing { self.handover.fade() } else { None };
+        let g = &self.generator;
+        let lp = Loop { spec: g.spec(), base: g.render(), pass: None, settings: g.settings(), step: 0.0, second: None };
+        let at_moment = self.asked_by == Asked::Moment;
+        if at_moment || fade.is_some() {
+            let when = if at_moment { start } else { now };
+            let fall = fade.map_or(ORGAN_FALL, |x| js::max(ORGAN_FALL, x));
+            self.seq.load_at(host, &mut self.synth, &lp, now, when, fall);
+        } else {
+            self.seq.load(host, &mut self.synth, &lp, now);
+        }
+        self.beat.set(if Cx::new(g.spec()).metre == Metre::SixEight { 6.0 } else { 4.0 });
+        if let Some(bpm) = self.tempo.take() {
+            self.seq.bpm = bpm;
+            let when = if at_moment { start } else { now };
+            Synth::set_echo(host, (60.0 / bpm) * self.generator.settings().echo_beats.get(), when);
+        }
+        // The old loop's notes hold the voice budget no longer: the new one
+        // asks as it would alone (the fading notes' cost is the change's,
+        // measured in `dlrender --changes`).
+        if let Some(x) = fade {
+            host.fade_all(start, start + x);
+            self.synth.budget.end_by(start);
+        }
+        self.seq.next_step_time = start;
+        // A new loop's work is its own: nothing measured yet.
+        self.pass_held = self.synth.budget.held();
+        self.pass_from = start;
+        self.units.set(-1.0);
+        let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
+        self.seq.pass_begins(&lp);
+        self.next_drawn = false;
+        self.next_unheard = false;
+        self.was_playing = false;
+        self.asked_by = Asked::Load;
+        self.handover = Handover::RingOut;
+        // The changes still waiting are worked out against this loop.
+        for c in self.pending.iter_mut().filter_map(Maybe::as_mut) {
+            c.target = None;
+        }
+        // The track counts from the new loop's first step: a time's to its
+        // second, and its fades planned from there.
+        self.count_from = 0;
+        self.ended = false;
+        self.track_at = match self.track {
+            Track::Seconds(n) => start + f64::from(n),
+            _ => 0.0,
+        };
+        self.plan_track(start, true);
+        self.write_gain(host, now);
+        if self.own {
+            self.own = false;
+            self.events.push(Event { time: start, kind: Kind::Own, number: u64::from(self.own_tag), step: 0 });
+        }
+        self.events.push(Event { time: start, kind: Kind::Loop, number: u64::from(self.generator.spec().seed), step: 0 });
+        self.state = State::Playing;
+    }
+
+    /// `begin` for the loop playing made again in its place (`revise`): it
+    /// takes the next step the old one would have decided, at that step's
+    /// time (or the first of its steps still to come, the steps passed while
+    /// it was made counted on), its setups sent again only where they differ
+    /// from `was`.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a few steps
+    fn begin_in_place<H: Host>(&mut self, host: &mut H, was: &Load) {
+        let now = self.now(host);
+        if let Some(bpm) = self.tempo.take() {
+            self.seq.bpm = bpm;
+        } else {
+            self.seq.bpm = self.generator.spec().bpm;
+        }
+        let sd = self.seq.step_dur();
+        let mut start = self.seq.next_step_time;
+        let mut skip = 0;
+        if !(start > now) && sd.is_finite() && sd > 0.0 {
+            let k = js::floor((now - start) / sd) + 1.0;
+            skip = k.clamp(0.0, 4096.0) as u32;
+            start += f64::from(skip) * sd;
+        }
+        self.generator.keep_late(was.late);
+        let g = &self.generator;
+        let lp = Loop { spec: g.spec(), base: g.render(), pass: None, settings: g.settings(), step: 0.0, second: None };
+        self.seq.revise(host, &mut self.synth, &lp, now, was);
+        let count = self.seq.loop_count;
+        for _ in 0..skip {
+            self.seq.advance(&lp);
+        }
+        if self.wandering && self.seq.loop_count != count {
+            self.draw(self.current, self.seq.loop_count);
+        }
+        self.seq.next_step_time = start;
+        self.lead_in = false;
+        self.pass_held = self.synth.budget.held();
+        self.pass_from = start;
+        self.units.set(-1.0);
+        let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
+        self.seq.pass_begins(&lp);
+        self.next_drawn = false;
+        self.next_unheard = false;
+        self.was_playing = false;
+        self.asked_by = Asked::Load;
+        self.handover = Handover::RingOut;
+        self.kept = Maybe::NONE;
+        for c in self.pending.iter_mut().filter_map(Maybe::as_mut) {
+            c.target = None;
+        }
+        self.events.push(Event { time: start, kind: Kind::Revised, number: u64::from(self.generator.spec().seed), step: self.seq.abs_step });
+        self.state = State::Playing;
+    }
+
+    /// When step `target` (from the load) of the loop playing falls, at its
+    /// tempo, on the core's clock.
+    #[allow(clippy::cast_precision_loss)] // steps, far below 2^53
+    fn time_of(&self, target: u64) -> f64 {
+        self.seq.next_step_time + target.saturating_sub(self.seq.abs_step) as f64 * self.seq.step_dur()
+    }
+
+    /// The change waiting that starts soonest, the latest asked among those
+    /// for the same boundary: its slot and its step.
+    fn soonest(&self) -> Option<(usize, u64)> {
+        let mut best: Option<(usize, u64, u32)> = None;
+        for (i, c) in self.pending.iter().enumerate() {
+            let Some(c) = c.as_ref() else { continue };
+            let Some(t) = c.target else { continue };
+            let better = match best {
+                None => true,
+                Some((_, bt, ba)) => t < bt || (t == bt && c.asked.wrapping_sub(ba) < u32::MAX / 2),
+            };
+            if better {
+                best = Some((i, t, c.asked));
+            }
+        }
+        best.map(|(i, t, _)| (i, t))
+    }
+
+    /// The step (from the load) the change waiting in `slot` starts on: the
+    /// first of its moment's boundaries, from the next step to decide, that
+    /// falls `lead` from `now` or later.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a grid of a few hundred steps
+    fn resolve(&self, slot: usize, now: f64) -> Option<u64> {
+        let moment = Moment::ALL.get(slot + 1).copied()?;
+        let g = &self.generator;
+        if moment == Moment::End {
+            // The first step the track ends on that is the lead away.
+            let sd = self.seq.step_dur();
+            if !(sd.is_finite() && sd > 0.0) {
+                return None;
+            }
+            let need = js::ceil((now + self.lead() - self.seq.next_step_time) / sd).max(0.0);
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // steps, far below 2^53
+            let first = self.seq.abs_step + need as u64;
+            // A time's: the first step on or after its second (the next
+            // loop starts on the second itself, `arm`).
+            if let Some(t) = self.track_at() {
+                return Some(self.step_at(t).max(first));
+            }
+            return self.track.next_end(g.spec(), self.count_from, first);
+        }
+        let spb = g.spec().steps_per_bar;
+        let total = g.spec().bars * spb;
+        let u = change::unit(moment, self.beat.get(), spb, total)? as u64;
+        let total = total as u64;
+        if total == 0 {
+            return None;
+        }
+        let lead = self.lead();
+        let abs = self.seq.abs_step;
+        // A piece with a section cut short: its boundaries
+        // walked step by step, section by section, from the next step.
+        if let Some(p) = Piece::of(g.spec()).filter(Piece::cut) {
+            let (mut s, mut n, mut t) = (self.seq.step, u64::from(self.seq.loop_count), abs);
+            let steps = |n: u64| (p.bars_of(n) * spb) as u64;
+            for _ in 0..1 << 16 {
+                if s % u == 0 && self.time_of(t) - now >= lead {
+                    return Some(t);
+                }
+                t += 1;
+                s += 1;
+                if s >= steps(n) {
+                    s = 0;
+                    n += 1;
+                }
+            }
+            return Some(t);
+        }
+        let into = |t: u64| (self.seq.step + (t - abs)) % total;
+        let mut t = abs + (u - into(abs) % u) % u;
+        let mut guard = 0;
+        while self.time_of(t) - now < lead && guard < 4096 {
+            t += 1;
+            t += (u - into(t) % u) % u;
+            guard += 1;
+        }
+        Some(t)
+    }
+
+    /// Before a block, with a loop playing: the changes waiting worked out,
+    /// and the soonest begun if its boundary is `lead` away or nearer. The
+    /// loop playing decides every step before the boundary (the old loop's
+    /// last), and the next loop is made from the next block on, to start
+    /// there. Returns the steps decided, if it began one.
+    fn arm<H: Host>(&mut self, host: &mut H, now: f64) -> Option<usize> {
+        // A track that ends with nothing waiting for it hands over to a loop
+        // of the core's own, where the host gave a seed to draw from,
+        // so the page may sleep through it.
+        if self.draws != 0
+            && self.track != Track::Always
+            && self.pending.get(END_SLOT).is_some_and(|p| p.get().is_none())
+        {
+            self.asked = self.asked.wrapping_add(1);
+            let mut c = Self::own_change(Handover::Crossfade(END_FADE));
+            c.asked = self.asked;
+            if let Some(p) = self.pending.get_mut(END_SLOT) {
+                *p = Maybe::some(c);
+            }
+        }
+        // A time's end falls on a step the tempo moves: it is
+        // worked out again each block, until it is the lead away.
+        let far = |t: u64| self.time_of(t) - now > self.lead();
+        if self.track_at().is_some() && self.pending.get(END_SLOT).and_then(Maybe::get).and_then(|c| c.target).is_some_and(far)
+            && let Some(c) = self.pending.get_mut(END_SLOT).and_then(Maybe::as_mut)
+        {
+            c.target = None;
+        }
+        for slot in 0..self.pending.len() {
+            if self.pending[slot].get().is_some_and(|c| c.target.is_none()) {
+                let t = self.resolve(slot, now);
+                match t {
+                    Some(t) => {
+                        if let Some(c) = self.pending[slot].as_mut() {
+                            c.target = Some(t);
+                        }
+                    }
+                    // A change for the track's end waits while it has none.
+                    None if slot == END_SLOT => {}
+                    None => self.pending[slot] = Maybe::NONE,
+                }
+            }
+        }
+        let (slot, target) = self.soonest()?;
+        if self.time_of(target) - now > self.lead() {
+            return None;
+        }
+        let change = self.pending[slot].get()?;
+        let mut n = 0;
+        while self.seq.abs_step < target && n < 4096 {
+            n += 1;
+            self.step_once(host, now, target);
+        }
+        for c in &mut self.pending {
+            if c.get().is_some_and(|c| c.target == Some(target)) {
+                *c = Maybe::NONE;
+            }
+        }
+        let mut start = self.seq.next_step_time;
+        // At the track's end the old loop hands over as the app's does: its
+        // notes ring out at a pass's end, and fall over the crossfade asked
+        // at a phrase line inside one.
+        let mut handover = change.handover;
+        // A time's track: the next loop starts on its second,
+        // the old one's notes left to ring (or, with the fade out, ended
+        // there, the last decided among them).
+        let timed = if slot == END_SLOT { self.track_at() } else { None };
+        if let Some(t) = timed {
+            self.fade_notes(host, now, true);
+            start = js::max(t, now);
+        }
+        if slot == END_SLOT {
+            if !self.ended {
+                self.ended = true;
+                self.events.push(Event { time: start, kind: Kind::End, number: 0, step: target });
+            }
+            // (And where a long piece's close landed there.)
+            if timed.is_some() || track::round_steps(self.generator.spec()).is_some_and(|r| target.is_multiple_of(r)) || self.passes.iter().any(|p| p.heard.stops) {
+                handover = Handover::RingOut;
+            }
+        }
+        let pending = self.pending;
+        // A loop of the core's own takes its seed and the picks now.
+        let (seed, request) = if change.own { (self.draw_seed(), self.picks) } else { (change.seed, change.request) };
+        self.load_at(seed, &request, start);
+        self.pending = pending;
+        self.handover = handover;
+        self.asked_by = Asked::Moment;
+        self.own = change.own;
+        self.own_tag = self.picks_tag;
+        if change.sets_track {
+            self.track = change.track;
+            self.fades = change.fades;
+        }
+        Some(n)
+    }
+
+    /// Decide the next step and hand its notes over; at the top of a pass,
+    /// the next pass (unless the step it reaches is `last`, where the loop
+    /// playing hands over).
+    fn step_once<H: Host>(&mut self, host: &mut H, now: f64, last: u64) {
+        self.tell();
+        let mut lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
+        #[allow(clippy::cast_precision_loss)] // a step of a section, far below 2^53
+        let step = self.seq.step as f64;
+        lp.step = step;
+        let (time, abs) = (self.seq.next_step_time, self.seq.abs_step);
+        self.seq.schedule_step(host, &mut self.synth, &lp, now);
+        // What each layer sounded there, as heard.
+        self.events.push(Event { time, kind: Kind::Heard, number: events::pack_heard(&self.seq.heard, &self.seq.share), step: abs });
+        if self.seq.advance(&lp) {
+            self.pass_measured();
+            if self.seq.abs_step != last {
+                self.next_pass();
+            }
+        }
+    }
+
+    /// The events of the step about to be decided, at its time: a pass, a
+    /// piece's section, a phrase line, the step, and the track's end.
+    fn tell(&mut self) {
+        let spec = self.generator.spec();
+        let (time, step, abs) = (self.seq.next_step_time, self.seq.step, self.seq.abs_step);
+        let ev = |kind, number| Event { time, kind, number, step: abs };
+        let n = u64::from(self.seq.loop_count);
+        if step == 0 {
+            match Piece::of(spec) {
+                Some(p) => {
+                    if p.end.map_or(n == 0, |(sections, _)| n.is_multiple_of(sections)) {
+                        let rounds = p.end.map_or(0, |(sections, _)| n / sections.max(1));
+                        self.events.push(ev(Kind::Pass, rounds));
+                    }
+                    self.events.push(ev(Kind::Section, n));
+                }
+                None => self.events.push(ev(Kind::Pass, n)),
+            }
+        }
+        if track::phrase_line(spec, abs) == abs {
+            self.events.push(ev(Kind::Phrase, step));
+        }
+        self.events.push(ev(Kind::Step, step));
+        if !self.ended && self.track.ends_at(spec, self.count_from, abs) {
+            self.ended = true;
+            self.events.push(ev(Kind::End, 0));
+        }
+    }
+
+    /// A pass decided to its end: the mean cost units its voices held over
+    /// it, for `units`, and the next pass measured from here.
+    fn pass_measured(&mut self) {
+        let held = self.synth.budget.held();
+        let span = self.seq.next_step_time - self.pass_from;
+        if span > 0.0 {
+            self.units.set((held - self.pass_held) / span);
+        }
+        self.pass_held = held;
+        self.pass_from = self.seq.next_step_time;
+    }
+
+    /// Before the block the core renders next: a stage of a load, if one is
+    /// under way, or the next pass drawn ahead; then every step due within
+    /// `LOOKAHEAD`, its notes handed over. `render` calls it before each
+    /// block; a host that drives `Core::process` itself calls it before
+    /// each. Returns what it did.
+    pub fn decide<H: Host>(&mut self, host: &mut H) -> Work {
+        if self.state == State::Loading || self.state == State::Wandering {
+            self.stage(host);
+            return Work::Load;
+        }
+        let now = self.now(host);
+        if let Some(at) = self.resume_at.take() {
+            let was = self.seq.next_step_time;
+            self.seq.next_step_time = if at > now { at } else { now + START };
+            self.state = State::Playing;
+            // A time's track waits out the pause: its second,
+            // and the fades planned after the pause began, move with the
+            // music.
+            let shift = self.seq.next_step_time - was;
+            // A time set while it was stopped counts from the resume.
+            if let Track::Seconds(n) = self.track
+                && self.track_at <= 0.0
+            {
+                self.track_at = self.seq.next_step_time + f64::from(n);
+                self.plan_track(self.seq.next_step_time, false);
+            } else if shift.is_finite() && shift > 0.0 {
+                if self.track_at > 0.0 {
+                    self.track_at += shift;
+                }
+                let from = self.played_to;
+                for p in self.gain.iter_mut().take(self.gain_len).filter(|p| p.0 >= from) {
+                    p.0 += shift;
+                }
+            }
+            // Written again whatever moved: a host's stop may have cancelled
+            // what was scheduled.
+            self.replan = self.replan || self.gain_moved;
+            // A jump asked while stopped lands now, a stage a block, and
+            // the music goes on from there.
+            if self.jump_held {
+                self.jump_held = false;
+                self.jumping = self.first_stage();
+            }
+        }
+        if self.state != State::Playing {
+            return Work::None;
+        }
+        self.played_to = now;
+        if self.replan {
+            self.write_gain(host, now);
+        }
+        // A jump under way: a stage a block; the place it leaves decides
+        // nothing more (what it handed over plays out, and falls).
+        if self.jumping != 0 {
+            self.jump_stage(host);
+            return Work::Load;
+        }
+        if let Some(n) = self.arm(host, now) {
+            return Work::Steps(n);
+        }
+        self.fade_notes(host, now, false);
+        // Never past a change's boundary: the step it starts on is the next
+        // loop's; nor past a time's second.
+        let mut last = self.soonest().map_or(u64::MAX, |(_, t)| t);
+        let end = self.track_at();
+        if let Some(t) = end {
+            last = last.min(self.step_at(t));
+        }
+        let due = |seq: &Sequencer| seq.next_step_time < now + LOOKAHEAD && seq.abs_step < last;
+        if self.wandering && !self.next_drawn && !due(&self.seq) {
+            let n = self.seq.loop_count.wrapping_add(1);
+            // The next section's second tune first, a stage a block, as a
+            // load is spread (another seed's tune is a spec's
+            // making and a melody's).
+            if self.journeyed && !self.generator.prepare(u64::from(n)) {
+                return Work::Pass;
+            }
+            // A piece's pass drawn in one block and heard in the next
+            // (its joins read from their notes), so neither
+            // block holds both.
+            if self.journeyed && !self.next_unheard {
+                self.draw_unheard(1 - self.current, n);
+                self.next_unheard = true;
+                return Work::Pass;
+            }
+            if self.next_unheard {
+                self.hear_pass(1 - self.current, n);
+                self.next_unheard = false;
+            } else {
+                self.draw(1 - self.current, n);
+            }
+            self.next_drawn = true;
+            return Work::Pass;
+        }
+        // A step is a tenth of a second or so: this many in one block would
+        // be a tempo past any the generator draws.
+        let mut guard = 0;
+        while due(&self.seq) && guard < 4096 {
+            guard += 1;
+            self.step_once(host, now, u64::MAX);
+        }
+        // A time's track has run with nothing to follow it (no change waits
+        // for its end: the host gave no seed to draw from): the host hears
+        // of its end on the second, and the loop is done, what it started
+        // ringing out.
+        if let Some(t) = end
+            && !self.ended
+            && self.seq.next_step_time >= t - 1e-9
+            && self.pending.get(END_SLOT).is_none_or(|p| p.get().is_none())
+        {
+            self.fade_notes(host, now, true);
+            self.ended = true;
+            self.events.push(Event { time: t, kind: Kind::End, number: 0, step: self.seq.abs_step });
+            self.stop();
+        }
+        if guard == 0 { Work::None } else { Work::Steps(guard) }
+    }
+
+    /// The top of a new pass: the next one drawn (now, if it is not yet),
+    /// and played.
+    fn next_pass(&mut self) {
+        if self.wander.get() > 0.0 || self.journeyed {
+            let next = 1 - self.current;
+            if !self.wandering || !self.next_drawn {
+                let n = self.seq.loop_count;
+                self.draw(next, n);
+            }
+            self.current = next;
+            self.wandering = true;
+        } else {
+            self.wandering = false;
+        }
+        self.next_drawn = false;
+        self.next_unheard = false;
+        let lp = loop_of(&self.generator, &self.passes, self.wandering.then_some(self.current));
+        self.seq.pass_begins(&lp);
+    }
+
+    /// Render the next `out[0].len()` frames into `out` (one slice a channel
+    /// of the layout), deciding before each block (`Core::render_with`).
+    ///
+    /// # Errors
+    ///
+    /// `Error::Layout` if `out` is not one slice for each channel of the
+    /// core's layout, all the same length; nothing is rendered.
+    pub fn render(&mut self, core: &mut Core, out: &mut [&mut [f32]]) -> Result<(), Error> {
+        core.render_with(out, |core| {
+            self.decide(core);
+        })
+    }
+
+    /// How far each pass wanders from now on ("Let the loop wander", 0 to
+    /// 2.4 in the app; 0 plays the loop as composed). Heard from the next
+    /// pass.
+    pub fn set_wander(&mut self, amount: f64) {
+        let amount = if amount.is_finite() { amount.max(0.0) } else { 0.0 };
+        if amount != self.wander.get() {
+            self.wander.set(amount);
+            self.next_drawn = false;
+            self.next_unheard = false;
+        }
+    }
+
+    /// The salt on the wander's stream from now on, heard
+    /// from the next pass: a host that wants a loop to wander differently
+    /// each time it is played (the app, across the wander slider's upper
+    /// range: `UNREPEATABLE_FROM` in `js/engine.js`) sends a new one each
+    /// play; 0, the default, is the wander every code has always had. The
+    /// draws stay a function of what the host sends: the same seed, request
+    /// and salt make the same samples.
+    pub fn set_wander_salt(&mut self, salt: u32) {
+        if salt != self.salt {
+            self.salt = salt;
+            self.next_drawn = false;
+            self.next_unheard = false;
+        }
+    }
+
+    /// The wander's salt (`set_wander_salt`).
+    #[must_use]
+    pub fn wander_salt(&self) -> u32 {
+        self.salt
+    }
+
+    /// Mute a layer or bring it back, as the app's layer buttons do: its
+    /// channel glides out or in at once, and its notes are left out (or
+    /// played) from the next step decided. It holds, across loads, until
+    /// brought back.
+    pub fn set_mute<H: Host>(&mut self, host: &mut H, layer: Layer, muted: bool) {
+        let now = self.now(host);
+        if let Some(m) = self.seq.mutes.get_mut(layer as usize) {
+            *m = muted;
+        }
+        self.synth.set_mute(host, channel_of(layer) as usize, muted, now);
+    }
+
+    /// The tempo, in beats a minute, as the app's slider sets it: from the
+    /// next step decided, the echo's time following it. Asked while a loop
+    /// is being made, the loop starts at it (a load starts at the loop's
+    /// own).
+    pub fn set_tempo<H: Host>(&mut self, host: &mut H, bpm: f64) {
+        if !(bpm.is_finite() && bpm > 0.0) {
+            return;
+        }
+        if self.state == State::Loading || self.state == State::Wandering {
+            self.tempo = Some(bpm);
+        } else if self.seq.bpm > 0.0 {
+            let now = self.now(host);
+            self.seq.bpm = bpm;
+            Synth::set_echo(host, (60.0 / bpm) * self.generator.settings().echo_beats.get(), now);
+            // A time's second stays where it is, and the step it falls on
+            // moves: a long piece's close lands on it again.
+            if self.track_at().is_some() && self.fades.fade_out && self.journeyed && self.wandering {
+                self.hear_pass(self.current, self.seq.loop_count);
+                if self.next_drawn {
+                    self.hear_pass(1 - self.current, self.seq.loop_count.wrapping_add(1));
+                }
+            }
+        }
+    }
+
+    /// The listener's volume, 0 to 1 (the app's 0.85 until set), as the
+    /// app's slider sets it.
+    pub fn set_volume<H: Host>(&mut self, host: &mut H, volume: f64) {
+        if !volume.is_finite() {
+            return;
+        }
+        let now = self.now(host);
+        self.synth.set_volume(host, volume.clamp(0.0, 1.0), now);
+    }
+}
+
+/// The loop as the sequencer plays it: the generator's, with the pass in
+/// `passes[slot]` wandering over it (none: the loop as composed).
+fn loop_of<'a>(g: &'a Generator, passes: &'a [Pass; 2], slot: Option<usize>) -> Loop<'a> {
+    let pass = slot.and_then(|i| passes.get(i));
+    Loop { spec: g.spec(), base: g.render(), pass, settings: g.settings(), step: 0.0, second: pass.and_then(|p| g.second(p.heard.second)) }
+}
+
+impl Default for Player {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(feature = "tools")]
+impl Player {
+    /// The voice calls the budget was asked and refused, by layer, and
+    /// those it let go (`Budget::counts`, `Budget::stolen`), for the
+    /// measuring tools (the tools build only).
+    #[must_use]
+    pub fn budget_counts(&self) -> (budget::Counts, [u32; 5]) {
+        (self.synth.budget.counts(), self.synth.budget.stolen())
+    }
+}

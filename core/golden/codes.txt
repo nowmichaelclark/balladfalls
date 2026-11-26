@@ -1,0 +1,39 @@
+# The golden loops (queue item 42): one a line, NAME SECONDS QUALITY CODE.
+#
+# 20 loops that between them play every voice the core has, on every channel
+# the app plays it on (melody, chords, bass, texture, drums), and one long busy
+# loop. They were chosen from the first 1,500 loops of corpus seed 1 by
+# `node tools/golden-export.mjs --pick --n 1500 --window 24`, then trimmed by
+# a randomized search for the fewest loops that cover all 58 voice-and-channel
+# pairs: 20 is the least that corpus allows, because a loop plays about eight
+# of them and the rare ones (the soft pad, the tubular bell, the choir, the
+# temple bell) come alone. Three play at lite quality, to render the mix with
+# three combs as well as six.
+#
+# SECONDS is how long to render: one pass of the loop (at most 24 s) and a
+# second for its tail. The lists were exported from these loops' version 1
+# codes by the JavaScript (retired, item 97) and are held by their hashes;
+# the codes here say which loops they are, as version 2 codes since session
+# 23 (each the loop its version 1 code plays on the core, note for note; the
+# tone each carries as an edit is version 1's, rounded to 1/255).
+01-glade 10 full Er0553DSAohqwgkwnquoChBSBs_6rnj1u9tBdSCk-w7k1r-lyIfCk
+02-wayfare 16 full EgnbX_ASAi0g15p5zyiIfSB4-1vmhnol6MfSCglohg0o0qyFf83
+03-tide 16 full ETWF8KASAsuzv-v-ygvMfSB0glyujik1hBdSC6y2kgrg838UhBHf
+04-vapor 9 full EmKEXxASAohq0xus0o-EfSB6tuvutto34LfSC0glgwixqpWfVp
+05-clockwork 11 full EKIkQ0BSA04jughh0n2-BhBSB2v97sr2o9pKfSCk5ou2qtpxxGfWX
+06-undertow 16 full E1zzodDSAor6ygshw_yzChBSB6y2oruh-1nKfSC6y205k3-_1Gf1d
+07-dust 17 lite ED5vANBSAqr6igtz9nxMfSBmyxo7rwzsxJfSC8m3pg7itimrBhBHm
+08-bloom 8 full EFNeO0DSAq1qholxpv9FfSBs_6nzwj0itGfSCokjxwwl849rChBkW
+09-shrine 25 full E3Dz1uASAohqwgkwnquoChBSBs_6rnj1u9tBdSCor6ygshw_yzCjBce
+10-shrine 16 full ESanCiCSA2q1u-g4zopIfSB-wny20q55sBdSCiv4z51w_nwCfHS
+11-haven 25 full EbII7oASAIBSBqwiymy5uwWdSCq8hnwwg6jrfhBeZ
+12-vapor 25 full E7hArLCSA0glogi4jlnkBhBSB2v9jw-qnptRfSC63-1g-2i6whDjBul
+13-dust 7 full Emq-NHCSA4-191h19_iBdSBohqwgkwnquoChBSCokjxwwl849rChBh6
+14-bloom 7 lite EDXNn_DSAkohiwg-o5hJfSBohq80hhz0hMfSC60llwyz7z_WhBLi
+15-wayfare 8 full ET3ihECSA0glyujik1hBdSBokjxwwl849rChBSC0glogi4jlnkBhBM8
+16-grove 5 full E9enJeBSA43-tw-vp-_9BhBSB2lt1hgk-p6JfSC04jughh0n2-BhB1C
+17-bloom 9 full E53GiNBSAyskvuorzksKfSB-wn8sw49v2LfSC2v91zxq3-WdxP
+18-shatter 8 full EY0WiTBSAIBSByxs05_0ptpFfSCi2vlw31wmsYhBPo
+19-glade 5 full EXaSSfDSAk-w7k1r-lyIfSBukjpzksot_LfSC-r_iwvkoxnNhBFQ
+20-tide 9 full EOrk4oDSAor6uujp-x_IfSB2ltxw1nxrqtChBSC63-1g-2i6whDjBFd
+busy-cinder 60 full EOGg45CSA6tu78jjphnIfSBqwiymy5uwWdSCy4jmwh66rlbhBPH

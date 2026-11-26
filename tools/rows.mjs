@@ -1,0 +1,4263 @@
+// The app on the core's player: a check for each row of
+// the controls table (every control and display against its command or
+// event), in the real app, in headless Chromium, playing in real time.
+//
+//   node tools/rows.mjs [--long] [--port 8771]
+//   node tools/rows.mjs --app [--cdp URL] [--long]
+//
+// `--app`: the same rows against the Android
+// app, its page driving the native core (android/cdp.mjs: the WebView's
+// DevTools port over adb, on the one device or emulator adb sees, the app
+// installed; `--cdp` an endpoint already up instead). The hooks sit on the
+// app's bridge (`DriftloomNative`) instead of a worklet's node, and "is
+// anything sounding" is the native output's own level. The rows that make no
+// sense there are left out (the export's, which has Android's own; the
+// plain lines: the app always has its core), and four are the app's own:
+// the WebView makes no audio of its own; Diagnostics says the native core,
+// with its counts and the stream's underruns; the page's main thread blocked
+// for five seconds and the music plays on (docs/CORE.md, promise 1); and
+// the too-slow line can't show, however slow the reports read.
+//
+// Nothing in js/ is touched. The page is read from outside, before its own
+// scripts run: every AudioWorkletNode it builds is kept, with what the core
+// sends back (its events, its counts) and what the page posts to it; an
+// analyser hangs on the node's output, for "is anything sounding"; and the
+// core is asked what it plays (`probe`: its state, its step, the track's
+// end, its lanes and the loop's description, `Player::describe`). Each row
+// does what a listener does (a tap, a key, a slider) and checks that the
+// core plays what the page shows:
+//
+//   Play                the core plays the loop on the card (its name); the
+//                       first loop is a fixed share code (tools/stalls.mjs's
+//                       shatter), pasted as a listener would, so no row
+//                       depends on a random draw
+//   info card           name, key, tempo as the core describes the loop
+//   cover               drawn
+//   cursor              lit from the core's steps, moving
+//   Pause, Play again   the core idle and silent; then on from where it stood
+//   Next                the core's own loop, crossfading;
+//                       the core's loop is the card's
+//   Previous            back to the loop before, by its seed, request and edits
+//   roll a layer        made again in place: its seed re-rolled, the steps go on
+//   the keyboard        (`--only keys`) by the keys
+//                       alone, on a fixed short loop: play, next, previous,
+//                       K, a bar on and back, the volume, mute, a layer
+//                       rolled and turned off and on, every layer rolled;
+//                       each view opened by its letter and closed by Esc;
+//                       the list of keys; a key held acts once; a slider's
+//                       and a tab's arrows are theirs; typing in the Bars
+//                       view's number does nothing else; the letter keys
+//                       switch reached by Tab and turned off: a letter, a
+//                       digit and ? do nothing, the arrows and Space work,
+//                       and so after a reload; Ctrl+S; the keys each
+//                       control says it has
+//   mutes               all five off: silence; on: sound
+//   tempo               the core's tempo and its steps' spacing
+//   tone                the core's tone
+//   wander and salt     the amount, and the salt across the upper range
+//   volume              0: silence; back: sound
+//   mono                the core renders one lane, then two
+//   layers' grid        the dots of the bar shown are the core's: each step as
+//                       heard where it is decided, the grid of
+//                       the pass heard for the steps to come
+//   picks               a vibe picked: held by the core, the
+//                       loop playing left as it is, the next loop the
+//                       core's own and leaning on it; held again after a
+//                       reload
+//   export MIDI         a MIDI file
+//   export audio        the Export view
+//                       behind Share's export audio: export flac and, where
+//                       the browser can encode Opus, export opus (hidden
+//                       where it can't: tested with the encoder taken
+//                       away), the lengths for a loop that plays on; a minute
+//                       exported to the file chosen (the save picker,
+//                       answered here with a file in the site's private
+//                       file system), written as it is made: a FLAC that
+//                       ends where the core says, the music playing on with
+//                       nothing late; both speeds ("lighter on processor"
+//                       off and on), measured; Cancel leaves no file and
+//                       nothing broken; the free space checked first (the
+//                       quota made small: the plain message, nothing
+//                       started); a disk that fills mid-export (the quota
+//                       made small while it runs) ends with the plain
+//                       message, no file, the music playing; and where
+//                       there is no save picker, the private file and a
+//                       download at the end. Small (104c) has its own: a
+//                       minute to the file chosen (an Ogg file, every page's
+//                       checksum good, the pre-skip and the last granule
+//                       position giving exactly the frames the Worker
+//                       rendered, the browser decoding it to that length),
+//                       its size near the constant bit rate, Cancel, the
+//                       private file and a disk that fills
+//   share               keys and no explainer; export
+//                       audio and album from seed open their views and back
+//   share code          the code decodes to the loop the core plays
+//   album export        (`--only album`) a tab of its own, an album
+//                       of four playing (three of 8 s, one that plays on):
+//                       loop or album offered; the album asks how long once
+//                       for the track that plays on; one zip of FLACs to the
+//                       file chosen (stored, every checksum good, "NN
+//                       name.flac", each tagged: title, album, track N/4, the
+//                       app, the day, its code, its cover a 600 px JPEG), the
+//                       music on and nothing late; a file a track of Opus
+//                       into a folder chosen, each tagged in OpusTags with its
+//                       cover; the space for the whole album checked first;
+//                       Cancel midway and a disk that fills midway leave no
+//                       zip; a single loop's file tagged too
+//   seed album save     the seed album's save: named in the Name
+//                       box, the album lands in the Library, its tracks the
+//                       ones its code plays, and plays from there; the box
+//                       closed saves nothing
+//   codes  version 2 only, in a tab of its own: a version 1
+//                       code pasted gets the "older" line, a newer build's
+//                       the "newer" one; an album's code pasted lands in the
+//                       Library, plays, and shared again is the same album;
+//                       the rename box keeps Thai and emoji and refuses an
+//                       invisible character, and the name travels with the
+//                       loop's code; the Library after a reload; a backup
+//                       copied, the Library cleared, and restored
+//   lighter on processor  a new core at the other quality, the same loop
+//   Diagnostics         the core's player, nothing late, nothing lost
+//   now playing art     the media session's artwork is the
+//                       playing loop's own cover: on first Play, Next,
+//                       Previous, an album track, a track's end, a rename
+//                       and out of an album
+//   sideways            (Mikey's review) the panel at the
+//                       left, centered with no insets, double-counted ones
+//                       and real ones; a scroll puts a browser's bar away
+//                       and nothing else moves the page
+//   plain line          a browser with no WebAssembly, and a module that
+//                       never arrives: one plain line each, nothing played
+//   long piece          (a page of its own, opened on a
+//                       32,768-bar arc) where you are: bar of how many,
+//                       time played and left, in the rail's place; the
+//                       markers on the line are the map's (a fresh call of
+//                       the core's map, painted pixel for pixel); a tap on
+//                       the line three hours in starts there within a
+//                       second, the words and the place saying so, nothing
+//                       late; the next-section key goes to the map's next
+//                       section; the journey pick (arc, wander) reaches the
+//                       core with the picks and is held whole; Endless: time
+//                       played, no time left, and a wander's own markers;
+//                       the Library's line says each loop's length
+//   album pacing        an album made with each track's length
+//                       set (passes, bars to a phrase line), shared from the
+//                       Library and opened by its link in a fresh profile:
+//                       each track plays as long as its maker set it, then
+//                       the next, the card following, round to the first
+//   previous in an album (`--only previous`
+//                       runs just these) a tab of its own: from the first
+//                       track Previous is on and goes round to the last; from
+//                       a middle track, by the screen's key, the keyboard's
+//                       Previous and the lock screen's and headset's
+//                       handler, it goes to the track before, the card
+//                       following; after a track's end handed over it goes
+//                       back to that track, which plays its own length and
+//                       hands over again; an album of one; after a track was
+//                       deleted it goes to the track before that one; after
+//                       leaving the album it is as the history says
+//   timeline            (`--only timeline`) a
+//                       tab of its own: a long piece's line pressed while
+//                       paused moves the playhead and its words, nothing
+//                       lands until Play, and Play starts there; a short
+//                       loop's rail pressed playing and paused lands on the
+//                       step asked (the core's Jump event), with no Track
+//                       length (the rail the loop's round) and with one (the
+//                       rail the track: its clock moved, so it ends as long
+//                       after the step); its keys; the album's way back gone
+//                       after Next and after the core's own next loop, and
+//                       back once another album is left
+//   pickers             (`--only pickers`) the
+//                       tempo, key, style and voices views from the Vibe
+//                       panel: a pick, a range or a set, any, the pages,
+//                       cancel and done, the line each fills, sent and held;
+//                       the next loop drawn under them and read back from
+//                       the core and its code; kept across a reload; clear
+//                       all; never all five layers off; whole on short
+//                       phones and on its side
+//   length (--long)     a minute: the track ends on its line and the core's
+//                       own loop starts there, with the picks, the card
+//                       following; Now Playing counts down
+//
+// Chromium from Playwright (npm install --no-save playwright@1.56.1).
+
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { decodeSong, encodeSong, encodeAlbum, decodeAlbum, linkOf } from '../js/share.js';
+import { newSpec } from '../js/gen.js';
+import { passSeconds } from '../js/ui.js';
+import { setTrack, trackOfSpec } from '../js/tracklen.js';
+import { LOOPS } from './stalls.mjs';
+import { pages, joined } from './ogg-read.mjs';
+import { crc32 as zipCrc } from '../js/zip.js';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const argv = process.argv.slice(2);
+if (argv.includes('--help') || argv.includes('-h')) {
+  console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').filter((l) => l.startsWith('//')).map((l) => l.slice(3)).join('\n'));
+  process.exit(0);
+}
+const flag = (name, dflt) => {
+  const i = argv.indexOf(name);
+  return i >= 0 ? argv[i + 1] : dflt;
+};
+const LONG = argv.includes('--long');
+const PORT = Number(flag('--port', 8771));
+const APP = argv.includes('--app');
+const CDP = flag('--cdp', '');
+// `--only previous` (or `track`, `timeline`, `pickers`, `scroll`, `keys`): just that group's rows, for working on one.
+const ONLY = flag('--only', '');
+
+function loadPlaywright() {
+  const require = createRequire(import.meta.url);
+  for (const id of ['playwright', 'playwright-core', '/opt/node22/lib/node_modules/playwright']) {
+    try { return require(id); } catch { /* try the next one */ }
+  }
+  console.error('rows: Playwright is not installed.  npm install --no-save playwright@1.56.1');
+  process.exit(3);
+  return null;
+}
+
+const TYPES = {
+  '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
+  '.webmanifest': 'application/manifest+json', '.wav': 'audio/wav', '.flac': 'audio/flac', '.png': 'image/png',
+  '.svg': 'image/svg+xml', '.wasm': 'application/wasm', '.woff2': 'font/woff2', '.txt': 'text/plain',
+};
+
+function serve(port) {
+  const server = http.createServer((req, res) => {
+    const url = new URL(req.url, 'http://x');
+    let file = path.join(ROOT, decodeURIComponent(url.pathname));
+    if (file.endsWith('/')) file = path.join(file, 'index.html');
+    if (!file.startsWith(ROOT) || !fs.existsSync(file)) {
+      res.writeHead(404);
+      res.end();
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
+    fs.createReadStream(file).pipe(res);
+  });
+  return new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server)));
+}
+
+// Before the page's scripts: the nodes, their messages, an analyser on the
+// output, the clipboard and the downloads.
+const HOOK = `(() => {
+  const R = window.__rows = { nodes: [], events: [], posts: [], kills: [], probes: new Map(), id: 0, clip: null, blobs: [] };
+  const Real = window.AudioWorkletNode;
+  window.AudioWorkletNode = class extends Real {
+    constructor(ctx, name, options) {
+      super(ctx, name, options);
+      R.ctx = ctx;
+      R.nodes.push({ node: this, quality: options && options.processorOptions && options.processorOptions.quality });
+      this.port.addEventListener('message', (e) => {
+        const m = e.data;
+        if (m && m.type === 'events') R.events.push({ node: R.nodes.length - 1, at: ctx.currentTime, events: m.events, grids: m.grids || [], place: m.place });
+        if (m && m.type === 'probe' && R.probes.has(m.id)) { R.probes.get(m.id)(m); R.probes.delete(m.id); }
+      });
+      this.port.start();
+    }
+  };
+  const post = MessagePort.prototype.postMessage;
+  MessagePort.prototype.postMessage = function (m, ...rest) {
+    if (m && typeof m.type === 'string' && /^play|^layout/.test(m.type)) R.posts.push({ ...m, at: R.ctx ? R.ctx.currentTime : 0, msg: m });
+    if (m && (m.type === 'dispose' || (m.type === 'param' && m.id === 18))) R.kills.push({ ...m, wall: performance.now() });
+    return post.call(this, m, ...rest);
+  };
+  const connect = AudioNode.prototype.connect;
+  AudioNode.prototype.connect = function (dest, ...rest) {
+    if (this instanceof window.AudioWorkletNode && dest === this.context.destination) {
+      const a = this.context.createAnalyser();
+      a.fftSize = 2048;
+      connect.call(this, a, rest[0] || 0);
+      R.analyser = a;
+    }
+    return connect.call(this, dest, ...rest);
+  };
+  R.level = () => {
+    if (!R.analyser) return 0;
+    const buf = new Float32Array(R.analyser.fftSize);
+    R.analyser.getFloatTimeDomainData(buf);
+    let s = 0;
+    for (const v of buf) s += v * v;
+    return Math.sqrt(s / buf.length);
+  };
+  R.probe = () => new Promise((resolve) => {
+    const n = R.nodes[R.nodes.length - 1];
+    if (!n) return resolve(null);
+    const id = 1e9 + ++R.id;
+    R.probes.set(id, resolve);
+    n.node.port.postMessage({ type: 'probe', id });
+    setTimeout(() => resolve(null), 2000);
+  });
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+    writeText: async (t) => { R.clip = t; }, readText: async () => R.clip || '' } });
+  // The audio export's Worker: what the page starts it
+  // with, and what it says (progress counted, the rest kept). The save
+  // picker answers with a file in the site's private file system, unless a
+  // tab takes the picker away (then the export writes there itself).
+  R.exports = [];
+  R.exportProgress = 0;
+  const RealWorker = window.Worker;
+  window.Worker = class extends RealWorker {
+    constructor(url, options) {
+      super(url, options);
+      if (!String(url).includes('export-worker')) return;
+      this.addEventListener('message', (e) => {
+        const m = e.data;
+        if (m && m.type === 'progress') R.exportProgress++;
+        else if (m) R.exports.push({ type: m.type, format: m.format, opus: m.opus, why: m.why, bytes: m.bytes, frames: m.frames, seconds: m.seconds, took: m.took, counts: m.counts, private: m.private });
+      });
+      const post = this.postMessage;
+      this.postMessage = (m, t) => {
+        if (m && m.type === 'start') {
+          R.exportStart = { job: m.job, sink: m.sink, pace: m.pace, name: m.name };
+          (R.exportStarts = R.exportStarts || []).push({ sink: m.sink, name: m.name, entry: m.entry, tags: m.tags, picture: m.picture ? { mime: m.picture.mime, width: m.picture.width, height: m.picture.height, size: m.picture.bytes.length } : null, track: m.job.track });
+        }
+        return t ? post.call(this, m, t) : post.call(this, m);
+      };
+    }
+  };
+  window.showSaveFilePicker = async (opts) => {
+    const d = await navigator.storage.getDirectory();
+    const asked = String(opts && opts.suggestedName);
+    R.picked = await d.getFileHandle(asked.endsWith('.opus') ? 'picked.opus' : asked.endsWith('.zip') ? 'picked.zip' : 'picked.flac', { create: true });
+    return R.picked;
+  };
+  // A folder chosen (an album as one file for each track): a folder in the
+  // site's private file system.
+  window.showDirectoryPicker = async () => {
+    const d = await navigator.storage.getDirectory();
+    R.pickedDir = await d.getDirectoryHandle('picked-dir', { create: true });
+    return R.pickedDir;
+  };
+  R.opfs = async () => {
+    const root = await navigator.storage.getDirectory();
+    const out = [];
+    for await (const [k, h] of root.entries()) {
+      if (h.kind === 'file') out.push(k);
+      else for await (const k2 of h.keys()) out.push(k + '/' + k2);
+    }
+    return out;
+  };
+  const make = URL.createObjectURL;
+  URL.createObjectURL = function (b) { if (b instanceof Blob) R.blobs.push(b); return make.call(this, b); };
+})();`;
+
+// The app's (`--app`): the same record, kept from the native bridge. Every
+// message the page posts it (an `init` is a new player, the node's place);
+// every batch it posts back; any audio context the page makes (none should
+// be); and a way to hand the page's own listener a batch, as the core would.
+const HOOK_APP = `(() => {
+  const R = window.__rows = { nodes: [], events: [], posts: [], kills: [], probes: new Map(), id: 0, clip: null, blobs: [], native: null, contexts: 0, listeners: [], app: true };
+  for (const name of ['AudioContext', 'webkitAudioContext']) {
+    const Real = window[name];
+    if (typeof Real !== 'function') continue;
+    window[name] = class extends Real { constructor(...a) { super(...a); R.contexts++; } };
+  }
+  const hear = (text) => {
+    let batch;
+    try { batch = JSON.parse(text); } catch { return; }
+    for (const m of [].concat(batch)) {
+      if (!m) continue;
+      if (m.type === 'native') R.native = m;
+      if (m.type === 'events') R.events.push({ node: R.nodes.length - 1, at: 0, events: m.events, grids: m.grids || [] });
+      if (m.type === 'probe' && R.probes.has(m.id)) { R.probes.get(m.id)(m); R.probes.delete(m.id); }
+    }
+  };
+  let hooked = false;
+  const hook = () => {
+    const N = window.DriftloomNative;
+    if (hooked || !N) return;
+    hooked = true;
+    const send = N.postMessage.bind(N);
+    const listen = N.addEventListener.bind(N);
+    R.send = (m) => send(JSON.stringify(m));
+    const post = (text) => {
+      try {
+        const m = JSON.parse(text);
+        if (m && m.type === 'init') R.nodes.push({ quality: m.quality });
+        if (m && typeof m.type === 'string' && /^play|^layout/.test(m.type)) R.posts.push({ ...m });
+        if (m && (m.type === 'dispose' || (m.type === 'param' && m.id === 18))) R.kills.push({ ...m, wall: performance.now() });
+      } catch { /* not ours to read */ }
+      return send(text);
+    };
+    const add = (type, fn, ...rest) => {
+      if (type === 'message') R.listeners.push(fn);
+      return listen(type, fn, ...rest);
+    };
+    listen('message', (e) => hear(e.data));
+    try { N.postMessage = post; N.addEventListener = add; } catch { /* read-only */ }
+    if (N.postMessage !== post) {
+      // An object whose methods can't be replaced: the page is given one
+      // that passes everything to it.
+      const shim = { postMessage: post, addEventListener: add, removeEventListener: (...a) => N.removeEventListener(...a) };
+      Object.defineProperty(window, 'DriftloomNative', { configurable: true, value: shim });
+    }
+  };
+  hook();
+  document.addEventListener('readystatechange', hook);
+  // The app's second bridge: a file the page saves goes through
+  // Android's own picker, which a row can't answer. So the rows answer for it:
+  // the page is told it was saved where it asked, and the bytes it sent are
+  // the Blob a download would have been (the MIDI row reads it as ever).
+  R.saves = [];
+  let appHooked = false;
+  const hookApp = () => {
+    const A = window.DriftloomApp;
+    if (appHooked || !A) return;
+    appHooked = true;
+    const sendApp = A.postMessage.bind(A);
+    const listenApp = A.addEventListener.bind(A);
+    const heard = [];
+    let chunks = [];
+    const answer = (id, more) => {
+      const data = JSON.stringify({ type: 'reply', id, ok: true, ...more });
+      setTimeout(() => heard.forEach((fn) => fn({ data })), 0);
+    };
+    const shim = {
+      postMessage(text) {
+        let m = null;
+        try { m = JSON.parse(text); } catch { /* not ours to read */ }
+        if (m && m.type === 'save') { chunks = []; R.saves.push({ name: m.name, mime: m.mime, need: m.need }); return answer(m.id, { name: m.name, free: 1e12, seekable: true }); }
+        if (m && m.type === 'save-write') { chunks.push(Uint8Array.from(atob(m.data), (c) => c.charCodeAt(0))); return answer(m.id, {}); }
+        if (m && m.type === 'save-close') { R.blobs.push(new Blob(chunks)); return answer(m.id, {}); }
+        if (m && m.type === 'save-abort') { chunks = []; return answer(m.id, {}); }
+        return sendApp(text);
+      },
+      addEventListener(type, fn, ...rest) {
+        if (type === 'message') heard.push(fn);
+        return listenApp(type, fn, ...rest);
+      },
+      removeEventListener: (...a) => A.removeEventListener(...a),
+    };
+    Object.defineProperty(window, 'DriftloomApp', { configurable: true, value: shim });
+  };
+  hookApp();
+  document.addEventListener('readystatechange', hookApp);
+  R.inject = (batch) => { for (const fn of R.listeners) fn({ data: JSON.stringify(batch) }); };
+  R.level = () => (R.native ? R.native.level : 0);
+  R.probe = () => new Promise((resolve) => {
+    if (!R.send) return resolve(null);
+    const id = 1e9 + ++R.id;
+    R.probes.set(id, resolve);
+    R.send({ type: 'probe', id });
+    setTimeout(() => resolve(null), 2000);
+  });
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+    writeText: async (t) => { R.clip = t; }, readText: async () => R.clip || '' } });
+  const make = URL.createObjectURL;
+  URL.createObjectURL = function (b) { if (b instanceof Blob) R.blobs.push(b); return make.call(this, b); };
+})();`;
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const rows = [];
+function row(name, ok, detail = '') {
+  rows.push({ name, ok: !!ok, detail });
+  console.log(`  ${ok ? 'pass' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`);
+}
+
+const about = (text) => (text ? Object.fromEntries(text.split('\n').filter(Boolean).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)])) : null);
+
+// FLAC's STREAMINFO from a file's first 42 bytes.
+function streaminfo(b) {
+  if (String.fromCharCode(...b.slice(0, 4)) !== 'fLaC') return null;
+  const si = b.slice(8);
+  return {
+    rate: (si[10] << 12) | (si[11] << 4) | (si[12] >> 4),
+    channels: ((si[12] >> 1) & 7) + 1,
+    bits: (((si[12] & 1) << 4) | (si[13] >> 4)) + 1,
+    total: (si[13] & 0x0f) * 2 ** 32 + ((si[14] << 24) >>> 0) + (si[15] << 16) + (si[16] << 8) + si[17],
+  };
+}
+
+// An exported Ogg Opus file's facts: every page's checksum
+// is verified (the reader throws on one that fails); the headers, the end of
+// stream and the granule positions as RFC 7845 has them.
+// OpusTags may take several pages (the cover in it): the packets
+// are read joined, and the audio's pages are those after it.
+function oggFacts(bytes) {
+  const ps = pages(bytes);
+  const all = joined(ps);
+  const head = all[0] && all[0].packet;
+  const tags = all[1] && all[1].packet;
+  const ascii = (b, n) => String.fromCharCode(...b.slice(0, n));
+  if (!head || ascii(head, 8) !== 'OpusHead') return null;
+  const preSkip = head[10] | (head[11] << 8);
+  const last = ps[ps.length - 1];
+  const audioFrom = all[1] ? all[1].page + 1 : 2;
+  return {
+    pages: ps.length,
+    channels: head[9],
+    preSkip,
+    beginning: ps[0].flags === 2,
+    tagged: !!tags && ascii(tags, 8) === 'OpusTags' && (ps[1].flags & 1) === 0 && ps.slice(1, audioFrom).every((p) => p.granule === 0),
+    comments: tags ? vorbisList(tags, 8) : [],
+    end: (last.flags & 4) === 4 && ps.slice(0, -1).every((p) => (p.flags & 4) === 0),
+    ordered: ps.every((p, i) => p.sequence === i && (i <= audioFrom || p.granule >= ps[i - 1].granule)),
+    frames: last.granule - preSkip,
+    packets: all.length - 2,
+    // The header pages' bytes (the tags and the cover in them).
+    headerBytes: ps.slice(0, audioFrom).reduce((n, p) => n + p.size, 0),
+  };
+}
+
+// A Vorbis comment list (OpusTags after its magic, FLAC's VORBIS_COMMENT
+// block's body) as "KEY=value" strings.
+function vorbisList(b, at = 0) {
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const dec = new TextDecoder();
+  let p = at + 4 + v.getUint32(at, true);
+  const n = v.getUint32(p, true);
+  p += 4;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const l = v.getUint32(p, true);
+    out.push(dec.decode(b.subarray(p + 4, p + 4 + l)));
+    p += 4 + l;
+  }
+  return out;
+}
+
+// A FLAC file's metadata blocks after STREAMINFO: its comments,
+// and its picture's size and type.
+function flacTags(b) {
+  if (String.fromCharCode(...b.slice(0, 4)) !== 'fLaC') return null;
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  let p = 4;
+  const out = { comments: [], picture: null, blocks: [] };
+  for (;;) {
+    const h = b[p];
+    const len = (b[p + 1] << 16) | (b[p + 2] << 8) | b[p + 3];
+    const type = h & 0x7f;
+    out.blocks.push(type);
+    if (type === 4) out.comments = vorbisList(b.subarray(p + 4, p + 4 + len));
+    if (type === 6) {
+      const q = p + 4;
+      const ml = v.getUint32(q + 4);
+      const mime = String.fromCharCode(...b.subarray(q + 8, q + 8 + ml));
+      const dl = v.getUint32(q + 8 + ml);
+      const r = q + 12 + ml + dl;
+      out.picture = { kind: v.getUint32(q), mime, width: v.getUint32(r), height: v.getUint32(r + 4), bytes: v.getUint32(r + 16) };
+    }
+    p += 4 + len;
+    if (h & 0x80 || p >= b.length) break;
+  }
+  return out;
+}
+
+// The entries of a stored zip, from its central directory: name,
+// its bytes' place and size, and whether its checksum is good.
+function zipEntries(b) {
+  const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+  const end = b.length - 22;
+  if (end < 0 || v.getUint32(end, true) !== 0x06054b50) return null;
+  const count = v.getUint16(end + 10, true);
+  let p = v.getUint32(end + 16, true);
+  const dec = new TextDecoder();
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    if (v.getUint32(p, true) !== 0x02014b50) return null;
+    const crc = v.getUint32(p + 16, true);
+    const size = v.getUint32(p + 20, true);
+    const nl = v.getUint16(p + 28, true);
+    const name = dec.decode(b.subarray(p + 46, p + 46 + nl));
+    const local = v.getUint32(p + 42, true);
+    const data = local + 30 + v.getUint16(local + 26, true) + v.getUint16(local + 28, true);
+    const bytes = b.subarray(data, data + size);
+    out.push({ name, method: v.getUint16(p + 10, true), size, bytes, good: zipCrc(bytes) === crc && v.getUint32(local + 14, true) === crc });
+    p += 46 + nl;
+  }
+  return out;
+}
+
+// The Track length view set to `secs` seconds (null: on and
+// on) with its fades, as a listener sets it: the Vibe panel's pace key, the
+// time typed, the fade keys, done (back on the Vibe panel). `evf` evaluates
+// in the page; returns what the pace key then shows.
+const trackTo = (evf, secs, fades = {}) => evf(([t, fadeIn, fadeOut]) => {
+  document.getElementById('vibesBtn').click();
+  document.querySelector('#picksList .pk-track').click();
+  const on = document.getElementById('trkOn');
+  if (t == null) {
+    if (on.getAttribute('aria-pressed') !== 'true') on.click();
+  } else {
+    const n = document.getElementById('trkNum');
+    const two = (x) => String(x).padStart(2, '0');
+    n.value = `${Math.floor(t / 3600)}:${two(Math.floor((t % 3600) / 60))}:${two(t % 60)}`;
+    n.dispatchEvent(new Event('blur'));
+  }
+  const press = (id, want) => {
+    const b = document.getElementById(id);
+    if (!b.disabled && (b.getAttribute('aria-pressed') === 'true') !== want) b.click();
+  };
+  press('trkFadeIn', !!fadeIn);
+  press('trkFadeOut', fadeOut !== false);
+  document.getElementById('trkDone').click();
+  return document.querySelector('#picksList .pk-track').textContent;
+}, [secs, fades.fadeIn, fades.fadeOut]);
+
+// The audio export's rows, on the page playing. An
+// export is as long as the track length (`trackTo`); a loop
+// that plays on asks how long first.
+async function exportRows({ page, ev, probe, level, diag, clickId, browser }) {
+  const origin = `http://127.0.0.1:${PORT}`;
+  const cdp = await page.context().newCDPSession(page);
+  const share = () => ev(() => {
+    if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+    document.querySelector('[data-stab="share"]').click();
+    document.getElementById('goExport').click();
+  });
+  // A format's key starts its export.
+  const exportKey = (format) => ev((f) => document.querySelector(`[data-format="${f}"]`).click(), format);
+  const sheet = () => ev(() => ({
+    choose: !document.getElementById('exportChoose').hidden,
+    run: !document.getElementById('exportRun').hidden,
+    done: !document.getElementById('exportDone').hidden,
+    failed: !document.getElementById('exportFailed').hidden,
+    why: document.getElementById('exportWhy').textContent,
+    saved: document.getElementById('exportSaved').textContent,
+    about: document.getElementById('exportAbout').textContent,
+    asks: document.querySelector('[data-format="lossless"]').dataset.asks || '',
+    hint: document.getElementById('exportHint').textContent,
+    lossless: !document.querySelector('[data-format="lossless"]').hidden,
+    small: !document.querySelector('[data-format="small"]').hidden,
+  }));
+  // The Worker's next word of `types` after `from`, or null after `ms`.
+  const said = async (types, from, ms) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < ms) {
+      const m = await ev((n) => window.__rows.exports.slice(n), from);
+      const hit = m.find((x) => types.includes(x.type));
+      if (hit) return hit;
+      await sleep(250);
+    }
+    return null;
+  };
+  const count = () => ev(() => window.__rows.exports.length);
+  const lateLine = async () => (await diag()).split('\n').find((l) => l.startsWith('engine:')) || '';
+  const nothingLate = (line) => /late: 0\s+missed: 0\s+dropped: 0/.test(line);
+  // Three seconds of listening (1.5 s fell in a quiet start once
+  // in forty runs, a new loop opening after the track's end), on the fixed
+  // busy loop (below): what was heard is kept for the row's words.
+  let heard = '';
+  const playing = async () => {
+    const p = await probe();
+    const lv = await level(3000);
+    heard = `state ${p && p.player.state}, level ${lv.toExponential(1)}`;
+    return p && p.player.state === 3 && lv > 1e-4;
+  };
+  const setLite = async (on) => {
+    const now = await ev(() => document.getElementById('liteMode').getAttribute('aria-checked') === 'true');
+    if (now !== on) {
+      await clickId('liteMode');
+      await sleep(3500);
+    }
+  };
+
+  console.log('\n  export audio (queue items 104b and 104c; its length the track\'s, session 30c)');
+  // The fixed busy loop the rows begin with, pasted again:
+  // the loop the picks' Next drew is any loop, and a sparse one is silent
+  // for seconds at a time (neisk-nesk, run 45271085229: up to 6 s), which
+  // a "music on" row then reads as stopped.
+  await ev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
+  await clickId('pasteCode');
+  await sleep(3500);
+  // On and on: the export asks how long first.
+  await trackTo(ev, null);
+  await share();
+  await sleep(1200);
+  let s = await sheet();
+  const exportsBefore = await count();
+  await exportKey('lossless');
+  await sleep(400);
+  const asked = await ev(() => !document.getElementById('viewTrack').hidden);
+  await clickId('trkCancel');
+  await sleep(400);
+  const back = await ev(() => !document.getElementById('viewExport').hidden && !document.getElementById('exportChoose').hidden);
+  row('export audio: export flac and export opus (this browser can encode Opus); a loop that plays on asks how long first (nothing on screen, its key\'s description saying so), its key opening the Track length view, cancel back to the Export view with nothing started',
+    s.choose && s.lossless && s.small && s.asks === 'length' && s.about === '' && /set how long first/.test(s.hint) && asked && back && (await count()) === exportsBefore, `${s.hint}; asked ${asked}, back ${back}`);
+  // A minute: the sheet says it, and done in the view from the export goes
+  // on to export it (the rows below set it from the Vibe panel).
+  await trackTo(ev, 60);
+  await share();
+  await sleep(600);
+  s = await sheet();
+  row('export audio: with a track length set, the export is as long as the track, and says so', s.asks === '' && /^1 min · flac ~\d+ MB, opus ~\d+ MB$/.test(s.about) && /^As long as the track: 1 min\./.test(s.hint), `${s.about}; ${s.hint}`);
+
+  // A minute, both speeds.
+  const speeds = {};
+  for (const lite of [false, true]) {
+    await setLite(lite);
+    await trackTo(ev, 60);
+    await share();
+    const from = await count();
+    const progress = await ev(() => window.__rows.exportProgress);
+    await exportKey('lossless');
+    const done = await said(['done', 'failed', 'cancelled'], from, 240000);
+    const meanwhile = await playing();
+    const start = await ev(() => window.__rows.exportStart);
+    const file = await ev(async () => {
+      const f = await window.__rows.picked.getFile();
+      return { size: f.size, head: [...new Uint8Array(await f.slice(0, 42).arrayBuffer())] };
+    });
+    const si = streaminfo(file.head);
+    s = await sheet();
+    const moved = (await ev(() => window.__rows.exportProgress)) - progress;
+    const line = await lateLine();
+    const pace = lite ? 'gentle' : 'fast';
+    speeds[pace] = done && done.took ? done.seconds / done.took : 0;
+    row(`export audio (${pace}): a minute to the file chosen, written as it went, a FLAC of the loop playing that ends where the core says, the music on and nothing late`,
+      done && done.type === 'done' && start.pace === pace && start.sink === 'handle' && file.size === done.bytes && si && si.rate === 44100 && si.bits === 16 && si.total === done.frames
+      && done.seconds >= 60 && done.seconds < 60 + 30 && moved >= 2 && !done.counts.late && !done.counts.missed && !done.counts.dropped && s.done && meanwhile && nothingLate(line),
+      `${done && done.type} ${done && done.why || ''}, ${file.size} of ${done && done.bytes} bytes, ${si && si.total} frames, ${done && done.seconds && done.seconds.toFixed(1)} s in ${done && done.took && done.took.toFixed(1)} s (${speeds[pace].toFixed(1)}x), ${moved} progress reports; ${start.pace} to ${start.sink}; ${s.done ? 'done shown' : 'no done'}; ${meanwhile ? 'playing' : 'not playing'}; ${s.saved}; ${line}`);
+    await clickId('exportDoneBtn');
+  }
+  row('export audio: gentle ("lighter on processor" on) is slower than fast, and both faster than real time', speeds.fast > speeds.gentle && speeds.gentle > 1, `fast ${speeds.fast.toFixed(1)}x, gentle ${speeds.gentle.toFixed(1)}x real time`);
+  await setLite(false);
+
+  // Cancel.
+  await trackTo(ev, 600);
+  await share();
+  let from = await count();
+  await exportKey('lossless');
+  await sleep(1500);
+  await clickId('exportCancel');
+  let m = await said(['cancelled', 'done', 'failed'], from, 30000);
+  s = await sheet();
+  let files = await ev(() => window.__rows.opfs());
+  let on = await playing();
+  let late = await lateLine();
+  row('export audio: Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && s.why === 'Canceled.' && !files.includes('picked.flac') && on && nothingLate(late),
+    `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}; ${heard}; ${late}`);
+  await clickId('exportOk');
+
+  // The free space checked first.
+  const usage = await ev(async () => (await navigator.storage.estimate()).usage);
+  await cdp.send('Storage.overrideQuotaForOrigin', { origin, quotaSize: usage + 1e6 });
+  await trackTo(ev, 3600);
+  await share();
+  from = await count();
+  const before = await ev(() => window.__rows.exportStart);
+  await exportKey('lossless');
+  await sleep(1500);
+  s = await sheet();
+  const after = await ev(() => window.__rows.exportStart);
+  row('export audio: free space checked first: too little says so plainly, and nothing starts', s.failed && /^Not enough space: needs /.test(s.why) && JSON.stringify(before) === JSON.stringify(after) && (await count()) === from,
+    s.why);
+  await cdp.send('Storage.overrideQuotaForOrigin', { origin });
+  await clickId('exportOk');
+  await probe();
+
+  // Small (104c): a minute to the file chosen, then Cancel.
+  await trackTo(ev, 60);
+  await share();
+  await sleep(400);
+  s = await sheet();
+  const smallAbout = s.about;
+  from = await count();
+  const progress0 = await ev(() => window.__rows.exportProgress);
+  await exportKey('small');
+  const small = await said(['done', 'failed', 'cancelled'], from, 240000);
+  const smallMeanwhile = await playing();
+  const smallStart = await ev(() => window.__rows.exportStart);
+  const smallGot = await ev(async () => {
+    const f = await window.__rows.picked.getFile();
+    const b = new Uint8Array(await f.arrayBuffer());
+    let bin = '';
+    for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode(...b.subarray(i, i + 0x8000));
+    let decoded;
+    try { decoded = (await new OfflineAudioContext(2, 1, 48000).decodeAudioData(b.buffer.slice(0))).length; } catch (e) { decoded = String(e); }
+    return { name: f.name, size: f.size, base64: bin ? btoa(bin) : '', decoded };
+  });
+  let ogg = null;
+  let oggWhy = '';
+  try { ogg = oggFacts(new Uint8Array(Buffer.from(smallGot.base64, 'base64'))); } catch (e) { oggWhy = e.message; }
+  s = await sheet();
+  const smallMoved = (await ev(() => window.__rows.exportProgress)) - progress0;
+  const smallLine = await lateLine();
+  // The audio's bytes a second: the file less its header pages (the tags
+  // and the cover), which the sheet's size allows for in its tail.
+  const rate = small && small.seconds && ogg ? (smallGot.size - ogg.headerBytes) / small.seconds : 0;
+  row('export audio (small): a minute to the file chosen, written as it went, an Ogg Opus file whose end and length are the Worker\'s frames to the sample, the browser decodes it, the music on and nothing late',
+    small && small.type === 'done' && small.format === 'opus' && smallStart.sink === 'handle' && smallStart.job.format === 'opus' && /\.opus$/.test(smallStart.name) && smallGot.name === 'picked.opus' && smallGot.size === small.bytes
+    && ogg && ogg.beginning && ogg.tagged && ogg.end && ogg.ordered && ogg.channels === 2 && ogg.preSkip > 0 && ogg.frames === small.frames && smallGot.decoded === small.frames
+    && small.seconds >= 60 && small.seconds < 60 + 30 && smallMoved >= 2 && !small.counts.late && !small.counts.missed && !small.counts.dropped && s.done && smallMeanwhile && nothingLate(smallLine),
+    `${small && small.type} ${small && small.why || ''}, ${smallGot.size} bytes, ${ogg ? `${ogg.pages} pages, ${ogg.packets} packets, pre-skip ${ogg.preSkip}, ${ogg.frames} frames` : oggWhy}; the browser decoded ${smallGot.decoded} frames; ${small && small.seconds && small.seconds.toFixed(1)} s in ${small && small.took && small.took.toFixed(1)} s; ${smallMoved} progress reports; ${s.saved}; ${smallLine}`);
+  row('export audio (small): the size is the constant bit rate (96 kbit/s stereo, 12,000 bytes a second and the pages) and the sheet said about so', rate > 11500 && rate < 12700 && /opus ~\d+ MB$/.test(smallAbout), `${Math.round(rate)} bytes a second of audio, ${ogg ? ogg.headerBytes : '?'} bytes of headers; ${smallAbout}`);
+  await clickId('exportDoneBtn');
+  await trackTo(ev, 600);
+  await share();
+  from = await count();
+  await exportKey('small');
+  await sleep(1500);
+  await clickId('exportCancel');
+  m = await said(['cancelled', 'done', 'failed'], from, 30000);
+  s = await sheet();
+  files = await ev(() => window.__rows.opfs());
+  on = await playing();
+  late = await lateLine();
+  row('export audio (small): Cancel leaves no file, the music playing and nothing late', m && m.type === 'cancelled' && s.failed && s.why === 'Canceled.' && !files.includes('picked.opus') && on && nothingLate(late),
+    `${m && m.type}; ${s.why}; files ${files.join(',') || 'none'}; ${heard}; ${late}`);
+  await clickId('exportOk');
+
+  // The format pressed is kept through the Track length view, and an export
+  // under way is still there on the way back into Export.
+  await trackTo(ev, null);
+  await share();
+  from = await count();
+  await exportKey('small');
+  await sleep(400);
+  await ev(() => {
+    const n = document.getElementById('trkNum');
+    n.value = '10:00';
+    n.dispatchEvent(new Event('blur'));
+    document.getElementById('trkDone').click();
+  });
+  await sleep(1500);
+  const went = await ev(() => ({ view: !document.getElementById('viewExport').hidden, format: window.__rows.exportStart && window.__rows.exportStart.job.format }));
+  await clickId('exportBack');
+  const atShare = await ev(() => !document.getElementById('viewSave').hidden && !document.getElementById('saveShare').hidden);
+  await clickId('goExport');
+  const again = await sheet();
+  await clickId('exportCancel');
+  m = await said(['cancelled', 'done', 'failed'], from, 30000);
+  row('export view: done in Track length goes on with the format pressed; back to Share and in again, the export is still under way', went.view && went.format === 'opus' && atShare && again.run && m && m.type === 'cancelled', `${JSON.stringify(went)}, share ${atShare}, running ${again.run}, ${m && m.type}`);
+  await clickId('exportOk');
+  await probe();
+
+  // The private file, and a disk that fills while it is written: another
+  // tab, with no save picker (as Android's Chrome and Safari have none).
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  const bad = [];
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(HOOK);
+  await tab.addInitScript(() => { window.showSaveFilePicker = undefined; });
+  await tab.goto(`${origin}/`);
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  const tshare = () => tev(() => {
+    if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+    document.querySelector('[data-stab="share"]').click();
+    document.getElementById('goExport').click();
+  });
+  const tkey = (format) => tev((f) => document.querySelector(`[data-format="${f}"]`).click(), format);
+  // A finite piece with no track length set exports whole.
+  await tev((code) => { window.__rows.clip = code; }, LOOPS.piece.code);
+  await tev(() => document.getElementById('pasteCode').click());
+  await sleep(3000);
+  await tshare();
+  await sleep(1500);
+  const whole = await tev(() => ({ about: document.getElementById('exportAbout').textContent, asks: document.querySelector('[data-format="lossless"]').dataset.asks || '' }));
+  row('export audio: a finite piece with no track length set exports whole, and says so', whole.asks === '' && /^\d+ h/.test(whole.about), whole.about);
+  await tev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
+  await tev(() => document.getElementById('pasteCode').click());
+  await sleep(3000);
+  await trackTo(tev, 60);
+  await tshare();
+  await sleep(1200);
+  const blobs = await tev(() => window.__rows.blobs.length);
+  await tkey('lossless');
+  let t0 = Date.now();
+  let done = null;
+  while (Date.now() - t0 < 240000 && !done) {
+    await sleep(500);
+    done = (await tev(() => window.__rows.exports)).find((x) => x.type === 'done' || x.type === 'failed');
+  }
+  const got = await tev(async (n) => {
+    const b = window.__rows.blobs[n];
+    return b ? { size: b.size, head: [...new Uint8Array(await b.slice(0, 42).arrayBuffer())] } : null;
+  }, blobs);
+  const start = await tev(() => window.__rows.exportStart);
+  const si = got && streaminfo(got.head);
+  row('export audio, with no save picker: written to the private file as it went, a download at the end', done && done.type === 'done' && start.sink === 'private' && got && got.size === done.bytes && si && si.total === done.frames,
+    `${done && done.type} ${done && done.why || ''}, ${got && got.size} bytes`);
+  await tev(() => document.getElementById('exportDoneBtn').click());
+
+  // A disk that fills mid-export: the quota made small once it is writing.
+  const tcdp = await tab.context().newCDPSession(tab);
+  await trackTo(tev, 1800);
+  await tshare();
+  const n0 = (await tev(() => window.__rows.exports)).length;
+  await tkey('lossless');
+  t0 = Date.now();
+  while (Date.now() - t0 < 30000 && (await tev(() => window.__rows.exportProgress)) < 3) await sleep(250);
+  const used = await tev(async () => (await navigator.storage.estimate()).usage);
+  await tcdp.send('Storage.overrideQuotaForOrigin', { origin, quotaSize: used + 256 * 1024 });
+  t0 = Date.now();
+  let end = null;
+  while (Date.now() - t0 < 120000 && !end) {
+    await sleep(500);
+    end = (await tev(() => window.__rows.exports)).slice(n0).find((x) => ['done', 'failed', 'cancelled'].includes(x.type));
+  }
+  await tcdp.send('Storage.overrideQuotaForOrigin', { origin });
+  files = await tev(() => window.__rows.opfs());
+  const why = await tev(() => document.getElementById('exportWhy').textContent);
+  const tp = await tev(() => window.__rows.probe());
+  const tl = await tev(async () => { let w = 0; for (let i = 0; i < 15; i++) { w = Math.max(w, window.__rows.level()); await new Promise((r) => setTimeout(r, 100)); } return w; });
+  row('export audio: a disk that fills mid-export ends with the plain message, no file left, the music playing', end && end.type === 'failed' && end.why === 'space' && /^Out of space/.test(why) && !files.some((f) => f.startsWith('exports/') && f.endsWith('.flac')) && tp && tp.player.state === 3 && tl > 1e-4,
+    `${end && end.type} ${end && end.why || ''}; ${why}; files ${files.join(',') || 'none'}`);
+  await tev(() => document.getElementById('exportOk').click());
+
+  // Small in the same tab: the private file, and a disk that fills.
+  await trackTo(tev, 60);
+  await tshare();
+  const blobs2 = await tev(() => window.__rows.blobs.length);
+  const n1 = (await tev(() => window.__rows.exports)).length;
+  await tkey('small');
+  t0 = Date.now();
+  let done2 = null;
+  while (Date.now() - t0 < 240000 && !done2) {
+    await sleep(500);
+    done2 = (await tev(() => window.__rows.exports)).slice(n1).find((x) => x.type === 'done' || x.type === 'failed');
+  }
+  const got2 = await tev(async (n) => {
+    const b = window.__rows.blobs[n];
+    if (!b) return null;
+    const u = new Uint8Array(await b.arrayBuffer());
+    let bin = '';
+    for (let i = 0; i < u.length; i += 0x8000) bin += String.fromCharCode(...u.subarray(i, i + 0x8000));
+    return { size: b.size, base64: btoa(bin) };
+  }, blobs2);
+  const start2 = await tev(() => window.__rows.exportStart);
+  let ogg2 = null;
+  try { ogg2 = got2 && oggFacts(new Uint8Array(Buffer.from(got2.base64, 'base64'))); } catch { ogg2 = null; }
+  row('export audio (small), with no save picker: written to the private file as it went, an Ogg Opus file downloaded at the end', done2 && done2.type === 'done' && done2.format === 'opus' && start2.sink === 'private' && got2 && got2.size === done2.bytes && ogg2 && ogg2.end && ogg2.ordered && ogg2.frames === done2.frames,
+    `${done2 && done2.type} ${done2 && done2.why || ''}, ${got2 && got2.size} bytes, ${ogg2 ? ogg2.frames : '?'} frames`);
+  await tev(() => document.getElementById('exportDoneBtn').click());
+  await trackTo(tev, 3600);
+  await tshare();
+  const n2 = (await tev(() => window.__rows.exports)).length;
+  await tkey('small');
+  t0 = Date.now();
+  while (Date.now() - t0 < 30000 && (await tev(() => window.__rows.exportProgress)) < 6) await sleep(250);
+  const used2 = await tev(async () => (await navigator.storage.estimate()).usage);
+  await tcdp.send('Storage.overrideQuotaForOrigin', { origin, quotaSize: used2 + 128 * 1024 });
+  t0 = Date.now();
+  let end2 = null;
+  while (Date.now() - t0 < 120000 && !end2) {
+    await sleep(500);
+    end2 = (await tev(() => window.__rows.exports)).slice(n2).find((x) => ['done', 'failed', 'cancelled'].includes(x.type));
+  }
+  await tcdp.send('Storage.overrideQuotaForOrigin', { origin });
+  files = await tev(() => window.__rows.opfs());
+  const why2 = await tev(() => document.getElementById('exportWhy').textContent);
+  const tp2 = await tev(() => window.__rows.probe());
+  row('export audio (small): a disk that fills mid-export ends with the plain message, no file left, the music playing', end2 && end2.type === 'failed' && end2.why === 'space' && /^Out of space/.test(why2) && !files.some((f) => f.startsWith('exports/') && f.endsWith('.opus')) && tp2 && tp2.player.state === 3,
+    `${end2 && end2.type} ${end2 && end2.why || ''}; ${why2}; files ${files.join(',') || 'none'}`);
+  row('export audio: no page errors in the tab with no save picker', bad.length === 0, bad.join('; '));
+  await tab.close();
+  // The loop playing back on and on, so no track ends under the rows after.
+  await trackTo(ev, null);
+  await share();
+  await sleep(500);
+
+  // A browser with no Opus encoder (the Worker's taken away: the sheet's
+  // choice is the Worker's word; what the page posts before the Worker's
+  // module has loaded is kept and handed to it): Small is not offered,
+  // Lossless is.
+  const bare = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  const bareBad = [];
+  bare.on('pageerror', (e) => bareBad.push(e.message));
+  await bare.addInitScript(HOOK);
+  await bare.addInitScript(() => {
+    const Real = window.Worker;
+    window.Worker = class extends Real {
+      constructor(url, options) {
+        let u = url;
+        if (String(url).includes('export-worker')) {
+          const abs = new URL(String(url), location.href).href;
+          u = URL.createObjectURL(new Blob([`self.AudioEncoder = undefined; const early = []; const keep = (e) => early.push(e); self.addEventListener('message', keep); await import(${JSON.stringify(abs)}); self.removeEventListener('message', keep); for (const e of early) self.onmessage(e);`], { type: 'text/javascript' }));
+        }
+        super(u, options);
+      }
+    };
+  });
+  await bare.goto(`${origin}/`);
+  await bare.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  await bare.evaluate((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
+  await bare.evaluate(() => document.getElementById('pasteCode').click());
+  await sleep(3000);
+  await bare.evaluate(() => {
+    if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+    document.querySelector('[data-stab="share"]').click();
+    document.getElementById('goExport').click();
+  });
+  await sleep(1500);
+  const seen = await bare.evaluate(() => ({
+    lossless: !document.querySelector('[data-format="lossless"]').hidden,
+    small: !document.querySelector('[data-format="small"]').hidden,
+    go: !document.querySelector('[data-format="lossless"]').disabled,
+    about: document.getElementById('exportAbout').textContent,
+  }));
+  row('export audio: where the browser has no Opus encoder, Small is not offered and Lossless still is', seen.lossless && !seen.small && seen.go && /^$|^[^·]+ · flac ~\d+ MB$/.test(seen.about) && bareBad.length === 0, `${JSON.stringify(seen)} ${bareBad.join('; ')}`);
+  await bare.close();
+}
+
+// The app's own rows (`--app`), on the page playing.
+async function appRows({ ev, diag, clickId, level, probe }) {
+  const line = (t, k) => t.split('\n').find((l) => l.startsWith(`${k}:`)) || '';
+  {
+    const seen = await ev(() => ({ contexts: window.__rows.contexts, audio: document.querySelectorAll('audio').length }));
+    const keep = line(await diag(), 'keepalive');
+    row('app: the WebView plays no audio of its own (no audio context, no keepalive element)', seen.contexts === 0 && seen.audio === 0 && /native/.test(keep), `${seen.contexts} contexts, ${seen.audio} audio elements; ${keep}`);
+  }
+  {
+    const t = await diag();
+    const engine = line(t, 'engine');
+    const stream = line(t, 'stream');
+    row('app: Diagnostics says the native core, its late, missed and dropped counts and the stream\'s underruns', /^engine: native \(the core's player\)\s+late: \d+\s+missed: \d+\s+dropped: \d+.*underruns: \d+/.test(engine) && /^stream: running/.test(stream), `${engine} | ${stream}`);
+  }
+  {
+    // Promise 1: the page's main thread blocked for five seconds; the core
+    // plays on through it, its clock keeping time with the wall's, its
+    // output sounding throughout, no underrun, nothing late.
+    const n0 = await ev(() => window.__rows.native);
+    const t0 = Date.now();
+    await ev(() => { const t = Date.now(); while (Date.now() - t < 5000) { /* busy */ } });
+    const blocked = Date.now() - t0;
+    await sleep(2500);
+    const n1 = await ev(() => window.__rows.native);
+    const wall = (Date.now() - t0) / 1000;
+    const clock = n1.time - n0.time;
+    const sounding = n1.sounding - n0.sounding;
+    const p = await probe();
+    row('app: the page\'s main thread blocked for 5 s, the music plays on (promise 1)', blocked >= 4900 && Math.abs(clock - wall) < 1.0 && sounding >= clock - 0.5 && n1.underruns === n0.underruns && p && p.player.state === 3 && p.late === 0,
+      `blocked ${blocked} ms; the core's clock ${clock.toFixed(2)} s in ${wall.toFixed(2)} s, ${sounding.toFixed(2)} s sounding; underruns ${n0.underruns} -> ${n1.underruns}; late ${p && p.late}`);
+  }
+  {
+    // The too-slow line can't show in the app: on lite, a minute of
+    // reports with every quarter-second behind (in a browser, the line
+    // after twenty seconds), handed to the page as the core hands them.
+    const isLite = () => ev(() => document.getElementById('liteMode').getAttribute('aria-checked'));
+    const was = await isLite();
+    if (was !== 'true') {
+      await clickId('liteMode');
+      await sleep(3000);
+    }
+    const lite = await isLite();
+    await ev(() => {
+      const busy = { max: 1.5, behind: 8, windows: 8, seconds: 2 };
+      for (let i = 0; i < 30; i++) window.__rows.inject([{ type: 'cost', ms: [0, 0], seconds: [0, 0], busy }]);
+    });
+    await sleep(500);
+    const shown = await ev(() => !document.getElementById('plainLine').hidden);
+    const slow = line(await diag(), 'slow');
+    row('app: the too-slow line can\'t show (lite, a minute of reports every quarter-second behind)', lite === 'true' && !shown && slow === 'slow: no', `lite ${lite}, line ${shown ? 'shown' : 'hidden'}, ${slow}`);
+    if (was !== 'true') {
+      await clickId('liteMode');
+      await sleep(3000);
+    }
+    row('app: and the music plays on', (await level(1500)) > 1e-4);
+  }
+}
+
+// The app's page (`--app`), with the hooks in, loaded afresh.
+async function openApp() {
+  const { AppPage } = await import('../android/cdp.mjs');
+  const page = await AppPage.open({ cdp: CDP, ms: 90000, log: (...a) => console.log(' ', ...a) });
+  await page.addInitScript(HOOK_APP);
+  await page.reload();
+  return page;
+}
+
+// The Layers view against the core, in the page: the dots of
+// the bar shown are each step's Heard event where the step is decided (the
+// loudness of what each layer sounded), and the core's grid of the pass heard
+// where it is not yet; a bar of some pass seen fits every layer. A row each
+// in the app's rows and the long piece's; `DRAWN_LEAST` is the page's own line
+// for a note too quiet to draw.
+async function layersFit() {
+  const { unpackHeard, DRAWN_LEAST } = await import('/js/heard.js');
+  const R = window.__rows;
+  const last = R.nodes.length - 1;
+  const layers = ['drums', 'bass', 'chords', 'melody', 'texture'];
+  const dots = layers.map((l) => [...document.querySelectorAll(`.layer[data-layer="${l}"] .pattern span`)].map((d) => (d.classList.contains('on') ? 1 : 0)));
+  const spb = dots[0].length;
+  // The events since the last loop or jump (its steps count from it).
+  const heard = new Map();
+  const starts = [];
+  let grids = [];
+  for (const b of R.events) {
+    if (b.node !== last) continue;
+    const gridOf = new Map(b.grids.map((g) => [g.at, g.grid]));
+    for (let k = 0; k < b.events.length; k += 4) {
+      const kind = b.events[k + 1];
+      const step = b.events[k + 3];
+      if (kind === 4 || kind === 8) { heard.clear(); starts.length = 0; grids = []; }
+      if (gridOf.has(k / 4)) grids.push(gridOf.get(k / 4));
+      if (kind === 9) heard.set(step, unpackHeard(b.events[k + 2]).loud);
+      if (kind === 0) { const from = step - b.events[k + 2]; if (!starts.includes(from)) starts.push(from); }
+    }
+  }
+  const tried = { grids: grids.length, starts: starts.length, heard: heard.size };
+  for (const g of grids.slice(-3)) {
+    for (const from of starts.slice(-2)) {
+      for (let bar = 0; bar < 64; bar++) {
+        const fits = layers.every((_, i) => {
+          const row = g[i];
+          return dots[i].every((on, k) => {
+            const h = heard.get(from + bar * spb + k);
+            const v = h ? h[i] : row.length ? row[(bar * spb + k) % row.length] : 0;
+            return on === (v >= DRAWN_LEAST ? 1 : 0);
+          });
+        });
+        if (fits) return { ok: true, bar, ...tried };
+      }
+    }
+  }
+  return { ok: false, ...tried, dots: dots.map((d) => d.join('')).join(' ') };
+}
+
+// A long piece's quiet section drawn quiet, in a page of its
+// own: a 128-bar arc whose opening holds its layers under their full level
+// (the plan's level, and the kit and the bass still coming in), opened by its
+// link, in the Layers view. Every layer the core has heard under 0.95 of its
+// level for the last two seconds (its Heard events' share) is drawn dimmer:
+// its dots at that share (the page's tenths, at least 0.3); every layer heard
+// at full, at full. Read three times, a few seconds apart; then the dots are
+// the core's.
+async function quietRows(browser) {
+  console.log('\n  a long piece\'s quiet section (queue item 110)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(HOOK);
+  await tab.goto(linkOf(`${ORIGIN}/`, encodeSong(newSpec(11, 'bars=128,journey=arc'))));
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1800);
+  await tab.click('#playBtn');
+  await tab.evaluate(() => { if (document.querySelector('.view:not([hidden])').dataset.view !== 'layers') document.getElementById('viewBtn').click(); });
+  await sleep(12000);
+  const reads = [];
+  for (let n = 0; n < 3; n++) {
+    reads.push(await tab.evaluate(async () => {
+      const { unpackHeard } = await import('/js/heard.js');
+      const R = window.__rows;
+      const last = R.nodes.length - 1;
+      const layers = ['drums', 'bass', 'chords', 'melody', 'texture'];
+      const now = R.events.length ? R.events[R.events.length - 1].at : 0;
+      const shares = layers.map(() => []);
+      for (const b of R.events) {
+        if (b.node !== last || b.at < now - 2) continue;
+        for (let k = 0; k < b.events.length; k += 4) if (b.events[k + 1] === 9) unpackHeard(b.events[k + 2]).share.forEach((s, i) => shares[i].push(s));
+      }
+      const want = (s) => (s < 0.95 ? Math.round(10 * Math.max(0.3, s)) / 10 : 1);
+      const out = layers.map((l, i) => {
+        const lo = Math.min(...shares[i]);
+        const hi = Math.max(...shares[i]);
+        const on = [...document.querySelectorAll(`.layer[data-layer="${l}"] .pattern span.on`)];
+        const drawn = on.map((d) => (d.dataset.shade ? Number(d.dataset.shade) : 1));
+        // How solid the dot's middle is drawn (since v197 a soft note is a
+        // full ring with a fainter middle: its fill's alpha, as painted).
+        const px = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+        const looks = on.map((d) => {
+          const cs = getComputedStyle(d);
+          px.clearRect(0, 0, 1, 1);
+          px.fillStyle = cs.backgroundColor;
+          px.fillRect(0, 0, 1, 1);
+          return (px.getImageData(0, 0, 1, 1).data[3] / 255) * Number(cs.opacity);
+        });
+        // Steady (the share held for the two seconds): every dot at it.
+        const steady = want(lo) === want(hi);
+        const ok = !shares[i].length || !steady || drawn.every((v) => v === want(lo));
+        return { layer: l, share: shares[i].length ? `${lo.toFixed(2)}..${hi.toFixed(2)}` : '-', dots: on.length, drawn: [...new Set(drawn)].join('/'), quiet: steady && want(lo) < 1 && on.length > 0 && looks.every((o) => o < 0.95), ok };
+      });
+      return { ok: out.every((x) => x.ok), quiet: out.filter((x) => x.quiet).length, layers: out };
+    }));
+    await sleep(3000);
+  }
+  const ok = reads.every((r) => r.ok && r.quiet > 0);
+  row('Layers: a long piece\'s quiet section drawn quiet (each layer\'s dots at the share of its level the core hears it at, full ones full)', ok,
+    reads.map((r) => r.layers.filter((x) => x.dots).map((x) => `${x.layer} ${x.share} drawn ${x.drawn}${x.ok ? '' : ' (wrong)'}`).join(', ')).join(' | '));
+  const fit = await tab.evaluate(layersFit);
+  row('Layers: in the quiet section, the bar shown is the core\'s, its steps as heard and its grid for the steps to come', fit.ok, JSON.stringify(fit));
+  row('Layers: no page errors in the quiet section\'s page', bad.length === 0, bad.join('; '));
+  await tab.close();
+}
+
+// A long piece on screen, in a page of its own: opened on
+// the 32,768-bar arc a listener's picks make (kept in the prefs as the app
+// keeps them), played in real time. Every row reads what the core says (its
+// `place` on each events post, its Jump event) against what the page shows.
+async function longRows(browser, port, errors) {
+  const page = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.addInitScript(HOOK);
+  await page.addInitScript(() => {
+    try {
+      if (!localStorage.getItem('driftloom.prefs.v1')) {
+        localStorage.setItem('driftloom.prefs.v1', JSON.stringify({ view: 'now', picks: { length: 32768, journey: 'arc' } }));
+      }
+    } catch (e) { /* no storage: the rows say so */ }
+  });
+  await page.goto(`http://127.0.0.1:${port}/`);
+  await page.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  const ev = (fn, arg) => page.evaluate(fn, arg);
+  const probe = async () => {
+    const m = await ev(() => window.__rows.probe());
+    return m ? { ...m, d: about(m.about) } : null;
+  };
+  const diag = () => ev(() => { document.getElementById('diagRefresh').click(); return document.getElementById('diagOut').textContent; });
+  const nothingLate = (text) => /late: 0\s+missed: 0\s+dropped: 0/.test(text.split('\n').find((l) => l.startsWith('engine:')) || '');
+  // The core's last word on where it is, and the page's words for it.
+  const place = () => ev(() => { const R = window.__rows; for (let i = R.events.length - 1; i >= 0; i--) if (R.events[i].place) return R.events[i].place; return null; });
+  const words = () => ev(() => ({
+    shown: !document.getElementById('nowPiece').hidden,
+    rail: !document.getElementById('nowRail').hidden,
+    bars: document.getElementById('pieceBars').textContent,
+    times: document.getElementById('pieceTimes').textContent,
+  }));
+  // "1:12:03 · −2:10:00": the time played, in seconds.
+  const secs = (t) => { const m = /^([\d:]+)( \u00b7|$)/.exec(t); return m ? m[1].split(':').reduce((a, v) => a * 60 + Number(v), 0) : NaN; };
+  const jumps = () => ev(() => window.__rows.posts.filter((m) => m.type === 'playJump'));
+  // Seconds from the page's jump to the core's Jump event arriving.
+  const landed = async (count) => {
+    for (let i = 0; i < 40; i++) {
+      const r = await ev((n) => {
+        const R = window.__rows;
+        const posts = R.posts.filter((m) => m.type === 'playJump');
+        if (posts.length < n) return null;
+        const post = posts[n - 1];
+        for (const b of R.events) if (b.at >= post.at) for (let k = 1; k < b.events.length; k += 4) if (b.events[k] === 8) return { after: b.at - post.at, at: post.at };
+        return null;
+      }, count);
+      if (r) return r;
+      await sleep(250);
+    }
+    return null;
+  };
+
+  console.log(`\nA long piece on screen (queue item 106b)`);
+  await page.click('#playBtn');
+  await sleep(4500);
+  let p = await probe();
+  const spb = Number(p.d.steps_per_bar);
+  const perBar = spb * (60 / Number(p.d.bpm) / 4);
+  let w = await words();
+  row('long piece: Now Playing says where you are: bar of how many, time played and time left, the line in the rail\'s place',
+    w.shown && !w.rail && /^bar [\d,]+\/32,768/.test(w.bars) && /^[\d:]+ \u00b7 \u2212[\d:]+$/.test(w.times), `${w.bars}; ${w.times}`);
+
+  // The markers are the map's: a fresh call of the core's map, drawn.
+  const m = await ev(async () => {
+    const piece = await import('/js/piece.js');
+    const st = piece.pieceState();
+    const model = st.model;
+    if (!model) return null;
+    const again = piece.modelNow(model.spec);
+    const line = document.getElementById('pieceLine');
+    const canvas = document.getElementById('pieceCanvas');
+    const W = Math.round(line.clientWidth);
+    const { heights } = piece.columns(model, W);
+    const dpr = canvas.width / canvas.clientWidth;
+    const ctx = canvas.getContext('2d');
+    const y = Math.round((canvas.clientHeight - 4.5) * dpr);
+    const row = ctx.getImageData(0, y, canvas.width, 1).data;
+    let missing = 0;
+    let stray = 0;
+    let ticks = 0;
+    for (let x = 0; x < W; x++) {
+      const alpha = row[Math.min(canvas.width - 1, Math.floor((x + 0.5) * dpr)) * 4 + 3];
+      if (heights[x] > 0) { ticks++; if (alpha < 40) missing++; } else if (!(x > 0 && heights[x - 1] > 0) && alpha > 10) stray++;
+    }
+    const roles = {};
+    for (const k of model.marks) roles[k.role] = (roles[k.role] || 0) + 1;
+    // The height is the peak, or in the small form, which has neither build
+    // nor second theme, the lift (docs/LONGFORM.md): about 1 arc in 100.
+    const height = roles.peak > 0 || (roles.lift > 0 && !roles.build && !roles.second);
+    return { height, same: JSON.stringify(again.marks) === JSON.stringify(model.marks), marks: model.marks.length, first: model.marks[0].bar, last: model.last, ticks, missing, stray, W, roles };
+  });
+  row('long piece: the markers are the map\'s: the core\'s marks asked again are the line\'s, every tick is painted and nothing else is',
+    m && m.same && m.marks > 100 && m.first === 0 && m.last === 32768 && m.ticks > 20 && m.missing === 0 && m.stray === 0 && m.height && m.roles.opening > 0, JSON.stringify(m));
+
+  // A jump to three hours in: a tap on the line.
+  const box = await page.locator('#pieceLine').boundingBox();
+  const target = Math.floor(10800 / perBar);
+  const x = box.x + (target / 32768) * box.width;
+  await page.mouse.click(x, box.y + box.height / 2);
+  const hit = await landed(1);
+  await sleep(1500);
+  const sent = (await jumps())[0];
+  const pl = await place();
+  const pixel = 32768 / box.width;
+  row('long piece: a tap three hours in starts there within a second (the core\'s Jump event, its place three hours in)',
+    hit && hit.after < 1 && sent && sent.kind === 1 && Math.abs(sent.msg.at - target) <= pixel + 1 && pl && Math.abs(pl.played - 10800) < 120 + pixel * perBar, `after ${hit && hit.after.toFixed(2)} s, jump to bar ${sent && sent.msg.at}, place ${pl && Math.round(pl.played)} s`);
+  w = await words();
+  const now = await place();
+  const shownBar = Number((/^bar ([\d,]+)/.exec(w.bars) || [])[1] && /^bar ([\d,]+)/.exec(w.bars)[1].replace(/,/g, ''));
+  const word = await ev(async (bar) => {
+    const piece = await import('/js/piece.js');
+    const mark = piece.markAt(piece.pieceState().model, bar);
+    return { want: mark ? piece.ROLE_WORDS[mark.role] : null, section: mark ? mark.section : null };
+  }, now.bar);
+  row('long piece: where you are after the jump: the bar, the time played and left, and the section\'s word are the core\'s place and the map\'s',
+    Math.abs(shownBar - (Math.floor(now.bar) + 1)) <= 3 && Math.abs(secs(w.times) - now.played) < 6 && /\u2212[\d:]+$/.test(w.times) && word.want && w.bars.endsWith(word.want), `${w.bars}; ${w.times}; place bar ${now.bar.toFixed(1)}`);
+  row('long piece: nothing late across the jump', nothingLate(await diag()), (await diag()).split('\n').find((l) => l.startsWith('engine:')));
+
+  // The next-section key goes to the map's next section.
+  const want = await ev(async (bar) => {
+    const piece = await import('/js/piece.js');
+    const next = piece.neighbor(piece.pieceState().model, bar, 1);
+    return next ? { bar: next.bar, role: next.role } : null;
+  }, now.bar);
+  await ev(() => document.getElementById('pieceNext').click());
+  const second = await landed(2);
+  await sleep(1500);
+  const after = await place();
+  const sent2 = (await jumps())[1];
+  row('long piece: the next-section key goes to the map\'s next section, on its line', want && second && sent2 && sent2.msg.at === want.bar && after && after.bar >= want.bar - 0.1 && after.bar < want.bar + 12, `to ${sent2 && sent2.msg.at} (${want && want.role}), place ${after && after.bar.toFixed(1)}`);
+
+  // The journey pick reaches the core with the picks (through the Bars
+  // picker, as a listener sets it), and is held whole.
+  await ev(() => document.getElementById('vibesBtn').click());
+  await sleep(300);
+  await ev(() => [...document.querySelectorAll('.pk-line-pace button')].find((b) => /^Bars/.test(b.getAttribute('aria-label') || '')).click());
+  await sleep(300);
+  await ev(() => { document.getElementById('lenEndless').click(); document.querySelector('#lenJourney [data-journey="wander"]').click(); });
+  const lit = await ev(() => ({ wander: document.querySelector('#lenJourney [data-journey="wander"]').getAttribute('aria-pressed'), arc: document.querySelector('#lenJourney [data-journey="arc"]').getAttribute('aria-pressed'), dim: document.getElementById('lenJourney').classList.contains('off') }));
+  await ev(() => document.getElementById('lenDone').click());
+  await sleep(600);
+  const picks = await ev(() => window.__rows.posts.filter((m) => m.type === 'playPicks').pop() || null);
+  p = await probe();
+  const cant = await ev(() => { const n = document.querySelector('.pk-cant'); return n ? n.textContent : ''; });
+  const pills = await ev(() => [...document.querySelectorAll('#picksList .pk-line-pace .pk-pill')].map((x) => x.textContent));
+  row('long piece: the journey pick (a wander, with Endless) is sent with the picks, held whole by the core, and shown beside the bars',
+    lit.wander === 'true' && lit.arc === 'false' && !lit.dim && picks && picks.ask.journey === 2 && picks.ask.length === 'endless' && p.picksTag === picks.tag && !cant && pills.includes('wander'),
+    `lit ${JSON.stringify(lit)}, ask journey ${picks && picks.ask.journey}, tag ${p && p.picksTag}/${picks && picks.tag}, ${cant}, ${pills.join('|')}`);
+
+  // Next: the core's own loop takes them, Endless, a wander: time played, no
+  // time left, and a wander's own markers.
+  await ev(() => document.getElementById('nowBtn').click());
+  await sleep(300);
+  await ev(() => document.getElementById('nextBtn').click());
+  await sleep(5000);
+  p = await probe();
+  w = await words();
+  const end = await ev(async () => {
+    const piece = await import('/js/piece.js');
+    const model = piece.pieceState().model;
+    const roles = new Set(model ? model.marks.map((k) => k.role) : []);
+    return { endless: !!(model && model.endless), wander: roles.has('holding') && !roles.has('peak') && !roles.has('opening'), window: model ? model.last - model.first : 0 };
+  });
+  row('long piece: Endless: bar and time played, no time left, a window of the map with a wander\'s holds',
+    end.endless && end.wander && end.window > 0 && /^bar [\d,]+( \u00b7 [a-z ]+)?$/.test(w.bars) && !/\//.test(w.bars) && /^[\d:]+$/.test(w.times), `${w.bars}; ${w.times}; ${JSON.stringify(end)}`);
+
+  // The Library says each loop's length: from 4 bars to 27 hours, or
+  // Endless. Four loops saved (the page's own storage, as a Save would), the
+  // album opened, the lines read.
+  await ev(async () => {
+    const store = await import('/js/storage.js');
+    const gen = await import('/js/gen.js');
+    [[11, 'bars=4'], [12, 'bars=3072,journey=arc'], [13, 'bars=32768,journey=wander'], [14, 'bars=endless,journey=arc'], [15, '-']].forEach(([seed, request]) => {
+      const entry = store.save(gen.newSpec(seed, request));
+      store.addToAlbum(store.FAVORITES, entry.id);
+    });
+  });
+  await ev(() => document.getElementById('libraryBtn').click());
+  await sleep(600);
+  await ev(() => document.querySelector('#libPane .lrow-main').click());
+  await sleep(600);
+  const lines = await ev(() => [...document.querySelectorAll('#libPane .lrow-meta')].map((x) => x.textContent.replace(/\u00a0/g, ' ')));
+  const has = (re) => lines.some((t) => re.test(t));
+  row('Library: a list\'s line says a loop\'s length: 4 bars and its time, 3,072 bars and hours, 32,768 bars and about a day, endless, a plain loop\'s own bars',
+    has(/ bpm · 4 bars · \d+s$/) && has(/ bpm · 3,072 bars · \d+h( \d+m)?$/) && has(/ bpm · 32,768 bars · \d+h( \d+m)?$/) && has(/ bpm · endless$/) && has(/ bpm · \d+ bars$/), lines.join(' | '));
+  row('long piece: no page errors in its page', errors.length === 0, errors.join('; '));
+  await page.close();
+}
+
+async function main() {
+  const { chromium } = APP ? {} : loadPlaywright();
+  const server = APP ? null : await serve(PORT);
+  const browser = APP ? null : await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  const errors = [];
+  try {
+    if (ONLY === 'previous') {
+      await previousRows(browser);
+      report();
+      return;
+    }
+    if (ONLY === 'track') {
+      await trackRows(browser);
+      report();
+      return;
+    }
+    if (ONLY === 'timeline') {
+      await timelineRows(browser);
+      report();
+      return;
+    }
+    if (ONLY === 'album') {
+      await albumExportRows(browser);
+      report();
+      return;
+    }
+    if (ONLY === 'pickers') {
+      await pickerRows(browser);
+      report();
+      return;
+    }
+    if (ONLY === 'keys') {
+      await keyboardRows(browser);
+      report();
+      return;
+    }
+    if (ONLY === 'scroll') {
+      await scrollRows(browser);
+      report();
+      return;
+    }
+    const page = APP ? await openApp() : await browser.newPage({ viewport: { width: 412, height: 915 } });
+    page.on('pageerror', (e) => errors.push(e.message));
+    const ready = async () => {
+      for (let t = 0; t < 60000; t += 250) {
+        if (await page.evaluate(() => document.readyState === 'complete' && !!document.getElementById('playBtn'))) return;
+        await sleep(250);
+      }
+      throw new Error('the page did not load');
+    };
+    if (!APP) {
+      await page.addInitScript(HOOK);
+      await page.goto(`http://127.0.0.1:${PORT}/`);
+    }
+    await ready();
+    await sleep(1500);
+    const ev = (fn, arg) => page.evaluate(fn, arg);
+    const probe = async () => {
+      const m = await ev(() => window.__rows.probe());
+      return m ? { ...m, d: about(m.about) } : null;
+    };
+    const name = () => ev(() => document.getElementById('loopName').textContent);
+    const level = async (ms = 600) => {
+      let worst = 0;
+      for (let t = 0; t < ms; t += 100) {
+        worst = Math.max(worst, await ev(() => window.__rows.level()));
+        await sleep(100);
+      }
+      return worst;
+    };
+    const diag = () => ev(() => { document.getElementById('diagRefresh').click(); return document.getElementById('diagOut').textContent; });
+    const setRange = (id, value) => ev(([i, v]) => {
+      const r = document.getElementById(i);
+      r.value = String(v);
+      r.dispatchEvent(new Event('input', { bubbles: true }));
+    }, [id, value]);
+    const clickId = (id) => ev((i) => document.getElementById(i).click(), id);
+    const key = (k) => page.keyboard.press(k);
+    // The step events from the latest node, as [time, kind, number, step].
+    const steps = () => ev(() => {
+      const R = window.__rows;
+      const last = R.nodes.length - 1;
+      const out = [];
+      for (const b of R.events) if (b.node === last) for (let i = 0; i < b.events.length; i += 4) out.push(b.events.slice(i, i + 4));
+      return out;
+    });
+    const kinds = { step: 0, pass: 1, section: 2, phrase: 3, loop: 4, revised: 5, end: 6, own: 7 };
+    // The last picks the page sent the core.
+    const lastPicks = () => ev(() => window.__rows.posts.filter((m) => m.type === 'playPicks').pop() || null);
+    // The seed of each loop the core made itself, with the picks' number.
+    const owns = async () => {
+      const e = await steps();
+      const out = [];
+      for (let i = 0; i + 1 < e.length; i++) if (e[i][1] === kinds.own && e[i + 1][1] === kinds.loop) out.push({ tag: e[i][2], seed: e[i + 1][2] });
+      return out;
+    };
+
+    console.log(`\nThe app's controls and displays on the core's player (queue item 94b)`);
+    // Play, from a fixed loop: a share code pasted through the page's own
+    // "paste code" (the clipboard is the harness's), which plays it. A
+    // loop drawn at random could be a sparse one, or ring on after a mute.
+    await ev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
+    await clickId('pasteCode');
+    await sleep(3500);
+    let p = await probe();
+    const first = await name();
+    {
+      row('Play: the core plays the loop on the card', p && p.player.state === 3 && p.d.name === first, `${p && p.d && p.d.name} / ${first}`);
+      const detail = await ev(() => document.getElementById('loopFacts').textContent);
+      row('info card: its key, tempo and name as the core describes the loop', detail.includes(`${p.d.bpm} bpm`) && p.d.name === first, detail.replace(/\s+/g, ' '));
+    }
+    row('cover: drawn', await ev(() => {
+      const c = document.getElementById('cover');
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      return d.some((v, i) => i % 4 !== 3 && v > 0);
+    }));
+    const lit = async () => ev(() => [...document.getElementById('playhead').children].findIndex((c) => c.classList.contains('on')));
+    const seen = new Set();
+    for (let i = 0; i < 12; i++) {
+      seen.add(await lit());
+      await sleep(70);
+    }
+    row('cursor: lit and moving with the steps', seen.size >= 3 && !seen.has(-1), [...seen].join(','));
+    // Listen for six seconds: even this loop has its rests.
+    row('sound: something plays', (await level(6000)) > 1e-4);
+
+    // Pause and Play again.
+    const before = (await steps()).filter((e) => e[1] === kinds.step).pop();
+    await key('Space');
+    await sleep(800);
+    p = await probe();
+    const quiet = await level();
+    row('Pause: the core stops, the output silent', p.player.state === 0 && quiet < 1e-4, `state ${p.player.state}, level ${quiet.toExponential(1)}`);
+    await key('Space');
+    await sleep(1500);
+    {
+      p = await probe();
+      const after = (await steps()).filter((e) => e[1] === kinds.step).pop();
+      row('Play again: the core goes on from where it stood', p.player.state === 3 && after[3] > before[3] && (await name()) === first, `step ${before[3]} -> ${after[3]}`);
+    }
+
+    // Next and Previous.
+    await clickId('nextBtn');
+    await sleep(3000);
+    const second = await name();
+    p = await probe();
+    const asked = await ev(() => window.__rows.posts.filter((m) => m.type === 'playNext' && m.moment === 0).pop());
+    {
+      row('Next: the core\'s own loop, crossfading, the card following', second !== first && p.d.name === second && asked && asked.fade === 1, `${p.d.name} / ${second}`);
+      const own = (await owns()).pop();
+      const sent = await lastPicks();
+      row('Next: the core says its own loop began, by its seed and the picks it took', own && own.seed === Number(p.d.seed) && sent && own.tag === sent.tag, JSON.stringify(own));
+    }
+    await clickId('prevBtn');
+    await sleep(3000);
+    p = await probe();
+    row('Previous: back to the loop before', (await name()) === first && p.d.name === first, p.d.name);
+
+    // Roll a layer (1, the drums): made again in place.
+    await ev(() => document.getElementById('viewBtn').click());
+    const seedsBefore = p.d.layer_seeds.split('|');
+    const stepBefore = (await steps()).filter((e) => e[1] === kinds.step).pop()[3];
+    await key('Digit1');
+    await sleep(2000);
+    {
+      p = await probe();
+      const seeds = p.d.layer_seeds.split('|');
+      const revised = (await steps()).some((e) => e[1] === kinds.revised);
+      const stepAfter = (await steps()).filter((e) => e[1] === kinds.step).pop()[3];
+      row('roll a layer: the drums re-rolled in place, the steps going on', seeds[0] !== seedsBefore[0] && seeds.slice(1).join() === seedsBefore.slice(1).join()
+        && (p.d.rolled || '').split('|').includes('drums') && revised && stepAfter > stepBefore, `${seedsBefore[0]} -> ${seeds[0]}, rolled ${p.d.rolled}, step ${stepBefore} -> ${stepAfter}`);
+    }
+
+    // Mutes: all five off, then on.
+    const mutes = () => ev(() => { for (const b of document.querySelectorAll('.layer .btn-on')) b.click(); });
+    await mutes();
+    // A tail still ringing (the room's reverb) is not yet silence: wait for
+    // it to fall, up to twelve seconds, rather than read once.
+    let muted = Infinity;
+    for (let t = 0; t < 12000 && !(muted < 2e-3); t += 500) {
+      await sleep(500);
+      muted = await level(400);
+    }
+    await mutes();
+    await sleep(1500);
+    const back = await level(1500);
+    row('mutes: all five layers off is silence, on again is sound', muted < 2e-3 && back > muted * 4, `${muted.toExponential(1)} -> ${back.toExponential(1)}`);
+
+    // Tempo and tone.
+    await setRange('bpm', 120);
+    await setRange('warmth', 0.13);
+    await setRange('space', 0.77);
+    await setRange('wobble', 0.21);
+    await sleep(2500);
+    {
+      p = await probe();
+      const st = (await steps()).filter((e) => e[1] === kinds.step).slice(-6);
+      const gaps = st.slice(1).map((e, i) => e[0] - st[i][0]);
+      row('tempo: the core plays at the slider\'s tempo, its steps that far apart', Number(p.d.bpm) === 120 && gaps.every((g) => Math.abs(g - 60 / 120 / 4) < 1e-6), `${p.d.bpm} bpm, ${gaps.map((g) => g.toFixed(4)).join(' ')}`);
+      row('tone: the core\'s warmth, space and wobble are the sliders\'', p.d.tone === '0.13|0.77|0.21', p.d.tone);
+    }
+
+    // Wander and its salt.
+    await setRange('driftAmount', 2.4);
+    await sleep(300);
+    const wander = await ev(() => window.__rows.posts.filter((m) => m.type === 'playWander').pop());
+    const wline = (await diag()).split('\n').find((l) => l.startsWith('wander:'));
+    row('wander: the amount, and a salt across the upper range', wander && wander.amount === 2.4 && wander.salt > 0 && /unrepeatable/.test(wline), wline);
+    await setRange('driftAmount', 0);
+    await sleep(300);
+    const off = await ev(() => window.__rows.posts.filter((m) => m.type === 'playWander').pop());
+    row('wander off: none', off && off.amount === 0 && off.salt === 0);
+    await setRange('driftAmount', 1);
+
+    // Volume.
+    await setRange('volume', 0);
+    await sleep(1200);
+    const silent = await level();
+    await setRange('volume', 0.85);
+    await sleep(1200);
+    const loud = await level(1200);
+    row('volume: 0 is silence, back is sound', silent < 1e-4 && loud > 1e-3, `${silent.toExponential(1)} -> ${loud.toExponential(1)}`);
+
+    // Mono.
+    await clickId('monoMode');
+    await sleep(600);
+    const mono = (await probe()).lanes;
+    await clickId('monoMode');
+    await sleep(600);
+    const stereo = (await probe()).lanes;
+    row('mono: one lane, then two again', mono === 1 && stereo === 2, `${mono}, ${stereo}`);
+
+    // The layers' grid: the dots of the bar shown are the
+    // core's: what each step sounded where it is decided (its Heard event),
+    // and the core's grid of the pass heard for the steps still to come.
+    await ev(() => { if (document.querySelector('.view:not([hidden])').dataset.view !== 'layers') document.getElementById('viewBtn').click(); });
+    await sleep(2500);
+    {
+      const res = await ev(layersFit);
+      row('layers\' grid: the bar shown is the core\'s, its steps as heard and its grid of the pass for the steps to come', res.ok, JSON.stringify(res));
+    }
+
+    // Picks: a vibe, then Next.
+    const playingSeed = (await probe()).d.seed;
+    const vibe = await ev(() => {
+      document.getElementById('vibesBtn').click();
+      document.querySelector('#picksList .pk-line-mood .pk-val').click();
+      const b = document.querySelector('#vibesList .vb-key');
+      b.click();
+      return b.dataset.vibe;
+    });
+    {
+      await sleep(500);
+      p = await probe();
+      const sent = await lastPicks();
+      const index = sent ? sent.ask.vibes.map(([i]) => i) : [];
+      row('picks: sent as a command and held by the core, the loop playing left as it is', sent && p.picksTag === sent.tag && index.length === 1 && p.d.seed === playingSeed, `tag ${p.picksTag}, ${JSON.stringify(sent && sent.ask.vibes)}`);
+    }
+    // A new loop by Next's keys: through the history to its end, and one more.
+    {
+      const lastOwn = async () => JSON.stringify((await owns()).pop() || null);
+      const had = await lastOwn();
+      for (let i = 0; i < 8; i++) {
+        await key('ArrowRight');
+        await sleep(3000);
+        if (await lastOwn() !== had) break;
+      }
+    }
+    {
+      p = await probe();
+      const own = (await owns()).pop();
+      row('picks: the next new loop is the core\'s own and leans on them', (p.d.vibes || '').split('|').some((x) => x.startsWith(`${vibe}:`)) && p.d.name === (await name())
+        && own && own.seed === Number(p.d.seed), `${vibe}: ${p.d.vibes}`);
+      // With nothing asked of the bars, about 1 new loop in 10 is a long
+      // piece the core drew, which ends: the rows after
+      // (the export's) want a loop that plays on, so Next again past one.
+      for (let i = 0; i < 6 && p.d.length != null; i++) {
+        await key('ArrowRight');
+        await sleep(3000);
+        p = await probe();
+      }
+    }
+    await ev(() => document.getElementById('vibesClear').click());
+
+    // Share: keys, and nothing else on screen.
+    {
+      await ev(() => {
+        if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+        document.querySelector('[data-stab="share"]').click();
+      });
+      await sleep(400);
+      const screen = await ev(() => {
+        const pane = document.querySelector('#saveShare .scroll');
+        return {
+          words: pane.innerText.split('\n').map((x) => x.trim()).filter(Boolean),
+          keys: [...pane.querySelectorAll('button')].map((b) => b.textContent.trim()),
+          scrolls: pane.scrollHeight > pane.clientHeight + 1,
+        };
+      });
+      row('share: just keys, copy code, paste code and export audio first, no explainer and nothing scrolling',
+        screen.keys.slice(0, 3).join() === 'copy code,paste code,export audio' && screen.words.join() === screen.keys.join() && !screen.scrolls, JSON.stringify(screen));
+      await clickId('goSeedAlbum');
+      const seed = await ev(() => !document.getElementById('viewSeed').hidden);
+      await clickId('seedBack');
+      const back = await ev(() => !document.getElementById('saveShare').hidden && !document.getElementById('viewSave').hidden);
+      await clickId('goExport');
+      await sleep(800);
+      // The format keys (the loop or album keys above them are an
+      // album's: the album rows hold them).
+      const keys = await ev(() => [...document.querySelectorAll('#exportChoose button')].filter((b) => !b.hidden && !b.closest('#exportScope')).map((b) => b.textContent.trim()).join());
+      row('share: album from seed and export audio open their views; Export is a key a format, export midi among them', seed && back && /^flac,(opus,)?midi$/.test(keys), `seed ${seed}, back ${back}, ${keys}`);
+    }
+    // Export MIDI and a share code.
+    await clickId('exportMidi');
+    await sleep(500);
+    const midi = await ev(async () => {
+      const b = window.__rows.blobs.pop();
+      if (!b) return null;
+      const t = new Uint8Array(await b.arrayBuffer());
+      return String.fromCharCode(...t.slice(0, 4));
+    });
+    row('export MIDI: a MIDI file', midi === 'MThd', String(midi));
+    // The export's rows are the browser's (the app has its own).
+    if (!APP) await exportRows({ page, ev, probe, level, diag, clickId, browser });
+    await clickId('copySong');
+    await sleep(500);
+    const code = await ev(() => window.__rows.clip);
+    let shared = null;
+    try { shared = decodeSong(code); } catch (err) { shared = { error: err.message }; }
+    p = await probe();
+    row('share code: it decodes to the loop the core plays', shared && shared.seed >>> 0 === Number(p.d.seed) && shared.name === p.d.name, `${code && code.slice(0, 24)}...`);
+
+    // Lighter on processor: a new core at the other quality, the loop again.
+    const nodes = await ev(() => window.__rows.nodes.length);
+    const lite = await ev(() => document.getElementById('liteMode').getAttribute('aria-checked'));
+    const card = await name();
+    const kills = await ev(() => window.__rows.kills.length);
+    await clickId('liteMode');
+    await sleep(3500);
+    const built = await ev(() => window.__rows.nodes.slice(-1)[0].quality);
+    {
+      p = await probe();
+      const loops = (await steps()).filter((e) => e[1] === kinds.loop);
+      row('lighter on processor: a new core at the other quality plays the same loop from its top', (await ev(() => window.__rows.nodes.length)) === nodes + 1
+        && built === (lite === 'true' ? 'full' : 'lite') && p.player.state === 3 && p.d.name === card && loops.length === 1, `${lite} -> ${built}`);
+      // The old core fades out before it is let go
+      // (letting it go at once cut the sound mid-note): a fade to silence
+      // asked well before the dispose, not only the transport's silence
+      // posted with it.
+      const k = (await ev(() => window.__rows.kills)).slice(kills);
+      const gone = k.find((m) => m.type === 'dispose');
+      const faded = gone && k.find((m) => m.type === 'param' && m.op === 1 && m.value === 0 && gone.wall - m.wall >= 150);
+      row('lighter on processor: the old core fades out before it is let go', !!faded, gone ? `fade asked ${faded ? Math.round(gone.wall - faded.wall) : '-'} ms before the dispose; ${k.length} kill and dispose messages` : 'no dispose');
+    }
+    await clickId('liteMode');
+    await sleep(3000);
+
+    // Diagnostics.
+    const text = await diag();
+    const engineLine = text.split('\n').find((l) => l.startsWith('engine:')) || '';
+    {
+      row('Diagnostics: the core\'s player, nothing late, missed or dropped, no event lost, no edit refused', /the core's player\)\s+late: 0\s+missed: 0\s+dropped: 0/.test(engineLine)
+        && /playerEventsLost: 0/.test(text) && /playerRefused: 0/.test(text), `${engineLine}; ${text.split('\n').filter((l) => /^player(EventsLost|Refused)/.test(l)).join(', ')}`);
+    }
+    // Why the app last moved to lite by itself (step 2): said,
+    // and "reset counters" clears the line but not the move (the rule
+    // still never moves twice).
+    {
+      const KEY = 'driftloom.prefs.v1';
+      await ev((k) => {
+        const p = JSON.parse(localStorage.getItem(k) || '{}');
+        p.liteAuto = { lite: true, why: 'busiest 61% at full', at: '2026-01-02T03:04:05.000Z' };
+        delete p.liteAutoReset;
+        localStorage.setItem(k, JSON.stringify(p));
+      }, KEY);
+      const said = (await diag()).split('\n').find((l) => l.startsWith('lite by itself:')) || '';
+      await clickId('diagReset');
+      const after = (await diag()).split('\n').find((l) => l.startsWith('lite by itself:')) || '';
+      const kept = await ev((k) => {
+        const p = JSON.parse(localStorage.getItem(k) || '{}');
+        const had = !!p.liteAuto;
+        delete p.liteAuto;
+        delete p.liteAutoReset;
+        localStorage.setItem(k, JSON.stringify(p));
+        return had;
+      }, KEY);
+      row('Diagnostics: why the app last moved to lite, and reset counters clears the line, the move kept', said === 'lite by itself: last on at 2026-01-02T03:04:05.000Z (busiest 61% at full)'
+        && after === 'lite by itself: never since reset counters' && kept, `${said} | ${after} | kept ${kept}`);
+    }
+    if (APP) await appRows({ ev, diag, clickId, level, probe });
+
+    // The track length (the Track length view): a minute.
+    if (LONG) {
+      await trackTo(ev, 60);
+      await ev(() => document.getElementById('nowBtn').click());
+      await sleep(800);
+      p = await probe();
+      const track = await ev(() => window.__rows.posts.filter((m) => m.type === 'playTrack').pop());
+      const clockText = await ev(() => document.getElementById('nowBig').textContent);
+      // At the end of the history nothing of the page's follows: the core
+      // makes its own.
+      row('length: the core counts the track, its own loop to follow (nothing of the page\'s armed)', p.trackEnd >= 0 && track && track.kind > 0 && track.arm === null && clockText.startsWith('−'), `end step ${p.trackEnd}, clock ${clockText}`);
+      const before = (await owns()).length;
+      const t0 = Date.now();
+      let took = null;
+      while (Date.now() - t0 < 150000 && !took) {
+        await sleep(2000);
+        const e = await steps();
+        const at = e.findIndex((x) => x[1] === kinds.end);
+        const own = (await owns()).slice(before)[0];
+        took = at >= 0 && own ? own : null;
+      }
+      await sleep(1500);
+      p = await probe();
+      const sent = await lastPicks();
+      row('length: the track ends on its line, the core\'s own loop starts there with the picks, the card follows', took && Number(p.d.seed) === took.seed && sent && took.tag === sent.tag
+        && p.d.name === (await name()) && p.trackEnd < 0, `${Math.round((Date.now() - t0) / 1000)} s`);
+      const after = (await diag()).split('\n').find((l) => l.startsWith('engine:'));
+      row('length: nothing late across the hand-over', /late: 0\s+missed: 0\s+dropped: 0/.test(after), after);
+    }
+    // The picks survive a reload (kept as the vibes are, in the prefs), and
+    // go to the new core as it starts.
+    {
+      await ev(() => {
+        document.getElementById('vibesBtn').click();
+        document.querySelector('#picksList .pk-line-mood .pk-val').click();
+        document.querySelector('#vibesList .vb-key').click();
+      });
+      await sleep(300);
+      const kept = await lastPicks();
+      await page.reload();
+      await ready();
+      await sleep(1500);
+      await page.click('#playBtn');
+      await sleep(3000);
+      p = await probe();
+      const again = await lastPicks();
+      row('picks: held again by the core after a reload', kept && again && p.picksTag === again.tag && JSON.stringify(again.ask.vibes) === JSON.stringify(kept.ask.vibes), JSON.stringify(again && again.ask.vibes));
+    }
+    row('no page errors', errors.length === 0, errors.join('; '));
+    // A long piece on screen, in a page of its own.
+    if (!APP) await longRows(browser, PORT, errors);
+    if (!APP) await quietRows(browser);
+    if (!APP) await plainRows(browser);
+    if (!APP) await codeRows(browser);
+    if (!APP) await linkRows(browser);
+    if (!APP) await albumExportRows(browser);
+    if (!APP) await paceRows(browser);
+    if (!APP) await previousRows(browser);
+    if (!APP) await artRows(browser);
+    if (!APP) await trackRows(browser);
+    if (!APP) await timelineRows(browser);
+    if (!APP) await pickerRows(browser);
+    if (!APP) await sidewaysRows(browser);
+    if (!APP) await scrollRows(browser);
+    if (!APP) await keyboardRows(browser);
+  } finally {
+    if (browser) await browser.close();
+    if (server) server.close();
+  }
+  report();
+}
+
+// An album exported whole, in a tab of its own.
+async function albumExportRows(browser) {
+  console.log('\n  album export (item 121)');
+  const origin = `http://127.0.0.1:${PORT}`;
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  const bad = [];
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(HOOK);
+  await tab.goto(`${origin}/`);
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  const cdp = await tab.context().newCDPSession(tab);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  const exportsNow = () => tev(() => window.__rows.exports.length);
+  const said = async (types, from, ms) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < ms) {
+      const m = await tev((n) => window.__rows.exports.slice(n), from);
+      const hit = m.find((x) => types.includes(x.type));
+      if (hit) return hit;
+      await sleep(250);
+    }
+    return null;
+  };
+  const doneCount = async (from) => (await tev((n) => window.__rows.exports.slice(n), from)).filter((x) => x.type === 'done').length;
+  const toExport = () => tev(() => {
+    if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+    document.querySelector('[data-stab="share"]').click();
+    document.getElementById('goExport').click();
+  });
+  const press = (sel) => tev((q) => { const b = document.querySelector(q); if (b && !b.hidden) b.click(); return !!b && !b.hidden; }, sel);
+  const sheet = () => tev(() => ({
+    scope: !document.getElementById('exportScope').hidden,
+    album: document.querySelector('[data-scope="album"]').getAttribute('aria-pressed') === 'true',
+    zipKey: !document.querySelector('[data-box="zip"]').hidden,
+    midi: !document.getElementById('exportMidi').hidden,
+    about: document.getElementById('exportAbout').textContent,
+    asks: document.querySelector('[data-format="lossless"]').dataset.asks || '',
+    run: !document.getElementById('exportRun').hidden,
+    done: !document.getElementById('exportDone').hidden,
+    failed: !document.getElementById('exportFailed').hidden,
+    why: document.getElementById('exportWhy').textContent,
+    saved: document.getElementById('exportSaved').textContent,
+    progress: document.getElementById('exportProgress').textContent,
+  }));
+  const playing = async () => {
+    const p = await tev(() => window.__rows.probe());
+    let w = 0;
+    for (let i = 0; i < 30; i++) { w = Math.max(w, await tev(() => window.__rows.level())); await sleep(100); }
+    return p && p.player.state === 3 && w > 1e-4;
+  };
+  const nothingLate = async () => {
+    const d = await tev(() => { document.getElementById('diagRefresh').click(); return document.getElementById('diagOut').textContent; });
+    return /late: 0\s+missed: 0\s+dropped: 0/.test(d.split('\n').find((l) => l.startsWith('engine:')) || '');
+  };
+  const opfs = () => tev(() => window.__rows.opfs());
+  // A file in the site's private file system as bytes.
+  const read = async (where) => new Uint8Array(Buffer.from(await tev(async (w) => {
+    let h = await navigator.storage.getDirectory();
+    const parts = w.split('/');
+    for (const d of parts.slice(0, -1)) h = await h.getDirectoryHandle(d);
+    const f = await (await h.getFileHandle(parts[parts.length - 1])).getFile();
+    const b = new Uint8Array(await f.arrayBuffer());
+    let bin = '';
+    for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode(...b.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }, where), 'base64'));
+
+  // The album: three tracks of 8 s, the fourth playing on.
+  const specs = [LOOPS.shatter, LOOPS.cinder, LOOPS.hollow, LOOPS.undertow].map((l) => decodeSong(l.code));
+  specs[0].name = 'ฝนตก 🎧';
+  for (const sp of specs.slice(0, 3)) setTrack(sp, { secs: 8, fadeIn: false, fadeOut: true });
+  const title = 'Rainy Export';
+  await tev((c) => { window.__rows.clip = c; }, encodeAlbum(title, specs));
+  await tev(() => document.getElementById('pasteCode').click());
+  await sleep(2500);
+  await tev(() => { if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click(); document.querySelector('[data-tab="albums"]').click(); });
+  await sleep(300);
+  await tev((t) => { const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.trim() === t); if (r) r.querySelector('.lrow-main').click(); }, title);
+  await sleep(400);
+  await tev(() => { const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'play'); if (b) b.click(); });
+  await sleep(3000);
+  await toExport();
+  await sleep(1200);
+  let s = await sheet();
+  const offered = s.scope && !s.album && !s.zipKey && s.midi;
+  await press('[data-scope="album"]');
+  await sleep(300);
+  s = await sheet();
+  row('album export: with an album playing, the Export view offers loop or album; the album hides midi and offers zip or files, and asks how long first (a track plays on)',
+    offered && s.album && s.zipKey && !s.midi && /^4 tracks$/.test(s.about) && s.asks === 'length', JSON.stringify(s));
+
+  // One zip of FLACs: the time asked once, for the track that plays on.
+  let from = await exportsNow();
+  const starts0 = await tev(() => (window.__rows.exportStarts || []).length);
+  await press('[data-format="lossless"]');
+  await sleep(500);
+  const asked = await tev(() => !document.getElementById('viewTrack').hidden);
+  await tev(() => {
+    const n = document.getElementById('trkNum');
+    n.value = '0:00:08';
+    n.dispatchEvent(new Event('blur'));
+    document.getElementById('trkDone').click();
+  });
+  const zipDone = await said(['zip-done', 'failed'], from, 180000);
+  await sleep(500);
+  s = await sheet();
+  const starts = (await tev(() => window.__rows.exportStarts || [])).slice(starts0);
+  let entries = null;
+  let why = '';
+  try { entries = zipEntries(await read('picked.zip')); } catch (e) { why = e.message; }
+  const meanwhile = await playing();
+  const late = await nothingLate();
+  const want = specs.map((sp, i) => `${String(i + 1).padStart(2, '0')} ${sp.name}.flac`);
+  const facts = (entries || []).map((e) => ({ name: e.name, good: e.good, method: e.method, si: streaminfo(e.bytes.slice(0, 42)), tags: flacTags(e.bytes) }));
+  const tagOk = (f, i) => {
+    const c = Object.fromEntries(f.tags.comments.map((x) => [x.slice(0, x.indexOf('=')), x.slice(x.indexOf('=') + 1)]));
+    let code = null;
+    try { code = decodeSong(c.COMMENT); } catch { code = null; }
+    return c.TITLE === specs[i].name && c.ALBUM === title && c.TRACKNUMBER === String(i + 1) && c.TRACKTOTAL === '4' && c.ARTIST && c.ALBUMARTIST === c.ARTIST
+      && /^\d{4}-\d{2}-\d{2}$/.test(c.DATE) && code && code.seed === specs[i].seed
+      && f.tags.picture && f.tags.picture.kind === 3 && f.tags.picture.mime === 'image/jpeg' && f.tags.picture.width === 600 && f.tags.picture.height === 600 && f.tags.picture.bytes > 1000;
+  };
+  row('album export: the track that plays on opens Track length once, for the album; then one zip to the file chosen, stored, every checksum good, its tracks "NN name.flac" in order',
+    asked && zipDone && zipDone.type === 'zip-done' && entries && entries.length === 4 && facts.every((f, i) => f.name === want[i] && f.good && f.method === 0) && starts.length === 4 && starts.every((x) => x.sink === 'handle' && x.entry) && /^Saved Rainy Export\.zip · /.test(s.saved),
+    `${zipDone && zipDone.type} ${zipDone && zipDone.why || ''}; ${facts.map((f) => `${f.name}${f.good ? '' : ' (bad)'}`).join(' | ')} ${why}; ${s.saved}`);
+  row('album export: each FLAC tagged (title, album, track N/4, the app, the day, its code) with its cover (a 600 px JPEG), STREAMINFO first and whole; the fourth as long as asked',
+    facts.length === 4 && facts.every((f, i) => tagOk(f, i) && f.si && f.si.total > 0 && f.tags.blocks[0] === 0) && facts.every((f) => f.si.total / 44100 >= 8 && f.si.total / 44100 < 8 + 13),
+    facts.map((f) => `${f.name}: ${f.tags && f.tags.comments.filter((c) => !c.startsWith('COMMENT')).join(',')} ${f.tags && f.tags.picture ? `${f.tags.picture.width}px` : 'no picture'} ${f.si ? (f.si.total / 44100).toFixed(1) : '?'} s`).join(' | '));
+  row('album export: while the album exported, the music played on and nothing was late', meanwhile && late, `${meanwhile} ${late}`);
+  await press('#exportDoneBtn');
+
+  // A file a track, Opus, into a folder chosen.
+  await press('[data-box="files"]');
+  await sleep(300);
+  s = await sheet();
+  from = await exportsNow();
+  await press('[data-format="small"]');
+  let t0 = Date.now();
+  while (Date.now() - t0 < 180000 && (await doneCount(from)) < 4 && !(await sheet()).failed) await sleep(500);
+  await sleep(800);
+  const s2 = await sheet();
+  const inDir = (await opfs()).filter((f) => f.startsWith('picked-dir/')).sort();
+  const wantOpus = specs.map((sp, i) => `picked-dir/${String(i + 1).padStart(2, '0')} ${sp.name}.opus`);
+  const oggs = [];
+  for (const f of wantOpus) {
+    try { oggs.push(oggFacts(await read(f))); } catch (e) { oggs.push({ error: e.message }); }
+  }
+  const opusTagged = (o, i) => {
+    const c = Object.fromEntries((o.comments || []).map((x) => [x.slice(0, x.indexOf('=')), x.slice(x.indexOf('=') + 1)]));
+    return o.tagged && o.end && o.ordered && c.TITLE === specs[i].name && c.ALBUM === title && c.TRACKNUMBER === String(i + 1) && c.TRACKTOTAL === '4' && (c.METADATA_BLOCK_PICTURE || '').length > 1000;
+  };
+  row('album export: a file a track, Opus, into the folder chosen: four files "NN name.opus", each tagged in OpusTags with its cover, and "Saved 4 files"',
+    s2.done && /^Saved 4 files · /.test(s2.saved) && wantOpus.every((f) => inDir.includes(f)) && oggs.every((o, i) => o && !o.error && opusTagged(o, i)),
+    `${s2.saved || s2.why}; ${inDir.join(' | ')}; ${oggs.map((o) => (o && o.error) || (o && `${o.pages}p ${o.comments.length}c`)).join(' | ')}`);
+  await press('#exportDoneBtn');
+
+  // Cancel midway: after the first track, no zip left.
+  await press('[data-box="zip"]');
+  from = await exportsNow();
+  await press('[data-format="lossless"]');
+  t0 = Date.now();
+  while (Date.now() - t0 < 60000 && (await doneCount(from)) < 1) await sleep(250);
+  await press('#exportCancel');
+  const gone = await said(['zip-gone'], from, 60000);
+  await sleep(500);
+  s = await sheet();
+  let files = await opfs();
+  row('album export: Cancel midway (a track made) leaves no zip, says Canceled., the music playing and nothing late',
+    gone && s.failed && s.why === 'Canceled.' && !files.includes('picked.zip') && (await playing()) && (await nothingLate()), `${gone && gone.type}; ${s.why}; ${files.join(',')}`);
+  await press('#exportOk');
+
+  // The space for the whole album checked first.
+  const usage = await tev(async () => (await navigator.storage.estimate()).usage);
+  await cdp.send('Storage.overrideQuotaForOrigin', { origin, quotaSize: usage + 2e6 });
+  from = await exportsNow();
+  const startsBefore = await tev(() => (window.__rows.exportStarts || []).length);
+  await press('[data-format="lossless"]');
+  await sleep(1500);
+  s = await sheet();
+  row('album export: the space for the whole album checked first: too little says so, and nothing starts',
+    s.failed && /^Not enough space: needs /.test(s.why) && (await tev(() => (window.__rows.exportStarts || []).length)) === startsBefore && (await exportsNow()) === from, s.why);
+  await cdp.send('Storage.overrideQuotaForOrigin', { origin });
+  await press('#exportOk');
+
+  // A disk that fills midway: after the first track, the quota made small.
+  from = await exportsNow();
+  await press('[data-format="lossless"]');
+  t0 = Date.now();
+  while (Date.now() - t0 < 60000 && (await doneCount(from)) < 1) await sleep(250);
+  const used = await tev(async () => (await navigator.storage.estimate()).usage);
+  await cdp.send('Storage.overrideQuotaForOrigin', { origin, quotaSize: used + 128 * 1024 });
+  const ended = await said(['zip-gone', 'zip-done'], from, 120000);
+  await cdp.send('Storage.overrideQuotaForOrigin', { origin });
+  await sleep(500);
+  s = await sheet();
+  files = await opfs();
+  row('album export: a disk that fills midway ends with the plain message, no zip left, the music playing',
+    ended && ended.type === 'zip-gone' && s.failed && /^Out of space/.test(s.why) && !files.includes('picked.zip') && (await playing()), `${ended && ended.type}; ${s.why}; ${files.join(',')}`);
+  await press('#exportOk');
+
+  // A single loop's file is tagged too: the loop, no album (a time set
+  // first: the album may be on its fourth track, which plays on).
+  await trackTo(tev, 8);
+  await toExport();
+  await sleep(600);
+  await press('[data-scope="loop"]');
+  from = await exportsNow();
+  const one = await tev(() => (window.__rows.exportStarts || []).length);
+  await press('[data-format="lossless"]');
+  const single = await said(['done', 'failed'], from, 120000);
+  const st = (await tev(() => window.__rows.exportStarts || []))[one];
+  let ft = null;
+  try { ft = flacTags(await read('picked.flac')); } catch { ft = null; }
+  const keys = ft ? ft.comments.map((c) => c.slice(0, c.indexOf('='))) : [];
+  row('album export: a single loop\'s file is tagged too: its name, the app, the day, its code and its cover; no album, no track',
+    single && single.type === 'done' && st && !st.entry && ft && ['TITLE', 'ARTIST', 'DATE', 'COMMENT'].every((k) => keys.includes(k)) && !keys.includes('ALBUM') && !keys.includes('TRACKNUMBER') && ft.picture && ft.picture.width === 600,
+    `${single && single.type}; ${keys.join(',')}`);
+  await press('#exportDoneBtn');
+  row('album export: no page errors in its tab', !bad.length, bad.join('; '));
+  await tab.close();
+}
+
+// Share codes, version 2, in a tab of its own: what pastes,
+// what a code carries, and the Library through a reload and a backup.
+async function codeRows(browser) {
+  console.log('\n  codes, version 2 (session 23)');
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  const bad = [];
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(HOOK);
+  const open = async (reload) => {
+    if (reload) await tab.reload();
+    else await tab.goto(`http://127.0.0.1:${PORT}/`);
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1500);
+  };
+  await open(false);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  const toast = () => tev(() => document.getElementById('toast').textContent);
+  const clip = () => tev(() => window.__rows.clip);
+  const paste = async (text) => {
+    await tev((t) => { window.__rows.clip = t; }, text);
+    await tev(() => document.getElementById('pasteCode').click());
+    await sleep(2500);
+  };
+  const library = () => tev(() => {
+    if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click();
+    document.querySelector('[data-tab="albums"]').click();
+  });
+  // The album called `title` opened in the Library, or false.
+  const openAlbum = async (title) => {
+    await library();
+    await sleep(300);
+    return tev((t) => {
+      // A playing album's title reads ", now playing" after it, for a screen reader.
+      const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.replace(/, now playing$/, '').trim() === t);
+      if (r) r.querySelector('.lrow-main').click();
+      return !!r;
+    }, title);
+  };
+  const heroKey = (word) => tev((w) => {
+    const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === w);
+    if (b) b.click();
+    return !!b;
+  }, word);
+  // The card's name, out of the Library (there the card names the album).
+  // The album called `title` shared from the Library: its code, waited for
+  // (twice, if the first tap lands before the page has the album open).
+  const shareAlbum = async (title) => {
+    for (let k = 0; k < 2; k++) {
+      await tev(() => { window.__rows.clip = ''; });
+      await openAlbum(title);
+      await sleep(300);
+      await heroKey('copy code');
+      for (let w = 0; w < 20; w++) {
+        const c = await clip();
+        if (c) return c;
+        await sleep(150);
+      }
+    }
+    return null;
+  };
+  const cardName = async () => {
+    await tev(() => { if (!document.getElementById('viewLibrary').hidden) document.getElementById('saveBtn').click(); });
+    await sleep(300);
+    return tev(() => document.getElementById('loopName').textContent);
+  };
+
+  // What can't be opened says so in one plain line.
+  await paste('DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR');
+  let t = await toast();
+  row('codes: a version 1 code pasted: it is from an older Ballad Falls and can\'t be opened', t === 'Code too old', t);
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  let h = 0;
+  for (const c of 'GRiSNBA') h = (h * 64 + A.indexOf(c) + 1) % 4093;
+  await paste(`GRiSNBA${A[h & 63]}${A[h >> 6]}`);
+  t = await toast();
+  row('codes: a newer build\'s code pasted: it needs a newer Ballad Falls', t === 'Needs update', t);
+
+  // An album's code pasted lands in the Library and plays; shared again, it
+  // is the same album.
+  const first = newSpec(31337, ['rainy', 'mellow']);
+  first.name = 'ฝนตกที่กรุงเทพ 🌧️';
+  const tracks = [first, newSpec(4242), newSpec(777, 'bars=64,bpm=80')];
+  const albumCode = encodeAlbum('Rainy Sunday', tracks);
+  await paste(albumCode);
+  t = await toast();
+  row('codes: an album\'s code pasted lands in the Library', t === 'Imported' && await openAlbum('Rainy Sunday'), t);
+  let again = null;
+  try { again = decodeAlbum(await shareAlbum('Rainy Sunday')); } catch (err) { again = { error: err.message }; }
+  const same = (a) => a && a.title === 'Rainy Sunday' && a.specs && a.specs.length === 3 && a.specs.every((s, i) => s.seed === tracks[i].seed && s.name === tracks[i].name && encodeSong(s) === encodeSong(tracks[i]));
+  row('codes: the album shared again from the Library is the same album, its first track\'s Thai name with it', same(again), JSON.stringify(again && again.title));
+  await heroKey('play');
+  await sleep(3500);
+  let p = await tev(() => window.__rows.probe());
+  let d = about(p && p.about);
+  let card = await cardName();
+  row('codes: the album plays: the core plays its first track, the card its name', d && Number(d.seed) === first.seed && card === first.name, `${d && d.seed} ${card}`);
+
+  // The rename box: Thai and emoji kept, an invisible character refused, and
+  // the name travels with the loop's code.
+  // Out of the Library first: there the card's name is the album's.
+  await cardName();
+  await tev(() => document.getElementById('loopName').click());
+  await tev(() => {
+    const i = document.getElementById('nameEdit');
+    i.value = 'ฝนตก 🎧';
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+    i.value = 'ฝนตก 🎧\u202E';
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  const box = await tev(() => document.getElementById('nameEdit').value);
+  await tab.keyboard.press('Enter');
+  await sleep(300);
+  await tev(() => {
+    if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+    document.querySelector('[data-stab="share"]').click();
+    document.getElementById('copySong').click();
+  });
+  await sleep(500);
+  let shared = null;
+  try { shared = decodeSong(await clip()); } catch (err) { shared = { error: err.message }; }
+  card = await cardName();
+  row('codes: the rename box keeps Thai and emoji, refuses an invisible character, and the name travels with the code', box === 'ฝนตก 🎧' && card === 'ฝนตก 🎧' && shared && shared.name === 'ฝนตก 🎧' && shared.seed === first.seed, `${JSON.stringify(box)} ${shared && shared.name}`);
+
+  // The Library after a reload: the album there, the renamed loop renamed.
+  await open(true);
+  const kept = await openAlbum('Rainy Sunday');
+  await heroKey('play');
+  await sleep(3500);
+  p = await tev(() => window.__rows.probe());
+  d = about(p && p.about);
+  card = await cardName();
+  row('codes: after a reload the Library has the album, and its first track plays renamed', kept && d && Number(d.seed) === first.seed && card === 'ฝนตก 🎧', `${d && d.seed} ${card}`);
+  const before = await shareAlbum('Rainy Sunday');
+
+  // A backup copied, the Library cleared, the backup restored: the album
+  // as it was.
+  await tev(() => document.getElementById('copyBackup').click());
+  await sleep(300);
+  const backup = await clip();
+  await tev(() => localStorage.clear());
+  await open(true);
+  const gone = !(await openAlbum('Rainy Sunday'));
+  await tev((b) => { window.__rows.clip = b; }, backup);
+  await tev(() => document.getElementById('pasteBackup').click());
+  await sleep(800);
+  t = await toast();
+  const back = await openAlbum('Rainy Sunday');
+  const after = await shareAlbum('Rainy Sunday');
+  row('codes: a backup restored brings the Library back: the album\'s code the same as before', gone && /^Restored \d+/.test(t) && back && after === before && /^[A-Za-z0-9_-]+$/.test(after), `${t}; ${after === before ? 'same code' : `${before} / ${after}`}`);
+  row('codes: no page errors in their tab', !bad.length, bad.join('; '));
+  await tab.close();
+}
+
+// Links, an album from one seed and the plain lines,
+// each in fresh tabs (a fresh profile each): a link opens the loop or
+// the album ready, not playing, online and offline; a damaged one says so
+// and the app goes on; sharing a link copies it (or uses the share sheet
+// where there is one); an album of one seed has a short code and the same
+// tracks in a second profile; the plain lines.
+async function linkRows(browser) {
+  console.log('\n  links and the album from one seed (session 24)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const fresh = async (url, { init } = {}) => {
+    const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+    tab.on('pageerror', (e) => bad.push(e.message));
+    await tab.addInitScript(HOOK);
+    if (init) await tab.addInitScript(init);
+    await tab.goto(url);
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1800);
+    return tab;
+  };
+  const state = (tab) => tab.evaluate(() => ({
+    card: document.getElementById('loopName').textContent,
+    toast: document.getElementById('toast').textContent,
+    hash: location.hash,
+    playing: document.getElementById('playBtn').getAttribute('aria-label') === 'Pause',
+  }));
+  const library = async (tab) => {
+    await tab.evaluate(() => {
+      if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click();
+      document.querySelector('[data-tab="albums"]').click();
+    });
+    await sleep(300);
+  };
+
+  // A loop's link, online.
+  const spec = newSpec(31337, ['rainy', 'mellow']);
+  spec.name = 'ฝนตก 🎧';
+  const loopCode = encodeSong(spec);
+  const loopLink = linkOf(`${ORIGIN}/`, loopCode);
+  let tab = await fresh(loopLink);
+  let st = await state(tab);
+  row('links: a loop\'s link opens the loop on the card, ready and not playing, its code out of the address', st.card === spec.name && !st.playing && st.hash === '' && /^Imported/.test(st.toast), JSON.stringify(st));
+  await tab.reload();
+  await sleep(1500);
+  st = await state(tab);
+  row('links: a reload brings the loop in no second time (the address has no code left to open)', !/Imported|Already/.test(st.toast) && st.hash === '', JSON.stringify(st));
+  await tab.close();
+
+  // The same link offline, the app installed (its worker holding the page).
+  tab = await fresh(`${ORIGIN}/`);
+  await tab.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await sleep(2500);
+  await tab.context().setOffline(true);
+  await tab.goto(loopLink);
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1800);
+  st = await state(tab);
+  row('links: the same link offline, the app installed, opens the loop', st.card === spec.name && !st.playing, JSON.stringify(st));
+  await tab.context().setOffline(false);
+  await tab.close();
+
+  // An album's link, and the album of one seed: made in one profile, opened
+  // by its link in another.
+  const share = await fresh(`${ORIGIN}/`);
+  await share.evaluate(() => { document.getElementById('seedCount').value = '12'; document.getElementById('seedCount').dispatchEvent(new Event('input')); });
+  await share.evaluate(() => document.getElementById('seedAlbumCode').click());
+  await sleep(600);
+  const seedCode = await share.evaluate(() => window.__rows.clip);
+  const toastCode = await share.evaluate(() => document.getElementById('toast').textContent);
+  row('links: an album from one seed of 12 tracks has a code under 20 characters', typeof seedCode === 'string' && /^[A-Za-z0-9_-]{5,19}$/.test(seedCode) && /^Copied/.test(toastCode), `${seedCode} ${toastCode}`);
+  await share.evaluate(() => document.getElementById('seedAlbumLink').click());
+  await sleep(600);
+  const seedLink = await share.evaluate(() => window.__rows.clip);
+  const linkCode = String(seedLink).slice(`${ORIGIN}/#c=`.length);
+  row('links: its link is the address with the code after #c= (a fresh seed each press), and "Copied" says so', String(seedLink).startsWith(`${ORIGIN}/#c=`) && /^[A-Za-z0-9_-]{5,19}$/.test(linkCode) && /^Copied/.test(await share.evaluate(() => document.getElementById('toast').textContent)), seedLink);
+  // The album of one seed saved (Mikey, 2026-11-23: "Add 'save'"):
+  // named in the Name box as a new album is, it lands in the Library as an
+  // album of its own, its tracks the ones its code plays, and it plays from
+  // there. The seed is fixed for the press (the page draws it from
+  // Math.random, its first draw), so the code copied and the album saved
+  // are the same draw; every later draw is the page's own (the Library's
+  // ids are drawn from it too, and must differ).
+  const pressFixed = (id) => share.evaluate((i) => {
+    const random = Math.random;
+    let first = true;
+    Math.random = () => {
+      if (!first) return random();
+      first = false;
+      return 0.3125;
+    };
+    try { document.getElementById(i).click(); } finally { Math.random = random; }
+  }, id);
+  await pressFixed('seedAlbumCode');
+  await sleep(600);
+  const fixedCode = await share.evaluate(() => window.__rows.clip);
+  share.once('dialog', (d) => d.dismiss());
+  await pressFixed('seedAlbumSave');
+  await sleep(600);
+  await library(share);
+  const none = await share.evaluate(() => [...document.querySelectorAll('.lrow.album .lrow-title')].map((x) => x.textContent.trim()));
+  row('seed album: save, its Name box closed: nothing saved', !none.some((n) => /Untitled|Seed Sunday/.test(n)), none.join(' | '));
+  await share.evaluate(() => { document.getElementById('saveBtn').click(); document.querySelector('[data-stab="share"]').click(); document.getElementById('goSeedAlbum').click(); });
+  await sleep(300);
+  let asked = null;
+  share.once('dialog', (d) => { asked = { message: d.message(), value: d.defaultValue() }; d.accept('Seed Sunday'); });
+  await pressFixed('seedAlbumSave');
+  await sleep(800);
+  const saveToast = await share.evaluate(() => document.getElementById('toast').textContent);
+  await library(share);
+  const opened = await share.evaluate(() => {
+    const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.replace(/, now playing$/, '').trim() === 'Seed Sunday');
+    if (r) r.querySelector('.lrow-main').click();
+    return !!r;
+  });
+  await sleep(400);
+  await share.evaluate(() => { window.__rows.clip = ''; });
+  await share.evaluate(() => { const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'copy code'); if (b) b.click(); });
+  await sleep(600);
+  let saved = null;
+  let fromSeed = null;
+  try { saved = decodeAlbum(await share.evaluate(() => window.__rows.clip)); } catch (err) { saved = { error: err.message }; }
+  try { fromSeed = decodeAlbum(fixedCode); } catch (err) { fromSeed = { error: err.message }; }
+  const sameTracks = saved && saved.specs && fromSeed && fromSeed.specs && saved.specs.length === 12 && fromSeed.specs.length === 12
+    && saved.specs.every((t, i) => encodeSong(t) === encodeSong(fromSeed.specs[i]));
+  row('seed album: save asks a name as a new album does, and the album lands in the Library under it', asked && asked.message === 'Name' && asked.value === 'Untitled' && opened && /^Saved/.test(saveToast) && saved && saved.title === 'Seed Sunday', `${JSON.stringify(asked)} ${saveToast} ${saved && saved.title}`);
+  row('seed album: its 12 tracks are the ones its code plays, in order (the code copied and the album saved from one seed)', sameTracks, saved && saved.specs ? `${saved.specs.length} tracks; first ${saved.specs[0] && saved.specs[0].name}, the code's ${fromSeed.specs && fromSeed.specs[0] && fromSeed.specs[0].name}` : JSON.stringify(saved));
+  await share.evaluate(() => { const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'play'); if (b) b.click(); });
+  await sleep(3500);
+  const heard = about((await share.evaluate(() => window.__rows.probe()) || {}).about);
+  await share.evaluate(() => { if (!document.getElementById('viewLibrary').hidden) document.getElementById('saveBtn').click(); });
+  await sleep(300);
+  const playedName = await share.evaluate(() => document.getElementById('loopName').textContent);
+  const firstTrack = fromSeed && fromSeed.specs && fromSeed.specs[0];
+  row('seed album: played from the Library, the core plays its first track (the code\'s), the card its name', firstTrack && heard && Number(heard.seed) === firstTrack.seed && playedName === firstTrack.name, `${heard && heard.seed} ${playedName}`);
+  await share.close();
+  const want = decodeAlbum(linkCode);
+  const second = await fresh(seedLink);
+  await library(second);
+  const tracks = await second.evaluate(() => {
+    const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.replace(/, now playing$/, '').trim() === 'Untitled');
+    if (r) r.querySelector('.lrow-main').click();
+    return !!r;
+  });
+  await sleep(400);
+  const names = await second.evaluate(() => [...document.querySelectorAll('.lrow.track .lrow-title')].map((x) => x.textContent.trim().replace(/^\d+\.\s*/, '').replace(/, now playing$/, '')));
+  st = await state(second);
+  row('links: a second fresh profile opens the album of 12 from its link, the same 12 tracks in the same order', tracks && names.length === 12 && names.every((n, i) => n === want.specs[i].name), `${names.join(' | ')} / ${want.specs.map((s) => s.name).join(' | ')}`);
+  await second.evaluate(() => document.getElementById('viewLibrary').hidden || document.getElementById('saveBtn').click());
+  await sleep(300);
+  st = await state(second);
+  row('links: the album is open at its first track, ready, not playing', st.card === want.specs[0].name && !st.playing, JSON.stringify(st));
+  await second.close();
+
+  // A damaged link: a plain line, the app still works.
+  const damaged = `${ORIGIN}/#c=${loopCode.slice(0, 4)}${loopCode[4] === 'A' ? 'B' : 'A'}${loopCode.slice(5)}`;
+  tab = await fresh(damaged);
+  st = await state(tab);
+  row('links: a link with a damaged code says so in one plain line', st.toast === 'Bad link' && st.hash === '', JSON.stringify(st));
+  await tab.evaluate((c) => { window.__rows.clip = c; }, loopCode);
+  await tab.evaluate(() => document.getElementById('pasteCode').click());
+  await sleep(1500);
+  st = await state(tab);
+  row('links: and the app still works: a code pasted after it opens', st.card === spec.name && /^Imported/.test(st.toast), JSON.stringify(st));
+  // A link pasted is its code.
+  await tab.evaluate((c) => { window.__rows.clip = `try this: ${c}`; }, loopLink);
+  await tab.evaluate(() => document.getElementById('pasteCode').click());
+  await sleep(1500);
+  st = await state(tab);
+  row('links: a link pasted opens as its code does', /Already saved/.test(st.toast), JSON.stringify(st));
+  await tab.close();
+
+  // Sharing a link: copied where there is no share sheet; the sheet where
+  // there is one.
+  tab = await fresh(`${ORIGIN}/`);
+  await tab.evaluate(() => document.getElementById('shareSong').click());
+  await sleep(600);
+  const copied = await tab.evaluate(() => ({ clip: window.__rows.clip, toast: document.getElementById('toast').textContent }));
+  row('links: share link without a share sheet copies the link', /^http:\/\/127\.0\.0\.1:\d+\/#c=[A-Za-z0-9_-]+$/.test(copied.clip) && /^Copied/.test(copied.toast), JSON.stringify(copied));
+  await tab.close();
+  tab = await fresh(`${ORIGIN}/`, { init: () => { navigator.share = async (d) => { window.__shared = d; }; } });
+  await tab.evaluate(() => document.getElementById('shareSong').click());
+  await sleep(600);
+  const sheet = await tab.evaluate(() => ({ shared: window.__shared, clip: window.__rows.clip }));
+  row('links: share link with a share sheet hands it the link and copies nothing', !!sheet.shared && /#c=[A-Za-z0-9_-]+$/.test(sheet.shared.url) && !sheet.clip, JSON.stringify(sheet));
+  await tab.close();
+
+  // The plain lines: a code from a newer build, and one from an older.
+  tab = await fresh(`${ORIGIN}/`);
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  let h = 0;
+  for (const c of 'GRiSNBA') h = (h * 64 + A.indexOf(c) + 1) % 4093;
+  const newer = `GRiSNBA${A[h & 63]}${A[h >> 6]}`;
+  const newerTab = await fresh(`${ORIGIN}/#c=${newer}`);
+  st = await state(newerTab);
+  row('links: a link from a newer build says it needs a newer Ballad Falls', st.toast === 'Needs update', st.toast);
+  await newerTab.close();
+  const olderTab = await fresh(`${ORIGIN}/#c=DL1-0C088-1GE08-60511-HBCQY-R4DR4-V7RDR`);
+  st = await state(olderTab);
+  row('links: a link with a version 1 code says it is from an older Ballad Falls', st.toast === 'Code too old', st.toast);
+  await olderTab.close();
+  await tab.close();
+  row('links: no page errors in their tabs', !bad.length, bad.join('; '));
+}
+
+// An album's pacing: each track plays as long as the album's
+// maker set it, then the next, in a profile that has never seen it.
+async function paceRows(browser) {
+  console.log('\n  an album carries how long each track plays (session 24b)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const fresh = async (url) => {
+    const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+    tab.on('pageerror', (e) => bad.push(e.message));
+    await tab.addInitScript(HOOK);
+    await tab.goto(url);
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1800);
+    return tab;
+  };
+  // Three short tracks, each its own time as its maker's Track length view
+  // set it, with fades of their own: 5 s of a 2-bar loop
+  // fading out; 4 s of a 16-bar loop, nothing faded; 6 s of a 4-bar loop
+  // fading in and out.
+  const made = [[101, 'bars=2,bpm=160', 5, false, true], [202, 'bars=16,bpm=150', 4, false, false], [303, 'bars=4,bpm=130', 6, true, true]];
+  const specs = made.map(([seed, request, secs, fadeIn, fadeOut]) => setTrack(newSpec(seed, request), { secs, fadeIn, fadeOut }));
+  // How long each plays: its time.
+  const want = specs.map((s) => s.track.secs);
+
+  // The maker's Library: the three saved in an album, shared from it.
+  let tab = await fresh(`${ORIGIN}/`);
+  await tab.evaluate(async (list) => {
+    const store = await import('/js/storage.js');
+    const ids = list.map((s) => store.save(s).id);
+    const a = store.createAlbum('Paced');
+    store.setAlbumIds(a.id, ids);
+  }, specs);
+  await tab.reload();
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  let code = null;
+  for (let k = 0; k < 2 && !code; k++) {
+    await tab.evaluate(() => {
+      window.__rows.clip = '';
+      if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click();
+      document.querySelector('[data-tab="albums"]').click();
+    });
+    await sleep(300);
+    await tab.evaluate(() => {
+      const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.replace(/, now playing$/, '').trim() === 'Paced');
+      if (r) r.querySelector('.lrow-main').click();
+    });
+    await sleep(300);
+    await tab.evaluate(() => { const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'copy code'); if (b) b.click(); });
+    for (let w = 0; w < 20 && !code; w++) {
+      code = await tab.evaluate(() => window.__rows.clip) || null;
+      await sleep(150);
+    }
+  }
+  await tab.close();
+  let back = null;
+  try { back = code && decodeAlbum(code); } catch (err) { back = { error: err.message }; }
+  const paced = (s) => { const t = trackOfSpec(s); return t.secs == null ? '-' : `${t.secs}${t.fadeIn ? 'i' : ''}${t.fadeOut ? 'o' : ''}`; };
+  row('album pacing: shared from the Library, the album\'s code carries each track\'s length and fades', back && back.specs && back.specs.map(paced).join(' ') === specs.map(paced).join(' '), `${code} ${back && back.specs ? back.specs.map(paced).join(' ') : JSON.stringify(back)}`);
+
+  // A fresh profile opens it by its link and plays: when does each track
+  // hand over? The core's loop (its seed) and the card, read every tenth of
+  // a second.
+  tab = await fresh(linkOf(`${ORIGIN}/`, code || ''));
+  const ready = await tab.evaluate(() => ({ card: document.getElementById('loopName').textContent, playing: document.getElementById('playBtn').getAttribute('aria-label') === 'Pause' }));
+  await tab.click('#playBtn');
+  const samples = await tab.evaluate(async (ms) => {
+    const out = [];
+    const start = performance.now();
+    while (performance.now() - start < ms) {
+      const p = await window.__rows.probe();
+      const seed = p && p.about ? Number((/(?:^|\n)seed=(\d+)/.exec(p.about) || [])[1]) : NaN;
+      out.push({ seed, at: (performance.now() - start) / 1000, card: document.getElementById('loopName').textContent });
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return out;
+  }, Math.round((want.reduce((a, b) => a + b, 0) + 8) * 1000));
+  await tab.close();
+  // Each run of one loop: its track, from when it started (Play, for the
+  // first), and the names the card showed through it.
+  const seen = [];
+  for (const x of samples.filter((y) => Number.isFinite(y.seed))) {
+    const last = seen[seen.length - 1];
+    if (!last || last.seed !== x.seed) seen.push({ seed: x.seed, at: seen.length ? x.at : 0, cards: [] });
+    seen[seen.length - 1].cards.push(x.card);
+  }
+  const order = seen.map((x) => specs.findIndex((s) => s.seed === x.seed));
+  const lasted = seen.slice(1).map((x, i) => x.at - seen[i].at);
+  const near = (i) => Math.abs(lasted[i] - want[i]) < 0.75;
+  // The card names the track for most of its run (it follows within a
+  // moment of the hand-over).
+  const follows = seen.length >= 3 && seen.slice(0, 3).every((x, i) => x.cards.filter((c) => c === specs[order[i]]?.name).length > x.cards.length * 0.8);
+  row('album pacing: opened by its link in a fresh profile, ready at its first track, not playing', ready.card === specs[0].name && !ready.playing, JSON.stringify(ready));
+  row('album pacing: played, each track hands over to the next in order, round to the first', order.slice(0, 4).join(',') === '0,1,2,0', `${order.join(',')}`);
+  row(`album pacing: each plays as long as its maker set it (${want[0]} s, from Play and round again; ${want[1]} s; ${want[2]} s)`,
+    lasted.length >= 4 && Math.abs(lasted[0] - want[0]) < 1.5 && near(1) && near(2) && Math.abs(lasted[3] - want[0]) < 0.75, `${lasted.map((x) => x.toFixed(2)).join(' s, ')} s`);
+  row('album pacing: the card follows the track playing', follows, seen.map((x) => `${x.cards[0]}..${x.cards[x.cards.length - 1]}`).join(' | '));
+  row('album pacing: no page errors in its tabs', !bad.length, bad.join('; '));
+}
+
+// Previous in an album: from the first track,
+// a middle track, after a track's end handed over, an album of one, after a
+// track was deleted, and after leaving the album; from the on-screen key,
+// the keyboard and the lock screen and headset (the page's media session
+// handler, which Android's notification reaches the same way).
+async function previousRows(browser) {
+  console.log('\n  Previous in an album (session 30a)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  tab.on('pageerror', (e) => bad.push(e.message));
+  // The page's media session handlers, kept so a row can press the lock
+  // screen's and the headset's keys.
+  await tab.addInitScript(`(() => {
+    window.__media = {};
+    try {
+      const ms = navigator.mediaSession;
+      const real = ms.setActionHandler.bind(ms);
+      ms.setActionHandler = (a, f) => { window.__media[a] = f; return real(a, f); };
+    } catch (e) { /* none here */ }
+  })();`);
+  await tab.addInitScript(HOOK);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  await tab.goto(`${ORIGIN}/`);
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+
+  // Three tracks that play on, one alone; and three short ones (two bars
+  // at 160 beats a minute, played once: a few seconds each) that hand over.
+  const mk = (seed, bpm, short) => {
+    const s = newSpec(seed, `bars=2,bpm=${bpm}`);
+    // Played once: its pass, to the second.
+    if (short) setTrack(s, { secs: Math.max(1, Math.round(passSeconds(s))) });
+    return s;
+  };
+  const specs = [mk(4101, 160), mk(4202, 150), mk(4303, 140)];
+  const paced = [mk(4404, 160, true), mk(4505, 150, true), mk(4606, 140, true)];
+  const solo = mk(4707, 160);
+  const ids = await tev(async (all) => {
+    const store = await import('/js/storage.js');
+    const out = {};
+    for (const [k, list] of Object.entries(all)) {
+      const made = list.map((s) => store.save(s).id);
+      const a = store.createAlbum(k);
+      store.setAlbumIds(a.id, made);
+      out[k] = made;
+    }
+    return out;
+  }, { Three: specs, Paced: paced, Solo: [solo] });
+  await tab.reload();
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+
+  const seedNow = async () => {
+    const m = await tev(() => window.__rows.probe());
+    const d = m ? about(m.about) : null;
+    return d ? Number(d.seed) : NaN;
+  };
+  const prevOn = () => tev(() => !document.getElementById('prevBtn').disabled);
+  const card = () => tev(() => document.getElementById('loopName').textContent);
+  // The core plays `seed` within `ms`.
+  const reaches = async (seed, ms = 4000) => {
+    for (let t = 0; t < ms; t += 100) {
+      if (await seedNow() === seed) return true;
+      await sleep(100);
+    }
+    return false;
+  };
+  const library = () => tev(() => {
+    if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click();
+    document.querySelector('[data-tab="albums"]').click();
+  });
+  const heroKey = (word) => tev((w) => {
+    const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === w);
+    if (b) b.click();
+    return !!b;
+  }, word);
+  // The album `title` played from its first track, the Library closed.
+  const playAlbum = async (title) => {
+    await library();
+    await sleep(300);
+    await tev((t) => {
+      const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.replace(/, now playing$/, '').trim() === t);
+      if (r) r.querySelector('.lrow-main').click();
+    }, title);
+    await sleep(300);
+    await heroKey('play');
+    await sleep(500);
+    await tev(() => { if (!document.getElementById('viewLibrary').hidden) document.getElementById('saveBtn').click(); });
+    await sleep(300);
+  };
+  const click = () => tev(() => document.getElementById('prevBtn').click());
+  const keys = () => tev(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'MediaTrackPrevious', key: 'MediaTrackPrevious', bubbles: true })));
+  const lockScreen = () => tev(() => { const f = window.__media.previoustrack; if (f) f(); return !!f; });
+  const pause = () => tev(() => { if (document.getElementById('playBtn').getAttribute('aria-label') === 'Pause') document.getElementById('playBtn').click(); });
+  const seeds = specs.map((s) => s.seed);
+
+  // From the first track: Previous is there, and goes round to the last.
+  await playAlbum('Three');
+  let first = await reaches(seeds[0]);
+  const enabled = await prevOn();
+  await click();
+  const wrapped = await reaches(seeds[2], 2500);
+  row('previous in an album: from the first track the key is there and goes to the last', first && enabled && wrapped, `first=${first} enabled=${enabled} last=${wrapped}`);
+
+  // A middle track, from each way in.
+  const via = async (name, press, from, to) => {
+    // `from` is playing; one press goes to `to`.
+    if (!(await reaches(from, 4000))) { row(`previous in an album: ${name}`, false, `never reached ${from}`); return; }
+    const ok = await press();
+    const there = await reaches(to, 2500);
+    const shown = await card();
+    row(`previous in an album: from a middle track, ${name}, goes to the track before, the card following`, ok !== false && there && shown === specs[seeds.indexOf(to)].name, `${there} ${shown}`);
+  };
+  await via('the on-screen key', click, seeds[2], seeds[1]);
+  await via('the keyboard\'s Previous', keys, seeds[1], seeds[0]);
+  // Round again to the middle, for the lock screen and the headset.
+  await click();
+  await reaches(seeds[2], 2500);
+  await via('the lock screen and the headset', lockScreen, seeds[2], seeds[1]);
+  const enabledMid = await prevOn();
+  row('previous in an album: the key stays on through the album', enabledMid, String(enabledMid));
+
+  // After a track's end handed over: the track plays its length, hands to
+  // the next, Previous goes back to it, and it plays its own length again.
+  const ps = paced.map((s) => s.seed);
+  await pause();
+  await playAlbum('Paced');
+  await reaches(ps[0]);
+  const handed = await reaches(ps[1], 6000);
+  await sleep(600);
+  await click();
+  const back = await reaches(ps[0], 2500);
+  const again = await reaches(ps[1], 6000);
+  row('previous in an album: after a track\'s end handed over, Previous goes back to it, and it plays its own length and hands over again', handed && back && again, `handed=${handed} back=${back} again=${again}`);
+
+  // An album of one.
+  await pause();
+  await playAlbum('Solo');
+  const only = await reaches(solo.seed);
+  const onlyOn = await prevOn();
+  await click();
+  await sleep(800);
+  const stayed = await seedNow() === solo.seed;
+  row('previous in an album: an album of one has the key on and Previous starts the track again', only && onlyOn && stayed, `${only} ${onlyOn} ${stayed}`);
+
+  // A track deleted out from under the album: Previous goes round it.
+  await pause();
+  await playAlbum('Three');
+  await reaches(seeds[0]);
+  await click();
+  await reaches(seeds[2], 2500);
+  await tev(async (id) => { const store = await import('/js/storage.js'); store.remove(id); }, ids.Three[1]);
+  await click();
+  const round = await reaches(seeds[0], 2500);
+  row('previous in an album: after a track was deleted, Previous goes to the track before it', round, `${round}`);
+  const goes = await seedNow();
+  await click();
+  const wrapAgain = await reaches(seeds[2], 2500);
+  row('previous in an album: and on round the album, still in its order', wrapAgain, `${goes} ${wrapAgain}`);
+
+  // After leaving the album Previous is as the history says: not there at
+  // its start, there once a new loop makes some.
+  await tev(() => document.getElementById('nowBtn').click());
+  await sleep(400);
+  const offered = await tev(() => { const a = document.getElementById('nowAction'); const ok = !!a && !a.hidden && a.textContent === 'leave'; if (ok) a.click(); return ok; });
+  await sleep(500);
+  const left = await tev(() => document.getElementById('prevBtn').disabled);
+  row('previous in an album: after leaving the album, Previous is as the history says (off at its start)', offered && left, `${offered} ${left}`);
+  await tev(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', code: 'ArrowRight', bubbles: true, cancelable: true })));
+  await sleep(2500);
+  const afterNew = await prevOn();
+  row('previous in an album: and on again once a new loop has made a history', afterNew, String(afterNew));
+  await pause();
+  row('previous in an album: no page errors', !bad.length, bad.join('; '));
+  await tab.close();
+}
+
+// The lock screen's artwork (Mikey, 2026-11-22): what
+// navigator.mediaSession.metadata says, fetched, decoded and compared with
+// that loop's cover as js/cover.js draws it, pixel for pixel at 32 px.
+async function artRows(browser) {
+  console.log('\n  Now Playing art (session 30f)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(() => {
+    window.__long = [];
+    try {
+      new PerformanceObserver((list) => { for (const t of list.getEntries()) window.__long.push({ at: t.startTime, ms: t.duration }); }).observe({ entryTypes: ['longtask'] });
+    } catch { /* none here */ }
+  });
+  const specs = [newSpec(31337, ['rainy', 'mellow']), newSpec(4242), newSpec(777, 'bpm=80')];
+  await tab.goto(linkOf(`${ORIGIN}/`, encodeAlbum('Art', specs)));
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  const click = (id) => tev((i) => document.getElementById(i).click(), id);
+  // How far the artwork is from a loop's cover (0: that cover), or why not.
+  // `spec` null: the card's own cover (a loop the core made itself).
+  const artIs = (spec) => tev(async (want) => {
+    const m = navigator.mediaSession.metadata;
+    if (!m || !m.artwork.length) return { why: 'no artwork', title: m && m.title };
+    const src = m.artwork[0].src;
+    if (src.includes('/icons/')) return { why: 'the app\'s icon', title: m.title, src };
+    let got;
+    try {
+      got = await createImageBitmap(await (await fetch(src)).blob());
+    } catch (e) {
+      return { why: `unreadable: ${e.message}`, title: m.title, src };
+    }
+    let expected = document.getElementById('cover');
+    if (want) {
+      expected = document.createElement('canvas');
+      (await import('/js/cover.js')).drawCover(expected, want, 320);
+    }
+    const small = (image) => {
+      const c = document.createElement('canvas');
+      c.width = c.height = 32;
+      const x = c.getContext('2d', { willReadFrequently: true });
+      x.drawImage(image, 0, 0, 32, 32);
+      return x.getImageData(0, 0, 32, 32).data;
+    };
+    const a = small(got);
+    const b = small(expected);
+    let sum = 0;
+    for (let i = 0; i < a.length; i++) sum += Math.abs(a[i] - b[i]);
+    return { off: sum / a.length, width: got.width, title: m.title, src };
+  }, spec);
+  // Within a few seconds: that loop's title, and its cover.
+  const becomes = async (spec, title, ms = 8000) => {
+    const until = Date.now() + ms;
+    let last;
+    do {
+      last = await artIs(spec);
+      if (last.off != null && last.off < 2 && last.width === 320 && (!title || last.title === title)) return { ok: true, ...last };
+      await sleep(300);
+    } while (Date.now() < until);
+    return { ok: false, ...last };
+  };
+  const say = (x) => (x.why ? `${x.why} (${x.title})` : `${x.off.toFixed(2)} off, ${x.width} px, ${x.title}`);
+  const steps = async (name, go, spec, title, ms) => {
+    await go();
+    const x = await becomes(spec, title, ms);
+    row(`now playing art: ${name}: the loop's own cover`, x.ok, say(x));
+    return x;
+  };
+
+  const apart = await steps('first Play', () => click('playBtn'), specs[0], specs[0].name);
+  const other = await artIs(specs[1]);
+  row('now playing art: one loop\'s cover is not another\'s', apart.ok && other.off > 4, say(other));
+  // From here: switching loops, not the first Play's loading of the core.
+  await sleep(1500);
+  await steps('Next', () => click('nextBtn'), specs[1], specs[1].name);
+  await steps('Previous', () => click('prevBtn'), specs[0], specs[0].name);
+  await steps('an album track', () => tev(async () => {
+    const at = async (sel) => { document.querySelector(sel).click(); await new Promise((r) => setTimeout(r, 300)); };
+    if (document.getElementById('viewLibrary').hidden) await at('#libraryBtn');
+    await at('[data-tab="albums"]');
+    [...document.querySelectorAll('.lrow.album')].find((r) => r.textContent.includes('Art')).querySelector('.lrow-main').click();
+    await new Promise((r) => setTimeout(r, 300));
+    document.querySelectorAll('.lrow.track .lrow-main')[1].click();
+  }), specs[1], specs[1].name);
+  await steps('a track\'s end', async () => {
+    await click('nowBtn');
+    await trackTo(tev, 3);
+  }, specs[2], specs[2].name, 15000);
+  const before = await artIs(specs[2]);
+  const renamed = await steps('a rename', () => tev(() => {
+    if (document.getElementById('viewNow').hidden) document.getElementById('nowBtn').click();
+    document.getElementById('loopName').click();
+    const i = document.getElementById('nameEdit');
+    i.value = 'renamed';
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+    i.dispatchEvent(new Event('blur'));
+  }), specs[2], 'renamed');
+  row('now playing art: a rename keeps the picture it had', renamed.ok && renamed.src === before.src, `${before.src} then ${renamed.src}`);
+
+  // Out of the album, a loop the core makes: the card's cover. Nothing here
+  // draws a cover to compare, so the long tasks are the app's own.
+  await tev(() => {
+    if (document.getElementById('viewNow').hidden) document.getElementById('nowBtn').click();
+    if (!document.getElementById('nowAlbum').hidden) document.getElementById('nowAction').click();
+  });
+  await sleep(500);
+  await tev(() => { window.__long = []; });
+  await click('nextBtn');
+  await sleep(2500);
+  const long = await tev(() => window.__long.map((t) => Math.round(t.ms)));
+  row('now playing art: no long task over 100 ms as a new loop\'s cover is made', long.every((ms) => ms <= 100), `${long.join(', ') || 'none'} ms`);
+  const fresh = await becomes(null);
+  row('now playing art: out of the album, a new loop: the cover on the card', fresh.ok && fresh.title !== 'renamed' && fresh.src !== renamed.src, say(fresh));
+  row('now playing art: no page errors', !bad.length, `${bad.join('; ')}`);
+  await tab.close();
+}
+
+// A phone on its side in a browser (Mikey's review,
+// 2026-11-22): the insets as a browser reports them (DevTools' override),
+// the screen's size apart from the page's, real touch gestures.
+async function keyboardRows(browser) {
+  console.log('\n  the keyboard (session 30n)');
+  const ctx = await browser.newContext({ viewport: { width: 1180, height: 820 }, serviceWorkers: 'block' });
+  const tab = await ctx.newPage();
+  const bad = [];
+  tab.on('pageerror', (e) => bad.push(e.message));
+  // A fixed short loop, so nothing here waits on a random draw (a long
+  // piece's line has keys of its own).
+  const loop = linkOf(`http://127.0.0.1:${PORT}/`, encodeSong(newSpec(4242, { length: 8 })));
+  try {
+    await tab.addInitScript(HOOK);
+    await tab.goto(loop);
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1500);
+    await tab.evaluate(() => {
+      addEventListener('keydown', (e) => { window.keyEvent = e; }, true);
+    });
+    const state = () => tab.evaluate(() => ({
+      name: document.getElementById('loopName').textContent,
+      play: document.getElementById('playBtn').getAttribute('aria-label'),
+      said: document.querySelector('.toast').textContent,
+      saves: localStorage.getItem('driftloom.saves.v1') || '',
+      view: [...document.querySelectorAll('.view')].find((v) => !v.hidden).dataset.view,
+      share: !document.getElementById('saveShare').hidden,
+      advanced: !document.getElementById('libAdvanced').hidden,
+      pop: document.getElementById('keysPop').open,
+      volume: document.getElementById('volume').value,
+      focus: document.activeElement ? document.activeElement.id || document.activeElement.className : '',
+      jumps: window.__rows.posts.filter((m) => m.type === 'playJump').map((m) => m.msg.at),
+      bass: document.querySelectorAll('#layerList .btn-on')[1].getAttribute('aria-checked'),
+    }));
+    const press = async (k, wait = 500) => {
+      await tab.evaluate(() => {
+        window.keyEvent = null;
+        document.querySelector('.toast').textContent = '';
+      });
+      await tab.keyboard.press(k);
+      await sleep(wait);
+      return { ...await state(), heard: await tab.evaluate(() => !!window.keyEvent), taken: await tab.evaluate(() => !!window.keyEvent && window.keyEvent.defaultPrevented) };
+    };
+    // Where a letter goes: the view up (Share and Advanced are panes).
+    const up = (s, view) => (view === 'share' ? s.view === 'save' && s.share : view === 'advanced' ? s.view === 'library' && s.advanced : s.view === view);
+
+    let s = await press('Space', 3000);
+    row('keyboard: Space plays', s.play === 'Pause' && s.taken, s.play);
+    const first = s.name;
+    s = await press('ArrowRight', 3000);
+    const second = s.name;
+    row('keyboard: Right is Next', s.taken && second !== first, `${first} to ${second}`);
+    s = await press('ArrowLeft', 3000);
+    row('keyboard: Left is Previous', s.taken && s.name === first, `${second} to ${s.name}`);
+    s = await press('k', 800);
+    const paused = s.play;
+    s = await press('k', 1500);
+    row('keyboard: K pauses and plays', paused === 'Play' && s.play === 'Pause', `${paused}, ${s.play}`);
+
+    // Shift with the arrows: a bar on and back, as the rail's keys go.
+    const jumps = s.jumps.length;
+    s = await press('Shift+ArrowRight', 300);
+    const ahead = s.jumps.slice(jumps);
+    s = await press('Shift+ArrowLeft', 300);
+    const back = s.jumps.slice(jumps);
+    row('keyboard: Shift+Right moves the playhead a bar on, Shift+Left a bar back', s.taken && ahead.length === 1 && back.length === 2 && back[1] < back[0], JSON.stringify(back));
+
+    const vol = s.volume;
+    s = await press('ArrowDown');
+    const down = s.volume;
+    s = await press('ArrowUp');
+    row('keyboard: Down and Up the volume, 5% a press', Math.abs(Number(vol) - Number(down) - 0.05) < 1e-6 && s.volume === vol && /^Volume \d+%$/.test(s.said), `${vol}, ${down}, ${s.volume}: ${s.said}`);
+    s = await press('m');
+    const muted = s;
+    s = await press('m');
+    row('keyboard: M mutes, and again back', muted.volume === '0' && muted.said === 'Muted' && s.volume === vol, `${muted.volume} ${muted.said}, ${s.volume}`);
+
+    s = await press('Digit1', 1200);
+    row('keyboard: 1 rolls the drums', s.taken && s.said === 'Rolled drums' && s.name === first, s.said);
+    s = await press('Shift+Digit2', 600);
+    const off = s;
+    s = await press('Shift+Digit2', 600);
+    row('keyboard: Shift+2 turns the bass off, and on', off.bass === 'false' && off.said === 'Bass off' && s.bass === 'true' && s.said === 'Bass on', `${off.bass} ${off.said}, ${s.bass} ${s.said}`);
+    s = await press('r', 1200);
+    row('keyboard: R rolls every layer', s.taken && s.said === 'Rolled all' && s.name === first, s.said);
+
+    // Each view by its letter, and out by Esc (Now Playing, Sound and
+    // Layers, where you stay, by N): the keyboard alone, the focus never
+    // left in a view that closed.
+    const views = await tab.evaluate(async () => (await import('./js/shortcuts.js')).VIEW_KEYS);
+    for (const [letter, view, word] of views) {
+      if (view === 'now') continue;
+      s = await press(letter);
+      const opened = s;
+      const lost = opened.focus === '' || opened.focus === 'BODY';
+      if (['sounds', 'layers'].includes(view)) {
+        s = await press('n');
+        row(`keyboard: ${letter.toUpperCase()} opens ${word}, N goes back to Now playing`, opened.taken && up(opened, view) && s.view === 'now', `${opened.view}, ${s.view}`);
+        continue;
+      }
+      // Esc goes back the way the view's own key does: a picker to the Vibe
+      // panel, Export to Share, Advanced to More; Esc again to Now playing.
+      let out = 0;
+      for (; out < 3 && s.view !== 'now'; out++) s = await press('Escape');
+      row(`keyboard: ${letter.toUpperCase()} opens ${word}, Esc closes it`, opened.taken && up(opened, view) && s.view === 'now' && !(lost && opened.focus !== '' && false), `${opened.view}${opened.advanced ? ' advanced' : ''}${opened.share ? ' share' : ''}, out in ${out}, focus ${opened.focus}`);
+    }
+    s = await press('l');
+    s = await press('n');
+    row('keyboard: N from Layers is Now playing', s.view === 'now', s.view);
+    s = await press('i');
+    const lib = s.view;
+    s = await press('i');
+    row('keyboard: a view\'s letter again goes back, as its key does', lib === 'library' && s.view === 'now', `${lib}, ${s.view}`);
+
+    // The list of keys, said whole; Esc closes it, the focus back.
+    await tab.evaluate(() => document.getElementById('nextBtn').focus());
+    s = await press('Shift+Slash');
+    const list = await tab.evaluate(() => [...document.querySelectorAll('#keysList li')].map((li) => li.textContent));
+    const shown = s;
+    s = await press('Escape');
+    row('keyboard: ? shows the list of keys, each said whole; Esc closes it, the focus back', shown.pop && shown.focus === 'keysClose' && list.length === 27 && list.some((t) => /Right arrow, left arrow: next \/ previous/.test(t)) && !s.pop && s.focus === 'nextBtn' && s.view === 'now', `${list.length} rows, ${shown.focus}, then ${s.focus}`);
+
+    const held = await tab.evaluate(() => {
+      const one = (code, key, mods) => {
+        const e = new KeyboardEvent('keydown', { code, key, ...mods, repeat: true, bubbles: true, cancelable: true });
+        document.body.dispatchEvent(e);
+        return e.defaultPrevented;
+      };
+      document.querySelector('.toast').textContent = '';
+      return [one('ArrowRight', 'ArrowRight', {}), one('KeyL', 'l', {}), one('KeyS', 's', { ctrlKey: true }), one('Space', ' ', {})];
+    });
+    await sleep(1500);
+    s = await state();
+    row('keyboard: a key held down acts once', held.every(Boolean) && s.name === first && s.said === '' && s.play === 'Pause' && s.view === 'now', JSON.stringify({ held, said: s.said, view: s.view }));
+
+    // A control's own keys: a slider's arrows move it; a tab's move the tabs.
+    s = await press('s');
+    await tab.focus('#warmth');
+    const warm = await tab.evaluate(() => document.getElementById('warmth').value);
+    s = await press('ArrowRight', 1500);
+    const warmer = await tab.evaluate(() => document.getElementById('warmth').value);
+    row('keyboard: on a slider, Right moves the slider, not to the next loop', s.name === first && Number(warmer) > Number(warm) && s.view === 'sounds', `${warm} to ${warmer}, ${s.name}`);
+    s = await press('l');
+    row('keyboard: on a slider, a letter still acts', s.view === 'layers', s.view);
+    s = await press('i');
+    await tab.focus('[data-tab="albums"]');
+    s = await press('ArrowRight', 1500);
+    row('keyboard: on a tab, Right moves the tab, not to the next loop', s.name === first && s.focus.includes('tab') && await tab.evaluate(() => document.activeElement.dataset.tab === 'loops'), `${s.focus}, ${s.name}`);
+    s = await press('Escape');
+
+    // Typing in the Bars view's number: every key the box's (it keeps the
+    // digits); Esc, its own, clears it, and then closes the view.
+    s = await press('b');
+    await tab.focus('#lenNum');
+    const was = await state();
+    for (const k of ['1', '2', 'l', 'Space', 'm', 'ArrowLeft']) await press(k, 150);
+    s = await state();
+    const typed = await tab.evaluate(() => document.getElementById('lenNum').value);
+    row('keyboard: typing in the Bars view\'s number does nothing else', s.view === 'length' && s.name === was.name && s.play === was.play && s.volume === was.volume && s.bass === was.bass && typed === '12', JSON.stringify({ typed, view: s.view }));
+    s = await press('Escape');
+    const cleared = s;
+    s = await press('Escape');
+    row('keyboard: Esc in the number is the box\'s; again, the view closes', cleared.view === 'length' && s.view === 'vibe', `${cleared.view}, ${s.view}`);
+    s = await press('Escape');
+
+    // The switch, by the keyboard alone: A, Tab to it, Space.
+    s = await press('a');
+    let n = 0;
+    for (; n < 40 && (await tab.evaluate(() => document.activeElement.id)) !== 'letterKeys'; n++) await tab.keyboard.press('Tab');
+    s = await press('Space');
+    const offNow = await tab.evaluate(() => document.getElementById('letterKeys').getAttribute('aria-checked'));
+    for (let i = 0; i < 3 && s.view !== 'now'; i++) s = await press('Escape');
+    row('keyboard: Advanced\'s letter keys switch, reached by Tab and pressed by Space', offNow === 'false' && s.view === 'now', `${n} Tabs, ${offNow}`);
+    const checkOff = async (label) => {
+      // (Esc left the focus on the Library's key, where Space presses it.)
+      await tab.evaluate(() => document.activeElement.blur());
+      const before = await state();
+      const nothing = [];
+      for (const k of ['l', 'Digit1', 'Shift+Slash', 'k', 'm', 'r']) {
+        const t = await press(k, 400);
+        nothing.push(t.heard && !t.taken && t.view === 'now' && !t.pop && t.said === '' && t.play === before.play && t.volume === before.volume);
+      }
+      let t = await press('ArrowRight', 3000);
+      const next = t.taken && t.name !== before.name;
+      t = await press('ArrowLeft', 3000);
+      const space = await press('Space', 800);
+      await press('Space', 800);
+      row(`keyboard: letter keys off${label}: a letter, a digit, ? do nothing; the arrows and Space still work`, nothing.every(Boolean) && next && t.name === before.name && space.taken && space.play !== t.play,
+        JSON.stringify({ nothing, next, back: t.name === before.name, space: [space.taken, t.play, space.play] }));
+    };
+    await checkOff('');
+    await tab.reload();
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1500);
+    await tab.evaluate(() => { addEventListener('keydown', (e) => { window.keyEvent = e; }, true); });
+    const kept = await tab.evaluate(() => document.getElementById('letterKeys').getAttribute('aria-checked'));
+    row('keyboard: the switch is kept, as Mono is', kept === 'false', kept);
+    await checkOff(', after a reload');
+    await tab.evaluate(() => document.getElementById('letterKeys').click());
+
+    s = await press('Control+KeyS');
+    row('keyboard: Ctrl+S saves to Favorite Loops, not the page', s.taken && /^Saved|^Already saved/.test(s.said) && s.saves !== '', s.said);
+
+    const said = await tab.evaluate(() => ['playBtn', 'nextBtn', 'prevBtn', 'saveBtn', 'libraryBtn', 'nowBtn', 'viewBtn', 'vibesBtn'].map((id) => document.getElementById(id).getAttribute('aria-keyshortcuts'))
+      .concat(document.querySelector('.btn-roll').getAttribute('aria-keyshortcuts'), document.querySelector('#layerList .btn-on').getAttribute('aria-keyshortcuts')));
+    row('keyboard: the controls say their keys', /^Space K,ArrowRight,ArrowLeft,Control\+S,I,N,[SL],V,1,Shift\+1$/.test(said.join()), said.join());
+  } catch (e) {
+    row('keyboard: measured', false, e.message.split('\n')[0]);
+  }
+  row('keyboard: no page errors', !bad.length, bad.join('; '));
+  await ctx.close();
+}
+
+async function sidewaysRows(browser) {
+  console.log('\n  a phone on its side, and the browser\'s bar (session 30f)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const phone = async ({ page: [width, height], screen: [sw, sh], insets: [top, right, bottom, left] = [0, 0, 0, 0], url = '/' }) => {
+    const ctx = await browser.newContext({ viewport: { width, height }, screen: { width: sw, height: sh }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+    const tab = await ctx.newPage();
+    tab.on('pageerror', (e) => bad.push(e.message));
+    const cdp = await ctx.newCDPSession(tab);
+    if (top || right || bottom || left) {
+      await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: { top, topMax: top, right, rightMax: right, bottom, bottomMax: bottom, left, leftMax: left } });
+    }
+    await tab.goto(url.startsWith('http') ? url : `${ORIGIN}${url}`);
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1000);
+    return { ctx, tab, cdp };
+  };
+
+  // The boxes, against the part of the page that is really the app's.
+  const CASES = [
+    ['no insets', { page: [800, 360], screen: [800, 360] }, [0, 0, 0, 0]],
+    ['no insets, small', { page: [568, 320], screen: [568, 320] }, [0, 0, 0, 0]],
+    ['no insets, wide', { page: [1000, 420], screen: [1000, 420] }, [0, 0, 0, 0]],
+    ['the window\'s insets, already outside (Mikey\'s phone)', { page: [804, 303], screen: [895, 393], insets: [25, 49, 0, 0] }, [0, 0, 0, 0]],
+    ['the same, the bar away', { page: [804, 368], screen: [895, 393], insets: [25, 49, 0, 0] }, [0, 0, 0, 0]],
+    ['real ones: a notch each side and a home bar', { page: [852, 343], screen: [852, 393], insets: [0, 59, 21, 59] }, [0, 59, 21, 59]],
+    ['real ones: edge to edge, the bar at one side', { page: [895, 393], screen: [895, 393], insets: [25, 49, 0, 0] }, [25, 49, 0, 0]],
+  ];
+  for (const [name, how, [top, right, bottom, left]] of CASES) {
+    try {
+      const { ctx, tab } = await phone(how);
+      const b = await tab.evaluate(() => {
+        const r = (s) => document.querySelector(s).getBoundingClientRect();
+        return { panel: r('.dynamic-inner'), card: r('.info-inner'), next: r('#nextBtn'), prev: r('#prevBtn'), last: r('#viewBtn'), w: document.documentElement.clientWidth, h: innerHeight };
+      });
+      await ctx.close();
+      const gap = {
+        left: b.panel.left - left, right: b.w - right - b.card.right,
+        top: b.panel.top - top, cardTop: b.card.top - top, bottom: b.h - bottom - b.panel.bottom, keysBottom: b.h - bottom - b.last.bottom,
+      };
+      const said = JSON.stringify(Object.fromEntries(Object.entries(gap).map(([k, v]) => [k, Math.round(v * 10) / 10])));
+      row(`sideways, ${name}: the panel at the left, the card and the keys at the right`, b.panel.right <= b.card.left && b.panel.right <= b.prev.left && Math.abs(b.next.right - b.card.right) <= 1, said);
+      row(`sideways, ${name}: centered in the room, and filling it`,
+        Math.abs(gap.left - gap.right) <= 2 && gap.left >= 0 && gap.left <= 14 && Math.abs(b.panel.width - b.card.width) <= 2
+        && [gap.top, gap.cardTop, gap.bottom, gap.keysBottom].every((v) => v >= 0 && v <= 10), said);
+    } catch (e) {
+      row(`sideways, ${name}: measured`, false, e.message.split('\n')[0]);
+    }
+  }
+
+  // The scroll that puts the bar away.
+  const long = linkOf(`${ORIGIN}/`, encodeSong(newSpec(11, { length: 1024 })));
+  for (const [width, height, sw, sh] of [[804, 303, 895, 393], [360, 640, 360, 760]]) {
+    const at = `${width}x${height}`;
+    try {
+      const { ctx, tab, cdp } = await phone({ page: [width, height], screen: [sw, sh], url: long });
+      const home = async () => {
+        await tab.evaluate(() => scrollTo(0, 0));
+        await sleep(250);
+      };
+      // A finger, move by move: headless Chromium's synthesizeScrollGesture
+      // sends the touch's start and no move, so nothing scrolls and "doesn't
+      // move the page" passes on nothing. So each swipe also says how many
+      // of its moves the element itself was given.
+      const swipe = async (selector, dx, dy, along = 0.5) => {
+        await home();
+        const p = await tab.evaluate(([s, part]) => {
+          window.fingerMoves = 0;
+          if (!window.fingerHeard) {
+            window.fingerHeard = true;
+            document.addEventListener('touchmove', (e) => { if (e.target.closest && e.target.closest(window.fingerOn)) window.fingerMoves++; }, { capture: true, passive: true });
+          }
+          window.fingerOn = s;
+          const r = document.querySelector(s).getBoundingClientRect();
+          return { x: Math.round(r.left + 12 + (r.width - 24) * part), y: Math.round(r.top + r.height / 2) };
+        }, [selector, along]);
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [p] });
+        for (let i = 1; i <= 12; i++) {
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x + (dx * i) / 12, y: p.y + (dy * i) / 12 }] });
+          await sleep(16);
+        }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await sleep(400);
+        return tab.evaluate(() => ({ y: scrollY, moves: window.fingerMoves }));
+      };
+      const press = async (selector) => {
+        await tab.evaluate((s) => document.querySelector(s).click(), selector);
+        await sleep(350);
+      };
+      const by = await swipe('#nowBig', 0, -120);
+      row(`the bar, ${at}: a swipe on the panel scrolls the document (what puts a browser's bar away)`, by.y >= 40, JSON.stringify(by));
+      await tab.evaluate(() => scrollTo(0, 1e5));
+      await sleep(250);
+      const still = await tab.evaluate(() => {
+        const app = document.getElementById('app').getBoundingClientRect();
+        const keys = [...document.querySelectorAll('.zone-buttons button')].map((b) => b.getBoundingClientRect());
+        return { top: app.top, height: app.height, h: innerHeight, in: keys.every((r) => r.top >= 0 && r.bottom <= innerHeight + 1), wide: document.documentElement.scrollWidth - innerWidth };
+      });
+      row(`the bar, ${at}: scrolled to the end, the app fills the screen, every key on it`, Math.abs(still.top) <= 1 && Math.abs(still.height - still.h) <= 1 && still.in && still.wide <= 0, JSON.stringify(still));
+      const line = await swipe('#pieceLine', 0, -100);
+      row(`the bar, ${at}: a finger on the piece's line doesn't move the page`, line.y === 0 && line.moves > 0, JSON.stringify(line));
+      await home();
+      for (let i = 0; i < 3 && await tab.evaluate(() => document.getElementById('viewSounds').hidden); i++) await press('#viewBtn');
+      // (A drag up a slider scrolls the page and leaves the
+      // slider as it was: the scroll rows.)
+      const held = await tab.evaluate(() => document.getElementById('warmth').value);
+      const slider = await swipe('#warmth', 0, -100, 0.05);
+      const kept = await tab.evaluate(() => document.getElementById('warmth').value);
+      row(`the bar, ${at}: a finger dragged up a slider moves the page, not the slider`, slider.y > 0 && slider.moves > 0 && kept === held, `${JSON.stringify(slider)}; ${held} to ${kept}`);
+      const was = await tab.evaluate(() => document.getElementById('warmth').value);
+      await swipe('#warmth', was > 0.5 ? -60 : 60, 0, Number(was));
+      const now = await tab.evaluate(() => document.getElementById('warmth').value);
+      row(`the bar, ${at}: the slider still slides`, now !== was, `${was} to ${now}`);
+      await press('#libraryBtn');
+      await press('[data-tab="albums"]');
+      const short = await swipe('#libPane .scroll', 0, -100);
+      row(`the bar, ${at}: the Library's list, with nothing more to scroll, doesn't move the page`, short.y === 0 && short.moves > 0, JSON.stringify(short));
+      await press('[data-tab="more"]');
+      await press('#goAdvanced');
+      let moved = 0;
+      let left = Infinity;
+      // To its end, and once more past it: there the page would take over.
+      for (let i = 0, past = false; i < 80 && !past; i++) {
+        past = left <= 2;
+        moved = Math.max(moved, (await swipe('#libAdvanced .scroll', 0, -Math.round(height * 0.3))).y);
+        left = await tab.evaluate(() => {
+          const sc = document.querySelector('#libAdvanced .scroll');
+          return sc.scrollHeight - sc.clientHeight - sc.scrollTop;
+        });
+      }
+      row(`the bar, ${at}: Advanced scrolls to its end and the page stays`, moved === 0 && left <= 2, `${moved} px; ${left} px left in the list`);
+      await ctx.close();
+    } catch (e) {
+      row(`the bar, ${at}: measured`, false, e.message.split('\n')[0]);
+    }
+  }
+  const desk = await browser.newPage({ viewport: { width: 1180, height: 820 } });
+  await desk.goto(`${ORIGIN}/`);
+  await sleep(800);
+  const extra = await desk.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+  row('the bar: with a mouse the page doesn\'t scroll at all', extra <= 1, `${extra} px`);
+  await desk.close();
+
+  // A computer at 400% (320x256), and at half a screen more across.
+  for (const [width, height] of [[320, 256], [320, 180], [640, 256]]) {
+    const at = `400% zoom, ${width}x${height}`;
+    try {
+      const tab = await browser.newPage({ viewport: { width, height } });
+      tab.on('pageerror', (e) => bad.push(e.message));
+      await tab.goto(`${ORIGIN}/`);
+      await sleep(1000);
+      await tab.mouse.move(6, height / 2);
+      for (let i = 0; i < 6; i++) { await tab.mouse.wheel(0, 120); await sleep(150); }
+      await sleep(400);
+      const end = await tab.evaluate(() => {
+        const r = document.getElementById('viewBtn').getBoundingClientRect();
+        return { y: scrollY, left: document.documentElement.scrollHeight - innerHeight - scrollY, key: r.top >= 0 && r.bottom <= innerHeight + 1, wide: document.documentElement.scrollWidth - innerWidth, card: document.querySelector('.zone-info').checkVisibility() };
+      });
+      row(`${at}: the wheel scrolls to the last key, the card kept, nothing across`, end.y > 0 && end.left <= 1 && end.key && end.card && end.wide <= 0, JSON.stringify(end));
+      await tab.evaluate(() => {
+        scrollTo(0, document.documentElement.scrollHeight);
+        document.getElementById('loopName').focus({ preventScroll: true });
+      });
+      await sleep(250);
+      const seen = await tab.evaluate(() => {
+        const r = document.activeElement.getBoundingClientRect();
+        return { on: document.activeElement.id, top: r.top, bottom: r.bottom, h: innerHeight };
+      });
+      row(`${at}: the focus the app moves is scrolled into sight`, seen.on === 'loopName' && seen.top >= -1 && seen.bottom <= seen.h + 1, JSON.stringify(seen));
+      await tab.close();
+    } catch (e) {
+      row(`${at}: measured`, false, e.message.split('\n')[0]);
+    }
+  }
+  row('sideways and the bar: no page errors', !bad.length, bad.join('; '));
+}
+
+// Chrome's bar scrolled from anywhere (Mikey:
+// "I can only scroll up and down by touching specific places on the
+// screen"; `--only scroll` runs just these), in a touch tab of its own,
+// upright and on its side: a finger dragged up from each kind of place (the
+// card, a key, Now Playing, a layer's dots and keys, a Sound slider's track,
+// its knob and its name, a picker's slider, Bars' slider) scrolls the
+// document, read from the document's own scrollY, and the element really
+// had the finger (its own touchmoves counted: a check that never touched it
+// passed once, in 30f); nothing it started on was pressed or changed (a key
+// not clicked, a slider's value and what the app shows of it as they were);
+// dragged down it comes back (the bar shown again); a drag across still
+// moves a slider; the piece's line and the rail under the time keep their
+// drags.
+async function scrollRows(browser) {
+  console.log('\n  Chrome\'s bar scrolled from anywhere (session 30k)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  for (const [width, height, sw, sh] of [[360, 640, 360, 760], [804, 303, 895, 393]]) {
+    const at = `${width}x${height}`;
+    const ctx = await browser.newContext({ viewport: { width, height }, screen: { width: sw, height: sh }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+    try {
+      const tab = await ctx.newPage();
+      tab.on('pageerror', (e) => bad.push(e.message));
+      const cdp = await ctx.newCDPSession(tab);
+      await tab.goto(linkOf(`${ORIGIN}/`, encodeSong(newSpec(7))));
+      await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+      await sleep(1200);
+      row(`the scroll, ${at}: a touch tab scrolls the bar away`, await tab.evaluate(() => document.documentElement.classList.contains('bar-scroll')));
+      const to = async (y) => {
+        await tab.evaluate((v) => scrollTo(0, v), y);
+        await sleep(250);
+        return tab.evaluate(() => scrollY);
+      };
+      const end = await to(1e5);
+      await to(0);
+      // A finger, move by move, from `selector` at `along` of its width; what
+      // the element itself was given is counted.
+      const swipe = async (selector, dx, dy, along = 0.5) => {
+        const p = await tab.evaluate(([s, part]) => {
+          window.fingerMoves = 0;
+          window.fingerClicks = 0;
+          if (!window.fingerHeard) {
+            window.fingerHeard = true;
+            document.addEventListener('touchmove', (e) => { if (e.target.closest && e.target.closest(window.fingerOn)) window.fingerMoves++; }, { capture: true, passive: true });
+            document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest(window.fingerOn)) window.fingerClicks++; }, true);
+          }
+          window.fingerOn = s;
+          const r = document.querySelector(s).getBoundingClientRect();
+          return { x: Math.round(r.left + 12 + (r.width - 24) * part), y: Math.round(r.top + r.height / 2) };
+        }, [selector, along]);
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [p] });
+        for (let i = 1; i <= 12; i++) {
+          await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x + (dx * i) / 12, y: p.y + (dy * i) / 12 }] });
+          await sleep(16);
+        }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await sleep(450);
+        return tab.evaluate(() => ({ y: scrollY, moves: window.fingerMoves, clicks: window.fingerClicks }));
+      };
+      const view = async (id) => {
+        await to(0);
+        for (let i = 0; i < 4 && await tab.evaluate((v) => document.getElementById(v).hidden, id); i++) {
+          await tab.evaluate(() => document.getElementById('viewBtn').click());
+          await sleep(300);
+        }
+      };
+      // What the app shows: the view, playing or not, and the sliders.
+      const state = () => tab.evaluate(() => ({
+        view: [...document.querySelectorAll('.view')].filter((v) => !v.hidden).map((v) => v.id).join(),
+        playing: document.getElementById('app').classList.contains('playing'),
+        sliders: [...document.querySelectorAll('input[type="range"]')].map((i) => i.value).join(),
+        shown: document.getElementById('bpmVal').textContent,
+      }));
+      const up = async (name, selector, along) => {
+        await to(0);
+        const was = await state();
+        const got = await swipe(selector, 0, -Math.min(120, height * 0.35), along);
+        const now = await state();
+        const same = JSON.stringify(was) === JSON.stringify(now);
+        row(`the scroll, ${at}: a finger dragged up from ${name} scrolls the document, and changes nothing`,
+          got.y >= Math.min(30, end) && got.moves > 0 && got.clicks === 0 && same,
+          `${JSON.stringify(got)}${same ? '' : `; ${JSON.stringify(was)} became ${JSON.stringify(now)}`}`);
+      };
+      const down = async (name, selector, along) => {
+        await to(1e5);
+        const got = await swipe(selector, 0, Math.min(120, height * 0.35), along);
+        row(`the scroll, ${at}: dragged down from ${name}, it comes back (the bar shown)`, got.y === 0 && got.moves > 0, `from ${end}: ${JSON.stringify(got)}`);
+      };
+      await view('viewNow');
+      for (const [name, sel] of [['the card\'s art', '.zone-info .cover'], ['the name', '#loopName'], ['the details', '#metaWrap'],
+        ['the playhead', '#playhead'], ['the time', '#nowBig'], ['the vibe key', '#vibesBtn'], ['Play', '#playBtn'], ['Library', '#libraryBtn'], ['the view key', '#viewBtn']]) await up(name, sel);
+      await down('the card', '#metaWrap');
+      await down('Play', '#playBtn');
+      const rail = await swipe('#nowRail', 0, -100);
+      row(`the scroll, ${at}: a finger on the rail under the time doesn't move the page`, rail.y === 0 && rail.moves > 0, JSON.stringify(rail));
+      await view('viewLayers');
+      for (const [name, sel] of [['a layer\'s dots', '.layer[data-layer="melody"] .pattern'], ['a layer\'s die', '.layer[data-layer="melody"] .btn-roll'],
+        ['a layer\'s speaker', '.layer[data-layer="melody"] .btn-on'], ['a layer\'s name', '.layer[data-layer="melody"] .lbl']]) await up(name, sel);
+      await view('viewSounds');
+      const knob = await tab.evaluate(() => { const i = document.getElementById('warmth'); return (i.value - i.min) / (i.max - i.min); });
+      await up('a slider\'s track', '#warmth', knob > 0.5 ? 0.05 : 0.95);
+      await up('a slider\'s knob', '#warmth', knob);
+      await up('a slider\'s name', '#viewSounds .srow span');
+      await up('the tempo slider', '#bpm', 0.95);
+      await down('a slider\'s track', '#warmth', knob > 0.5 ? 0.05 : 0.95);
+      await to(0);
+      const before = await state();
+      await swipe('#bpm', (before.sliders.split(',')[0] > 110 ? -1 : 1) * Math.min(160, width * 0.4), 0, 0.5);
+      const after = await state();
+      row(`the scroll, ${at}: a drag across still moves a slider, and the app hears it`, before.sliders !== after.sliders && before.shown !== after.shown,
+        `${before.shown} to ${after.shown}`);
+      await to(0);
+      await tab.evaluate(() => { document.getElementById('viewBtn').click(); });
+      await view('viewNow');
+      await tab.evaluate(() => document.getElementById('vibesBtn').click());
+      await sleep(300);
+      await tab.evaluate(() => document.querySelector('#picksList .pk-go-tempo').click());
+      await sleep(300);
+      await up('a picker\'s slider', '#tmpLo', 0.95);
+      await tab.evaluate(() => document.getElementById('tmpCancel')?.click());
+      await sleep(300);
+      await tab.evaluate(() => document.querySelector('#picksList .pk-go-bars').click());
+      await sleep(300);
+      await up('Bars\' slider', '#lenSlide', 0.95);
+    } catch (e) {
+      row(`the scroll, ${at}: measured`, false, e.message.split('\n')[0]);
+    }
+    await ctx.close();
+  }
+  const long = await browser.newContext({ viewport: { width: 360, height: 640 }, screen: { width: 360, height: 760 }, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+  try {
+    const tab = await long.newPage();
+    tab.on('pageerror', (e) => bad.push(e.message));
+    const cdp = await long.newCDPSession(tab);
+    await tab.goto(linkOf(`${ORIGIN}/`, encodeSong(newSpec(11, { length: 1024 }))));
+    await sleep(1500);
+    const p = await tab.evaluate(() => { const r = document.getElementById('pieceLine').getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [p] });
+    for (let i = 1; i <= 12; i++) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x, y: p.y - (100 * i) / 12 }] });
+      await sleep(16);
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await sleep(450);
+    const y = await tab.evaluate(() => scrollY);
+    row('the scroll, 360x640: a finger on the piece\'s line doesn\'t move the page', y === 0, `${y} px`);
+  } catch (e) {
+    row('the scroll: the piece\'s line measured', false, e.message.split('\n')[0]);
+  }
+  await long.close();
+  row('the scroll: no page errors', !bad.length, bad.join('; '));
+}
+
+// The plain lines, each in a tab of its own.
+async function plainRows(browser) {
+  {
+    // The plain line (Mikey, 2026-11-07): a browser that
+    // can't run the core says so in the card's place and plays nothing;
+    // there is no fallback synth. A page with WebAssembly taken away
+    // before its scripts run, and one whose module never arrives.
+    const plain = async (setup) => {
+      const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+      const bad = [];
+      tab.on('pageerror', (e) => bad.push(e.message));
+      await setup(tab);
+      await tab.goto(`http://127.0.0.1:${PORT}/`);
+      await sleep(2500);
+      const seen = await tab.evaluate(() => {
+        const line = document.getElementById('plainLine');
+        return { text: line.textContent.trim(), shown: !line.hidden && getComputedStyle(line).display !== 'none' };
+      });
+      await tab.close();
+      return { ...seen, bad };
+    };
+    const none = await plain((tab) => tab.addInitScript(() => { Object.defineProperty(globalThis, 'WebAssembly', { value: undefined }); }));
+    row('plain line: a browser with no WebAssembly is told it can\'t play', none.shown && none.text === 'Can\'t play here. Try recent Chrome, Firefox or Safari.' && !none.bad.length, `${none.text} ${none.bad.join('; ')}`);
+    const lost = await plain((tab) => tab.route('**/js/dlplayer.wasm', (r) => r.abort('failed')));
+    row('plain line: a module that never arrives says to refresh', lost.shown && lost.text === 'Please refresh.' && !lost.bad.length, `${lost.text} ${lost.bad.join('; ')}`);
+  }
+}
+
+function report() {
+  const failed = rows.filter((r) => !r.ok);
+  console.log(failed.length ? `\n${failed.length} of ${rows.length} failed` : `\nall ${rows.length} passed`);
+  process.exit(failed.length ? 1 : 0);
+}
+
+await main();
+
+// Track length: its own view, opened from the
+// Vibe panel's pace line beside "any tempo" and "any bars": the time typed
+// to the second, the keys a second and a minute either way, the coarse
+// slider, on and on, the two fades, cancel and done; the core's track a time
+// on its own clock (a tempo change doesn't move it); a short track ending on
+// its second with the next loop there, with and without its fade out; and
+// the Sound view's Length slider gone.
+// What can't be touched in a view (Track length's, Bars'), as
+// it is on the screen (run in the page).
+function covered(id = 'viewTrack') {
+  const view = document.getElementById(id);
+  const box = view.getBoundingClientRect();
+  const out = [];
+  for (const el of view.querySelectorAll('button, input')) {
+    if (!el.checkVisibility()) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 24 || r.height < 24) out.push(`${el.id} is ${Math.round(r.width)}x${Math.round(r.height)}`);
+    if (r.top < box.top - 1 || r.bottom > box.bottom + 1 || r.left < box.left - 1 || r.right > box.right + 1) out.push(`${el.id} is outside the view`);
+    for (const [at, y] of [['top', r.top + 3], ['middle', r.top + r.height / 2], ['bottom', r.bottom - 3]]) {
+      const hit = document.elementFromPoint(r.left + r.width / 2, y);
+      if (!hit || !(hit === el || el.contains(hit))) out.push(`${el.id}'s ${at} is under ${hit ? hit.id || hit.className : 'nothing'}`);
+    }
+  }
+  for (const el of [view, view.querySelector('.ln-body, .pv-body')].filter(Boolean)) {
+    if (/auto|scroll/.test(getComputedStyle(el).overflowY)) out.push(`${el.id || el.className} scrolls`);
+  }
+  return out;
+}
+
+// The timeline (Mikey, 2026-11-23): "click on
+// the timeline ... and skip around on the track", any length, paused or
+// playing; and the album's way back gone once a new track is made.
+async function timelineRows(browser) {
+  console.log('\n  The timeline moves the playhead (session 30h)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const open = async (prefs) => {
+    const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+    tab.on('pageerror', (e) => bad.push(e.message));
+    await tab.addInitScript(HOOK);
+    if (prefs) {
+      await tab.addInitScript((p) => {
+        try { if (!localStorage.getItem('driftloom.prefs.v1')) localStorage.setItem('driftloom.prefs.v1', p); } catch (e) { /* no storage */ }
+      }, JSON.stringify(prefs));
+    }
+    await tab.goto(`${ORIGIN}/`);
+    await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1500);
+    return tab;
+  };
+  // What a tab's page and core say.
+  const kit = (tab) => {
+    const tev = (fn, arg) => tab.evaluate(fn, arg);
+    return {
+      tev,
+      probe: async () => {
+        const m = await tev(() => window.__rows.probe());
+        return m ? { ...m, d: about(m.about) } : null;
+      },
+      clock: () => tev(() => (window.__rows.ctx ? window.__rows.ctx.currentTime : 0)),
+      playing: () => tev(() => document.getElementById('playBtn').getAttribute('aria-label') === 'Pause'),
+      // The last jump the page asked (the record's own `at` is the clock's;
+      // the jump's is the message's).
+      lastJump: () => tev(() => {
+        const m = window.__rows.posts.filter((x) => x.type === 'playJump').pop();
+        return m ? { kind: m.msg.kind, at: m.msg.at } : null;
+      }),
+      jumpCount: () => tev(() => window.__rows.posts.filter((m) => m.type === 'playJump').length),
+      // The core's Jump events whose batch came at or after `t` (the audio
+      // clock): the step each landed on, and its time.
+      landed: (t) => tev((since) => {
+        const out = [];
+        for (const b of window.__rows.events) {
+          if (b.at < since) continue;
+          for (let k = 0; k < b.events.length; k += 4) if (b.events[k + 1] === 8) out.push({ step: b.events[k + 2], time: b.events[k] });
+        }
+        return out;
+      }, t),
+      rail: () => tev(() => {
+        const r = document.getElementById('nowRail');
+        const m = /scaleX\(([\d.]+)\)/.exec(document.getElementById('nowFill').style.transform);
+        return { hidden: r.hidden, role: r.getAttribute('role'), off: r.getAttribute('aria-disabled') === 'true', frac: m ? Number(m[1]) : NaN,
+          text: document.getElementById('nowBig').textContent, said: r.getAttribute('aria-valuetext') || '', now: Number(r.getAttribute('aria-valuenow')), max: Number(r.getAttribute('aria-valuemax')) };
+      }),
+      press: async (id, f) => {
+        const box = await tab.locator(`#${id}`).boundingBox();
+        await tab.mouse.click(box.x + f * box.width, box.y + box.height / 2);
+      },
+      toNow: () => tev(() => { if (document.getElementById('viewNow').hidden) document.getElementById('nowBtn').click(); }),
+      pause: () => tev(() => { if (document.getElementById('playBtn').getAttribute('aria-label') === 'Pause') document.getElementById('playBtn').click(); }),
+      play: () => tev(() => { if (document.getElementById('playBtn').getAttribute('aria-label') === 'Play') document.getElementById('playBtn').click(); }),
+    };
+  };
+  // The first Jump event at or after `t`, waited for up to `ms`.
+  const waitLanded = async (k, t, ms = 3000) => {
+    for (let w = 0; w < ms; w += 100) {
+      const got = await k.landed(t);
+      if (got.length) return got[0];
+      await sleep(100);
+    }
+    return null;
+  };
+  // "−2:48" or "1:02": seconds.
+  const secsOf = (text) => { const m = /([\d:]+)$/.exec(text); return m ? m[1].split(':').reduce((a, v) => a * 60 + Number(v), 0) : NaN; };
+
+  // A long piece, paused: the line moves the playhead; Play starts there.
+  {
+    const tab = await open({ view: 'now', picks: { length: 3072, journey: 'arc' } });
+    const k = kit(tab);
+    await tab.click('#playBtn');
+    await sleep(4000);
+    await k.pause();
+    await sleep(800);
+    const before = await k.jumpCount();
+    const box = await tab.locator('#pieceLine').boundingBox();
+    const ask = Math.floor(3072 * 0.4);
+    await tab.mouse.click(box.x + 0.4 * box.width, box.y + box.height / 2);
+    const asked = await k.clock();
+    await sleep(800);
+    const sent = await k.lastJump();
+    const words = await k.tev(() => ({ bars: document.getElementById('pieceBars').textContent, head: document.getElementById('pieceHead').style.transform, playing: document.getElementById('playBtn').getAttribute('aria-label') }));
+    const headX = Number((/translateX\(([\d.]+)px\)/.exec(words.head) || [])[1]);
+    const shownBar = Number(((/^bar ([\d,]+)/.exec(words.bars) || [])[1] || '').replace(/,/g, ''));
+    const early = await k.landed(asked);
+    const pixel = 3072 / box.width;
+    row('timeline: a long piece paused, a press on its line asks the core there (a bar) and the playhead and "bar N/M" go there, still paused, nothing landing',
+      (await k.jumpCount()) === before + 1 && sent && sent.kind === 1 && Math.abs(sent.at - ask) <= pixel + 1 && words.playing === 'Play'
+        && Math.abs(headX - 0.4 * box.width) < 3 && Math.abs(shownBar - ask) <= 4 + pixel + 1 && /\/3,072/.test(words.bars) && early.length === 0,
+      `asked bar ${sent && sent.at} of ${ask}; ${words.bars}; head ${headX.toFixed(1)} of ${(0.4 * box.width).toFixed(1)} px; ${early.length} landed`);
+    const t0 = await k.clock();
+    await k.play();
+    const hit = await waitLanded(k, t0);
+    await sleep(1500);
+    const p = await k.probe();
+    const spb = Number(p.d.steps_per_bar);
+    const at = hit ? hit.step / spb : NaN;
+    row('timeline: then Play starts there: the core lands on the phrase line at or before the bar asked, playing',
+      hit && at <= sent.at && at > sent.at - Number(p.d.bars) - 0.01 && p.player.state === 3 && hit.time - t0 < 1, `landed at bar ${at}, asked ${sent && sent.at}, ${hit ? (hit.time - t0).toFixed(3) : '-'} s after Play`);
+    await k.pause();
+    await tab.close();
+  }
+
+  // A short loop, playing and paused, with no Track length: the rail is the
+  // loop's round.
+  const tab = await open({ view: 'now' });
+  const k = kit(tab);
+  await k.tev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
+  await k.tev(() => document.getElementById('pasteCode').click());
+  await sleep(3500);
+  await k.toNow();
+  await sleep(300);
+  let p = await k.probe();
+  const spb = Number(p.d.steps_per_bar);
+  const round = Number(p.d.bars) * spb;
+  let r = await k.rail();
+  row('timeline: a short loop\'s rail is a slider (its value said: bar of the round), the long piece\'s line hidden', !r.hidden && r.role === 'slider' && !r.off && /^bar \d+ of \d+$/.test(r.said) && r.max === Number(p.d.bars),
+    `${r.role}, ${r.said}, max ${r.max} of ${p.d.bars} bars`);
+  let t0 = await k.clock();
+  await k.press('nowRail', 0.5);
+  let sent = await k.lastJump();
+  let hit = await waitLanded(k, t0);
+  await sleep(300);
+  r = await k.rail();
+  row('timeline: a short loop playing, a press halfway along its rail lands on the step asked (the core\'s Jump event), halfway through its round, heard within a second',
+    sent && sent.kind === 3 && hit && hit.step === sent.at && Math.abs((sent.at % round) / round - 0.5) < 2 / round + 0.01 && hit.time - t0 < 1 && Math.abs(r.frac - 0.5) < 0.2,
+    `asked step ${sent && sent.at} (${sent && ((sent.at % round) / round).toFixed(3)} of the round), landed ${hit && hit.step}, ${hit ? (hit.time - t0).toFixed(3) : '-'} s; rail ${r.frac}`);
+  // Paused: the rail moves now, nothing lands, Play starts there.
+  await k.pause();
+  await sleep(600);
+  t0 = await k.clock();
+  await k.press('nowRail', 0.25);
+  await sleep(600);
+  sent = await k.lastJump();
+  r = await k.rail();
+  const early = await k.landed(t0);
+  row('timeline: a short loop paused, a press a quarter along moves the rail and says it, nothing landing, still paused',
+    sent && sent.kind === 3 && Math.abs((sent.at % round) / round - 0.25) < 2 / round + 0.01 && Math.abs(r.frac - 0.25) < 0.02 && early.length === 0 && !(await k.playing()) && r.now === Math.floor((sent.at % round) / spb) + 1,
+    `asked ${sent && sent.at}, rail ${r.frac}, said ${r.said}, ${early.length} landed`);
+  t0 = await k.clock();
+  await k.play();
+  hit = await waitLanded(k, t0);
+  row('timeline: and Play starts on that step', hit && hit.step === sent.at && hit.time - t0 < 1, `landed ${hit && hit.step} for ${sent && sent.at}`);
+  // The keys: a bar on with the right arrow, from where it is.
+  await sleep(1500);
+  const n0 = await k.jumpCount();
+  await tab.focus('#nowRail');
+  await tab.keyboard.press('ArrowRight');
+  await sleep(200);
+  const keyed = await k.lastJump();
+  await tab.keyboard.press('Home');
+  await sleep(200);
+  const home = await k.lastJump();
+  row('timeline: the rail\'s keys: the right arrow a bar on, Home its round\'s first step', (await k.jumpCount()) === n0 + 2 && keyed.kind === 3 && home.kind === 3 && home.at % round === 0 && keyed.at > home.at,
+    `${keyed && keyed.at}, ${home && home.at}`);
+
+  // With a Track length: the rail is the track; a move takes the track's
+  // clock with it.
+  await trackTo(k.tev, 60, { fadeIn: false, fadeOut: true });
+  await sleep(300);
+  await k.toNow();
+  await sleep(2500);
+  p = await k.probe();
+  r = await k.rail();
+  const sd = 60 / Number(p.d.bpm) / 4;
+  const endStep = p.trackEnd;
+  row('timeline: with a Track length the rail is the track, its value said as time of its length', /^\d+:\d\d of (0:59|1:00|1:01)$/.test(r.said) && r.max >= 59 && r.max <= 61 && endStep > 0, `${r.said}, end step ${endStep}`);
+  t0 = await k.clock();
+  await k.press('nowRail', 0.75);
+  sent = await k.lastJump();
+  hit = await waitLanded(k, t0);
+  await sleep(400);
+  p = await k.probe();
+  r = await k.rail();
+  // The track's second moved: it ends as long after the step as the step
+  // was from its end.
+  const leftThen = (endStep - sent.at) * sd;
+  const leftNow = hit ? p.trackAt - hit.time : NaN;
+  row('timeline: a short loop with a Track length, playing, a press three quarters along lands on the step asked, and the track ends as long after it as that step was from its end (its clock moved)',
+    hit && hit.step === sent.at && Math.abs(leftNow - leftThen) < sd + 0.01 && Math.abs(r.frac - 0.75) < 0.05 && secsOf(r.text) <= 16 && secsOf(r.text) >= 13 && Math.abs(p.trackEnd - endStep) <= 1,
+    `asked ${sent && sent.at} of ${endStep}; left ${leftNow.toFixed(2)} s for ${leftThen.toFixed(2)}; rail ${r.frac}, ${r.text}; end step ${p.trackEnd}`);
+  await k.pause();
+  await sleep(500);
+  t0 = await k.clock();
+  await k.press('nowRail', 0.1);
+  await sleep(600);
+  sent = await k.lastJump();
+  r = await k.rail();
+  const quiet = await k.landed(t0);
+  row('timeline: and paused, a press at a tenth moves the rail and the time left, nothing landing', Math.abs(r.frac - 0.1) < 0.03 && secsOf(r.text) >= 53 && secsOf(r.text) <= 55 && quiet.length === 0 && sent.kind === 3,
+    `rail ${r.frac}, ${r.text}`);
+  t0 = await k.clock();
+  await k.play();
+  hit = await waitLanded(k, t0);
+  await sleep(400);
+  p = await k.probe();
+  row('timeline: then Play starts on that step, the track ending as long after it as it was from its end',
+    hit && hit.step === sent.at && Math.abs((p.trackAt - hit.time) - (endStep - sent.at) * sd) < 2 * sd + 0.01, `landed ${hit && hit.step} for ${sent && sent.at}; left ${hit ? (p.trackAt - hit.time).toFixed(2) : '-'} s`);
+  await trackTo(k.tev, null);
+  await sleep(300);
+  await k.pause();
+  await tab.close();
+
+  // The album's way back: gone once a new track is made (Next, or the
+  // core's own at a track's end), back when another album is left.
+  {
+    const tab2 = await open(null);
+    const k2 = kit(tab2);
+    const specs = [newSpec(4801, 'bars=2,bpm=160'), newSpec(4802, 'bars=2,bpm=150')];
+    await k2.tev(async (all) => {
+      const store = await import('/js/storage.js');
+      const a = store.createAlbum('Back');
+      store.setAlbumIds(a.id, all.map((s) => store.save(s).id));
+    }, specs);
+    await tab2.reload();
+    await tab2.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+    await sleep(1500);
+    const action = () => k2.tev(() => { const a = document.getElementById('nowAction'); return a.hidden ? null : (a.getAttribute('aria-label') || a.textContent); });
+    const playBack = async () => {
+      await k2.tev(() => {
+        if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click();
+        document.querySelector('[data-tab="albums"]').click();
+      });
+      await sleep(300);
+      await k2.tev(() => {
+        const row2 = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.replace(/, now playing$/, '').trim() === 'Back');
+        if (row2) row2.querySelector('.lrow-main').click();
+      });
+      await sleep(300);
+      await k2.tev(() => { const b = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'play'); if (b) b.click(); });
+      await sleep(800);
+      await k2.toNow();
+      await sleep(300);
+    };
+    const leave = async () => {
+      await k2.toNow();
+      await k2.tev(() => { const a = document.getElementById('nowAction'); if (!a.hidden && a.textContent === 'leave') a.click(); });
+      await sleep(500);
+    };
+    await playBack();
+    await leave();
+    const offered = await action();
+    await k2.tev(() => document.getElementById('nextBtn').click());
+    await sleep(3000);
+    const afterNext = await action();
+    row('timeline: the album\'s way back, offered on leaving it, goes once Next makes a new track', offered === 'Back to Back' && afterNext === null, `${offered} then ${afterNext}`);
+    await playBack();
+    await leave();
+    const again = await action();
+    // The core's own next loop at a track's end: nothing of the page's armed.
+    await trackTo(k2.tev, 3, { fadeIn: false, fadeOut: false });
+    await sleep(300);
+    await k2.toNow();
+    let gone;
+    for (let w = 0; w < 9000; w += 300) {
+      gone = await action();
+      if (gone === null) break;
+      await sleep(300);
+    }
+    const kept = [];
+    for (let w = 0; w < 3; w++) { kept.push(await action()); await sleep(1000); }
+    row('timeline: back after another album is left, and gone once the core makes its own next loop at the track\'s end, staying gone',
+      again === 'Back to Back' && gone === null && kept.every((x) => x === null), `${again}; then ${gone}; ${kept.join(',')}`);
+    await trackTo(k2.tev, null);
+    await k2.pause();
+    await tab2.close();
+  }
+  row('timeline: no page errors', !bad.length, bad.join('; '));
+}
+
+async function trackRows(browser) {
+  console.log('\n  track length, its own view (session 30c)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(HOOK);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  await tab.goto(`${ORIGIN}/`);
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  await tab.click('#playBtn');
+  await sleep(3000);
+  const probe = () => tev(() => window.__rows.probe());
+  const shown = () => tev(() => ({
+    view: [...document.querySelectorAll('.view')].find((v) => !v.hidden)?.dataset.view,
+    num: document.getElementById('trkNum').value,
+    words: document.getElementById('trkWords').textContent,
+    on: document.getElementById('trkOn').getAttribute('aria-pressed') === 'true',
+    fadeIn: document.getElementById('trkFadeIn').getAttribute('aria-pressed') === 'true',
+    fadeOut: document.getElementById('trkFadeOut').getAttribute('aria-pressed') === 'true',
+    outDimmed: document.getElementById('trkFadeOut').disabled,
+    slide: document.getElementById('trkSlide').value,
+    lit: [...document.querySelectorAll('#trkTicks .on')].map((t) => t.textContent).join(','),
+    upOff: document.getElementById('trkSecUp').disabled,
+    key: document.querySelector('#picksList .pk-track')?.textContent || null,
+    keyLabel: document.querySelector('#picksList .pk-track')?.getAttribute('aria-label') || null,
+  }));
+  const lastTrack = () => tev(() => window.__rows.posts.filter((m) => m.type === 'playTrack').pop() || null);
+  const tracks = () => tev(() => window.__rows.posts.filter((m) => m.type === 'playTrack').length);
+  const click = (id) => tab.click(`#${id}`);
+  // The events of the latest node: [time, kind, number, step].
+  const events = () => tev(() => {
+    const R = window.__rows;
+    const last = R.nodes.length - 1;
+    const out = [];
+    for (const b of R.events) if (b.node === last) for (let i = 0; i < b.events.length; i += 4) out.push(b.events.slice(i, i + 4));
+    return out;
+  });
+  const END = 6;
+  const LOOP = 4;
+
+  // The Sound view has no Length slider now.
+  const sound = await tev(() => ({ slider: !!document.getElementById('trackLen'), rows: [...document.querySelectorAll('#viewSounds .srow')].map((r) => r.textContent.trim().split(/\s/)[0]) }));
+  row('track length: the Sound view\'s Length slider is gone', !sound.slider && !sound.rows.includes('Length'), sound.rows.join(', '));
+
+  // Its key on the pace line, then the view.
+  await tab.click('#vibesBtn');
+  await sleep(300);
+  const line = await tev(() => document.querySelector('#picksList .pk-line-pace').innerText.replace(/\s+/g, ' ').trim());
+  let v = await shown();
+  row('track length: its key on the Vibe panel\'s pace line, beside "any tempo" and "any bars", says the loop plays on', /any tempo · any bars · \u221e/.test(line) && v.keyLabel === 'Track length: plays on', line);
+  const before = await tracks();
+  await tab.click('#picksList .pk-track');
+  await sleep(300);
+  v = await shown();
+  row('track length: open, on and on lit, fade in off and fade out on (dimmed while it plays on)', v.view === 'track' && v.num === '\u221e' && v.on && !v.fadeIn && v.fadeOut && v.outDimmed, JSON.stringify(v));
+
+  // Typed: h:mm:ss, m:ss, and digits a timer's way.
+  const type = async (text) => {
+    await tab.click('#trkNum');
+    await tab.fill('#trkNum', text);
+    await tab.press('#trkNum', 'Enter');
+    await sleep(150);
+    return shown();
+  };
+  const a = await type('1:23:45');
+  const b2 = await type('12345');
+  const c = await type('90');
+  const d = await type('4:07');
+  row('track length: typed to the second: 1:23:45, 12345 (a timer\'s way), 90 seconds as 1:30, 4:07; on and on unlit, the fade out ready',
+    a.num === '1:23:45' && a.words === '1 hour 23 minutes 45 seconds' && !a.on && !a.outDimmed && b2.num === '1:23:45' && c.num === '1:30' && d.num === '4:07',
+    [a.num, a.words, b2.num, c.num, d.num].join(' | '));
+  // Keys a second and a minute either way.
+  await type('1:23:45');
+  await click('trkSecUp');
+  const k1 = (await shown()).num;
+  await click('trkMinDown');
+  const k2 = (await shown()).num;
+  await click('trkMinUp');
+  await click('trkSecDown');
+  const k3 = (await shown()).num;
+  await type('0:01');
+  const k4 = await shown();
+  const downOff = await tev(() => document.getElementById('trkSecDown').disabled && document.getElementById('trkMinDown').disabled);
+  row('track length: the keys a second and a minute either way, never under a second (at 0:01 both down keys are off)', k1 === '1:23:46' && k2 === '1:22:46' && k3 === '1:23:45' && k4.num === '0:01' && downOff, [k1, k2, k3, k4.num, downOff].join(' | '));
+  // The coarse slider: its stops, to a whole day.
+  const slideTo = (i) => tev((x) => { const r = document.getElementById('trkSlide'); r.value = String(x); r.dispatchEvent(new Event('input', { bubbles: true })); }, i);
+  await slideTo(8);
+  const s8 = await shown();
+  await slideTo(15);
+  const s15 = await shown();
+  await tab.focus('#trkSlide');
+  await tab.keyboard.press('ArrowLeft');
+  const s14 = await shown();
+  row('track length: the coarse slider: an hour at its middle tick, a whole day at its end (+1 s off there), the arrows a stop at a time',
+    s8.num === '1:00:00' && s8.lit === '1h' && s15.num === '24:00:00' && s15.lit === '1d' && s15.upOff && s14.num === '12:00:00', [s8.num, s8.lit, s15.num, s15.lit, s14.num].join(' | '));
+  // On and on, and back to the time it showed.
+  await click('trkOn');
+  const on = await shown();
+  await click('trkOn');
+  const off = await shown();
+  row('track length: on and on lit (the fade out dimmed), pressed again the time it showed', on.on && on.num === '\u221e' && on.outDimmed && !off.on && off.num === '12:00:00' && !off.outDimmed, `${on.num} | ${off.num}`);
+  // The fades, each pressed on or off.
+  await click('trkFadeIn');
+  const f1 = await shown();
+  await click('trkFadeOut');
+  const f2 = await shown();
+  await click('trkFadeIn');
+  await click('trkFadeOut');
+  const f3 = await shown();
+  row('track length: the fade in and fade out keys each turn over, pressed again back', f1.fadeIn && f1.fadeOut && f2.fadeIn && !f2.fadeOut && !f3.fadeIn && f3.fadeOut, `${f1.fadeIn}/${f1.fadeOut} ${f2.fadeIn}/${f2.fadeOut} ${f3.fadeIn}/${f3.fadeOut}`);
+  // Cancel: nothing changed.
+  await click('trkCancel');
+  await sleep(300);
+  v = await shown();
+  let p = await probe();
+  row('track length: cancel goes back to the Vibe panel, nothing sent, the loop still on and on', v.view === 'vibe' && v.key === '\u221e' && (await tracks()) === before && p.trackAt < 0, `${v.view} ${v.key}, trackAt ${p.trackAt}`);
+
+  // Done: 1:23:45 with its fade in, on the core to the second.
+  await tab.click('#picksList .pk-track');
+  await sleep(200);
+  await type('1:23:45');
+  await click('trkFadeIn');
+  // The player's next step just before done and just after: the second
+  // counts from the block it is set before, between them (however slow the
+  // runner's clicks are). The next step is decided ahead of the clock, by
+  // the lookahead and up to a step: a second's room below.
+  const was = (await probe()).player.time;
+  await click('trkDone');
+  await sleep(600);
+  v = await shown();
+  p = await probe();
+  let t = await lastTrack();
+  const left = p.trackAt - p.player.time;
+  const from = p.trackAt - 5025;
+  row('track length: done sets it on the loop playing: the key says 1:23:45, the core holds a time of 5025 s with both fades, counted from now',
+    v.view === 'vibe' && v.key === '1:23:45' && v.keyLabel === 'Track length: 1 hour 23 minutes 45 seconds' && t && t.kind === (3 | 4 | 8) && t.count === 5025 && from >= was - 1 && from <= p.player.time + 0.01,
+    `${v.key}; kind ${t && t.kind}, count ${t && t.count}; ${left.toFixed(3)} s left, set ${(from - was).toFixed(3)} s after the clock before done`);
+  // A tempo change doesn't move its second.
+  const at = p.trackAt;
+  await tev(() => { const r = document.getElementById('bpm'); r.value = String(Math.min(190, Number(r.value) + 30)); r.dispatchEvent(new Event('input', { bubbles: true })); });
+  await sleep(1500);
+  p = await probe();
+  row('track length: a tempo change doesn\'t move its second', p.trackAt === at, `${at} then ${p.trackAt}`);
+
+  // A short track ends on its second, the next loop starting there: with
+  // the fade out, quiet as it reaches it; without, playing to it.
+  for (const fadeOut of [false, true]) {
+    const secs = fadeOut ? 10 : 6;
+    // A busy loop of the corpus, so its level is there to fall from (the
+    // core's own next loop may open near silence).
+    await tev((code) => { window.__rows.clip = code; }, LOOPS.shatter.code);
+    await tev(() => document.getElementById('pasteCode').click());
+    await sleep(3000);
+    await trackTo(tev, secs, { fadeIn: false, fadeOut });
+    await sleep(200);
+    p = await probe();
+    // The probe's time is the next step decided, up to a lookahead and a
+    // step ahead of the core's clock: the time counts from the clock.
+    const set = p.player.time;
+    const end = p.trackAt;
+    const levels = [];
+    const t0 = Date.now();
+    // When the end sounds, on the wall clock (the step time ahead, and the
+    // output's own delay, about a quarter of a second): listened to past it.
+    const heardEnd = end - set + 0.25;
+    let got = null;
+    while (Date.now() - t0 < (heardEnd + 1.5) * 1000 || (!got && Date.now() - t0 < (secs + 6) * 1000)) {
+      levels.push({ at: (Date.now() - t0) / 1000, level: await tev(() => window.__rows.level()) });
+      if (!got) {
+        const e = await events();
+        const ended = e.find((x) => x[1] === END && Math.abs(x[0] - end) < 0.5);
+        const next = ended && e.find((x) => x[1] === LOOP && Math.abs(x[0] - end) < 1e-6);
+        got = ended && next ? { ended, next } : null;
+      }
+      await sleep(50);
+    }
+    const within = (from, to) => levels.filter((l) => l.at >= from && l.at < to).map((l) => l.level);
+    const early = Math.max(0, ...within(1, heardEnd - 4));
+    // (The output's level, read every 50 ms.) With the fade out, a dip to
+    // near silence where it ends, before the next loop comes in; without,
+    // the loop still sounding in its last second.
+    const dip = Math.min(1, ...within(heardEnd - 1.2, heardEnd + 0.6));
+    const last = Math.max(0, ...within(heardEnd - 1.3, heardEnd - 0.35));
+    const quiet = fadeOut ? dip < early * 0.05 : last > early * 0.1;
+    row(`track length: a track of ${secs} s ${fadeOut ? 'with' : 'without'} its fade out ends on its second, to the sample, the next loop starting there; ${fadeOut ? 'falling to silence there' : 'playing to it'}`,
+      got && end - set > secs - 0.75 && end - set <= secs + 0.05 && Math.abs(got.ended[0] - end) < 1e-6 && quiet,
+      got ? `set at ${set.toFixed(3)}, end ${end.toFixed(6)} (${(end - set).toFixed(3)} s after the next step), told ${got.ended[0].toFixed(6)}, next ${got.next[0].toFixed(6)}; level ${early.toFixed(4)}, ${fadeOut ? `at the end ${dip.toFixed(4)}` : `its last second ${last.toFixed(4)}`}` : 'no end seen');
+  }
+  await sleep(1500);
+  v = await tev(() => { document.getElementById('vibesBtn').click(); return document.querySelector('#picksList .pk-track').textContent; });
+  row('track length: the loop after it (the core\'s own) plays on, as after the Length slider', v === '\u221e', v);
+  const line2 = (await tev(() => document.getElementById('diagRefresh').click() || document.getElementById('diagOut').textContent)).split('\n').find((l) => l.startsWith('engine:')) || '';
+  row('track length: nothing late across it', /late: 0\s+missed: 0\s+dropped: 0/.test(line2), line2);
+  // Short phones: every control inside the view and touchable at its top,
+  // middle and bottom (what is there by elementFromPoint), with a time set
+  // and on and on, and nothing in the view to scroll.
+  if ((await shown()).view !== 'vibe') await tab.click('#vibesBtn');
+  await tab.click('#picksList .pk-track');
+  for (const [width, height] of [[360, 640], [320, 568], [360, 740]]) {
+    await tab.setViewportSize({ width, height });
+    await sleep(400);
+    for (const endless of [false, true]) {
+      // (Pressed by script: the key itself may be the one covered.)
+      if ((await shown()).on !== endless) await tev(() => document.getElementById('trkOn').click());
+      await sleep(250);
+      const out = await tev(covered);
+      row(`track length: at ${width}x${height}, ${endless ? 'on and on' : 'a time set'}, every control can be reached, nothing to scroll`, !out.length, out.join('; ') || 'all reached');
+    }
+  }
+  // A phone on its side: the panel beside the card and the
+  // keys, and Track length usable in it.
+  const SIDEWAYS = [[640, 360], [800, 360], [844, 390], [915, 412], [568, 320]];
+  for (const [width, height] of SIDEWAYS) {
+    await tab.setViewportSize({ width, height });
+    await sleep(400);
+    const tall = await tev(() => Math.round(document.getElementById('viewport').getBoundingClientRect().height));
+    row(`a phone on its side, ${width}x${height}: the panel has the screen's height`, tall >= height - 24, `${tall} px`);
+    for (const endless of [false, true]) {
+      if ((await shown()).on !== endless) await tev(() => document.getElementById('trkOn').click());
+      await sleep(250);
+      const out = await tev(covered);
+      row(`track length: at ${width}x${height}, ${endless ? 'on and on' : 'a time set'}, every control can be reached, nothing to scroll`, !out.length, out.join('; ') || 'all reached');
+    }
+  }
+  await tev(() => document.getElementById('trkCancel').click());
+  // Bars, the same way, upright and on its side: any, a
+  // number and Endless.
+  await tev(() => document.querySelector('#picksList .pk-go-bars').click());
+  for (const [width, height] of [[360, 640], [320, 568], [360, 740], [360, 780], ...SIDEWAYS]) {
+    await tab.setViewportSize({ width, height });
+    await sleep(400);
+    for (const mode of ['any', 'a number', 'endless']) {
+      await tev((to) => {
+        const $ = (id) => document.getElementById(id);
+        const endless = $('lenEndless').getAttribute('aria-pressed') === 'true';
+        if (endless !== (to === 'endless')) $('lenEndless').click();
+        if (to === 'any') $('lenAny').click();
+        if (to === 'a number') {
+          $('lenSlide').value = '6';
+          $('lenSlide').dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }, mode);
+      await sleep(250);
+      const out = await tev(covered, 'viewLength');
+      row(`bars: at ${width}x${height}, ${mode}, every control can be reached, nothing to scroll`, !out.length, out.join('; ') || 'all reached');
+    }
+  }
+  await tev(() => document.getElementById('lenCancel').click());
+  // Closing the gaps takes nothing from a key that has the room.
+  await tab.setViewportSize({ width: 360, height: 640 });
+  await sleep(300);
+  const anyKeys = await tev(() => [...document.querySelectorAll('#picksList .pk-anykey')].map((k) => [k.getBoundingClientRect().height, k.parentElement.getBoundingClientRect().height]));
+  row('vibe: at 360x640 each any key is as tall as its line lets it be', anyKeys.every(([k, line]) => k >= Math.min(44, line - 4) - 1), anyKeys.map(([k]) => Math.round(k)).join(', '));
+  for (let i = 0; i < 3 && await tev(() => document.getElementById('viewLayers').hidden); i++) await tev(() => document.getElementById('viewBtn').click());
+  await sleep(300);
+  const layerKeys = await tev(() => [...document.querySelectorAll('.layer button')].map((k) => k.getBoundingClientRect().height));
+  row('layers: at 360x640 each key is 44 px or more', layerKeys.length === 10 && layerKeys.every((h) => h >= 44), layerKeys.map(Math.round).join(', '));
+  row('track length: no page errors', !bad.length, bad.join('; '));
+  await tab.close();
+}
+
+// The tempo, key, style and voices pickers
+// (`--only pickers` runs just these), in a tab of their own: each opened from
+// its line on the Vibe panel, its keys pressed as a listener would (one pick,
+// a range or a set, any, the pages), cancel keeping what was there and done
+// what is shown; the line it fills and the picks sent to the core and held;
+// the loop playing left as it is, and the next new loop (the core's own)
+// drawn under the picks, read back from the core and from its share code;
+// the picks kept across a reload; clear all; never all five layers off; and
+// each view whole at 360x640, 320x568 and on its side, nothing to scroll.
+async function pickerRows(browser) {
+  console.log('\n  the tempo, key, style and voices pickers (session 30j)');
+  const ORIGIN = `http://127.0.0.1:${PORT}`;
+  const bad = [];
+  const tab = await browser.newPage({ viewport: { width: 412, height: 915 } });
+  tab.on('pageerror', (e) => bad.push(e.message));
+  await tab.addInitScript(HOOK);
+  const tev = (fn, arg) => tab.evaluate(fn, arg);
+  await tab.goto(`${ORIGIN}/`);
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  // A fixed first loop that plays on (a fresh one may be a long piece the
+  // core drew, which ends), pasted as a listener would.
+  await tev((code) => { window.__rows.clip = code; document.getElementById('pasteCode').click(); }, LOOPS.shatter.code);
+  await sleep(3500);
+  const probe = async () => {
+    const m = await tev(() => window.__rows.probe());
+    return m ? { ...m, d: about(m.about) } : null;
+  };
+  const view = () => tev(() => [...document.querySelectorAll('.view')].find((v) => !v.hidden)?.dataset.view);
+  const sent = () => tev(() => window.__rows.posts.filter((m) => m.type === 'playPicks'));
+  const line = (id) => tev((i) => {
+    const b = document.querySelector(`#picksList .pk-go-${i}`);
+    return b ? { text: b.textContent.replace(/\u00a0/g, ' ').trim(), label: b.getAttribute('aria-label') } : null;
+  }, id);
+  // What a picker shows: its value line (or number), the keys lit on the
+  // page shown, the any key, the page, the tab.
+  const shown = (p) => tev((q) => {
+    const $ = (id) => document.getElementById(id);
+    const grid = $(`${q}Grid`);
+    return {
+      value: q === 'tmp' ? $('tmpNum').value : $(`${q}Value`).textContent,
+      lit: grid ? [...grid.children].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent) : [],
+      keys: grid ? [...grid.children].map((b) => b.textContent) : [],
+      any: $(`${q}Any`).getAttribute('aria-pressed') === 'true',
+      page: $(`${q}Pager`) && !$(`${q}Pager`).hidden ? $(`${q}Page`).textContent : '',
+      tab: document.querySelector(`#${$(`${q}Cancel`).closest('.view').id} .pv-tab[aria-pressed="true"]`)?.dataset.tab || null,
+    };
+  }, p);
+  // A key by its words, turning the pages until it shows.
+  const press = (p, text) => tev(([q, t]) => {
+    const $ = (id) => document.getElementById(id);
+    const find = () => [...$(`${q}Grid`).children].find((b) => b.textContent === t);
+    while (!$(`${q}Prev`).disabled && !$(`${q}Pager`).hidden) $(`${q}Prev`).click();
+    for (let i = 0; i < 30 && !find() && !$(`${q}Next`).disabled; i++) $(`${q}Next`).click();
+    const b = find();
+    if (!b) return false;
+    b.click();
+    return true;
+  }, [p, text]);
+  // The vibe key is Now Playing's: from anywhere else, there first.
+  const toVibe = async () => {
+    if ((await view()) === 'vibe') return;
+    if ((await view()) !== 'now') { await tab.click('#nowBtn'); await sleep(250); }
+    await tab.click('#vibesBtn');
+    await sleep(250);
+  };
+  const openLine = async (id) => {
+    await toVibe();
+    await tab.click(`#picksList .pk-go-${id}`);
+    await sleep(300);
+  };
+  const playing = (await probe()).d.seed;
+
+  // The panel: every line taps through, nothing picked.
+  await tab.click('#vibesBtn');
+  await sleep(300);
+  const lines = {};
+  for (const id of ['tempo', 'key', 'style', 'voices']) lines[id] = await line(id);
+  row('pickers: the Vibe panel\'s tempo, key, style and voices lines are keys, each saying "any"',
+    Object.values(lines).every((l) => l && /any/.test(l.text)) && lines.tempo.label === 'Tempo: any tempo' && lines.key.label === 'Key: any key',
+    Object.entries(lines).map(([k, l]) => `${k} ${l && l.label}`).join(' | '));
+  const clear0 = await tev(() => document.getElementById('picksClear').disabled);
+  row('pickers: clear all is there, dim with nothing to clear', clear0);
+
+  // Tempo: cancel keeps "any".
+  const sent0 = (await sent()).length;
+  await openLine('tempo');
+  let t = await shown('tmp');
+  row('tempo: opens from its line, any lit, the number "any"', (await view()) === 'tempo' && t.any && t.value === 'any', JSON.stringify(t));
+  const type = async (text) => {
+    await tab.click('#tmpNum');
+    await tab.fill('#tmpNum', text);
+    await tab.press('#tmpNum', 'Enter');
+    await sleep(150);
+    return shown('tmp');
+  };
+  const t77 = await type('77');
+  const slide = (id, v) => tev(([i, x]) => { const s = document.getElementById(i); s.value = String(x); s.dispatchEvent(new Event('input', { bubbles: true })); }, [id, v]);
+  await slide('tmpHi', 85);
+  const tr = await shown('tmp');
+  await tab.click('#tmpDown');
+  const td = await shown('tmp');
+  await slide('tmpLo', 100);
+  const pushed = await shown('tmp');
+  row('tempo: typed, pinned (77, any unlit); the fast end to 85, a range (77–85); −1 moves both ends (76–84); the slow end past the fast one takes it along (100)',
+    t77.value === '77' && !t77.any && tr.value === '77–85' && td.value === '76–84' && pushed.value === '100', [t77.value, tr.value, td.value, pushed.value].join(' | '));
+  await tab.click('#tmpAny');
+  const ta = await shown('tmp');
+  const lim = await tev(() => {
+    const s = document.getElementById('tmpLo');
+    return [Number(s.min), Number(s.max)];
+  });
+  row('tempo: any lit again, the number "any"; the sliders go from 32 to 190 bpm, all the core takes', ta.any && ta.value === 'any' && lim[0] === 32 && lim[1] === 190, `${ta.value} ${lim.join('-')}`);
+  await type('90');
+  await tab.click('#tmpCancel');
+  await sleep(300);
+  const afterCancel = await line('tempo');
+  row('tempo: cancel goes back to the panel, the line still "any tempo", nothing sent', (await view()) === 'vibe' && afterCancel.label === 'Tempo: any tempo' && (await sent()).length === sent0, afterCancel.label);
+  await openLine('tempo');
+  await type('70-85');
+  await tab.click('#tmpDone');
+  await sleep(500);
+  let s = (await sent()).pop();
+  let p = await probe();
+  const tl = await line('tempo');
+  row('tempo: done, "70–85 bpm" on its line, sent to the core and held, the loop playing left as it is',
+    tl.text === '70–85 bpm' && s && s.ask.tempo && s.ask.tempo.join('-') === '70-85' && p.picksTag === s.tag && p.d.seed === playing, `${tl.text}; ask ${s && JSON.stringify(s.ask.tempo)}, tag ${p.picksTag}/${s && s.tag}`);
+
+  // Key: a note, a set of notes, a scale, any for one of them.
+  await openLine('key');
+  let k = await shown('key');
+  row('key: opens on the notes, all twelve, any lit', (await view()) === 'key' && k.tab === 'note' && k.keys.length === 12 && k.any && k.value === 'any', `${k.keys.join(' ')} ${k.page}`);
+  await press('key', 'D');
+  const k1 = await shown('key');
+  await press('key', 'G');
+  const k2 = await shown('key');
+  row('key: D pinned, then D or G, a set', k1.value === 'D' && k1.lit.join() === 'D' && !k1.any && k2.value === 'D or G' && k2.lit.join() === 'D,G', `${k1.value} | ${k2.value}`);
+  await tab.click('#viewKey .pv-tab[data-tab="scale"]');
+  await sleep(150);
+  k = await shown('key');
+  const scales = [];
+  {
+    // Every scale, page by page.
+    const all = await tev(() => {
+      const $ = (id) => document.getElementById(id);
+      while (!$('keyPrev').disabled) $('keyPrev').click();
+      const out = [...$('keyGrid').children].map((b) => b.textContent);
+      for (let i = 0; i < 30 && !$('keyNext').disabled; i++) { $('keyNext').click(); out.push(...[...$('keyGrid').children].map((b) => b.textContent)); }
+      return out;
+    });
+    scales.push(...all);
+  }
+  row('key: the scales, all nineteen the core has, on pages (nothing scrolls)', k.tab === 'scale' && k.any && scales.length === 19 && new Set(scales).size === 19, `${k.page}: ${scales.join(', ')}`);
+  await press('key', 'dorian');
+  const k3 = await shown('key');
+  await press('key', 'aeolian');
+  await tab.click('#keyAny');
+  const k4 = await shown('key');
+  await press('key', 'dorian');
+  const k5 = await shown('key');
+  row('key: dorian with the notes ("D or G dorian"); aeolian too, then any for the scales alone (the notes kept); dorian again',
+    k3.value === 'D or G dorian' && k4.value === 'D or G' && k4.any && k5.value === 'D or G dorian', [k3.value, k4.value, k5.value].join(' | '));
+  await tab.click('#keyDone');
+  await sleep(500);
+  s = (await sent()).pop();
+  p = await probe();
+  const kl = await line('key');
+  row('key: done, "D or G dorian" on its line, sent (D and G, dorian) and held', kl.text === 'D or G dorian' && s.ask.keys === ((1 << 2) | (1 << 7)) && s.ask.scales === 1 && p.picksTag === s.tag, `${kl.text}; keys ${s.ask.keys}, scales ${s.ask.scales}`);
+
+  // Style: a set, then one.
+  await openLine('style');
+  let st = await shown('sty');
+  await press('sty', 'tide');
+  await press('sty', 'shrine');
+  const st2 = await shown('sty');
+  await press('sty', 'shrine');
+  const st3 = await shown('sty');
+  row('style: any lit, then tide or shrine, a set; shrine again, tide alone', st.any && st2.value === 'shrine or tide' && st3.value === 'tide' && !st3.any, `${st.value} | ${st2.value} | ${st3.value} ${st.page}`);
+  await tab.click('#styDone');
+  await sleep(500);
+  s = (await sent()).pop();
+  const sl = await line('style');
+  row('style: done, "tide" on its line, sent', sl.text === 'tide' && s.ask.styles === 1 << 13, `${sl.text} ${s.ask.styles}`);
+
+  // Voices: a voice and the layer on; another layer off; never all five off.
+  await openLine('voices');
+  await tab.click('#viewVoices .pv-tab[data-tab="melody"]');
+  await sleep(150);
+  await press('vox', 'kalimba');
+  await tab.click('#voxOn');
+  const v1 = await shown('vox');
+  const layerKey = (l) => tab.click(`#viewVoices .pv-tab[data-tab="${l}"]`);
+  for (const l of ['drums', 'bass', 'chords', 'texture']) { await layerKey(l); await tab.click('#voxOff'); }
+  await layerKey('melody');
+  const lastOn = await tev(() => document.getElementById('voxOff').disabled);
+  for (const l of ['bass', 'chords', 'texture']) { await layerKey(l); await tab.click('#voxOff'); }
+  await layerKey('drums');
+  const v2 = await shown('vox');
+  const dot = await tev(() => [...document.querySelectorAll('#viewVoices .pv-tab.asks')].map((b) => b.dataset.tab).join(','));
+  row('voices: kalimba with the melody on ("kalimba · on"); the drums off; with the other four off the melody\'s off rests (all five off is the one thing the core can\'t do); the layers asking something marked',
+    v1.value === 'kalimba · on' && v1.lit.join() === 'kalimba' && lastOn && v2.value === 'off' && dot === 'drums,melody', `${v1.value} | ${lastOn} | ${v2.value} | ${dot}`);
+  await tab.click('#voxDone');
+  await sleep(500);
+  s = (await sent()).pop();
+  p = await probe();
+  const vl = await line('voices');
+  row('voices: done, "kalimba, no drums, melody always" on its line, sent and held',
+    vl.text === 'kalimba, no drums, melody always' && s.ask.layers.join() === '2,0,0,1,0' && s.ask.voices[3] !== 0 && p.picksTag === s.tag && p.d.seed === playing, `${vl.text}; layers ${s.ask.layers}, voices ${s.ask.voices}`);
+  const cant = await tev(() => document.querySelector('#picksList .pk-cant')?.textContent || '');
+  row('pickers: every pick together can be met (no "can\'t do that")', !cant, cant);
+
+  // Now Playing shows them; Next draws the core's own loop under them.
+  await tab.click('#nowBtn');
+  await sleep(300);
+  const pills = await tev(() => document.getElementById('nowPicks').getAttribute('aria-label'));
+  row('pickers: Now Playing\'s picks say them', /70 to 85 bpm/.test(pills) && /D or G dorian/.test(pills) && /tide/.test(pills) && /kalimba/.test(pills), pills);
+  await tab.click('#nextBtn');
+  await sleep(3500);
+  p = await probe();
+  const d = p.d;
+  const bpm = Number(d.bpm);
+  const mix = (d.mix || '').split('|').map((x) => x.split(':'));
+  const plays = (d.layers || '').split('|');
+  // A layer off is the loop's own mute (core/src/generator/asked.rs): drawn,
+  // and silent; the Layers view shows it off.
+  for (let i = 0; i < 3 && await tev(() => document.getElementById('viewLayers').hidden); i++) await tab.click('#viewBtn');
+  await sleep(400);
+  const drums = await tev(() => document.querySelector('.layer[data-layer="drums"] .btn-on').getAttribute('aria-checked'));
+  row('pickers: the next loop, the core\'s own, is drawn under them: 70 to 85 bpm, D or G dorian, tide, the drums off, the melody playing',
+    d.seed !== playing && bpm >= 70 && bpm <= 85 && ['2', '7'].includes(d.root) && d.scale === 'dorian' && mix.length === 1 && mix[0][0] === 'tide' && drums === 'false' && plays[3] === '1',
+    `${d.bpm} bpm, root ${d.root} ${d.scale}, mix ${d.mix}, drums on ${drums}, layers drawn ${d.layers}`);
+  await tev(() => {
+    window.__rows.clip = '';
+    if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+    document.querySelector('[data-stab="share"]').click();
+    document.getElementById('copySong').click();
+  });
+  await sleep(600);
+  let back = null;
+  try { back = decodeSong(await tev(() => window.__rows.clip)); } catch (err) { back = { error: err.message }; }
+  row('pickers: its spec, read back from its share code, carries what was asked: the tempo, the notes and the scale, the style, the voice and the layers',
+    back && back.seed >>> 0 === Number(d.seed) && back.mutes && back.mutes.drums === true && JSON.stringify(back.tempo) === '[70,85]' && JSON.stringify(back.askKey) === '[2,7]' && JSON.stringify(back.askScale) === '["dorian"]'
+      && JSON.stringify(back.askStyle) === '["tide"]' && JSON.stringify(back.askVoices) === '{"melody":["kalimba"]}' && JSON.stringify(back.askLayers) === '{"drums":"off","melody":"on"}',
+    back && JSON.stringify({ tempo: back.tempo, key: back.askKey, scale: back.askScale, style: back.askStyle, voices: back.askVoices, layers: back.askLayers, error: back.error }));
+
+  // Kept with the panel's state: a reload.
+  await tab.reload();
+  await tab.waitForFunction(() => document.readyState === 'complete' && document.getElementById('playBtn'));
+  await sleep(1500);
+  // (It opens where it was left: the Layers view.)
+  await toVibe();
+  const kept = [];
+  for (const id of ['tempo', 'key', 'style', 'voices']) kept.push((await line(id)).text);
+  row('pickers: the picks kept across a reload', kept.join(' | ') === '70–85 bpm | D or G dorian | tide | kalimba, no drums, melody always', kept.join(' | '));
+  // Playing again, so there is a core to send the picks to.
+  await tab.click('#playBtn');
+  await sleep(3000);
+
+  // A picker opens on what is picked: the scale's page, the lit keys.
+  await openLine('style');
+  st = await shown('sty');
+  row('style: opened again, on the page with tide lit', st.lit.join() === 'tide', `${st.page} ${st.lit}`);
+  await tab.click('#styCancel');
+  await sleep(250);
+
+  // Clear all.
+  const before = (await sent()).length;
+  await tab.click('#picksClear');
+  await sleep(500);
+  const cleared = [];
+  for (const id of ['tempo', 'key', 'style', 'voices']) cleared.push((await line(id)).label);
+  const after = await tev(() => ({ dim: document.getElementById('picksClear').disabled, focus: document.activeElement && document.activeElement.id, anys: [...document.querySelectorAll('#picksList .pk-anykey')].every((b) => b.getAttribute('aria-pressed') === 'true') }));
+  s = (await sent()).pop();
+  row('pickers: clear all puts every line back to any, sends picks of nothing, goes dim and leaves the focus on close',
+    cleared.every((l) => /any/.test(l)) && after.dim && after.anys && after.focus === 'picksClose' && (await sent()).length === before + 1
+      && !s.ask.tempo && !s.ask.keys && !s.ask.scales && !s.ask.styles && s.ask.layers.every((x) => x === 0) && s.ask.voices.every((x) => x === 0) && !s.ask.vibes.length,
+    `${cleared.join(' | ')}; ${JSON.stringify(after)}`);
+
+  // Whole on short phones and on a phone on its side: every key reachable,
+  // nothing to scroll, on every tab and page.
+  for (const [width, height] of [[360, 640], [320, 568], [640, 360], [568, 320]]) {
+    await tab.setViewportSize({ width, height });
+    await sleep(400);
+    const out = [];
+    for (const [id, viewId, tabs] of [['tempo', 'viewTempo', [null]], ['key', 'viewKey', ['note', 'scale']], ['style', 'viewStyle', [null]], ['voices', 'viewVoices', ['drums', 'melody', 'texture']]]) {
+      await openLine(id);
+      for (const tb of tabs) {
+        if (tb) { await tev((x) => document.querySelector(`.view:not([hidden]) .pv-tab[data-tab="${x}"]`).click(), tb); await sleep(150); }
+        out.push(...(await tev(covered, viewId)).map((x) => `${id}${tb ? `/${tb}` : ''}: ${x}`));
+      }
+      await tev(() => document.querySelector('.view:not([hidden]) .pv-cancel').click());
+      await sleep(200);
+    }
+    row(`pickers: at ${width}x${height} each view whole, every key reachable, nothing to scroll`, !out.length, out.join('; ') || 'all reached');
+  }
+  row('pickers: no page errors', !bad.length, bad.join('; '));
+  await tab.close();
+}

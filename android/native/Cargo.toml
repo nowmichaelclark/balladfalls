@@ -1,0 +1,37 @@
+[package]
+name = "dlandroid"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Ballad Falls' core on Android's own audio: the AAudio stream, the engine's queue and the JNI bridge"
+license-file = "../../LICENSE"
+
+# The core itself, from the same source as the web's module, with the same
+# features as that build (no `wide`: rates up to 96 kHz, the memory the app
+# has). Nothing else: AAudio and JNI are reached by hand (src/aaudio.rs,
+# src/jni.rs), so F-Droid builds this from the repository alone.
+[dependencies]
+dlcore = { path = "../../core", default-features = false }
+
+[lib]
+# libdriftloom.so, the library the app loads (System.loadLibrary("driftloom")).
+name = "driftloom"
+crate-type = ["cdylib"]
+
+# The core's own release profile (core/Cargo.toml), which a dependency's
+# manifest can't set for the library that links it.
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+# The tests render minutes of audio: optimized, with a debug build's checks.
+[profile.test]
+opt-level = 3
+debug-assertions = true
+overflow-checks = true
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }

@@ -1,0 +1,731 @@
+// The Library and Save viewports.
+//
+// Library: albums (Favorite Loops and Imported Loops built in, first), every
+// loop, and More (backups, the processor switch, diagnostics). Save: which
+// albums the playing loop is in, and sharing and exporting.
+//
+// A saved loop always lives in at least one album, so saving a loop IS
+// ticking an album, and taking it out of its last album deletes it
+// (storage.js has the rules).
+//
+// Lists scroll. The Library's lists and the Advanced page are the only
+// things in the app that do. Everything else holds still.
+//
+// Opening an album turns the card over to show the album; leaving the album
+// turns it back to whatever is playing.
+
+import { albumCoverSpec } from './cover.js';
+import { coverImage, paint } from './covers.js';
+import { NOTE_NAMES, SCALES } from './theory.js';
+import * as store from './storage.js';
+import * as ui from './ui.js';
+import { fitName } from './share.js';
+
+const el = ui.el;
+
+const lib = {
+  app: null,
+  tab: 'albums',
+  albumId: null,
+  mode: null,          // within an album: null (tracks), 'pick' or 'move'
+  moving: null,        // the loop being moved
+  advanced: false,     // More's Advanced page is open
+  saveTab: 'albums',
+  scroll: {},          // remembered scroll position per list
+  armed: null,         // { key, until }: a destructive tap waiting for its second
+};
+
+// ---------------------------------------------------------------- setup
+
+export function initLibrary(app) {
+  lib.app = app;
+  for (const b of document.querySelectorAll('[data-tab]')) {
+    b.addEventListener('click', () => setTab(b.dataset.tab));
+  }
+  tabKeys(document.querySelectorAll('[data-tab]'));
+  for (const b of document.querySelectorAll('[data-stab]')) {
+    b.addEventListener('click', () => { lib.saveTab = b.dataset.stab; renderSave(); });
+  }
+  tabKeys(document.querySelectorAll('[data-stab]'));
+  el('goAdvanced').addEventListener('click', () => {
+    lib.advanced = true;
+    render();
+    el('libAdvanced').querySelector('.page-title').focus({ preventScroll: true });
+  });
+  el('advBack').addEventListener('click', () => {
+    lib.advanced = false;
+    render();
+    el('goAdvanced').focus({ preventScroll: true });
+  });
+}
+
+// Arrow keys move along a tab row, as tabs do everywhere.
+function tabKeys(tabs) {
+  const list = [...tabs];
+  list.forEach((t, i) => t.addEventListener('keydown', (e) => {
+    const d = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    if (!d) return;
+    e.preventDefault();
+    const n = list[(i + d + list.length) % list.length];
+    n.focus();
+    n.click();
+  }));
+}
+
+function setTabState(tabs, current) {
+  for (const b of tabs) {
+    const on = (b.dataset.tab || b.dataset.stab) === current;
+    b.setAttribute('aria-selected', String(on));
+    b.tabIndex = on ? 0 : -1;
+  }
+}
+
+export function isVisible() {
+  return !el('viewLibrary').hidden;
+}
+
+function saveVisible() {
+  return !el('viewSave').hidden;
+}
+
+// The album the card should show, or null for the playing loop.
+export function shownAlbum() {
+  return isVisible() && lib.tab === 'albums' ? lib.albumId : null;
+}
+
+// The album open in the Library's albums, shown now or not (the Export
+// view offers it), or null.
+export function openedAlbum() {
+  return lib.tab === 'albums' ? lib.albumId : null;
+}
+
+export function setTab(tab) {
+  // Tapping Albums while inside an album goes back up to the list; coming
+  // to it from another tab returns to the album you were in. The same for
+  // More and its Advanced page.
+  if (tab === 'albums' && lib.tab === 'albums') {
+    lib.albumId = null;
+    lib.mode = null;
+  }
+  if (tab === 'more' && lib.tab === 'more') lib.advanced = false;
+  lib.tab = tab;
+  render();
+  lib.app.cardChanged();
+}
+
+export function openAlbum(id) {
+  lib.tab = 'albums';
+  lib.albumId = id;
+  lib.mode = null;
+  render();
+  lib.app.cardChanged();
+}
+
+export function closeAlbum() {
+  lib.albumId = null;
+  lib.mode = null;
+  render();
+  lib.app.cardChanged();
+}
+
+// Called when something that the lists show may have changed. It is cheap
+// when neither view is on screen: it does nothing. A list that would come
+// out the same (for example, a new loop that is in none of them, every time
+// one starts) is left as it is, not built again. A tap on the lists
+// themselves always builds them.
+export function refresh() {
+  if (isVisible() && built.library !== shownKey()) render();
+  if (saveVisible() && built.save !== shownKey()) renderSave();
+}
+
+// What the lists show, as one string: what is stored, where the lists
+// stand, and what is playing.
+const built = { library: null, save: null };
+function shownKey() {
+  const st = lib.app.state;
+  const pl = st.playlist;
+  const spec = st.spec;
+  return JSON.stringify([
+    store.loadAll().map((e) => [e.id, e.spec.name, e.spec.root, e.spec.scale, e.spec.bpm]), store.loadAlbums(),
+    lib.tab, lib.albumId, lib.mode, lib.moving, lib.advanced, lib.saveTab, lib.armed && lib.armed.key,
+    st.currentId, pl ? [pl.albumId, pl.index, pl.ids.length] : null,
+    spec ? spec.name : null, spec ? lib.app.isSaved() && lib.app.isChanged() : null,
+  ]);
+}
+
+export function showShare() {
+  lib.saveTab = 'share';
+  renderSave();
+}
+
+// --------------------------------------------------------------- pieces
+
+const NB = ' ';
+
+function make(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+
+// A list that scrolls, keeping its place across re-renders (rows are
+// rebuilt on every change). The hairline at an edge shows only while
+// there is more to see past it.
+function scroller(key, ...children) {
+  const sc = make('div', 'scroll');
+  sc.append(...children);
+  sc.dataset.key = key;
+  sc.addEventListener('scroll', () => { lib.scroll[key] = sc.scrollTop; edges(sc); }, { passive: true });
+  return sc;
+}
+
+function edges(sc) {
+  sc.classList.toggle('more-up', sc.scrollTop > 1);
+  sc.classList.toggle('more-down', sc.scrollTop + sc.clientHeight < sc.scrollHeight - 1);
+}
+
+// Put a pane's new contents in place, then restore its scroll, or bring
+// the row marked current into view the first time.
+function mount(host, nodes) {
+  const held = focusHeld(host);
+  host.innerHTML = '';
+  host.append(...nodes);
+  for (const sc of host.querySelectorAll('.scroll')) {
+    const key = sc.dataset.key;
+    if (lib.scroll[key] != null) sc.scrollTop = lib.scroll[key];
+    else {
+      const cur = sc.querySelector('.lrow.current');
+      if (cur) sc.scrollTop = Math.max(0, cur.offsetTop - sc.clientHeight / 3);
+    }
+    edges(sc);
+  }
+  if (held) focusAgain(host, held);
+}
+
+// Rows are built again at every change, so the focus is put back: on the
+// same key of the same page, or, on a page just come to, on its first (the
+// way back, where it has one).
+function focusHeld(host) {
+  const at = document.activeElement;
+  if (!at || !host.contains(at)) return null;
+  const keys = [...host.querySelectorAll('button')];
+  const row = at.closest('.lrow');
+  return {
+    page: host.querySelector('.scroll')?.dataset.key,
+    index: keys.indexOf(at),
+    row: row?.querySelector('.lrow-title')?.textContent,
+    nth: row ? [...row.querySelectorAll('button')].indexOf(at) : -1,
+  };
+}
+
+function focusAgain(host, held) {
+  const keys = [...host.querySelectorAll('button:not(:disabled)')];
+  if (!keys.length) return;
+  let to = keys[0];
+  if (held.page === host.querySelector('.scroll')?.dataset.key && held.index >= 0) {
+    to = keys[Math.min(held.index, keys.length - 1)];
+    if (held.row != null) {
+      const same = [...host.querySelectorAll('.lrow')].find((r) => r.querySelector('.lrow-title')?.textContent === held.row);
+      if (same) to = same.querySelectorAll('button')[held.nth] || to;
+    }
+  }
+  // The list keeps its own place: the focus doesn't move it.
+  to.focus({ preventScroll: true });
+}
+
+function lrows(label, rows) {
+  const l = make('div', 'lrows');
+  l.setAttribute('role', 'list');
+  l.setAttribute('aria-label', label);
+  l.append(...rows);
+  return l;
+}
+
+function row(title, meta, onOpen, { art = null, current = false, cls = '', num = null } = {}) {
+  const r = make('div', 'lrow' + (current ? ' current' : '') + (cls ? ` ${cls}` : ''));
+  r.setAttribute('role', 'listitem');
+  const main = make('button', 'lrow-main');
+  main.type = 'button';
+  if (num != null) {
+    const n = make('span', 'trk', String(num));
+    n.setAttribute('aria-hidden', 'true');
+    main.appendChild(n);
+  }
+  if (art) main.appendChild(art);
+  const text = make('span', 'lrow-text');
+  const t = make('span', 'lrow-title');
+  if (current) t.insertAdjacentHTML('beforeend', ui.icon('nowMark').replace('<svg ', '<svg class="now-mark" '));
+  const name = make('span');
+  if (num != null) name.appendChild(make('span', 'vh', `${num}. `));
+  name.appendChild(document.createTextNode(title));
+  t.appendChild(name);
+  if (current) t.appendChild(make('span', 'vh', ', now playing'));
+  const m = make('span', 'lrow-meta', meta);
+  text.append(t, m);
+  main.appendChild(text);
+  main.addEventListener('click', onOpen);
+  r.appendChild(main);
+  return r;
+}
+
+// A key: its word, or (`icon`) a symbol with whatever follows it.
+function key(label, onClick, { word = false, aria = '', icon = '' } = {}) {
+  const b = make('button', 'vkey' + (word ? ' word' : ''));
+  if (icon) {
+    b.innerHTML = ui.icon(icon);
+    if (aria) b.title = aria;
+  }
+  b.append(label);
+  b.type = 'button';
+  if (aria) b.setAttribute('aria-label', aria);
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+function backKey(label, onBack, aria) {
+  const b = make('button', 'vkey back');
+  b.type = 'button';
+  b.innerHTML = ui.icon('left');
+  b.appendChild(document.createTextNode(label));
+  if (aria) b.setAttribute('aria-label', aria);
+  b.addEventListener('click', onBack);
+  return b;
+}
+
+function pageHead(back, title, hero = false) {
+  const h = make('div', 'page-head');
+  const t = make('h3', 'page-title' + (hero ? ' hero-title' : ''), title);
+  t.tabIndex = -1;
+  h.append(back, t);
+  return h;
+}
+
+function page(...nodes) {
+  const p = make('div', 'page');
+  p.append(...nodes);
+  return p;
+}
+
+function foot(...keys) {
+  const f = make('div', 'page-foot');
+  f.append(...keys);
+  return f;
+}
+
+// Destructive taps ask twice. The first arms `key` (and the caller shows
+// what will happen); a second tap on the same thing within a few seconds
+// returns true. Survives re-renders, since rows are rebuilt on every change.
+function armed(k) {
+  const now = Date.now();
+  if (lib.armed && lib.armed.key === k && lib.armed.until > now) {
+    lib.armed = null;
+    return true;
+  }
+  lib.armed = { key: k, until: now + 3500 };
+  setTimeout(() => {
+    if (lib.armed && lib.armed.key === k && lib.armed.until <= Date.now()) {
+      lib.armed = null;
+      refresh();
+    }
+  }, 3600);
+  return false;
+}
+
+function isArmed(k) {
+  return !!lib.armed && lib.armed.key === k && lib.armed.until > Date.now();
+}
+
+// An armed key re-words itself, and its accessible name says what a
+// second press does (v17: never a pop-up).
+function confirmKey(k, label, armedLabel, armedAria, onConfirm, word = true) {
+  const on = isArmed(k);
+  const b = key(on ? armedLabel : label, () => {
+    if (armed(k)) onConfirm();
+    else refresh();
+  }, { word, aria: on ? armedAria : '' });
+  if (on) b.classList.add('armed');
+  return b;
+}
+
+function mark(on, warn = false) {
+  const m = make('span', 'pick' + (warn ? ' warn' : ''));
+  m.setAttribute('aria-hidden', 'true');
+  m.innerHTML = warn ? ui.icon('close') : on ? ui.icon('check') : '';
+  return m;
+}
+
+// Album art is drawn once per album contents and copied after that, so
+// re-rendering a list does not redraw noise fields every time.
+//
+// And it is drawn off the main thread (js/covers.js). A Library's worth at
+// once held the main thread for a second and more on a slow phone, past
+// what the music had queued. The first time, a row's art comes in a moment
+// after the row. `warmArt` asks for them ahead, so mostly it is there.
+function albumSpec(album, specs) {
+  return albumCoverSpec(album.title, specs.length ? specs : [
+    { seed: 1, feel: { lift: 0.5, energy: 0.3, warmth: 0.6 }, mix: { dust: 1 } },
+  ]);
+}
+
+// The album's art at `size`: a promise of a picture to draw in.
+export function albumArt(album, specs, size = 96) {
+  return coverImage(albumSpec(album, specs), size);
+}
+
+// Into `canvas` once it is drawn.
+function artInto(canvas, album, specs, size = 96) {
+  albumArt(album, specs, size).then((image) => {
+    if (canvas && canvas.isConnected) paint(canvas, image);
+  }).catch((err) => console.warn('Could not draw album art', err));
+}
+
+// Every album's art for the lists, asked for ahead. Hidden, nothing is
+// looking: the next time the page is shown.
+export function warmArt() {
+  if (document.hidden) {
+    document.addEventListener('visibilitychange', warmArt, { once: true });
+    return;
+  }
+  const byId = loopsById();
+  for (const album of listedAlbums(store.IMPORTED)) {
+    albumArt(album, album.ids.map((id) => byId.get(id)).filter(Boolean).map((e) => e.spec)).catch(() => {});
+  }
+}
+
+function artFor(album, byId, big = false) {
+  const specs = album.ids.map((id) => byId.get(id)).filter(Boolean).map((e) => e.spec);
+  const art = document.createElement('canvas');
+  art.className = 'art' + (big ? ' big' : '');
+  art.setAttribute('aria-hidden', 'true');
+  art.width = 96;
+  art.height = 96;
+  artInto(art, album, specs);
+  return art;
+}
+
+function loopsById() {
+  return new Map(store.loadAll().map((e) => [e.id, e]));
+}
+
+function keyOf(spec) {
+  return `${NOTE_NAMES[spec.root]}${NB}${SCALES[spec.scale].label} · ${spec.bpm}${NB}bpm · ${ui.lengthLine(spec)}`;
+}
+
+function count(n, word) {
+  return `${n}${NB}${word}${n === 1 ? '' : 's'}`;
+}
+
+// An empty list's line; `more` is only for a screen reader.
+function empty(text, more = '') {
+  const p = make('p', 'empty', text);
+  if (more) p.appendChild(make('span', 'vh', `. ${more}`));
+  return p;
+}
+
+// A row's meta on an armed delete: why, for a screen reader, before the line.
+function warned(r, why) {
+  r.querySelector('.lrow-meta').prepend(make('span', 'vh', `${why}: `));
+}
+
+// Albums worth listing: Imported Loops only when it has something in it.
+function listedAlbums(alsoShow = null) {
+  return store.loadAlbums().filter((a) => a.id !== store.IMPORTED || a.ids.length || a.id === alsoShow);
+}
+
+// A new album's name, asked as every new album's is (the Name box, Untitled
+// in it), or null: closed, empty, or nothing a code can carry. The seed
+// album's save uses it too.
+export function askAlbumName() {
+  const title = prompt('Name', 'Untitled');
+  if (!title || !title.trim()) return null;
+  // An album's name travels with its code: only what a code can carry.
+  const name = fitName(title, store.NAME_MAX);
+  if (!name) { ui.toast("Can't use name", "That name can't be shared; try another"); return null; }
+  return name;
+}
+
+function newAlbumThen(after) {
+  const name = askAlbumName();
+  if (!name) return;
+  const album = store.createAlbum(name);
+  if (!album) { ui.toast("Can't make album"); return; }
+  after(album);
+}
+
+// ------------------------------------------------------------- library
+
+export function render() {
+  built.library = shownKey();
+  setTabState(document.querySelectorAll('[data-tab]'), lib.tab);
+  const more = lib.tab === 'more';
+  el('libMore').hidden = !more || lib.advanced;
+  el('libAdvanced').hidden = !more || !lib.advanced;
+  el('libPane').hidden = more;
+  if (more) return;
+  if (lib.tab === 'albums') {
+    const album = lib.albumId && store.loadAlbums().find((a) => a.id === lib.albumId);
+    if (lib.albumId && !album) { lib.albumId = null; lib.mode = null; }
+    if (!album) renderAlbums();
+    else if (lib.mode === 'pick') renderPicker(album);
+    else if (lib.mode === 'move' && lib.moving) renderMove(album);
+    else renderAlbum(album);
+  } else {
+    renderLoops();
+  }
+}
+
+function renderAlbums() {
+  const byId = loopsById();
+  const playing = lib.app.state.playlist;
+  const actions = make('div', 'lib-actions');
+  actions.append(
+    key('', () => newAlbumThen((a) => { ui.announce(`Created ${a.title}`); render(); }), { icon: 'plus', aria: 'New album' }),
+    key('paste code', () => lib.app.pasteCode()),
+  );
+  const rows = listedAlbums().map((album) => {
+    const n = album.ids.filter((id) => byId.has(id)).length;
+    const isPlaying = !!playing && playing.albumId === album.id;
+    const meta = count(n, 'loop') + (isPlaying ? ` · playing ${playing.index + 1}/${playing.ids.length}` : '');
+    const r = row(album.title, meta, () => openAlbum(album.id),
+      { art: artFor(album, byId), current: isPlaying, cls: 'album' });
+    r.appendChild(key('play', () => lib.app.playAlbum(album.id, 0), { word: true, aria: `Play ${album.title}` }));
+    return r;
+  });
+  mount(el('libPane'), [page(scroller('albums', actions,
+    rows.length ? lrows('Albums', rows) : empty('No albums')))]);
+}
+
+function renderAlbum(album) {
+  const byId = loopsById();
+  const present = album.ids.filter((id) => byId.has(id));
+  const playing = lib.app.state.playlist;
+  const here = !!playing && playing.albumId === album.id;
+
+  const hero = make('div', 'hero');
+  const meta = make('p', 'hero-meta', count(present.length, 'loop')
+    + (here ? ` · playing ${playing.index + 1}/${playing.ids.length}` : ''));
+  const keys = make('div', 'hero-keys');
+  keys.append(
+    // While this album is playing the same key takes you out of it, so
+    // Next goes back to making new loops.
+    here ? key('stop', () => lib.app.leaveAlbum(), { aria: `stop album ${album.title}` })
+      : key('play', () => lib.app.playAlbum(album.id, 0), { aria: `play album ${album.title}` }),
+    key('', () => { lib.mode = 'pick'; render(); }, { icon: 'plus', aria: 'Add loops' }),
+    key('copy code', () => lib.app.shareAlbum(album.id), { aria: `copy code of ${album.title}` }),
+    key('share link', () => lib.app.shareAlbumLink(album.id), { aria: `share link to ${album.title}` }),
+  );
+  hero.append(artFor(album, byId, true), meta, keys);
+
+  const rows = present.map((id, i) => {
+    const spec = byId.get(id).spec;
+    const isCurrent = here && playing.index === i;
+    const r = row(spec.name, keyOf(spec), () => lib.app.playAlbum(album.id, i),
+      { current: isCurrent, cls: 'track', num: i + 1 });
+    const rk = make('span', 'row-keys');
+    rk.appendChild(key('move', () => {
+      lib.mode = 'move';
+      lib.moving = id;
+      render();
+    }, { word: true, aria: `Move ${spec.name} to another album` }));
+    const last = store.albumsOf(id).length <= 1;
+    rk.appendChild(confirmKey(`rm:${album.id}:${id}`, 'remove', last ? 'delete?' : 'sure?',
+      last ? `delete? Press again to delete ${spec.name}` : `sure? Press again to remove ${spec.name} from ${album.title}`,
+      () => {
+        const res = store.removeFromAlbum(album.id, id);
+        if (!res.ok) { ui.toast("Can't change album"); return; }
+        if (res.deleted && lib.app.state.currentId === id) lib.app.state.currentId = null;
+        if (res.deleted) ui.toast('Deleted', `Deleted ${spec.name}`);
+        else ui.toast('Removed', `Removed ${spec.name} from ${album.title}`);
+        lib.app.savedChanged();
+        lib.app.cardChanged();
+      }));
+    r.appendChild(rk);
+    return r;
+  });
+
+  const parts = [hero, rows.length ? lrows(`Loops in ${album.title}`, rows)
+    : empty('Empty', 'Press add loops to pick from your loops.')];
+  if (!store.isBuiltin(album.id)) {
+    const k = `del-album:${album.id}`;
+    const going = store.onlyHere(album.id).length;
+    const ask = going ? `delete with ${count(going, 'loop')}?` : 'delete album?';
+    const all = going ? ` and the ${count(going, 'loop')} that ${going === 1 ? 'is' : 'are'} only in it` : '';
+    const end = make('div', 'end-keys');
+    end.appendChild(confirmKey(k, 'delete album', ask, `${ask} Press again to delete ${album.title}${all}`, () => {
+      const pl = lib.app.state.playlist;
+      if (pl && pl.albumId === album.id) lib.app.state.playlist = null;
+      store.removeAlbum(album.id);
+      ui.toast('Deleted', `Deleted ${album.title}`);
+      lib.app.savedChanged();
+      closeAlbum();
+    }, false));
+    parts.push(end);
+  }
+  mount(el('libPane'), [page(
+    pageHead(backKey('Albums', closeAlbum, 'Back to Albums'), album.title, true),
+    scroller(`album:${album.id}`, ...parts),
+  )]);
+}
+
+// Move one track: tap the album it should go to.
+function renderMove(album) {
+  const byId = loopsById();
+  const entry = byId.get(lib.moving);
+  if (!entry) { lib.mode = null; render(); return; }
+  const done = () => { lib.mode = null; lib.moving = null; render(); };
+  const go = (target) => {
+    if (!store.moveToAlbum(entry.id, album.id, target.id)) { ui.toast("Can't move", `Can't move ${entry.spec.name}`); return; }
+    ui.toast('Moved', `Moved ${entry.spec.name} to ${target.title}`);
+    lib.app.savedChanged();
+    lib.app.cardChanged();
+    done();
+  };
+  // Imported Loops is where codes land, not somewhere to file things.
+  const targets = store.loadAlbums().filter((a) => a.id !== album.id && a.id !== store.IMPORTED);
+  const rows = targets.map((target) => {
+    const has = target.ids.includes(entry.id);
+    const r = row(target.title, count(target.ids.length, 'loop'),
+      () => go(target), { art: artFor(target, byId) });
+    if (has) {
+      r.classList.add('in');
+      r.querySelector('.lrow-meta').appendChild(make('span', 'vh', ', already has it'));
+      r.querySelector('.lrow-main').appendChild(mark(true));
+    }
+    return r;
+  });
+  mount(el('libPane'), [page(
+    pageHead(backKey(album.title, done, `Back to ${album.title}`), `Move ${entry.spec.name}`),
+    scroller(`move:${album.id}`, rows.length ? lrows('Albums', rows) : empty('No other albums', 'Make one with new album.')),
+    foot(key('', () => newAlbumThen(go), { icon: 'plus', aria: 'New album' }), key('cancel', done)),
+  )]);
+}
+
+// Pick loops into the album without playing them: tap a row to put it in,
+// tap again to take it out (twice, if that would delete it).
+function renderPicker(album) {
+  const done = () => { lib.mode = null; render(); };
+  const loops = store.loadAll();
+  const fresh = store.loadAlbums().find((a) => a.id === album.id) || album;
+  const rows = loops.map((entry) => {
+    const inAlbum = fresh.ids.includes(entry.id);
+    const last = inAlbum && store.albumsOf(entry.id).length <= 1;
+    const k = `pick:${album.id}:${entry.id}`;
+    const warn = last && isArmed(k);
+    const r = row(entry.spec.name, warn ? 'delete?' : keyOf(entry.spec), () => {
+      if (!inAlbum) {
+        store.addToAlbum(album.id, entry.id);
+      } else if (last && !armed(k)) {
+        render();
+        return;
+      } else {
+        const res = store.removeFromAlbum(album.id, entry.id);
+        if (res.deleted) {
+          if (lib.app.state.currentId === entry.id) lib.app.state.currentId = null;
+          ui.toast('Deleted', `Deleted ${entry.spec.name}`);
+        }
+      }
+      lib.app.savedChanged();
+      lib.app.cardChanged();
+    }, { current: entry.id === lib.app.state.currentId });
+    if (warn) warned(r, 'only here, press again to delete');
+    if (inAlbum) r.classList.add('in');
+    r.querySelector('.lrow-main').setAttribute('aria-pressed', String(inAlbum));
+    r.querySelector('.lrow-main').appendChild(mark(inAlbum, warn));
+    return r;
+  });
+  const keys = [];
+  const s = lib.app.state.spec;
+  if (s && !lib.app.isSaved()) {
+    keys.push(key(s.name, () => { lib.app.saveIn(album.id); render(); }, { icon: 'plus', aria: `Add ${s.name}` }));
+  }
+  keys.push(key('done', done));
+  mount(el('libPane'), [page(
+    pageHead(backKey(album.title, done, `Back to ${album.title}`), 'Add loops'),
+    scroller(`pick:${album.id}`, rows.length ? lrows('Your loops', rows) : empty('No loops', 'Save one you like and it will show up here.')),
+    foot(...keys),
+  )]);
+}
+
+// Every loop, wherever it lives. Tap to play; changes happen in albums.
+function renderLoops() {
+  const loops = store.loadAll();
+  const albums = store.loadAlbums();
+  const currentId = lib.app.state.currentId;
+  const rows = loops.map((entry) => {
+    const homes = albums.filter((a) => a.ids.includes(entry.id));
+    const where = homes.length ? homes[0].title + (homes.length > 1 ? `${NB}+${homes.length - 1}` : '') : '';
+    return row(entry.spec.name, `${keyOf(entry.spec)}${where ? ` · ${where}` : ''}`, () => lib.app.openSaved(entry),
+      { current: entry.id === currentId });
+  });
+  mount(el('libPane'), [page(scroller('loops',
+    rows.length ? lrows('All loops', rows) : empty('No loops', 'Save one you like and it will show up here.')))]);
+}
+
+// ----------------------------------------------------------------- save
+
+export function renderSave() {
+  built.save = shownKey();
+  setTabState(document.querySelectorAll('[data-stab]'), lib.saveTab);
+  const share = lib.saveTab === 'share';
+  el('saveShare').hidden = !share;
+  el('savePane').hidden = share;
+  if (share) return;
+  const app = lib.app;
+  const spec = app.state.spec;
+  if (!spec) { mount(el('savePane'), [empty('Press play', 'It makes a loop to save.')]); return; }
+  const kept = app.isSaved();
+  const id = kept ? app.state.currentId : null;
+
+  // A saved loop that has been re-rolled or tweaked since: say so, and offer
+  // both ways forward rather than guessing.
+  // A tick says saved. The line shows only for a changed loop, and a screen
+  // reader hears it all, on each album's tick.
+  const head = make('div', 'save-head');
+  let said;
+  if (kept && app.isChanged()) {
+    const homes = store.albumsOf(id).length;
+    head.classList.add('changed');
+    said = make('p', 'hint', 'Changed');
+    said.appendChild(make('span', 'vh', ' since you saved it.'));
+    head.append(said,
+      key(homes > 1 ? `update in ${homes} albums` : 'update', () => app.updateSaved(), { aria: homes > 1 ? `update in ${homes} albums` : 'update the saved loop' }),
+      key('save as new', () => app.saveAsNew()));
+  } else {
+    said = make('p', 'vh', kept ? `${spec.name} is saved. Untick to take it out.` : `Tick an album to save ${spec.name} to it.`);
+    head.append(said);
+  }
+  said.id = 'saveHint';
+
+  const byId = loopsById();
+  const albums = listedAlbums(store.IMPORTED);
+  const shown = albums.filter((a) => a.id !== store.IMPORTED || (id && a.ids.includes(id)));
+  const rows = shown.map((album) => {
+    const inAlbum = !!id && album.ids.includes(id);
+    const last = inAlbum && store.albumsOf(id).length <= 1;
+    const k = `save:${album.id}:${id}`;
+    const warn = last && isArmed(k);
+    const meta = warn ? 'delete?' : count(album.ids.filter((x) => byId.has(x)).length, 'loop');
+    const r = row(album.title, meta, () => {
+      if (!inAlbum) { app.saveIn(album.id); return; }
+      if (last && !armed(k)) { renderSave(); return; }
+      app.unsaveFrom(album.id);
+    }, { art: artFor(album, byId) });
+    if (warn) warned(r, 'only album, press again to delete');
+    if (inAlbum) r.classList.add('in');
+    const main = r.querySelector('.lrow-main');
+    main.setAttribute('role', 'checkbox');
+    main.setAttribute('aria-checked', String(inAlbum));
+    main.setAttribute('aria-describedby', 'saveHint');
+    main.appendChild(mark(inAlbum, warn));
+    return r;
+  });
+
+  mount(el('savePane'), [page(
+    head,
+    scroller('save', rows.length ? lrows('Albums', rows) : empty('No albums')),
+    foot(key('', () => newAlbumThen((a) => {
+      app.saveIn(a.id);
+    }), { icon: 'plus', aria: 'New album' })),
+  )]);
+}

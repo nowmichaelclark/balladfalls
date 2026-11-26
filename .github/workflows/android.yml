@@ -1,0 +1,496 @@
+# The Android app's CI build (queue item 107a): a debug APK on every PR that
+# touches android/, the app's files or the core, uploaded for Mikey to
+# install, and a smoke test of it on a headless emulator. Since session 26
+# (107b) the APK carries the core, native (android/native, built by cargo
+# for each ABI with the pinned NDK), and the `native` job plays it on the
+# emulator's own audio. Since session 27 (107c) the page plays on that
+# native core: the smoke test and `rows` (tools/rows.mjs --app, every row of
+# item 94a's table that makes sense in the app) drive the app's page on the
+# emulator, with a sound server for its stream. Not part of the merge gate
+# yet (docs/QUEUE.md, "Merge policy"); it is run, and read, before a merge.
+# By hand, `smoke_runs` boots that many emulators for the smoke test at once
+# (session 27: ten in a row before it is relied on).
+#
+# The app's files are the list sw.js keeps (android/app/build.gradle.kts
+# copies them into the APK), so the paths below are that list's folders;
+# the core's are those its libraries are built from.
+name: android
+
+on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android.yml'
+      - 'index.html'
+      - 'sw.js'
+      - 'manifest.webmanifest'
+      - 'css/**'
+      - 'js/**'
+      - 'data/**'
+      - 'fonts/**'
+      - 'audio/**'
+      - 'icons/**'
+      - 'core/src/**'
+      - 'core/build.rs'
+      - 'core/Cargo.*'
+      - 'core/golden/seeds.hashes'
+      - 'tools/rows.mjs'
+  workflow_dispatch:
+    inputs:
+      smoke_runs:
+        description: 'Smoke tests to run, each on an emulator of its own'
+        default: '1'
+      only:
+        description: 'Run only this emulator job (background, smoke, native, rows, screenshots; burn runs only by name); empty runs all'
+        default: ''
+      minutes:
+        description: 'Minutes the background job keeps the screen off (10 in a PR)'
+        default: '10'
+      burns:
+        description: 'With only=burn: the burns to sweep, microseconds a 128 frames (empty: burn.mjs''s own)'
+        default: ''
+      commit_screenshots:
+        description: 'With only=screenshots: commit the screenshots to the branch run on (fastlane/.../phoneScreenshots)'
+        default: 'false'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: the debug APK builds from a clean checkout
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      smoke: ${{ steps.runs.outputs.list }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # How many smoke tests (one on a PR; `smoke_runs` by hand).
+      - id: runs
+        run: |
+          n="${{ github.event.inputs.smoke_runs || '1' }}"
+          echo "list=[$(seq -s, 1 "$n")]" >> "$GITHUB_OUTPUT"
+
+      # No binary in the tree but the Gradle wrapper's jar, and that jar is
+      # the one Gradle publishes (F-Droid's rules).
+      - name: the tree and the Gradle wrapper
+        run: sh android/check-tree.sh
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The NDK the gradle.properties pins (driftloom.ndkVersion).
+      - name: the Android SDK pieces
+        run: |
+          ndk=$(sed -n 's/^driftloom\.ndkVersion=//p' android/gradle.properties)
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "ndk;$ndk" >/dev/null
+          ls "$ANDROID_HOME/ndk"
+
+      # The compiler android/native/rust-toolchain.toml pins (the core's),
+      # with Android's three targets.
+      - name: the Rust toolchain
+        working-directory: android/native
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal --component clippy \
+            --target aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+          rustc --version
+
+      # The native crate on this machine: its queue, the engine's path held
+      # to the golden loops and to the web's module (a stereo render at a
+      # device's 48 kHz, made by js/dlplayer.wasm in Node), and nothing
+      # allocated in the audio thread's call. Then clippy, pedantic, for an
+      # Android target and this one.
+      - name: the native crate's tests and clippy
+        working-directory: android/native
+        run: |
+          export DL_WASM_LINE="$(node ../../tools/player-wasm.mjs --seed 2693262067 --seconds 45 --rate 48000 --stereo)"
+          echo "the web's line: $DL_WASM_LINE"
+          echo "$DL_WASM_LINE" > "$RUNNER_TEMP/wasm-line.txt"
+          cargo test --locked
+          cargo clippy --locked --all-targets -- -D warnings
+          cargo clippy --locked --all-targets --target aarch64-linux-android -- -D warnings
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wasm-line
+          path: ${{ runner.temp }}/wasm-line.txt
+          retention-days: 14
+
+      # The run number is the version code, so each build installs over the
+      # one before it (they share the test signing key,
+      # android/test-signing/README.md).
+      - name: build the debug APK
+        working-directory: android
+        run: sh gradle-retry.sh assembleDebug assembleDebugAndroidTest -Pdriftloom.versionCode=${{ github.run_number }}
+
+      # Android's lint (session 28: the app passes it with no errors). The
+      # report is kept; an error fails the build.
+      - name: Android lint
+        working-directory: android
+        run: sh gradle-retry.sh lintDebug -Pdriftloom.versionCode=${{ github.run_number }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-report
+          path: android/app/build/reports/lint-results-debug.*
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # One APK for each ABI and a universal one (all three); the size of
+      # each, and of the core's library inside it.
+      - name: the APKs
+        run: |
+          echo "### The APKs (version code ${{ github.run_number }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| APK | bytes | libdriftloom.so (bytes, in the APK) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          for apk in android/app/build/outputs/apk/debug/*-debug.apk; do
+            libs=$(unzip -v "$apk" 'lib/*' 2>/dev/null | awk '/libdriftloom.so/ { printf "%s%s: %s (%s stored)", sep, $8, $1, $3; sep="; " }')
+            echo "| $(basename "$apk") | $(stat -c %s "$apk") | $libs |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          ls -l android/app/build/outputs/apk/debug/ android/app/build/outputs/apk/androidTest/debug/
+          # A test build keeps the working id (session 31a: the release's is
+          # its own, android/fdroid/check-apk.sh), so the two install side by side.
+          aapt2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          want=$(sed -n 's/^driftloom\.applicationId=//p' android/gradle.properties)
+          id=$("$aapt2" dump badging android/app/build/outputs/apk/debug/*-universal-debug.apk | sed -n "s/^package: name='\([^']*\)'.*/\1/p")
+          [ "$id" = "$want" ] && echo "ok   the test build's id is the working one: $id" || { echo "::error::the test build's id is $id, expected $want"; exit 1; }
+          for so in android/app/build/generated/native/*/libdriftloom.so; do
+            echo "$so: $(stat -c %s "$so") bytes"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: driftloom-debug-apk
+          path: android/app/build/outputs/apk/debug/*-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: driftloom-test-apk
+          path: android/app/build/outputs/apk/androidTest/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  smoke:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.only == '' || github.event.inputs.only == 'smoke'
+    name: the APK installs, starts and plays on an emulator (${{ matrix.run }})
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        run: ${{ fromJSON(needs.build.outputs.smoke) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: driftloom-debug-apk
+          path: apk
+
+      # The runner lets the emulator use KVM once its group can.
+      - name: KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      # The page plays on the core's native stream (session 27), which needs
+      # a device to play to: PulseAudio with a null sink, as `native`'s.
+      - name: a sound server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pulseaudio >/dev/null
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=driftloom
+          pactl set-default-sink driftloom
+
+      - name: smoke test
+        run: sh android/emulator-smoke.sh "$(ls apk/*-universal-debug.apk)" "$RUNNER_TEMP/smoke.png"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-screenshot-${{ matrix.run }}
+          path: ${{ runner.temp }}/smoke.png
+          if-no-files-found: ignore
+          retention-days: 14
+
+  native:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.only == '' || github.event.inputs.only == 'native'
+    name: the core plays natively on the emulator's audio
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: driftloom-debug-apk
+          path: apk
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: driftloom-test-apk
+          path: test-apk
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: wasm-line
+          path: wasm-line
+
+      - name: KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      # The runner has no sound card: PulseAudio with a null sink takes the
+      # emulator's audio at the real rate, so AAudio's stream runs as on a
+      # device and its underruns mean something.
+      - name: a sound server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pulseaudio >/dev/null
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=driftloom
+          pactl set-default-sink driftloom
+          pactl info | grep -E 'Server|Default Sink'
+
+      - name: the native tests
+        run: |
+          WASM_LINE="$(cat wasm-line/wasm-line.txt)" sh android/emulator-native.sh \
+            "$(ls apk/*-x86_64-debug.apk)" "$(ls test-apk/*.apk)" "$GITHUB_STEP_SUMMARY"
+
+  rows:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.only == '' || github.event.inputs.only == 'rows'
+    name: the app's rows on the native core, on an emulator (tools/rows.mjs --app)
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: driftloom-debug-apk
+          path: apk
+
+      - name: KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: a sound server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pulseaudio >/dev/null
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=driftloom
+          pactl set-default-sink driftloom
+
+      # Every row that makes sense in the app, with the length slider's
+      # minute (--long): the page driving the native core through the
+      # WebView's DevTools port.
+      - name: the rows
+        run: sh android/emulator-rows.sh "$(ls apk/*-x86_64-debug.apk)" --long
+
+  # The screen off (session 28, queue item 107d): the music plays on for ten
+  # minutes with the screen off and the app in the background (the service's
+  # heartbeat says what the audio thread did, once a minute), the session's
+  # and the notification's controls work, a call (another app taking the
+  # audio focus) pauses it and gives it back, nothing is held when it is
+  # paused, and an export (lossless, and small where the WebView has the
+  # encoder) finishes with the screen off into a file chosen in Android's own
+  # picker. The emulator's figures are the emulator's, said to be only that.
+  background:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.only == '' || github.event.inputs.only == 'background'
+    name: the screen off, the controls, a call and an export, on an emulator
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: driftloom-debug-apk
+          path: apk
+
+      - name: KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: a sound server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pulseaudio >/dev/null
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=driftloom
+          pactl set-default-sink driftloom
+
+      - name: the screen-off test
+        run: sh android/emulator-background.sh "$(ls apk/*-x86_64-debug.apk)" "$GITHUB_STEP_SUMMARY" "${{ github.event.inputs.minutes || '10' }}" "$RUNNER_TEMP/now-playing"
+
+      # The notification and the lock screen as they were on the glass, and
+      # the cover they should show (session 30f).
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: now-playing-shots
+          path: ${{ runner.temp }}/now-playing
+          if-no-files-found: warn
+
+  # The "lighter on processor" rule on the native core (session 30g, step
+  # 6): a slower phone made with `?burn=`, swept, reading the busy share the
+  # page's rule sees and the glitches the native core counts, screen on and
+  # off, and whether the app moves to lite by itself (android/burn.mjs). By
+  # hand only (only=burn): a measurement, not a check. The emulator's figures
+  # are the emulator's.
+  burn:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.only == 'burn'
+    name: the lite rule on the native core, a slower phone swept, on an emulator
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: driftloom-debug-apk
+          path: apk
+
+      - name: KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: a sound server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pulseaudio >/dev/null
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=driftloom
+          pactl set-default-sink driftloom
+
+      - name: the sweep
+        env:
+          BURNS: ${{ github.event.inputs.burns }}
+        run: |
+          if [ -n "$BURNS" ]; then
+            sh android/emulator-burn.sh "$(ls apk/*-x86_64-debug.apk)" "$GITHUB_STEP_SUMMARY" --burns "$BURNS"
+          else
+            sh android/emulator-burn.sh "$(ls apk/*-x86_64-debug.apk)" "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # The F-Droid listing's phone screenshots (session 29, queue item 107e), taken
+  # from the app on an emulator (android/screenshots.mjs). The artifact's files
+  # are what fastlane/metadata/android/en-US/images/phoneScreenshots/ holds;
+  # retake them when the screens or the app's name change (session 31a).
+  screenshots:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.only == '' || github.event.inputs.only == 'screenshots'
+    name: the listing's screenshots, from the app on an emulator
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: driftloom-debug-apk
+          path: apk
+
+      - name: KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      - name: a sound server
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pulseaudio >/dev/null
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=driftloom
+          pactl set-default-sink driftloom
+
+      - name: the screenshots
+        run: sh android/emulator-screenshots.sh "$(ls apk/*-x86_64-debug.apk)" "$RUNNER_TEMP/shots"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phone-screenshots
+          path: ${{ runner.temp }}/shots
+          if-no-files-found: ignore
+          retention-days: 30
+
+      # By hand ("Run workflow", only=screenshots, commit_screenshots=true, on
+      # the branch to change): the screenshots are committed to that branch,
+      # as the listing's phoneScreenshots. A push by this token starts no
+      # workflow of its own, so the next push to the branch runs them.
+      - name: commit the screenshots to the branch
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.commit_screenshots == 'true'
+        run: |
+          set -eu
+          dir=fastlane/metadata/android/en-US/images/phoneScreenshots
+          mkdir -p "$dir"
+          git rm -q -r --ignore-unmatch "$dir"
+          mkdir -p "$dir"
+          cp "$RUNNER_TEMP"/shots/*.png "$dir"/
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "$dir"
+          git commit -m "The listing's phone screenshots, taken from the app on an emulator (android/screenshots.mjs)"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

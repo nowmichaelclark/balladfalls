@@ -1,0 +1,1863 @@
+//! The WebAssembly face of the core, for `js/worklet.js`. One core per
+//! instance: the worklet compiles one instance per AudioWorkletNode.
+//!
+//! Plain numbers in and out, nothing else -- no imports, no strings, no
+//! allocator. Samples move through linear memory: before each block the
+//! host writes its own notes for each channel at the address `dl_inputs`
+//! returns, `CHANNELS` runs of `QUANTUM` floats; after it, what goes to the
+//! speakers is at `dl_out`, a run an output channel (`dl_outputs`: one, or
+//! two in stereo), what reached the bus compressor at `dl_bus`, as many
+//! (`master::OUT` runs apart, the first the mono one), and the channels as
+//! they went into the mix at the address `dl_process` returns, `CHANNELS`
+//! runs.
+
+use core::cell::UnsafeCell;
+
+use crate::block::Event;
+use crate::{Core, Key, Tap, Taken};
+
+/// What the module does if the core panics: nothing reachable from the
+/// exports can (`lib.rs`), but a `no_std` module must say. It traps, which
+/// the worklet reports as a processor error. There is no JavaScript synth
+/// to fall back to: the page says in a plain line that it can't play.
+#[panic_handler]
+fn panic(_: &core::panic::PanicInfo) -> ! {
+    core::arch::wasm32::unreachable()
+}
+
+struct Global(UnsafeCell<Core>);
+
+// WebAssembly here runs on one thread: the audio thread that owns the
+// worklet. Nothing else can reach the core.
+unsafe impl Sync for Global {}
+
+static CORE: Global = Global(UnsafeCell::new(Core::new()));
+
+fn core() -> &'static mut Core {
+    // SAFETY: single-threaded (above), and no export holds the reference
+    // past its own return.
+    unsafe { &mut *CORE.0.get() }
+}
+
+/// Where `dl_render` puts the frames it renders.
+const RENDER_MAX: usize = 4096;
+struct Scratch(UnsafeCell<[f32; RENDER_MAX]>);
+
+// Single-threaded, as above.
+unsafe impl Sync for Scratch {}
+
+static SCRATCH: Scratch = Scratch(UnsafeCell::new([0.0; RENDER_MAX]));
+
+/// Set the sample rate and clear everything. The core renders mono until
+/// `dl_layout` says otherwise.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_init(rate: f64) {
+    core().init(rate);
+}
+
+/// Render `channels` output channels from the next block: 1 (mono) or 2
+/// (stereo). 1 if it did, 0 for any other number. While the
+/// core plays, the switch fades (`Core::set_layout`).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_layout(channels: u32) -> u32 {
+    u32::from(core().set_layout(channels))
+}
+
+/// A note; see `Core::note`. `a` to `l` are its `EXTRA` values. Returns a
+/// `Taken`, as a number.
+#[unsafe(no_mangle)]
+#[allow(clippy::too_many_arguments)]
+pub extern "C" fn dl_note(
+    voice: u32,
+    channel: u32,
+    time: f64,
+    midi: f64,
+    dur: f64,
+    vel: f64,
+    parts: u32,
+    a: f64,
+    b: f64,
+    c: f64,
+    d: f64,
+    e: f64,
+    f: f64,
+    g: f64,
+    h: f64,
+    i: f64,
+    j: f64,
+    k: f64,
+    l: f64,
+) -> u32 {
+    core().note(
+        voice,
+        channel,
+        time,
+        midi,
+        dur,
+        vel,
+        parts,
+        [a, b, c, d, e, f, g, h, i, j, k, l],
+    ) as u32
+}
+
+/// Where the notes sent next sit in their loop; see `Core::key`.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_key(seed: u32, pass: u32, step: u32, ord: u32) {
+    core().key(Key { seed, pass, step, ord });
+}
+
+/// A new strum into `channel` at `time`; see `Core::damp`.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_damp(channel: u32, time: f64) {
+    core().damp(channel, time);
+}
+
+/// Let the notes of `channel` keyed (`seed`, `pass`, `step`, `ord`) go,
+/// falling to nothing from `from` to `to`; see
+/// `Core::steal`. Returns how many it reached.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_steal(channel: u32, seed: u32, pass: u32, step: u32, ord: u32, from: f64, to: f64) -> u32 {
+    core().steal(channel, Key { seed, pass, step, ord }, from, to)
+}
+
+/// An event of `kind` into `channel` at `time`, with `value`; see
+/// `Core::event`. Returns 1 if it took.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_event(channel: u32, kind: u32, time: f64, value: f64) -> u32 {
+    u32::from(core().event(channel, Event::new(kind, time, value)))
+}
+
+/// A retune of `channel` to a chord of up to six notes at `time` (NaN past
+/// the last); see `Core::event` and `event::RETUNE`. Returns 1 if it took.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_retune(channel: u32, time: f64, n1: f64, n2: f64, n3: f64, n4: f64, n5: f64, n6: f64) -> u32 {
+    u32::from(core().event(channel, Event::retune(time, &[n1, n2, n3, n4, n5, n6])))
+}
+
+/// Set a setting of one of `channel`'s own blocks at `time`; see
+/// `Core::set`. Returns 1 if it took.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_set(channel: u32, block: u32, setting: u32, value: f64, time: f64) -> u32 {
+    u32::from(core().set(channel, block as usize, setting as usize, value, time))
+}
+
+/// Route `from_channel` (or one of its own blocks, `from_block`; 4294967295
+/// for the whole channel) into a setting of one of `channel`'s own blocks
+/// from `time`, or undo the route with `from_channel` 4294967295; see
+/// `Core::route`. Returns 1 if it took.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_route(channel: u32, block: u32, setting: u32, from_channel: u32, from_block: u32, time: f64) -> u32 {
+    let from = (from_channel != u32::MAX).then_some(Tap {
+        channel: from_channel,
+        block: (from_block != u32::MAX).then_some(from_block as usize),
+    });
+    u32::from(core().route(channel, block as usize, setting as usize, from, time))
+}
+
+/// The mix as the synth builds it on full quality (1) or lite (0); see
+/// `Core::quality`. Returns whether the core mixes at its rate.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_quality(full: u32) -> u32 {
+    core().quality(full != 0);
+    core().mixing() as u32
+}
+
+/// Move one of the mix's parameters; see `Core::param`. Returns 1 if it
+/// took.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_param(id: u32, op: u32, value: f64, time: f64, tau: f64) -> u32 {
+    core().param(id, op, value, time, tau) as u32
+}
+
+/// Render `frames` (at most 4,096) the way a host with its own block size
+/// does, `Core::render`, and return where they are: a run of that many
+/// floats. The worklet never calls this (it owns the block clock and calls
+/// `dl_process`); the tools that check the sound does not depend on the
+/// host's block size do. In stereo the right side follows the left: two
+/// runs of `frames`, at most half the scratch each. 0 if the core would not
+/// render.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_render(frames: u32) -> *const f32 {
+    // SAFETY: single-threaded (above), and nothing else holds the scratch.
+    let scratch = unsafe { &mut *SCRATCH.0.get() };
+    let core = core();
+    let stereo = core.layout() == 2;
+    let frames = (frames as usize).min(if stereo { RENDER_MAX / 2 } else { RENDER_MAX });
+    let (left, rest) = scratch.split_at_mut(frames);
+    let result = if stereo {
+        let Some(right) = rest.get_mut(..frames) else {
+            return core::ptr::null();
+        };
+        core.render(&mut [left, right])
+    } else {
+        core.render(&mut [left])
+    };
+    match result {
+        Ok(()) => scratch.as_ptr(),
+        Err(_) => core::ptr::null(),
+    }
+}
+
+/// Where the host writes its own notes for the next block.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_inputs() -> *mut f32 {
+    core().inputs().as_mut_ptr().cast()
+}
+
+/// Where the last block's output is, a run an output channel.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_out() -> *const f32 {
+    core().output().as_ptr().cast()
+}
+
+/// Set the space recipe's setting `which` to draw from `lo` to `hi`
+/// (`Core::space_range`). 1 if it did.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_space_range(which: u32, lo: f64, hi: f64) -> u32 {
+    u32::from(core().space_range(which as usize, lo, hi))
+}
+
+/// Set the bass layer's lift in dB for the loop; see `Core::bass_lift`.
+/// 1 if it took.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_bass_lift(db: f64) -> u32 {
+    u32::from(core().bass_lift(db))
+}
+
+/// One of the core's own math functions (`crate::math`) at `x` (and `y`,
+/// for `pow`): 0 `pow`, 1 `exp`, 2 `log`, 3 `log2`, 4 `log10`, 5 `sin`,
+/// 6 `cos`, 7 `sqrt`; NaN for any other `which`. Nothing that plays calls
+/// it: it is how `test/dlmath.test.mjs` holds the generator's JavaScript
+/// mirror (`js/dlmath.js`) to these functions bit for bit,
+/// in the very module the app runs.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_math(which: u32, x: f64, y: f64) -> f64 {
+    use crate::math;
+    match which {
+        0 => math::pow(x, y),
+        1 => math::exp(x),
+        2 => math::log(x),
+        3 => math::log2(x),
+        4 => math::log10(x),
+        5 => math::sin(x),
+        6 => math::cos(x),
+        7 => math::sqrt(x),
+        _ => f64::NAN,
+    }
+}
+
+/// The number of output channels: the layout, 1 or 2.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_outputs() -> u32 {
+    core().layout()
+}
+
+/// How many of `dl_out`'s runs the last block filled: the layout, except
+/// while a switch into mono fades the side out (`Core::lanes`),
+/// when it is still 2.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_lanes() -> u32 {
+    core().lanes()
+}
+
+/// Where the last block was as it reached the bus compressor.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_bus() -> *const f32 {
+    core().bus().as_ptr().cast()
+}
+
+/// The bus compressor's `reduction` (0) or the ceiling's (1), in dB.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_reduction(which: u32) -> f32 {
+    core().reduction(which as usize)
+}
+
+/// How hard the signal has pressed the bus compressor (0) or the ceiling
+/// (1) since this was last asked, in dB (`Compressor::deepest`).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_deepest(which: u32) -> f32 {
+    core().deepest(which as usize)
+}
+
+/// Render the block that starts at frame `block` and return where its
+/// channels are (the output is at `dl_out`).
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_process(block: f64) -> *const f32 {
+    let frame = if block > 0.0 { block as u64 } else { 0 };
+    core().process(frame).as_ptr().cast()
+}
+
+/// Let every voice go.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_clear() {
+    core().clear();
+}
+
+/// Drop every note still waiting to start.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_cancel() {
+    core().cancel();
+}
+
+/// Drop the notes waiting to start at `time` or later.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_cancel_from(time: f64) {
+    core().cancel_from(time);
+}
+
+/// Let every note handed over go, falling from `from` to nothing at `to`
+/// (seconds; `Core::fade_all`): the page's track that its length slider
+/// ends inside a pass, at a phrase line, before it hands
+/// over the next loop's notes. Returns how many notes it reached.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_fade_all(from: f64, to: f64) -> u32 {
+    core().fade_all(from, to)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_late() -> u32 {
+    core().late()
+}
+
+/// Notes that arrived more than `MISS` late and were left out
+/// .
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_missed() -> u32 {
+    core().missed()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_dropped() -> u32 {
+    core().dropped()
+}
+
+/// Notes dropped for one cause; see `Core::dropped_by`.
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_dropped_by(cause: u32) -> u32 {
+    core().dropped_by(cause as usize)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn dl_busy() -> u32 {
+    core().busy() as u32
+}
+
+// Kept in step with `Taken`; the worklet reads these numbers.
+const _: () = assert!(
+    Taken::Late as u32 == 1 && Taken::Full as u32 == 2 && Taken::Missed as u32 == 4
+);
+
+// ------------------------------------------------------------ the generator
+
+/// The generator's exports, in a build with the
+/// `generator` feature only: not in the app's `.wasm` until the player is.
+/// `tools/gen-core.sh` builds one and checks the generation
+/// goldens through it in Node. A host writes the vibes it asks for at
+/// `dl_gen_input` (one byte a vibe, its number), loads a loop, and reads
+/// what the generator made: a part's hash, or the spec as text.
+#[cfg(feature = "generator")]
+mod generator {
+    use core::cell::UnsafeCell;
+
+    use crate::generator::canon::Text;
+    use crate::generator::request::Request;
+    use crate::generator::{Generator, Part, data};
+
+    struct Global(UnsafeCell<Generator>);
+    // Single-threaded, as the core's own global.
+    unsafe impl Sync for Global {}
+    static GENERATOR: Global = Global(UnsafeCell::new(Generator::empty()));
+
+    struct Bytes<const N: usize>(UnsafeCell<[u8; N]>);
+    // Single-threaded, as above.
+    unsafe impl<const N: usize> Sync for Bytes<N> {}
+    /// Room for the vibes' numbers, or a request's text (`dl_gen_request`).
+    const INPUT_MAX: usize = 1024;
+    static INPUT: Bytes<INPUT_MAX> = Bytes(UnsafeCell::new([0; INPUT_MAX]));
+    /// Room for a part's text: the spec's is about 600 bytes, the longest
+    /// in the goldens (a wandered pass, the whole pattern) 74 KB.
+    const TEXT_MAX: usize = 1 << 20;
+    static TEXT: Bytes<TEXT_MAX> = Bytes(UnsafeCell::new([0; TEXT_MAX]));
+
+    fn generator() -> &'static mut Generator {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { &mut *GENERATOR.0.get() }
+    }
+
+    /// Where the host writes the vibes of the next `dl_gen_load`.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_gen_input() -> *mut u8 {
+        INPUT.0.get().cast()
+    }
+
+    /// Generate the loop of `seed` with the first `vibes` bytes at
+    /// `dl_gen_input` as its vibes. 1 if it did; 0 if a vibe's number is
+    /// unknown (nothing is loaded then).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_gen_load(seed: u32, vibes: u32) -> u32 {
+        // SAFETY: single-threaded; the host wrote the bytes before calling.
+        let input = unsafe { &*INPUT.0.get() };
+        let mut picked = [0usize; data::VIBE_COUNT];
+        let n = (vibes as usize).min(input.len());
+        for (p, &b) in picked.iter_mut().zip(&input[..n]) {
+            if usize::from(b) >= data::VIBE_COUNT {
+                return 0;
+            }
+            *p = usize::from(b);
+        }
+        generator().load(seed, &picked[..n]);
+        1
+    }
+
+    /// Generate the loop of `seed` as the request whose text is the first
+    /// `length` bytes at `dl_gen_input` asks (`Request::parse`; the goldens'
+    /// second field). 1 if it did; 0 if the request cannot be met (nothing
+    /// is loaded then).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_gen_request(seed: u32, length: u32) -> u32 {
+        // SAFETY: single-threaded; the host wrote the bytes before calling.
+        let input = unsafe { &*INPUT.0.get() };
+        let bytes = &input[..(length as usize).min(input.len())];
+        match core::str::from_utf8(bytes).map(Request::parse) {
+            Ok(Ok(r)) => {
+                generator().load_with(seed, &r);
+                1
+            }
+            _ => 0,
+        }
+    }
+
+    /// The hash of part `part` (`Part::ALL`'s order) of the loop loaded.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_gen_hash(part: u32) -> u64 {
+        Part::ALL.get(part as usize).map_or(0, |&p| generator().hash(p))
+    }
+
+    /// How many items the generator's lists dropped (0).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_gen_lost() -> u32 {
+        u32::try_from(generator().lost()).unwrap_or(u32::MAX)
+    }
+
+    /// The loaded loop's spec as plain ASCII, its canonical text (the
+    /// goldens' `spec`), at `dl_gen_text`; returns its length.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_spec() -> u32 {
+        // SAFETY: single-threaded, as above.
+        let buf = unsafe { &mut *TEXT.0.get() };
+        let mut text = Text { buf, len: 0, lost: 0 };
+        generator().write(Part::Spec, &mut text);
+        u32::try_from(text.len).unwrap_or(0)
+    }
+
+    /// Part `part`'s canonical text (`Part::ALL`'s order) at
+    /// `dl_gen_text`; returns its length (0 for no such part, or one too
+    /// long for the buffer).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_gen_part(part: u32) -> u32 {
+        let Some(&p) = Part::ALL.get(part as usize) else { return 0 };
+        // SAFETY: single-threaded, as above.
+        let buf = unsafe { &mut *TEXT.0.get() };
+        let mut text = Text { buf, len: 0, lost: 0 };
+        generator().write(p, &mut text);
+        if text.lost > 0 { 0 } else { u32::try_from(text.len).unwrap_or(0) }
+    }
+
+    /// Where `dl_spec` and `dl_gen_part` write.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_gen_text() -> *const u8 {
+        TEXT.0.get().cast()
+    }
+
+    /// The map of the loaded loop's piece
+    /// (`generator::longform`), at `dl_gen_text`: a list of the piece's own
+    /// line and then a line a unit (`[section, phrase, span]`) for `count`
+    /// sections from section `from` (a whole number, as a double: sections
+    /// go past 2^32). Returns its length; 0 for a loop that is no long
+    /// piece, or a map too long for the buffer.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole sections, below 2^53
+    pub extern "C" fn dl_gen_map(from: f64, count: u32) -> u32 {
+        let Some(form) = generator().form() else { return 0 };
+        // SAFETY: single-threaded, as above.
+        let buf = unsafe { &mut *TEXT.0.get() };
+        let mut text = Text { buf, len: 0, lost: 0 };
+        let mut w = crate::generator::canon::Writer::new(&mut text);
+        w.list();
+        form.write(&mut w);
+        let from = if from >= 0.0 { from as u64 } else { 0 };
+        for n in from..from.saturating_add(u64::from(count)) {
+            for p in 0..form.units_in(n) {
+                w.list();
+                w.num(n as f64);
+                w.num(p as f64);
+                form.joined(n, p).write(&mut w);
+                w.end_list();
+            }
+        }
+        w.end_list();
+        if text.lost > 0 { 0 } else { u32::try_from(text.len).unwrap_or(0) }
+    }
+
+    /// The joins of the loaded loop's piece as played, at
+    /// `dl_gen_text`: a list of a section's steps and then a line a unit
+    /// (`[section, phrase, kind, from, to, out, rests, under]`: the join `heard`
+    /// plays, where it begins and the unit ends, in the section's steps, the
+    /// layers it takes out and the layers the unit rests, a bit each, in
+    /// `LAYERS`' order, and how far under the unit the join's notes leave
+    /// the mix, `Unit::under`), for `count` sections from section
+    /// `from`, each drawn at the wander's amount 0. The map (`dl_gen_map`)
+    /// names the plan's join; this, what the loop can play of it (a tune
+    /// alone over a tune silent there is a breath, a breath with nothing to
+    /// take out a glide), so the yardstick reads the join that is heard.
+    /// Returns its length; 0 as `dl_gen_map`.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole sections, below 2^53
+    pub extern "C" fn dl_gen_played(from: f64, count: u32) -> u32 {
+        let g = generator();
+        if g.form().is_none() {
+            return 0;
+        }
+        // SAFETY: single-threaded, as above.
+        let buf = unsafe { &mut *TEXT.0.get() };
+        let mut text = Text { buf, len: 0, lost: 0 };
+        let mut w = crate::generator::canon::Writer::new(&mut text);
+        w.list();
+        w.num(g.spec().bars * g.spec().steps_per_bar);
+        let from = if from >= 0.0 { from as u64 } else { 0 };
+        for n in from..from.saturating_add(u64::from(count)) {
+            let pass = g.section(n, 0.0);
+            for (p, u) in pass.heard.units().iter().enumerate() {
+                w.list();
+                w.num(n as f64);
+                w.num(p as f64);
+                w.str(u.join.name());
+                w.num(u.join_from);
+                w.num(u.to);
+                w.num(f64::from(u.out));
+                let rests = crate::generator::LAYERS.iter().enumerate().filter(|&(_, &l)| u.rests(l)).fold(0u8, |m, (i, _)| m | 1 << i);
+                w.num(f64::from(rests));
+                w.num(u.under);
+                w.end_list();
+            }
+        }
+        w.end_list();
+        if text.lost > 0 { 0 } else { u32::try_from(text.len).unwrap_or(0) }
+    }
+}
+
+// --------------------------------------------------------------- the player
+
+/// The player's exports, in a build with the `player`
+/// feature: `js/dlplayer.wasm`, which the app plays with `?engine=player`
+/// (for testing; the app's own `.wasm` stays without it until phase 3). The
+/// worklet starts the core as always (`dl_init`, `dl_quality`, `dl_layout`),
+/// then the player on it (`dl_play_attach`); it asks for a loop (the vibes
+/// first, `dl_play_vibe`, then `dl_play_load`) and renders each block with
+/// `dl_play_process`, which decides the block's steps first. The load is
+/// spread across the blocks that follow, so it never spikes one.
+#[cfg(feature = "player")]
+mod player {
+    use core::cell::UnsafeCell;
+
+    use super::core;
+    use crate::generator::Layer;
+    use crate::player::about::GRID_MAX;
+    use crate::player::events::EVENTS_MAX;
+    use crate::player::{Handover, Moment, Player, Request, State, Track};
+
+    struct Global(UnsafeCell<Player>);
+    // Single-threaded, as the core's own global.
+    unsafe impl Sync for Global {}
+    static PLAYER: Global = Global(UnsafeCell::new(Player::new()));
+
+    struct Asked(UnsafeCell<Request>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Asked {}
+    static REQUEST: Asked = Asked(UnsafeCell::new(Request::new()));
+
+    pub(super) fn player() -> &'static mut Player {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { &mut *PLAYER.0.get() }
+    }
+
+    pub(super) fn request() -> &'static mut Request {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { &mut *REQUEST.0.get() }
+    }
+
+    /// The first thing refused in the request being asked, so
+    /// the picks can say why they can't be met: plain ASCII, the request's
+    /// own line ("tempo must be 32 to 190 bpm"). None while all is met.
+    struct Refused(UnsafeCell<Option<&'static str>>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Refused {}
+    static REFUSED: Refused = Refused(UnsafeCell::new(None));
+
+    pub(super) fn refused() -> &'static mut Option<&'static str> {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { &mut *REFUSED.0.get() }
+    }
+
+    /// A part of the request asked: kept if it can be met (1), else the
+    /// request left as it was and the refusal noted (0).
+    // The request comes back from its builder by value, as each `with_` makes it.
+    #[allow(clippy::large_types_passed_by_value)]
+    fn take(asked: Result<Request, &'static str>) -> u32 {
+        match asked {
+            Ok(r) => {
+                *request() = r;
+                1
+            }
+            Err(why) => {
+                refused().get_or_insert(why);
+                0
+            }
+        }
+    }
+
+    /// The request asked so far, taken for a load, a change, a re-roll or
+    /// the picks: the next one starts from nothing.
+    fn taken() -> (Request, Option<&'static str>) {
+        let r = *request();
+        *request() = Request::new();
+        (r, refused().take())
+    }
+
+    /// Start the player on the core just started (`Player::attach`), with
+    /// the full mix (1) or lite's (0), as the worklet asked `dl_quality`.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_attach(full: u32) {
+        let rate = core().context().rate;
+        player().attach(core(), rate, full != 0);
+    }
+
+    /// Add the vibe numbered `index` to what the next `dl_play_load` asks for
+    /// (`generator::data::VIBES`, `VIBE_IDS` in `js/vibes.js`). 1 if the core
+    /// has it.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_vibe(index: u32) -> u32 {
+        let known = (index as usize) < crate::generator::data::VIBE_COUNT;
+        *request() = request().with(index as usize);
+        if !known {
+            refused().get_or_insert(crate::generator::request::NO_SUCH_VIBE);
+        }
+        u32::from(known)
+    }
+
+    /// Add the vibe numbered `index` at `weight` to what the next
+    /// `dl_play_load` asks for (`Request::with_weight`). 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_weight(index: u32, weight: f64) -> u32 {
+        take(request().with_weight(index as usize, weight))
+    }
+
+    /// Ask the next `dl_play_load` for a tempo, `lo` to `hi` bpm
+    /// (`Request::with_tempo`). 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_ask_tempo(lo: f64, hi: f64) -> u32 {
+        take(request().with_tempo(lo, hi))
+    }
+
+    /// Bend the loop of `seed` in what the next `dl_play_load` asks for
+    /// (`Request::with_theme`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_theme(seed: u32) {
+        *request() = request().with_theme(seed);
+    }
+
+    /// Ask the next `dl_play_load` for a piece `bars` bars long, or Endless
+    /// with `bars` infinite (`Request::with_length`). 1 if it
+    /// can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_length(bars: f64) -> u32 {
+        use crate::generator::request::Length;
+        let length = if bars == f64::INFINITY { Length::Endless } else { Length::Bars(bars) };
+        take(request().with_length(length))
+    }
+
+    /// Ask the next `dl_play_load` for the journey a long piece takes: 1 an arc, 2 a wander
+    /// (`Request::with_journey`; the app's journey pick). 0 for no such journey
+    /// (refused with the request's own line), else 1. A loop of up to 32 bars has none and plays as it does without.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_journey(journey: u32) -> u32 {
+        use crate::generator::request::{Journey, NO_SUCH_JOURNEY};
+        let j = match journey {
+            1 => Journey::Arc,
+            2 => Journey::Wander,
+            _ => {
+                refused().get_or_insert(NO_SUCH_JOURNEY);
+                return 0;
+            }
+        };
+        *request() = request().with_journey(j);
+        1
+    }
+
+    /// Ask the next `dl_play_load` for the home notes in `keys`, a bit each
+    /// with C the lowest (`Request::with_keys`). 1 if it can
+    /// be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_keys(keys: u32) -> u32 {
+        take(request().with_keys(keys))
+    }
+
+    /// Ask the next `dl_play_load` for the modes in `scales`, a bit each by
+    /// its place in the core's list (`Request::with_scales`).
+    /// 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_scales(scales: u32) -> u32 {
+        take(request().with_scales(scales))
+    }
+
+    /// Ask the next `dl_play_load` for the profiles in `styles`, a bit each
+    /// by place in the frozen order (`Request::with_styles`).
+    /// 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_styles(styles: u32) -> u32 {
+        take(request().with_styles(styles))
+    }
+
+    /// Ask the next `dl_play_load` for the voices in `voices` of layer
+    /// `layer` (0 to 4), a bit each by place in the layer's list
+    /// (`Request::with_voices`). 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_voices(layer: u32, voices: u32) -> u32 {
+        take(request().with_voices(layer as usize, voices))
+    }
+
+    /// Ask the next `dl_play_load` for layer `layer` (0 to 4) to be left to
+    /// chance (`state` 0), always played (1) or left out (2)
+    /// (`Request::with_layer`). 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_layer(layer: u32, state: u32) -> u32 {
+        use crate::generator::request::LayerAsk;
+        let ask = match state {
+            0 => LayerAsk::Chance,
+            1 => LayerAsk::On,
+            2 => LayerAsk::Off,
+            _ => return 0,
+        };
+        take(request().with_layer(layer as usize, ask))
+    }
+
+    /// Pin setting `number` at `value` for what the next `dl_play_load`
+    /// asks for (`Request::with_pin`). 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_pin(number: u32, value: f64) -> u32 {
+        take(request().with_pin(number as usize, value))
+    }
+
+    /// Set layer `layer`'s seed (0 to 4, the core's order) to `seed` in what
+    /// the next load, change or re-roll asks for, re-rolled (always played)
+    /// with `rolled` not 0 (`Request::with_layer_seed`; a
+    /// code's edit). 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_seed(layer: u32, seed: u32, rolled: u32) -> u32 {
+        take(request().with_layer_seed(layer as usize, seed, rolled != 0))
+    }
+
+    /// Set the tone's part `which` (0 warmth, 1 space, 2 wobble) to `value`,
+    /// 0 to 1, in what the next load asks for (`Request::with_tone`; a code's
+    /// edit). 1 if it can be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_edit_tone(which: u32, value: f64) -> u32 {
+        take(request().with_tone(which as usize, value))
+    }
+
+    /// Set the tempo to `bpm` after the next load's loop is drawn
+    /// (`Request::with_bpm`; a code's edit, the tempo slider's). 1 if it can
+    /// be met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_edit_bpm(bpm: f64) -> u32 {
+        take(request().with_bpm(bpm))
+    }
+
+    /// The loop playing made again with what was asked since the last load,
+    /// in its place (`Player::revise`; a re-roll): the loop
+    /// of `seed` with a layer's new seed (`dl_play_seed`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_revise(seed: u32) {
+        player().revise(seed, &taken().0);
+    }
+
+    /// The tone from now (`Player::set_tone`): warmth, space and wobble.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_tone(warmth: f64, space: f64, wobble: f64) {
+        player().set_tone(core(), [warmth, space, wobble]);
+    }
+
+    /// How long the track plays (`Player::set_track_with`): `kind` 0 on and
+    /// on, 1 `count` whole passes, 2 `count` bars (to the next phrase line),
+    /// 3 `count` seconds; with 4 added for a fade in and 8 for
+    /// a fade out (a time's only): `Track::of`. 1 if it is a kind there is.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_track(kind: u32, count: u32) -> u32 {
+        let Some((track, fades)) = Track::of(kind, count) else { return 0 };
+        player().set_track_with(core(), track, fades);
+        1
+    }
+
+    /// The second a time's track ends on, on the core's clock
+    /// (`Player::track_at`); -1 for none.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_track_at() -> f64 {
+        player().track_at().unwrap_or(-1.0)
+    }
+
+    /// The step from the loop's load the track ends at
+    /// (`Player::track_end`); -1 while it plays on.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_precision_loss)] // a step, far below 2^53
+    pub extern "C" fn dl_play_track_end() -> f64 {
+        player().track_end().map_or(-1.0, |s| s as f64)
+    }
+
+    struct Floats<const N: usize>(UnsafeCell<[f64; N]>);
+    // Single-threaded, as above.
+    unsafe impl<const N: usize> Sync for Floats<N> {}
+    static EVENTS: Floats<{ 4 * EVENTS_MAX }> = Floats(UnsafeCell::new([0.0; 4 * EVENTS_MAX]));
+    static GRID: Floats<GRID_MAX> = Floats(UnsafeCell::new([0.0; GRID_MAX]));
+
+    /// Take every event waiting (`Player::event`) into
+    /// `dl_play_event_at`, four doubles each: its time on the core's clock,
+    /// its kind (`Kind::ALL`'s order: 0 step, 1 pass, 2 section, 3 phrase, 4
+    /// loop, 5 revised, 6 end, 7 own, 8 jump, 9 heard), its number and its
+    /// step from the load. Returns how many. The worklet calls it after each block.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_precision_loss)] // numbers and steps, far below 2^53
+    pub extern "C" fn dl_play_events() -> u32 {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *EVENTS.0.get() };
+        let mut n = 0;
+        for slot in buf.as_chunks_mut::<4>().0 {
+            let Some(e) = player().event() else { break };
+            slot.copy_from_slice(&[e.time, f64::from(e.kind as u8), e.number as f64, e.step as f64]);
+            n += 1;
+        }
+        n
+    }
+
+    /// Where `dl_play_events` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_event_at() -> *const f64 {
+        EVENTS.0.get().cast()
+    }
+
+    /// Events lost for want of room (`Player::events_lost`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_events_lost() -> u32 {
+        player().events_lost()
+    }
+
+    /// Layer `layer`'s grid (`Player::grid`) at `dl_play_grid_at`, a double
+    /// a step; returns its steps (0 for none).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_grid(layer: u32) -> u32 {
+        let Some(&l) = crate::generator::LAYERS.get(layer as usize) else { return 0 };
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *GRID.0.get() };
+        u32::try_from(player().grid(l, buf)).unwrap_or(0)
+    }
+
+    /// Where `dl_play_grid` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_grid_at() -> *const f64 {
+        GRID.0.get().cast()
+    }
+
+    static NOTE: Floats<16> = Floats(UnsafeCell::new([0.0; 16]));
+
+    /// How many notes layer `layer` has in the loop as composed
+    /// (`Player::notes`; the MIDI export's).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_notes(layer: u32) -> u32 {
+        let Some(&l) = crate::generator::LAYERS.get(layer as usize) else { return 0 };
+        u32::try_from(player().notes(l)).unwrap_or(0)
+    }
+
+    /// Layer `layer`'s note `index` (`Player::note`) at `dl_play_note_at`:
+    /// its step, length, velocity, offset (a roll's), how many pitches, then
+    /// the pitches; a drum hit's instrument at `dl_play_text`, its length
+    /// returned. -1 past the last note.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_precision_loss)] // a few pitches
+    pub extern "C" fn dl_play_note(layer: u32, index: u32) -> i32 {
+        let Some(&l) = crate::generator::LAYERS.get(layer as usize) else { return -1 };
+        let Some(n) = player().note(l, index as usize) else { return -1 };
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *NOTE.0.get() };
+        buf[..5].copy_from_slice(&[n.step, n.dur, n.vel, n.micro, n.count as f64]);
+        for (slot, &p) in buf[5..].iter_mut().zip(&n.notes) {
+            *slot = p;
+        }
+        // SAFETY: as above.
+        let name = unsafe { &mut *NAME.0.get() };
+        let drum = n.drum.as_bytes();
+        let k = drum.len().min(name.len());
+        name[..k].copy_from_slice(&drum[..k]);
+        i32::try_from(k).unwrap_or(0)
+    }
+
+    /// Where `dl_play_note` writes the numbers.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_note_at() -> *const f64 {
+        NOTE.0.get().cast()
+    }
+
+    /// Room for the loop's description: some 600 bytes, with room to spare.
+    const ABOUT_MAX: usize = 4096;
+    struct About(UnsafeCell<[u8; ABOUT_MAX]>);
+    // Single-threaded, as above.
+    unsafe impl Sync for About {}
+    static ABOUT: About = About(UnsafeCell::new([0; ABOUT_MAX]));
+
+    /// A writer into a fixed buffer that fails rather than cut short.
+    struct Fill<'a> {
+        buf: &'a mut [u8],
+        len: usize,
+    }
+
+    impl core::fmt::Write for Fill<'_> {
+        fn write_str(&mut self, s: &str) -> core::fmt::Result {
+            let end = self.len + s.len();
+            let slot = self.buf.get_mut(self.len..end).ok_or(core::fmt::Error)?;
+            slot.copy_from_slice(s.as_bytes());
+            self.len = end;
+            Ok(())
+        }
+    }
+
+    /// The loop's description (`Player::describe`: plain ASCII lines,
+    /// `name=value`) at `dl_play_about_at`; returns its length (0 with no
+    /// loop made).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_describe() -> u32 {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *ABOUT.0.get() };
+        let mut w = Fill { buf, len: 0 };
+        match player().describe(&mut w) {
+            Ok(()) => u32::try_from(w.len).unwrap_or(0),
+            Err(_) => 0,
+        }
+    }
+
+    /// Where `dl_play_describe` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_about_at() -> *const u8 {
+        ABOUT.0.get().cast()
+    }
+
+    /// Ask for the loop of `seed` with what was asked since the last load,
+    /// its first step at `at` seconds on the core's clock, or as soon as it
+    /// is made if that has passed (0: as soon as made). See `Player::load`.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_load(seed: u32, at: f64) {
+        player().load_at(seed, &taken().0, at);
+    }
+
+    /// `dl_play_load` for a loop resumed on a new core (`Player::load_resumed`;
+    /// the app's automatic quality switch): its lateFloor is
+    /// not waited out a second time.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_load_resumed(seed: u32, at: f64) {
+        player().load_resumed(seed, &taken().0, at);
+    }
+
+    /// Change to the loop of `seed` with what was asked since the last load,
+    /// at `moment` of the loop playing (0 now, 1 the next beat, 2 bar, 3
+    /// phrase, 4 pass, 5 the track's end: `Moment::ALL`), the old loop crossfading over
+    /// `crossfade` seconds, or ringing out for a negative one
+    /// (`Player::change`). 0 for a moment there is no such number for
+    /// (nothing changes), else 1.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_change(seed: u32, moment: u32, crossfade: f64) -> u32 {
+        let Some(m) = Moment::of(moment) else { return 0 };
+        let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
+        player().change(seed, &taken().0, m, handover);
+        1
+    }
+
+    /// `dl_play_change`, and how long the loop's track plays once it starts
+    /// (`Player::change_with_track`): `kind` and `count` as
+    /// `dl_play_track` takes them. The app arms the loop that follows a
+    /// track's end this way. 0 for a moment or a kind there is no such number
+    /// for (nothing changes), else 1.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_change_track(seed: u32, moment: u32, crossfade: f64, kind: u32, count: u32) -> u32 {
+        let Some(m) = Moment::of(moment) else { return 0 };
+        let Some(track) = Track::of(kind, count) else { return 0 };
+        let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
+        player().change_with(seed, &taken().0, m, handover, Some(track));
+        1
+    }
+
+    /// A new loop of the core's own at `moment` (`Player::next`;
+    /// the app's Next at the end of its history), crossfading as
+    /// `dl_play_change` does: its seed drawn from `dl_play_draws`', with the
+    /// picks (`dl_play_picks`). 1 if asked; 0 for no such moment, or with no
+    /// seed to draw from.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_next(moment: u32, crossfade: f64) -> u32 {
+        let Some(m) = Moment::of(moment) else { return 0 };
+        let handover = if crossfade < 0.0 { Handover::RingOut } else { Handover::Crossfade(crossfade) };
+        u32::from(player().next(m, handover))
+    }
+
+    /// Drop the change waiting for `moment` (`Player::drop_change`):
+    /// the app drops the one armed for the track's end when nothing it
+    /// holds comes next, so the core's own loop follows. 1 if there is such
+    /// a moment.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_drop(moment: u32) -> u32 {
+        let Some(m) = Moment::of(moment) else { return 0 };
+        player().drop_change(m);
+        1
+    }
+
+    /// Why the picks last held could not be met as asked, if they could not
+    /// (plain ASCII, at `dl_play_refusal_at`).
+    struct Why(UnsafeCell<Option<&'static str>>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Why {}
+    static PICKS_REFUSED: Why = Why(UnsafeCell::new(None));
+
+    /// Hold what was asked since the last load as the picks, numbered `tag`
+    /// (`Player::set_picks`; the app's New loops panel): every
+    /// loop the core makes itself asks them. If any part of them was refused,
+    /// only their vibes are held, as the page's own draw kept the moods of a
+    /// request it could not meet, and the first refusal is kept for
+    /// `dl_play_refusal`. 1 if held whole, 0 if only the vibes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_picks(tag: u32) -> u32 {
+        let (r, why) = taken();
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { *PICKS_REFUSED.0.get() = why };
+        if why.is_none() {
+            player().set_picks(&r, tag);
+            1
+        } else {
+            player().set_picks(&r.vibes_only(), tag);
+            0
+        }
+    }
+
+    /// The length of why the picks last held could not be met (its bytes at
+    /// `dl_play_refusal_at`); 0 if they were met.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_refusal() -> u32 {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let why = unsafe { *PICKS_REFUSED.0.get() };
+        why.map_or(0, |w| u32::try_from(w.len()).unwrap_or(0))
+    }
+
+    /// Where that line's bytes are (null if there is none).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_refusal_at() -> *const u8 {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let why = unsafe { *PICKS_REFUSED.0.get() };
+        why.map_or(core::ptr::null(), str::as_ptr)
+    }
+
+    /// The number of the picks the core holds (`Player::picks`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_picks_tag() -> u32 {
+        player().picks().1
+    }
+
+    /// Give the core a seed to draw its own loops' seeds from
+    /// (`Player::set_draws`); 0, none of its own.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_draws(seed: u32) {
+        player().set_draws(seed);
+    }
+
+    /// When the next change waiting starts its loop, in seconds on the
+    /// core's clock (`Player::next_change`); -1 if none is worked out yet.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_next_change() -> f64 {
+        player().next_change().unwrap_or(-1.0)
+    }
+
+    /// Make what is left of the loop asked for, now (`Player::ready`): for a
+    /// host with no deadline (an offline render, the checks), never on an
+    /// audio thread.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_ready() {
+        player().ready(core());
+    }
+
+    /// Go on with the loop stopped, its next step at `at` seconds
+    /// (`Player::resume`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_resume(at: f64) {
+        player().resume(at);
+    }
+
+    /// Stop deciding: the loop stays loaded, and what is handed over plays
+    /// out (`Player::stop`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_stop() {
+        player().stop();
+    }
+
+    /// Render the block that starts at frame `block` (`dl_process`), the
+    /// player deciding its steps first (`Player::decide`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_process(block: f64) -> *const f32 {
+        player().decide(core());
+        super::dl_process(block)
+    }
+
+    /// Render the next `frames` frames (at most 4,096, or 2,048 a side in
+    /// stereo) the way a host rendering ahead does (`Player::render`):
+    /// any number a call, each call carrying on where the last
+    /// stopped. Where they are, as `dl_render` says; 0 if the core would not
+    /// render. Never mixed with `dl_play_process`, which owns the block clock.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_render(frames: u32) -> *const f32 {
+        // SAFETY: single-threaded, and nothing else holds the scratch.
+        let scratch = unsafe { &mut *super::SCRATCH.0.get() };
+        let core = core();
+        let stereo = core.layout() == 2;
+        let frames = (frames as usize).min(if stereo { super::RENDER_MAX / 2 } else { super::RENDER_MAX });
+        let (left, rest) = scratch.split_at_mut(frames);
+        let result = if stereo {
+            let Some(right) = rest.get_mut(..frames) else {
+                return core::ptr::null();
+            };
+            player().render(core, &mut [left, right])
+        } else {
+            player().render(core, &mut [left])
+        };
+        match result {
+            Ok(()) => scratch.as_ptr(),
+            Err(_) => core::ptr::null(),
+        }
+    }
+
+    /// The frames to the end of the pass playing (`Player::pass_frames`);
+    /// -1 while no loop plays.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_precision_loss)] // frames, far below 2^53
+    pub extern "C" fn dl_play_pass_frames() -> f64 {
+        player().pass_frames(core()).map_or(-1.0, |n| n as f64)
+    }
+
+    /// The mean cost units the loop's voices hold (`Player::units`); -1 for
+    /// none measured yet.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_units() -> f64 {
+        player().units().unwrap_or(-1.0)
+    }
+
+    /// How long the next `frames` frames will take to render, in
+    /// microseconds on the reference host (`Player::estimate`).
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // a count of frames
+    pub extern "C" fn dl_play_estimate(frames: f64) -> f64 {
+        let n = if frames > 0.0 { frames as u64 } else { 0 };
+        player().estimate(core(), n)
+    }
+
+    /// How far each pass wanders (`Player::set_wander`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_wander(amount: f64) {
+        player().set_wander(amount);
+    }
+
+    /// The salt on the wander's stream
+    /// (`Player::set_wander_salt`): 0, every code's own wander.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_wander_salt(salt: u32) {
+        player().set_wander_salt(salt);
+    }
+
+    /// Mute layer `layer` (the generator's order: drums, bass, chords,
+    /// melody, texture) or bring it back (`Player::set_mute`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_mute(layer: u32, muted: u32) {
+        if let Some(&l) = crate::generator::LAYERS.get(layer as usize) {
+            let l: Layer = l;
+            player().set_mute(core(), l, muted != 0);
+        }
+    }
+
+    /// The tempo, in beats a minute (`Player::set_tempo`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_tempo(bpm: f64) {
+        player().set_tempo(core(), bpm);
+    }
+
+    /// The listener's volume, 0 to 1 (`Player::set_volume`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_volume(volume: f64) {
+        player().set_volume(core(), volume);
+    }
+
+    /// Where the player is: 0 idle, 1 making a loop, 2 drawing its first
+    /// pass, 3 playing.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_state() -> u32 {
+        match player().state() {
+            State::Idle => 0,
+            State::Loading => 1,
+            State::Wandering => 2,
+            State::Playing => 3,
+        }
+    }
+
+    struct Name(UnsafeCell<[u8; 64]>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Name {}
+    static NAME: Name = Name(UnsafeCell::new([0; 64]));
+
+    /// The name of the loop made (plain ASCII), at `dl_play_text`; returns
+    /// its length.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_name() -> u32 {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *NAME.0.get() };
+        let name = player().generator().spec().name.as_str().as_bytes();
+        let n = name.len().min(buf.len());
+        buf[..n].copy_from_slice(&name[..n]);
+        u32::try_from(n).unwrap_or(0)
+    }
+
+    /// Where `dl_play_name` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_text() -> *const u8 {
+        NAME.0.get().cast()
+    }
+
+    /// The step the player decides next, in its loop.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_precision_loss)] // a step, far below 2^53
+    pub extern "C" fn dl_play_step() -> f64 {
+        player().position().0 as f64
+    }
+
+    /// When that step falls, in seconds on the core's clock.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_time() -> f64 {
+        player().position().2
+    }
+
+    /// Go on from somewhere else in the loop playing
+    /// (`Player::jump`): `kind` 0 a section (`at`, a whole number), 1 a bar,
+    /// 2 a time in seconds, from the piece's start, 3 a step from the load
+    /// (`Jump::of`). 1 if it was asked; 0 with nothing playing or stopped,
+    /// for no such kind, or a place that is not a number.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_jump(kind: u32, at: f64) -> u32 {
+        crate::player::Jump::of(kind, at).map_or(0, |to| u32::from(player().jump(to)))
+    }
+
+    /// Where the loop playing is (`dl_play_place`): bar, bars, played, left,
+    /// section.
+    static PLACE: Floats<5> = Floats(UnsafeCell::new([0.0; 5]));
+
+    /// Where the loop playing is as heard now (`Player::place`), at
+    /// `dl_play_place_at`: the bar from the piece's start, the piece's bars
+    /// (-1 for Endless), the seconds played and left (-1 for none), and the
+    /// section. 1, or 0 with nothing playing.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_precision_loss)] // a section, far below 2^53
+    pub extern "C" fn dl_play_place() -> u32 {
+        let Some(p) = player().place(core()) else { return 0 };
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let out = unsafe { &mut *PLACE.0.get() };
+        *out = [p.bar, p.bars.unwrap_or(-1.0), p.played, p.left.unwrap_or(-1.0), p.section as f64];
+        1
+    }
+
+    /// Where `dl_play_place` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_place_at() -> *const f64 {
+        PLACE.0.get().cast()
+    }
+
+    /// The numbers a mark takes (`dl_play_marks`).
+    const MARK: usize = 8;
+    /// The most marks a call writes: more than a 32,768-bar piece's
+    /// movements, and than a window of its roles any page draws.
+    const MARKS_MAX: usize = 2048;
+    static MARKS: Floats<{ MARK * MARKS_MAX }> = Floats(UnsafeCell::new([0.0; MARK * MARKS_MAX]));
+
+    /// A long piece's marks for the page (`Player::marks`), of
+    /// the loop made (js/gen.js's instance makes it; the one that plays has
+    /// it too), at `dl_play_marks_at`: for `count` sections from section
+    /// `from` (whole numbers, as doubles), each unit where a role, theme,
+    /// key or movement begins (with `coarse` not 0, a movement only), as
+    /// eight numbers: its first bar from the piece's start, its section, its
+    /// role, theme (0 a rest, 1 A, 2 B, 3 an earlier movement's B), key
+    /// (its root, 0 C to 11) and the key's relation to home
+    /// (`longform::Relation`, 0 home), its energy (0 to 1), and its
+    /// movement's kind (`longform::Kind`, 0 full). Returns how many (at most
+    /// 2,048: ask again from the section after the last); 0 for a loop that
+    /// is no long piece.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_precision_loss)] // whole sections, below 2^53
+    pub extern "C" fn dl_play_marks(from: f64, count: f64, coarse: u32) -> u32 {
+        use crate::generator::longform::Theme;
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let out = unsafe { &mut *MARKS.0.get() };
+        let from = if from >= 0.0 { from as u64 } else { 0 };
+        let count = if count >= 0.0 { count as u64 } else { 0 };
+        let mut n = 0;
+        let _ = player().marks(from, count, coarse != 0, |bar, section, span| {
+            let Some(m) = out.get_mut(n * MARK..(n + 1) * MARK) else { return false };
+            let theme = match span.theme {
+                Theme::Rest => 0.0,
+                Theme::A => 1.0,
+                Theme::B => 2.0,
+                Theme::Recall(_) => 3.0,
+            };
+            m.copy_from_slice(&[bar, section as f64, f64::from(span.role as u8), theme, f64::from(span.key.root), f64::from(span.key.relation as u8), span.energy, f64::from(span.kind as u8)]);
+            n += 1;
+            n < MARKS_MAX
+        });
+        u32::try_from(n).unwrap_or(0)
+    }
+
+    /// Where `dl_play_marks` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_play_marks_at() -> *const f64 {
+        MARKS.0.get().cast()
+    }
+}
+
+/// The measuring tools' exports (the `tools` feature, a build
+/// the tools make for themselves and the app never ships): a request as
+/// text, as the C host's `dl_player_ask` takes one; one note of one voice
+/// through its layer's path (`player::probe`); and what the voice budget
+/// was asked and refused, by layer.
+#[cfg(feature = "tools")]
+mod tools {
+    use core::cell::UnsafeCell;
+
+    use super::core;
+    use super::player::{player, refused, request};
+    use crate::generator::LAYERS;
+    use crate::player::Request;
+    use crate::player::probe::{Note, Room, VOICES};
+    use crate::player::synth::Synth;
+
+    struct Bytes(UnsafeCell<[u8; 1024]>);
+    // Single-threaded, as the core's own global.
+    unsafe impl Sync for Bytes {}
+    static INPUT: Bytes = Bytes(UnsafeCell::new([0; 1024]));
+
+    struct Probe(UnsafeCell<(Room, Synth, bool)>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Probe {}
+    static PROBE: Probe = Probe(UnsafeCell::new((Room::new(), Synth::new(), false)));
+
+    /// Where the host writes a request's text (`dl_tools_ask`), and reads a
+    /// voice's name (`dl_tools_voice`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_tools_input() -> *mut u8 {
+        INPUT.0.get().cast()
+    }
+
+    /// Ask the next `dl_play_load` for the request whose text is the first
+    /// `length` bytes at `dl_tools_input` (`Request::parse`), in place of
+    /// anything asked so far. 1 if it can be met; else 0, the request left
+    /// as it was and the refusal noted (`dl_play_refusal`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_tools_ask(length: u32) -> u32 {
+        // SAFETY: single-threaded; the host wrote the bytes before calling.
+        let input = unsafe { &*INPUT.0.get() };
+        let bytes = &input[..(length as usize).min(input.len())];
+        match core::str::from_utf8(bytes).map(Request::parse) {
+            Ok(Ok(r)) => {
+                *request() = r;
+                1
+            }
+            Ok(Err(why)) => {
+                refused().get_or_insert(why);
+                0
+            }
+            Err(_) => 0,
+        }
+    }
+
+    /// How many voices the probe knows in `layer` (`probe::VOICES`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_tools_voices(layer: u32) -> u32 {
+        VOICES.get(layer as usize).map_or(0, |v| u32::try_from(v.len()).unwrap_or(0))
+    }
+
+    /// The name of voice `index` of `layer`, written at `dl_tools_input`;
+    /// its length, 0 for none.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_tools_voice(layer: u32, index: u32) -> u32 {
+        let Some(name) = VOICES.get(layer as usize).and_then(|v| v.get(index as usize)) else { return 0 };
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *INPUT.0.get() };
+        buf[..name.len()].copy_from_slice(name.as_bytes());
+        u32::try_from(name.len()).unwrap_or(0)
+    }
+
+    /// Hand the core one note of voice `index` of `layer` at `at` seconds,
+    /// through the layer's own path (`probe::Room::play`): `midi`, `vel`,
+    /// held `seconds`, its draws from `seed`, a sung voice on vowel `vowel`.
+    /// The synth is started on the first call. 1 if the voice exists.
+    #[unsafe(no_mangle)]
+    #[allow(clippy::too_many_arguments)] // the note's own fields
+    pub extern "C" fn dl_tools_probe(layer: u32, index: u32, midi: f64, vel: f64, seconds: f64, seed: u32, vowel: u32, at: f64) -> u32 {
+        let (Some(&at_layer), Some(&voice)) = (LAYERS.get(layer as usize), VOICES.get(layer as usize).and_then(|v| v.get(index as usize))) else {
+            return 0;
+        };
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let (room, synth, started) = unsafe { &mut *PROBE.0.get() };
+        let core = core();
+        if !*started {
+            let rate = core.context().rate;
+            synth.start(core, rate, false, 0.0);
+            *started = true;
+        }
+        room.play(core, synth, &Note { layer: at_layer, voice, midi, vel, seconds, seed, vowel: vowel as usize }, at);
+        1
+    }
+
+    /// The voice calls the player's budget was asked for `layer` (0), those
+    /// it refused room (1), and those it let go for newer notes (2), since
+    /// the player was attached.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_tools_budget(layer: u32, which: u32) -> u32 {
+        let l = layer as usize;
+        if l >= 5 {
+            return 0;
+        }
+        let (counts, stolen) = player().budget_counts();
+        match which {
+            0 => counts.asked[l],
+            1 => counts.refused[l],
+            _ => stolen[l],
+        }
+    }
+}
+
+// FLAC, the lossless export (`crate::flac`), with the `flac`
+// feature: in js/dlplayer.wasm since the app exports
+// (js/export-worker.js drives it), and in the tools' build (`tools/flac.mjs` holds its bytes to the native encoder's).
+// One encoder an instance, in static memory like the core: a host writes up to
+// `BLOCK` frames a channel at `dl_flac_input` (left, then right), calls
+// `dl_flac_write`, and appends the bytes at `dl_flac_out` to its file.
+#[cfg(feature = "flac")]
+mod flac {
+    use core::cell::UnsafeCell;
+
+    use crate::flac::{BLOCK, Flac, HEADER};
+
+    /// The encoder, the runs a host writes into, and the finished header.
+    struct Encoder(UnsafeCell<(Flac, [f32; 2 * BLOCK], [u8; HEADER])>);
+
+    // Single-threaded, as the core is.
+    unsafe impl Sync for Encoder {}
+
+    static ENCODER: Encoder = Encoder(UnsafeCell::new((Flac::new(), [0.0; 2 * BLOCK], [0; HEADER])));
+
+    fn encoder() -> &'static mut (Flac, [f32; 2 * BLOCK], [u8; HEADER]) {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { &mut *ENCODER.0.get() }
+    }
+
+    /// A byte count as the exports give it: -1 for a refusal.
+    fn count(result: Result<&[u8], crate::flac::Refused>) -> i32 {
+        result.map_or(-1, |bytes| i32::try_from(bytes.len()).unwrap_or(-1))
+    }
+
+    /// Start a stream (`Flac::start`): `channels` (1 or 2) of `bits`-bit
+    /// samples (16 or 24) at `rate` Hz. The file's first bytes, its header
+    /// with the totals unknown, are at `dl_flac_out`; their count, or -1 for
+    /// a rate, layout or depth the export does not write.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_flac_start(rate: u32, channels: u32, bits: u32) -> i32 {
+        count(encoder().0.start(rate, channels, bits))
+    }
+
+    /// Where a host writes the next frames: two runs of `BLOCK` floats, the
+    /// left (or mono) channel's first, as the core renders them.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_flac_input() -> *mut f32 {
+        encoder().1.as_mut_ptr()
+    }
+
+    /// Take `frames` frames (at most `BLOCK`) from `dl_flac_input`. The
+    /// bytes to append, a whole frame when a block filled (else none), are at
+    /// `dl_flac_out`; their count, or -1 if not started or too many frames.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_flac_write(frames: u32) -> i32 {
+        let (flac, input, _) = encoder();
+        let n = frames as usize;
+        if n > BLOCK {
+            return -1;
+        }
+        let (left, right) = input.split_at(BLOCK);
+        let (left, right) = (left.get(..n).unwrap_or(&[]), right.get(..n).unwrap_or(&[]));
+        if flac.channels() == 2 { count(flac.write(&[left, right])) } else { count(flac.write(&[left])) }
+    }
+
+    /// End the stream: the last frame's bytes at `dl_flac_out`, their count
+    /// (-1 if not started). Then `dl_flac_header` is the finished header.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_flac_finish() -> i32 {
+        count(encoder().0.finish())
+    }
+
+    /// The bytes the last start, write or finish gave.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_flac_out() -> *const u8 {
+        encoder().0.bytes().as_ptr()
+    }
+
+    /// The file's first `HEADER` (42) bytes as they stand (`Flac::header`):
+    /// after `dl_flac_finish`, with the length and the MD5, for a host to
+    /// write over the start of its file.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_flac_header() -> *const u8 {
+        let (flac, _, head) = encoder();
+        *head = flac.header();
+        head.as_ptr()
+    }
+
+    /// The encoder's whole state in bytes: the memory an export takes, the
+    /// same for a minute or three hours.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_flac_size() -> u32 {
+        u32::try_from(core::mem::size_of::<Flac>()).unwrap_or(u32::MAX)
+    }
+}
+
+// Share codes, version 2 (`crate::code`), with the `codes`
+// feature: in the tools' build, and in js/dlplayer.wasm. A
+// host writes a code (or an album's parts, or a name) at `dl_code_input`,
+// and reads what is written at `dl_code_text`. What a code asks is the
+// player's request being asked (`dl_play_*`), and a refusal is noted where
+// `dl_code_refusal` reads it. A name is its UTF-8 bytes, as the host gave
+// them (`code::Name`).
+#[cfg(feature = "codes")]
+mod codes {
+    use core::cell::UnsafeCell;
+
+    use super::player::request;
+    use crate::code::{self, Kind, Loop, Name};
+
+    /// Room for a code, or an album's tracks: 64 KB each way.
+    const ROOM: usize = 1 << 16;
+
+    struct Bytes(UnsafeCell<[u8; ROOM]>);
+    // Single-threaded, as the core's own global.
+    unsafe impl Sync for Bytes {}
+    static INPUT: Bytes = Bytes(UnsafeCell::new([0; ROOM]));
+    static TEXT: Bytes = Bytes(UnsafeCell::new([0; ROOM]));
+
+    /// The last loop read: its seed, mutes, salt and name.
+    struct Last(UnsafeCell<(u32, u8, u32, Name)>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Last {}
+    static LAST: Last = Last(UnsafeCell::new((0, 0, 0, Name::NONE)));
+
+    /// The last pace read's count (`dl_code_pace`).
+    struct Count(UnsafeCell<u32>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Count {}
+    static PACE: Count = Count(UnsafeCell::new(0));
+
+    /// The text written at `dl_code_text`, as far as it fits.
+    struct At(usize);
+    impl core::fmt::Write for At {
+        fn write_str(&mut self, s: &str) -> core::fmt::Result {
+            let end = self.0 + s.len();
+            text().get_mut(self.0..end).ok_or(core::fmt::Error)?.copy_from_slice(s.as_bytes());
+            self.0 = end;
+            Ok(())
+        }
+    }
+
+    /// Why the last call here refused, or none.
+    struct Refused(UnsafeCell<Option<&'static str>>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Refused {}
+    static REFUSED: Refused = Refused(UnsafeCell::new(None));
+
+    fn refuse(why: &'static str) -> u32 {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { *REFUSED.0.get() = Some(why) };
+        0
+    }
+
+    fn met() {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { *REFUSED.0.get() = None };
+    }
+
+    fn input(len: u32) -> &'static [u8] {
+        // SAFETY: single-threaded; the host wrote the bytes before calling.
+        let all = unsafe { &*INPUT.0.get() };
+        &all[..(len as usize).min(ROOM)]
+    }
+
+    fn text() -> &'static mut [u8; ROOM] {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        unsafe { &mut *TEXT.0.get() }
+    }
+
+    /// A code written: its length, or 0 with the refusal noted (`dl_code_refusal`).
+    fn length(written: Result<usize, &'static str>) -> u32 {
+        match written {
+            Ok(n) => {
+                met();
+                u32::try_from(n).unwrap_or(0)
+            }
+            Err(why) => refuse(why),
+        }
+    }
+
+    /// Why the last code call refused ("needs a newer version", "not a
+    /// code"), written at `dl_code_text`: its length, 0 if it did not.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_refusal() -> u32 {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let Some(why) = (unsafe { *REFUSED.0.get() }) else { return 0 };
+        text()[..why.len()].copy_from_slice(why.as_bytes());
+        u32::try_from(why.len()).unwrap_or(0)
+    }
+
+    /// Where the host writes a code, or an album's parts.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_input() -> *mut u8 {
+        INPUT.0.get().cast()
+    }
+
+    /// Where a code, a track, a name or a refusal is written.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_text() -> *const u8 {
+        TEXT.0.get().cast()
+    }
+
+    /// What the first `len` bytes at `dl_code_input` are: 1 a loop's code, 2
+    /// an album's, 0 neither (or a newer build's), read from the head alone.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_kind(len: u32) -> u32 {
+        match code::kind(input(len)) {
+            Some(Kind::Loop) => 1,
+            Some(Kind::Album) => 2,
+            None => 0,
+        }
+    }
+
+    /// Read the loop's code in the first `len` bytes at `dl_code_input`:
+    /// what it asks becomes the request being asked (in place of anything
+    /// asked so far), and its seed, mutes, salt and name are `dl_code_seed`,
+    /// `dl_code_mutes`, `dl_code_salt` and `dl_code_name`. 1 if it is one;
+    /// else 0, the request left as it was (`dl_code_refusal` says why:
+    /// "needs a newer version", "not a code").
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_read(len: u32) -> u32 {
+        match code::read_loop(input(len)) {
+            Ok(l) => {
+                *request() = l.request;
+                // SAFETY: single-threaded, and no export keeps the reference.
+                unsafe { *LAST.0.get() = (l.seed, l.mutes, l.salt, l.name) };
+                met();
+                1
+            }
+            Err(why) => refuse(why),
+        }
+    }
+
+    /// The last loop's code read: its seed.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_seed() -> u32 {
+        // SAFETY: single-threaded.
+        unsafe { (*LAST.0.get()).0 }
+    }
+
+    /// Its layers muted, a bit each in the core's layer order.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_mutes() -> u32 {
+        // SAFETY: single-threaded.
+        u32::from(unsafe { (*LAST.0.get()).1 })
+    }
+
+    /// Its wander's salt, 0 for none.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_salt() -> u32 {
+        // SAFETY: single-threaded.
+        unsafe { (*LAST.0.get()).2 }
+    }
+
+    /// The request being asked (a code's, after `dl_code_read`), as the
+    /// text `Request::parse` reads (`code::request_text`: its asks, its
+    /// edits and its version), written at `dl_code_text`: its length. A host
+    /// that keeps a loop as a record of its request reads it from here.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_request() -> u32 {
+        let mut at = At(0);
+        if code::request_text(request(), &mut at).is_err() {
+            return 0;
+        }
+        u32::try_from(at.0).unwrap_or(0)
+    }
+
+    /// Its own name, written at `dl_code_text`: its length in bytes, 0 for
+    /// none.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_name() -> u32 {
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let name = unsafe { (*LAST.0.get()).3 };
+        let t = name.text();
+        text()[..t.len()].copy_from_slice(t);
+        u32::try_from(t.len()).unwrap_or(0)
+    }
+
+    /// Whether the first `len` bytes at `dl_code_input` are a name a code
+    /// carries (`code::Name::new`; none is one): 1, or 0 with the refusal
+    /// noted. The app's rename box asks it, so a name is held to one rule.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_name_ok(len: u32) -> u32 {
+        match Name::new(input(len)) {
+            Ok(_) => {
+                met();
+                1
+            }
+            Err(why) => refuse(why),
+        }
+    }
+
+    /// Write the code of the loop of `seed` as the request being asked asks
+    /// (it is kept, for a load after), with `mutes` (a bit each), the
+    /// wander's `salt` (0 for none) and the name in the first `name` bytes at
+    /// `dl_code_input` (0 for none), at `dl_code_text`: its length, or 0
+    /// with the refusal noted (`dl_code_refusal`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_write(seed: u32, mutes: u32, salt: u32, name: u32) -> u32 {
+        let name = match Name::new(input(name)) {
+            Ok(n) => n,
+            Err(why) => return refuse(why),
+        };
+        #[allow(clippy::cast_possible_truncation)] // five bits
+        let l = Loop { seed, request: *request(), mutes: (mutes & 31) as u8, salt, name };
+        length(code::write_loop(&l, text()))
+    }
+
+    /// Read the album's code in the first `len` bytes at `dl_code_input`:
+    /// how many tracks (each then `dl_code_track`), and its name at
+    /// `dl_code_text`, NUL-terminated (empty for none: a name holds no
+    /// NUL); 0 with the refusal noted if it is none.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_album(len: u32) -> u32 {
+        match code::read_album(input(len)) {
+            Ok(a) => {
+                let t = a.name.text();
+                text()[..t.len()].copy_from_slice(t);
+                text()[t.len()] = 0;
+                met();
+                u32::try_from(a.count).unwrap_or(0)
+            }
+            Err(why) => refuse(why),
+        }
+    }
+
+    /// Track `index` (from 0) of the album in the first `len` bytes at
+    /// `dl_code_input`, as its own loop's code at `dl_code_text`: its
+    /// length, or 0 with the refusal noted (`dl_code_refusal`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_track(len: u32, index: u32) -> u32 {
+        length(code::album_track(input(len), index as usize, text()))
+    }
+
+    /// How long track `index` (from 0) of the album in the first `len`
+    /// bytes at `dl_code_input` plays before the next (`code::album_pace`):
+    /// the player's track kind plus one (`code::Pace::kind`: 1 on and on, 4
+    /// a time, each with its fades' bits, 4 for a fade in and 8 for a fade
+    /// out, added before the one), its seconds at `dl_code_pace_count`; or 0
+    /// with the refusal noted.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_pace(len: u32, index: u32) -> u32 {
+        match code::album_pace(input(len), index as usize) {
+            Ok(p) => {
+                // SAFETY: single-threaded, and no export keeps the reference.
+                unsafe { *PACE.0.get() = p.count() };
+                met();
+                p.kind() + 1
+            }
+            Err(why) => refuse(why),
+        }
+    }
+
+    /// The count of the last pace read (`dl_code_pace`): its seconds.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_pace_count() -> u32 {
+        // SAFETY: single-threaded.
+        unsafe { *PACE.0.get() }
+    }
+
+    /// Write the album of the loops' codes in the first `len` bytes at
+    /// `dl_code_input` (its name's `name` bytes first, then the codes, a
+    /// `.` between each, each with its pace after it where it has one:
+    /// `code::paced`), at `dl_code_text`: its length, or 0 with the refusal
+    /// noted.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_album_write(len: u32, name: u32) -> u32 {
+        let all = input(len);
+        let (head, codes) = all.split_at((name as usize).min(all.len()));
+        let name = match Name::new(head) {
+            Ok(n) => n,
+            Err(why) => return length(Err(why)),
+        };
+        let tracks = codes.split(|&b| b == b'.');
+        if tracks.clone().any(|t| code::paced(t).is_err()) {
+            return refuse(code::BAD_PACE);
+        }
+        length(code::write_album(tracks.map(|t| code::paced(t).unwrap_or((t, code::Pace::On))), &name, text()))
+    }
+
+    /// Write the album of `count` tracks drawn from `seed`, each asked what
+    /// the request being asked asks (its edits left out), named by the
+    /// first `name` bytes at `dl_code_input`, at `dl_code_text`: its
+    /// length, or 0 with the refusal noted (`dl_code_refusal`).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_code_album_seed(seed: u32, count: u32, name: u32) -> u32 {
+        let name = match Name::new(input(name)) {
+            Ok(n) => n,
+            Err(why) => return length(Err(why)),
+        };
+        length(code::write_seed_album(seed, count as usize, request(), &name, text()))
+    }
+}
+
+// The measuring tools' log of the notes heard (the `tools`
+// feature), at the file's end so no line of shipped code moves.
+#[cfg(feature = "tools")]
+mod begun_exports {
+    use core::cell::UnsafeCell;
+
+    struct Begun(UnsafeCell<[f64; crate::begun::MOST * crate::begun::WORDS]>);
+    // Single-threaded, as above.
+    unsafe impl Sync for Begun {}
+    static BEGUN: Begun = Begun(UnsafeCell::new([0.0; crate::begun::MOST * crate::begun::WORDS]));
+
+    /// The notes that took a voice since the last call
+    /// (`crate::begun`), at `dl_tools_begun_at`, ten numbers each: channel,
+    /// key seed, pass, step and order, the frame it began on, velocity, the
+    /// channel's gain, the share a fade left it, and its voice. Returns how
+    /// many.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_tools_begun() -> u32 {
+        let (rows, n) = crate::begun::take();
+        // SAFETY: single-threaded, and no export keeps the reference.
+        let buf = unsafe { &mut *BEGUN.0.get() };
+        buf[..rows.len()].copy_from_slice(rows);
+        u32::try_from(n).unwrap_or(0)
+    }
+
+    /// Where `dl_tools_begun` writes.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn dl_tools_begun_at() -> *const f64 {
+        BEGUN.0.get().cast()
+    }
+}

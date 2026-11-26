@@ -1,0 +1,678 @@
+// The Android app with the screen off, on an
+// emulator: the music plays on in the background, the notification and the
+// lock screen's controls work, a call pauses it and gives it back, nothing
+// runs when it is paused, and an export finishes with the screen off, into a
+// file chosen through Android's own picker. It drives the app's page through
+// the WebView's DevTools port (android/cdp.mjs) and the system through adb
+// (`dumpsys`, `cmd media_session`, `input`, `uiautomator`). What CI's
+// `background` job runs (android/emulator-background.sh boots the emulator).
+//
+//   node android/background.mjs [--minutes 10] [--paused 120] [--no-export] [--summary FILE] [--shots DIR]
+//
+// An album: pasted, played, and exported whole, as one zip
+// through the same picker and as a file a track into a folder chosen in
+// Android's own folder picker; each file found where it went.
+//
+// --shots: the notification shade and the lock screen as they
+// are on the glass while it plays, and the loop's cover beside them
+// (cover-*.png), to see that the art is that cover.
+//
+// The emulator's figures are the emulator's, said to be only that: they say
+// the app's service holds what it must and the audio thread keeps its time
+// with the screen off; what a battery costs is a phone's to say.
+
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { AppPage, appId, adb, until } from './cdp.mjs';
+import { encodeAlbum, decodeSong } from '../js/share.js';
+import { setTrack } from '../js/tracklen.js';
+import { LOOPS } from '../tools/stalls.mjs';
+
+const argv = process.argv.slice(2);
+const opt = (name, fallback) => {
+  const i = argv.indexOf(name);
+  return i >= 0 && argv[i + 1] ? argv[i + 1] : fallback;
+};
+const MINUTES = Number(opt('--minutes', '10'));
+const EXPORT = !argv.includes('--no-export');
+const SUMMARY = opt('--summary', '');
+const SHOTS = opt('--shots', '');
+// How long the lock screen's Play waits, paused with the screen off: two
+// minutes (step 7).
+const PAUSED_MS = Number(opt('--paused', '120')) * 1000;
+const pkg = appId();
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const log = (...a) => console.log(...a);
+const sh = (...a) => adb('shell', ...a);
+const rows = [];
+const check = (name, ok, detail = '') => {
+  rows.push({ name, ok, detail });
+  log(`${ok ? 'ok  ' : 'FAIL'} ${name}${detail ? `: ${detail}` : ''}`);
+  return ok;
+};
+const facts = [];
+const fact = (name, value) => {
+  facts.push({ name, value });
+  log(`     ${name}: ${value}`);
+};
+
+// ------------------------------------------------------------- the system
+
+const power = () => sh('dumpsys', 'power');
+const asleep = () => /mWakefulness=Asleep/.test(power());
+// Held now: the app's lock in dumpsys's list of the locks held (a lock let go is not in it).
+const wakeLocks = () => {
+  const o = power();
+  const at = o.indexOf('Wake Locks: size=');
+  if (at < 0) return o.split('\n').filter((l) => l.includes('Driftloom:playing'));
+  const rest = o.slice(at).split('\n');
+  const end = rest.findIndex((l, i) => i > 0 && !/^\s/.test(l));
+  return rest.slice(1, end < 0 ? undefined : end).filter((l) => l.includes('Driftloom:playing'));
+};
+const wakeLockHeld = () => wakeLocks().length > 0;
+const screenOff = async () => {
+  sh('input', 'keyevent', 'KEYCODE_SLEEP');
+  await until('the screen to go off', () => asleep(), 20000, 500);
+};
+const screenOn = async () => {
+  sh('input', 'keyevent', 'KEYCODE_WAKEUP');
+  await until('the screen to come on', () => !asleep(), 20000, 500);
+  try { sh('wm', 'dismiss-keyguard'); } catch { /* none */ }
+};
+const service = () => {
+  const o = sh('dumpsys', 'activity', 'services', pkg);
+  const running = /PlaybackService/.test(o);
+  const foreground = /isForeground=true/.test(o);
+  return { running, foreground, types: (/foregroundServiceType=0x([0-9a-f]+)/.exec(o) || /types=0x([0-9a-f]+)/.exec(o) || [])[1] };
+};
+// The media session's block, as dumpsys writes it: from the line that names
+// the app to the next session's.
+const session = () => {
+  const o = sh('dumpsys', 'media_session');
+  const at = o.indexOf(`${pkg}/Driftloom`) >= 0 ? o.indexOf(`${pkg}/Driftloom`) : o.indexOf(pkg);
+  return at < 0 ? '' : o.slice(at, at + 3000);
+};
+const sessionState = () => {
+  const m = /PlaybackState \{state=(\w+)/.exec(session());
+  if (!m) return null;
+  return /^\d+$/.test(m[1]) ? Number(m[1]) : ({ PLAYING: 3, PAUSED: 2, STOPPED: 1 }[m[1]] ?? null);
+};
+const notification = () => {
+  const o = sh('dumpsys', 'notification', '--noredact');
+  const records = o.split(/\n\s*NotificationRecord\(/).filter((r) => r.includes(`pkg=${pkg}`));
+  return records.join('\n');
+};
+const focusHeld = () => sh('dumpsys', 'audio').includes(`pack: ${pkg}`);
+const logcat = (tag) => sh('logcat', '-d', '-s', `${tag}:I`).split('\n');
+const heartbeats = () => logcat('DriftloomService').filter((l) => l.includes('heartbeat')).map((l) => ({
+  under: Number((/underruns=(\d+)/.exec(l) || [])[1]),
+  late: Number((/late=(\d+)/.exec(l) || [])[1]),
+  missed: Number((/missed=(\d+)/.exec(l) || [])[1]),
+  dropped: Number((/dropped=(\d+)/.exec(l) || [])[1]),
+  frames: Number((/frames=(\d+)/.exec(l) || [])[1]),
+  rate: Number((/rate=(\d+)/.exec(l) || [])[1]),
+  // The stream's counts (android/native/src/watch.rs): callbacks over
+  // their deadline, times the speaker's playhead fell behind the clock, and
+  // the seconds played with the screen off.
+  over: Number((/ over=(\d+)/.exec(l) || [])[1]),
+  behind: Number((/ behind=(\d+)/.exec(l) || [])[1]),
+  off: Number((/ off=([\d.]+)s/.exec(l) || [])[1]),
+  line: l,
+}));
+
+// ------------------------------------------------------------ on the glass
+
+const screencap = (name) => fs.writeFileSync(path.join(SHOTS, `${name}.png`), execFileSync('adb', ['exec-out', 'screencap', '-p'], { maxBuffer: 64 * 1024 * 1024 }));
+// The keyguard, as the window manager's policy has it.
+const keyguard = () => sh('dumpsys', 'window').split('\n').filter((l) => /keyguard|^\s*showing=/i.test(l)).map((l) => l.trim());
+const locked = () => keyguard().some((l) => /^showing=true|(mKeyguardShowing|isKeyguardShowing|mDreamingLockscreen)=true/.test(l));
+// The notification's large icon, as the system holds it: a bitmap, not a
+// resource (the app's icon would be one).
+const largeIcon = () => (/android\.largeIcon=[^\n]*/.exec(notification()) || ['none'])[0];
+
+// ------------------------------------------------------------ the picker
+
+// The system's file picker (DocumentsUI) on the screen: its nodes, from the
+// UI dump.
+function nodes() {
+  sh('uiautomator', 'dump', '/sdcard/ui.xml');
+  const xml = sh('cat', '/sdcard/ui.xml');
+  const out = [];
+  for (const m of xml.matchAll(/<node [^>]*>/g)) {
+    const a = (k) => ((new RegExp(`${k}="([^"]*)"`)).exec(m[0]) || [])[1] || '';
+    const b = /bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"/.exec(m[0]);
+    if (!b) continue;
+    out.push({
+      text: a('text'), id: a('resource-id'), desc: a('content-desc'), enabled: a('enabled') === 'true', clickable: a('clickable') === 'true',
+      x: (Number(b[1]) + Number(b[3])) / 2, y: (Number(b[2]) + Number(b[4])) / 2,
+    });
+  }
+  return { xml, list: out };
+}
+const tap = (n) => sh('input', 'tap', String(Math.round(n.x)), String(Math.round(n.y)));
+
+// Choose a place and save in it. The AOSP picker opens in some folder; if
+// Save is not offered there, Downloads is.
+async function pickerSave() {
+  await until('the system picker', () => nodes().xml.includes('com.android.documentsui'), 45000, 1500);
+  let last = null;
+  for (let i = 0; i < 20; i++) {
+    const { xml, list } = nodes();
+    last = xml;
+    const save = list.find((n) => /^save$/i.test(n.text) || /container_save|button1/.test(n.id) && /save/i.test(n.text));
+    if (save && save.enabled) {
+      tap(save);
+      return true;
+    }
+    // Not here: the roots (the menu), then Downloads.
+    const downloads = list.find((n) => /^downloads$/i.test(n.text));
+    if (downloads) tap(downloads);
+    else {
+      const menu = list.find((n) => /roots|navigate up|open navigation/i.test(n.desc));
+      if (menu) tap(menu);
+    }
+    await sleep(1500);
+  }
+  log('the picker never offered Save; its last screen:');
+  log((last || '').slice(0, 4000));
+  return false;
+}
+
+// The system's folder picker (an album a file a track): into a
+// folder it lets an app use (not the storage's root, not Downloads), then
+// "Use this folder" and Allow.
+async function pickerFolder() {
+  await until('the folder picker', () => nodes().xml.includes('com.android.documentsui'), 45000, 1500);
+  // What a screen shows, short: each labeled node, its id's tail, and
+  // whether it can be pressed (a step's trace, and the last screen's).
+  const said = (list) => list.filter((n) => n.text || n.desc).map((n) => `${n.text || `[${n.desc}]`}${n.id ? `#${n.id.split('/').pop()}` : ''}${n.enabled ? '' : ' (off)'}`).join(' | ').slice(0, 1500);
+  let last = [];
+  // The device's own storage first, once (the drawer's Documents or Audio are
+  // views across folders, which the picker won't give as a folder), then a
+  // folder in it.
+  let wentDevice = false;
+  for (let i = 0; i < 25; i++) {
+    const { list } = nodes();
+    last = list;
+    const allow = list.find((n) => /^allow$/i.test(n.text) && n.enabled);
+    // The key itself ("USE THIS FOLDER", button1), not the line that says
+    // "Can't use this folder" over a folder it won't give.
+    const use = list.find((n) => /^use this folder$/i.test(n.text.trim()) && n.enabled);
+    const into = list.find((n) => /^(Music|Documents|Podcasts|Alarms|Movies)$/i.test(n.text));
+    const device = list.find((n) => /sdk|phone|internal storage|built for|gphone/i.test(n.text));
+    const menu = list.find((n) => /roots|navigate up|open navigation|show roots/i.test(n.desc));
+    const step = allow || use || (!wentDevice && device) || into || menu;
+    if (step && step === device) wentDevice = true;
+    log(`     folder picker, step ${i + 1}: ${step ? `tap "${step.text || step.desc}"` : 'nothing to tap'}; ${said(list)}`);
+    if (allow) {
+      tap(allow);
+      return true;
+    }
+    if (step) tap(step);
+    await sleep(1500);
+  }
+  log('the folder picker never offered a folder to use; its last screen:');
+  log(said(last));
+  return false;
+}
+
+// ----------------------------------------------------------------- the page
+
+const page = await AppPage.open({ pkg, ms: 120000, log });
+const ev = (fn, arg, gesture = false, ms = 20000) => page.evaluate(fn, arg, { gesture, ms });
+// A question to a page that may not answer (a hidden page's timers are slowed, a frozen one's stop): an
+// answer, or null after a few seconds; never a test that waits for it.
+const ask = (fn, arg) => ev(fn, arg, false, 8000).catch(() => null);
+const playingNow = () => ask(() => document.getElementById('playBtn').getAttribute('aria-label') === 'Pause');
+const loopName = () => ask(() => document.getElementById('loopName').textContent.trim());
+const diag = () => ev("document.getElementById('diagRefresh').click(); document.getElementById('diagOut').textContent");
+const line = (t, key) => (t.split('\n').find((l) => l.startsWith(`${key}:`)) || '').trim();
+const waitFor = (what, fn, ms = 20000) => until(what, fn, ms, 500);
+const dispatch = (key) => sh('cmd', 'media_session', 'dispatch', key);
+// What the app and the page said about the controls, for a failed check.
+const evidence = (what) => {
+  log(`  evidence (${what}):`);
+  const lines = sh('logcat', '-d').split('\n').filter((l) => /DriftloomService|DriftloomApp|DriftloomStream|MediaSession|MediaButton/.test(l)).slice(-25);
+  for (const l of lines) log(`    ${l.slice(0, 260)}`);
+};
+// How the page runs, as it says itself without a timer of its own to wait for: what it thinks of its
+// visibility, and how long since its own 50 ms interval last ran (a page whose timers are slowed shows it).
+const hiddenPage = () => ask(() => ({
+  visible: document.visibilityState,
+  hidden: document.hidden,
+  lastTickAgoMs: window.__tick ? Math.round(performance.now() - window.__tick) : null,
+  locks: !!navigator.locks,
+}));
+
+try {
+  await waitFor('the page to be built', () => ev("document.readyState === 'complete' && !!document.getElementById('playBtn') && !!document.getElementById('diagOut')"), 90000);
+  sh('logcat', '-c');
+  await ev(() => { window.__tick = performance.now(); setInterval(() => { window.__tick = performance.now(); }, 50); });
+  const bridged = await ev("typeof window.DriftloomApp === 'object' && !!window.DriftloomApp");
+  check('the app\'s second bridge (saving, the lock screen) is in the page', bridged);
+
+  // ------------------------------------- the notification, refused first
+  // Android 13 and later asks at the first Play, with the app in front. The
+  // listener says no: the music, the service and the session go on as they
+  // do (the notification itself is the one thing that doesn't show).
+  log('\n-- the first Play asks about notifications; the answer is no --');
+  const sdk = Number(sh('getprop', 'ro.build.version.sdk'));
+  await ev("document.getElementById('playBtn').click()", undefined, true);
+  if (sdk >= 33) {
+    const asked = await until('the permission dialog', () => nodes().xml.includes('permissioncontroller'), 30000, 1500).then(() => true, () => false);
+    check('the first Play asks about notifications', asked);
+    if (asked) {
+      const no = nodes().list.find((n) => /^don.t allow$/i.test(n.text.replace(/\u2019/g, "'")));
+      if (no) tap(no);
+      await sleep(1500);
+    }
+  }
+  await waitFor('the music to play', () => playingNow(), 60000);
+  await sleep(2000);
+  check('refused: the music plays and the service holds on', service().foreground && sessionState() === 3, JSON.stringify(service()));
+  sh('input', 'keyevent', 'KEYCODE_HOME');
+  await sleep(1500);
+  await screenOff();
+  await sleep(20000);
+  check('refused: with the screen off it plays on', service().foreground && sessionState() === 3 && wakeLockHeld() && asleep(), JSON.stringify(service()));
+  dispatch('pause');
+  await waitFor('Pause', async () => !(await playingNow()), 20000).catch(() => null);
+  check('refused: the session\'s Pause still works', !(await playingNow()));
+  await screenOn();
+  sh('am', 'start', '-n', `${pkg}/app.loops.MainActivity`);
+  await sleep(2000);
+  // Allowed from here on: the notification itself is read below.
+  sh('pm', 'grant', pkg, 'android.permission.POST_NOTIFICATIONS');
+  sh('logcat', '-c');
+
+  // One minute for the track (the Track length view), so the
+  // core hands the music from loop to loop by itself while the page is
+  // hidden.
+  await ev(() => {
+    document.getElementById('vibesBtn').click();
+    document.querySelector('.pk-track').click();
+    const n = document.getElementById('trkNum');
+    n.value = '1:00';
+    n.dispatchEvent(new Event('blur'));
+    document.getElementById('trkDone').click();
+    document.getElementById('picksClose').click();
+  });
+
+  // ---------------------------------------------------------------- play
+  log('\n-- Play, then the app leaves the screen --');
+  await ev("document.getElementById('playBtn').click()", undefined, true);
+  await waitFor('the music to play', () => playingNow(), 60000);
+  await sleep(3000);
+  const first = await loopName();
+  check('Play starts the foreground service', service().running && service().foreground, JSON.stringify(service()));
+  check('the media session plays', sessionState() === 3, `state ${sessionState()}`);
+  const note = notification();
+  check('the notification has the loop\'s name and Previous, Play or Pause, Next', note.includes(first) && /Previous/.test(note) && /Next/.test(note) && /Pause/.test(note), note.slice(0, 600));
+  check('the audio focus is held', focusHeld());
+  check('the wake lock is held while it plays', wakeLockHeld());
+  await waitFor('the notification to take the cover', () => /BITMAP/i.test(largeIcon()), 20000).catch(() => null);
+  check('the notification\'s large picture is a bitmap (the cover\'s)', /BITMAP/i.test(largeIcon()), largeIcon());
+
+  if (SHOTS) {
+    fs.mkdirSync(SHOTS, { recursive: true });
+    const saveCover = async (name) => {
+      const url = await ev(() => document.getElementById('cover').toDataURL('image/png'));
+      fs.writeFileSync(path.join(SHOTS, `${name}.png`), Buffer.from(url.split(',')[1], 'base64'));
+    };
+    await saveCover('cover-first');
+    screencap('app');
+    sh('input', 'keyevent', 'KEYCODE_HOME');
+    await sleep(2000);
+    sh('cmd', 'statusbar', 'expand-notifications');
+    await sleep(5000);
+    screencap('notification');
+    sh('cmd', 'statusbar', 'collapse');
+    await sleep(1000);
+    // The emulator comes with no lock screen: without one the picture was
+    // the home screen's. One for the picture, then as it was.
+    const had = sh('locksettings', 'get-disabled').trim();
+    sh('locksettings', 'set-disabled', 'false');
+    await screenOff();
+    // (A screen gone to sleep can take five seconds to lock.)
+    await sleep(8000);
+    // On, and left locked.
+    sh('input', 'keyevent', 'KEYCODE_WAKEUP');
+    await sleep(5000);
+    check('the lock screen is what the picture shows', locked(), `disabled was ${had}; ${keyguard().join(' | ').slice(0, 1500)}`);
+    screencap('lock-screen');
+    fact('screenshots', fs.readdirSync(SHOTS).join(', '));
+    if (had === 'true') sh('locksettings', 'set-disabled', 'true');
+    try { sh('wm', 'dismiss-keyguard'); } catch { /* none */ }
+    await sleep(1000);
+  }
+  sh('input', 'keyevent', 'KEYCODE_HOME');
+  await sleep(2000);
+  await screenOff();
+  check('the screen is off and the app is in the background', asleep());
+
+  // -------------------------------------------------------- ten minutes
+  log(`\n-- ${MINUTES} minutes with the screen off --`);
+  const t0 = Date.now();
+  const startBeats = heartbeats().length;
+  await sleep(MINUTES * 60000);
+  const elapsed = (Date.now() - t0) / 1000;
+  const beats = heartbeats();
+  const mine = beats.slice(startBeats);
+  check(`the service's heartbeat came every minute (${mine.length} in ${MINUTES})`, mine.length >= MINUTES - 1, `${mine.length}`);
+  const a = mine[0];
+  const z = mine[mine.length - 1];
+  if (a && z) {
+    const secs = (z.frames - a.frames) / z.rate;
+    const span = (mine.length - 1) * 60;
+    check('the audio thread kept real time: its frames over the minutes are those minutes', Math.abs(secs - span) <= 3, `${secs.toFixed(1)} s of sound in ${span} s`);
+    check('no underrun with the screen off', z.under === a.under, `underruns ${a.under} -> ${z.under}`);
+    check('no glitch by the playhead with the screen off: it never fell behind the clock', z.behind === a.behind, `behind ${a.behind} -> ${z.behind}`);
+    check('the time played with the screen off is counted: those minutes', Math.abs((z.off - a.off) - span) <= 3, `${(z.off - a.off).toFixed(1)} s off of ${span} s`);
+    fact('callbacks over their deadline with the screen off (a figure, not a glitch: the buffer holds them)', `${z.over - a.over}`);
+    check('nothing late, missed or dropped', mine.every((b) => b.late === 0 && b.missed === 0 && b.dropped === 0), z.line.replace(/^.*heartbeat /, ''));
+    fact('the callback', z.line.replace(/^.*heartbeat /, ''));
+  }
+  check('still playing: the service, the session and the wake lock', service().foreground && sessionState() === 3 && wakeLockHeld() && asleep(), JSON.stringify(service()));
+  fact('screen off for', `${Math.round(elapsed)} s`);
+
+  // What the app cost, as the system counts it (the emulator's, said to be only that).
+  const cpu = sh('dumpsys', 'cpuinfo').split('\n').filter((l) => /driftloom|sandboxed|webview|chromium/i.test(l)).map((l) => l.trim()).slice(0, 6);
+  fact('CPU with the screen off (dumpsys cpuinfo, the last minutes)', cpu.join(' ; ') || 'not listed');
+  fact('the page while the screen is off', JSON.stringify(await hiddenPage()));
+  fact('the page\'s timer', JSON.stringify(await ask(() => new Promise((resolve) => { const t = performance.now(); setTimeout(() => resolve(Math.round(performance.now() - t)), 100); }))));
+
+  // The page was hidden the whole time: its loops moved on by the core's tracks.
+  const gone = await ev(() => document.getElementById('playBtn').getAttribute('aria-label'));
+  check('the page still plays (its button says Pause)', gone === 'Pause', gone);
+  const t = await diag();
+  check('the page\'s player has nothing late across the tracks', /late: 0\s+missed: 0\s+dropped: 0/.test(line(t, 'engine')), line(t, 'engine'));
+
+  // ------------------------------------------------ the lock screen's keys
+  log('\n-- the lock screen\'s controls, screen off --');
+  fact('the page before the first button', JSON.stringify(await hiddenPage()));
+  const before = await loopName();
+  dispatch('next');
+  await waitFor('Next to change the loop', async () => { const n = await loopName(); return n && n !== before; }, 40000).catch(() => null);
+  const after = await loopName();
+  if (!check('Next (the session\'s) goes to a new loop', after !== before, `${before} -> ${after}`)) evidence('Next');
+  dispatch('previous');
+  await sleep(3000);
+  check('Previous (the session\'s) is heard by the page and the music plays on', await playingNow(), `${after} -> ${await loopName()}`);
+
+  dispatch('pause');
+  await waitFor('Pause to pause the page', async () => !(await playingNow()), 20000).catch(() => null);
+  if (!check('Pause pauses the page', !(await playingNow()))) evidence('Pause');
+  await waitFor('the session to say paused', () => sessionState() === 2, 15000).catch(() => null);
+  check('the session says paused', sessionState() === 2, `state ${sessionState()}`);
+  // Two minutes paused with the screen off (step 7): past the
+  // minute after which the system freezes a hidden page's timers, so the
+  // lock screen's Play below is pressed on a frozen page, as a listener's
+  // after a long pause is.
+  await sleep(11000);
+  check('paused: no wake lock, no audio focus', !wakeLockHeld() && !focusHeld(), `wake ${wakeLocks().join(' | ').trim()}, focus ${focusHeld()}`);
+  check('paused: the service is not foreground; the notification stays (Play)', !service().foreground && /Play/.test(notification()), JSON.stringify(service()));
+  check('paused: the stream is stopped (nothing runs)', logcat('DriftloomStream').some((l) => l.includes('stream stopped')), logcat('DriftloomStream').slice(-3).join('\n'));
+
+  await sleep(PAUSED_MS - 11000);
+  fact('the page after two minutes paused', JSON.stringify(await hiddenPage()));
+  // What the lock screen's Play needs: the service and its session, still
+  // there (Android stops a background service a minute after the app left
+  // the screen, and the session went with it, until the service kept itself).
+  check('paused two minutes: the service and its session are still there', service().running && session().length > 0, JSON.stringify(service()));
+  const playAt = Date.now();
+  dispatch('play');
+  await waitFor('Play to play', () => playingNow(), 20000).catch(() => null);
+  check('Play, after two minutes paused with the screen off, plays the page again', await playingNow(), `${Date.now() - playAt} ms`);
+  {
+    // And it sounds: the stream started again and its frames move.
+    const before = heartbeats().length;
+    await waitFor('a heartbeat while playing', () => heartbeats().length > before, 70000).catch(() => null);
+    const b = heartbeats().slice(before);
+    check('after the long pause the audio thread plays again (a heartbeat while playing)', b.length > 0, b.map((x) => x.line.replace(/^.*heartbeat /, '')).join(' | ').slice(0, 300));
+  }
+  await sleep(3000);
+  check('playing again: the stream is back, and the lock is held', logcat('DriftloomStream').some((l) => l.includes('stream started')) && wakeLockHeld() && service().foreground, JSON.stringify(service()));
+
+  // ------------------------------------------------------------- a call
+  log('\n-- a call (simulated: another app takes the audio focus) --');
+  const call = (what) => sh('am', 'broadcast', '-n', `${pkg}/app.loops.CallSimulator`, '-a', `app.loops.debug.${what}`);
+  call('CALL_START');
+  await waitFor('the call to pause the music', async () => !(await playingNow()), 20000).catch(() => null);
+  check('a call pauses the music', !(await playingNow()));
+  await sleep(2000);
+  call('CALL_END');
+  await waitFor('the music to return', () => playingNow(), 20000).catch(() => null);
+  check('when the call ends, the music returns', await playingNow());
+  call('CALL_START');
+  await waitFor('the second call to pause', async () => !(await playingNow()), 20000).catch(() => null);
+  dispatch('pause');
+  await sleep(1000);
+  call('CALL_END');
+  await sleep(4000);
+  check('a music paused by the listener before the call ends stays paused', !(await playingNow()));
+  dispatch('play');
+  await waitFor('Play again', () => playingNow(), 20000).catch(() => null);
+
+  // ------------------------------------------------------ the screen on
+  await screenOn();
+  sh('am', 'start', '-n', `${pkg}/app.loops.MainActivity`);
+  await sleep(3000);
+  const t2 = await diag();
+  check('on again: the page is playing and nothing was late', await playingNow() && /late: 0\s+missed: 0\s+dropped: 0/.test(line(t2, 'engine')), line(t2, 'engine'));
+  fact('Diagnostics, the stream', line(t2, 'stream'));
+  fact('Diagnostics, while hidden', line(t2, 'hiddenMedia') || line(t2, 'hidden'));
+
+  // Pause for the export's own run: nothing playing, only the file.
+  await ev("document.getElementById('playBtn').click()", undefined, true);
+  await waitFor('the pause', async () => !(await playingNow()), 20000);
+
+  // ---------------------------------------------------------- the export
+  if (EXPORT) {
+    log('\n-- an export into a file chosen in Android\'s picker, finishing with the screen off --');
+    const exportOne = async (format, length) => {
+      // The export is as long as the track: set in the Track
+      // length view, to the second, as a listener sets it.
+      await ev((t) => {
+        document.getElementById('vibesBtn').click();
+        document.querySelector('#picksList .pk-track').click();
+        const n = document.getElementById('trkNum');
+        const two = (x) => String(x).padStart(2, '0');
+        n.value = `${Math.floor(t / 3600)}:${two(Math.floor((t % 3600) / 60))}:${two(t % 60)}`;
+        n.dispatchEvent(new Event('blur'));
+        document.getElementById('trkDone').click();
+      }, length);
+      await ev(() => {
+        if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+        document.querySelector('[data-stab="share"]').click();
+        document.getElementById('goExport').click();
+      });
+      await sleep(1500);
+      if (format === 'small') {
+        const shown = await ev(() => !document.querySelector('[data-format="small"]').hidden);
+        if (!shown) {
+          fact('Small', 'hidden: this WebView has no Opus encoder');
+          return null;
+        }
+      }
+      const missing = await ev(([f, l]) => {
+        const go = document.querySelector(`[data-format="${f}"]`);
+        const t = Number(l);
+        const two = (x) => String(x).padStart(2, '0');
+        const shown = t >= 3600 ? `${Math.floor(t / 3600)}:${two(Math.floor((t % 3600) / 60))}:${two(t % 60)}` : `${Math.floor(t / 60)}:${two(t % 60)}`;
+        const key = document.querySelector('#picksList .pk-track');
+        return [go ? '' : `the ${f} key`, key && key.textContent === shown ? '' : `the track length ${shown} (the key says ${key && key.textContent})`].filter(Boolean).join(', ')
+          || ((go.disabled && `the ${f} key is disabled: ${document.getElementById('exportAbout').textContent}`) || '')
+          || (go.dataset.asks ? `the export asks how long: ${document.getElementById('exportHint').textContent}` : '');
+      }, [format, String(length)]);
+      if (missing) {
+        const sheet = await ev(() => ({
+          about: document.getElementById('exportAbout').textContent,
+          choose: !document.getElementById('exportChoose').hidden,
+          key: (document.querySelector('#picksList .pk-track') || {}).textContent,
+          worker: typeof Worker,
+        }));
+        check(`${format}: the export sheet has what the run clicks`, false, `${missing}; ${JSON.stringify(sheet)}`);
+        // Why the Worker would not start: what the page's own loader serves, and what Workers say.
+        const probe = (label, make) => ev(([text]) => new Promise((resolve) => {
+          try {
+            const w = (new Function('return ' + text))()();
+            w.onerror = (e) => resolve(`error: ${e.message} ${e.filename}:${e.lineno}`);
+            w.onmessage = (e) => resolve(`message: ${JSON.stringify(e.data).slice(0, 80)}`);
+            w.postMessage({ type: 'hello' });
+            setTimeout(() => resolve('no answer in 10 s'), 10000);
+          } catch (e) { resolve(`threw: ${e}`); }
+        }), [make], false, 30000).then((r) => fact(label, r), (e) => fact(label, `no answer: ${e.message}`));
+        await probe('the export Worker (module)', "() => new Worker(new URL('js/export-worker.js', location.href), { type: 'module' })");
+        await probe('the cover Worker (module)', "() => new Worker(new URL('js/cover-worker.js', location.href), { type: 'module' })");
+        await probe('a classic Worker of the same file', "() => new Worker(new URL('js/rng.js', location.href))");
+        await probe('a Worker from a Blob', "() => new Worker(URL.createObjectURL(new Blob(['onmessage = () => postMessage(\\'blob ok\\')'])))");
+        await probe('a module Worker from a Blob importing a file by its address', "() => new Worker(URL.createObjectURL(new Blob([`import * as r from '${location.origin}/js/rng.js'; onmessage = () => postMessage('imported ' + Object.keys(r).length)`], { type: 'text/javascript' })), { type: 'module' })");
+        await probe('a module Worker from a Blob with no import', "() => new Worker(URL.createObjectURL(new Blob(['onmessage = () => postMessage(\\'module blob ok\\')'], { type: 'text/javascript' })), { type: 'module' })");
+        await probe('a module Worker of a file with no import (js/rng.js)', "() => new Worker(new URL('js/rng.js', location.href), { type: 'module' })");
+        await probe('a classic Worker that fetches a file', "() => new Worker(URL.createObjectURL(new Blob([`onmessage = async () => { try { const r = await fetch('${location.origin}/js/rng.js'); postMessage('fetch ' + r.status + ' ' + r.headers.get('content-type')); } catch (e) { postMessage('fetch failed ' + e); } }`])))");
+        await probe('a classic Worker that imports by dynamic import()', "() => new Worker(URL.createObjectURL(new Blob([`onmessage = async () => { try { const m = await import('${location.origin}/js/rng.js'); postMessage('import ok ' + Object.keys(m).length); } catch (e) { postMessage('import failed ' + e); } }`])))");
+        fact('the WebView', String(await ask(() => navigator.userAgent)));
+        for (const m of ['export-render', 'export-opus', 'ogg', 'app', 'request', 'player']) {
+          fact(`import of js/${m}.js in the page`, String(await ask((n) => import(new URL(`js/${n}.js`, location.href).href).then(() => 'ok', (e) => `failed: ${e}`), m)));
+        }
+        log(`  the page's problems: ${page.problems.slice(-5).join(' | ')}`);
+        return null;
+      }
+      await ev(`document.querySelector('[data-format="${format}"]').click()`, undefined, true);
+      const picked = await pickerSave();
+      if (!check(`${format}: the picker opened and took Save`, picked)) return null;
+      await waitFor('the export to run', () => ev("!document.getElementById('exportRun').hidden"), 60000).catch(() => null);
+      sh('input', 'keyevent', 'KEYCODE_HOME');
+      await sleep(1500);
+      await screenOff();
+      await sleep(8000);
+      const n = notification();
+      check(`${format}: with the screen off, the notification says it is saving and the service holds on`, /Saving/.test(n) && service().foreground && wakeLockHeld(), `${service().foreground} ${wakeLockHeld()} ${n.slice(0, 300)}`);
+      const t0 = Date.now();
+      await waitFor('the export to finish', () => ev("!document.getElementById('exportDone').hidden || !document.getElementById('exportFailed').hidden"), 20 * 60000);
+      const took = (Date.now() - t0) / 1000;
+      const sheet = await ev(() => ({
+        done: !document.getElementById('exportDone').hidden,
+        saved: document.getElementById('exportSaved').textContent,
+        why: document.getElementById('exportWhy').textContent,
+      }));
+      check(`${format}: the export finished with the screen off`, sheet.done && asleep(), `${sheet.saved || sheet.why} (${Math.round(took)} s after the first check)`);
+      await sleep(2000);
+      check(`${format}: when it is done, nothing is held`, !wakeLockHeld() && !service().foreground, `wake ${wakeLockHeld()}, ${JSON.stringify(service())}`);
+      await screenOn();
+      sh('am', 'start', '-n', `${pkg}/app.loops.MainActivity`);
+      await sleep(2000);
+      const name = (/^Saved (.+?) · \d/.exec(sheet.saved) || [])[1];
+      if (name) {
+        const found = sh('find', '/storage/emulated/0/', '-name', name, '-size', '+1k').split('\n').filter(Boolean)[0];
+        const head = found ? sh('head', '-c', '4', `'${found}'`) : '';
+        const bytes = found ? Number(sh('stat', '-c', '%s', `'${found}'`)) : 0;
+        check(`${format}: the file is where the picker put it, with the right header`, !!found && (format === 'small' ? head.startsWith('OggS') : head.startsWith('fLaC')), `${found} ${bytes} bytes`);
+        fact(`${format} file`, `${found}, ${bytes} bytes`);
+      } else {
+        check(`${format}: the page says where it saved`, false, sheet.saved);
+      }
+      await ev("document.getElementById('exportDoneBtn').click()");
+      return true;
+    };
+    await exportOne('lossless', 1800);
+    await exportOne('small', 600);
+
+    // An album exported whole: three tracks of 20 s, pasted and
+    // playing; one zip of FLACs through the picker, then a file a track
+    // into a folder from the folder picker.
+    const title = 'Moto Album';
+    const tracks = [LOOPS.shatter, LOOPS.cinder, LOOPS.hollow].map((l) => setTrack(decodeSong(l.code), { secs: 20, fadeIn: false, fadeOut: true }));
+    const code = encodeAlbum(title, tracks);
+    const exportAlbum = async (box, format) => {
+      log(`\n-- an album of three, ${box === 'zip' ? 'one zip through Android\'s picker' : 'a file a track into a folder from Android\'s folder picker'} (${format}) --`);
+      const ready = await ev(([c, t]) => new Promise((resolve) => {
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText: async () => c, writeText: async () => {} } });
+        if (![...document.querySelectorAll('.lrow.album .lrow-title')].some((x) => x.textContent.trim() === t)) document.getElementById('pasteCode').click();
+        setTimeout(() => {
+          if (document.getElementById('viewLibrary').hidden) document.getElementById('libraryBtn').click();
+          document.querySelector('[data-tab="albums"]').click();
+          setTimeout(() => {
+            const r = [...document.querySelectorAll('.lrow.album')].find((x) => x.querySelector('.lrow-title').textContent.replace(/, now playing$/, '').trim() === t);
+            if (!r) return resolve('the album is not in the Library');
+            r.querySelector('.lrow-main').click();
+            setTimeout(() => {
+              const play = [...document.querySelectorAll('.hero-keys button')].find((x) => x.textContent.trim() === 'play');
+              if (play) play.click();
+              resolve('');
+            }, 600);
+          }, 600);
+        }, 2500);
+      }), [code, title], false, 30000);
+      await sleep(2500);
+      const missing = ready || await ev(([b, f]) => {
+        if (document.getElementById('viewSave').hidden) document.getElementById('saveBtn').click();
+        document.querySelector('[data-stab="share"]').click();
+        document.getElementById('goExport').click();
+        const scope = document.querySelector('[data-scope="album"]');
+        if (!scope || document.getElementById('exportScope').hidden) return 'no album key on the Export view';
+        scope.click();
+        document.querySelector(`[data-box="${b}"]`).click();
+        const go = document.querySelector(`[data-format="${f}"]`);
+        if (!go || go.hidden) return `no ${f} key`;
+        return go.dataset.asks ? `it asks how long: ${document.getElementById('exportHint').textContent}` : '';
+      }, [box, format]);
+      if (!check(`album ${box} (${format}): the album playing, the Export view offers it`, !missing, missing)) return;
+      await ev(`document.querySelector('[data-format="${format}"]').click()`, undefined, true);
+      const picked = box === 'zip' ? await pickerSave() : await pickerFolder();
+      if (!check(`album ${box} (${format}): ${box === 'zip' ? 'the picker took Save' : 'the folder picker gave a folder'}`, picked)) return;
+      await waitFor('the album to finish', () => ev("!document.getElementById('exportDone').hidden || !document.getElementById('exportFailed').hidden"), 10 * 60000);
+      const sheet = await ev(() => ({ done: !document.getElementById('exportDone').hidden, saved: document.getElementById('exportSaved').textContent, why: document.getElementById('exportWhy').textContent }));
+      check(`album ${box} (${format}): it finished`, sheet.done && (box === 'zip' ? /^Saved .+\.zip · / : /^Saved 3 files · /).test(sheet.saved), sheet.saved || sheet.why);
+      const ext = format === 'small' ? 'opus' : 'flac';
+      if (box === 'zip') {
+        const name = (/^Saved (.+?\.zip) · \d/.exec(sheet.saved) || [])[1];
+        const found = name ? sh('find', '/storage/emulated/0/', '-name', `'${name}'`, '-size', '+1k').split('\n').filter(Boolean)[0] : '';
+        let listed = '';
+        if (found) {
+          const local = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'dlalbum-')), 'album.zip');
+          adb('pull', found, local);
+          try { listed = execFileSync('unzip', ['-Z1', local], { encoding: 'utf8' }) + execFileSync('unzip', ['-tq', local], { encoding: 'utf8' }); } catch (e) { listed = `unzip: ${e.message}`; }
+        }
+        const want = tracks.map((t, i) => `${String(i + 1).padStart(2, '0')} ${t.name}.${ext}`);
+        check(`album zip (${format}): the zip is where the picker put it, its tracks "NN name.${ext}", and unzip tests it clean`, !!found && want.every((w) => listed.includes(w)) && /No errors detected/.test(listed), `${found}; ${listed.replace(/\n/g, ' | ').slice(0, 300)}`);
+      } else {
+        const files = tracks.map((t, i) => sh('find', '/storage/emulated/0/', '-name', `'${String(i + 1).padStart(2, '0')} ${t.name}.${ext}'`, '-size', '+1k').split('\n').filter(Boolean)[0] || '');
+        const heads = files.map((f) => (f ? sh('head', '-c', '4', `'${f}'`) : ''));
+        check(`album files (${format}): each track in the folder chosen, "NN name.${ext}", with its header`, files.every(Boolean) && heads.every((h) => h.startsWith(ext === 'opus' ? 'OggS' : 'fLaC')), files.join(' | '));
+      }
+      await ev("document.getElementById('exportDoneBtn').click()");
+    };
+    await exportAlbum('zip', 'lossless');
+    await exportAlbum('files', (await ev(() => !document.querySelector('[data-format="small"]').hidden)) ? 'small' : 'lossless');
+  }
+} catch (e) {
+  check('the run went to its end', false, e.message);
+}
+
+log('\n---- the page\'s problems ----');
+const uncaught = page.problems.filter((p) => p.startsWith('uncaught'));
+log(page.problems.join('\n') || 'none');
+check('no uncaught error in the page', !uncaught.length, uncaught.join('; '));
+try { page.close(); } catch { /* gone */ }
+
+const failed = rows.filter((r) => !r.ok).length;
+if (SUMMARY) {
+  const text = [
+    `### The app with the screen off (emulator, ${MINUTES} minutes)`,
+    '',
+    '| check | result |',
+    '|---|---|',
+    ...rows.map((r) => `| ${r.name.replace(/\|/g, '/')} | ${r.ok ? 'ok' : `**FAIL** ${String(r.detail).replace(/\|/g, '/').replace(/\n/g, ' ').slice(0, 200)}`} |`),
+    '',
+    ...facts.map((f) => `- ${f.name}: ${String(f.value).replace(/\n/g, ' ')}`),
+    '',
+    'Said only of the emulator: its figures say the service holds what it must and the audio thread keeps time with the screen off; a phone\'s battery is the phone\'s to say.',
+    '',
+  ].join('\n');
+  fs.appendFileSync(SUMMARY, text);
+}
+log(failed ? `\n${failed} check(s) failed` : '\nthe app plays on with the screen off, and saves');
+process.exit(failed ? 1 : 0);

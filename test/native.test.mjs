@@ -1,0 +1,162 @@
+// Tests for the Android app's transport to its native core (js/native.js) that need no browser and no device: a stub bridge in place
+// of the app's `DriftloomNative`, the real CoreHost and Output on it.
+// Run with:  node test/native.test.mjs
+//
+// What they pin down: the page's player posts the worklet's very messages
+// over the bridge (an `init` first, carrying what a worklet's
+// processorOptions carry), hears the worklet's messages back as from a port,
+// and keeps the core's clock as its context's; the WebView makes no node and
+// no audio; Diagnostics says the native core with the stream's underruns.
+
+let failures = 0;
+function check(label, condition, detail = '') {
+  console.log(condition ? `  pass  ${label}` : `  FAIL  ${label} ${detail}`);
+  if (!condition) failures++;
+}
+
+class Bridge extends EventTarget {
+  constructor() {
+    super();
+    this.sent = [];
+  }
+  postMessage(text) { this.sent.push(JSON.parse(text)); }
+  // A batch from the core, as the app posts it.
+  hear(batch) {
+    const e = new Event('message');
+    e.data = JSON.stringify(batch);
+    this.dispatchEvent(e);
+  }
+}
+const bridge = new Bridge();
+globalThis.DriftloomNative = bridge;
+// Any node the page tried to make would be the WebView's own audio.
+let nodes = 0;
+globalThis.AudioWorkletNode = class { constructor() { nodes++; } };
+
+const { nativeBridge, NativeContext } = await import('../js/native.js');
+const { CoreHost, coreUnsupported, loadCore } = await import('../js/core.js');
+const { Output } = await import('../js/output.js');
+const { MediaBridge } = await import('../js/media.js');
+
+console.log('\nThe bridge chosen when the app puts it in the page');
+check('found', nativeBridge() === bridge);
+check('the core is supported without a worklet', coreUnsupported() === null);
+
+const ctx = new NativeContext(bridge);
+check('a stand-in context, on the core\'s clock', ctx.native && ctx.currentTime === 0 && ctx.state === 'suspended');
+const core = await loadCore(ctx);
+check('loadCore gives the bridge\'s port, nothing fetched', core.port === ctx.port && !core.bytes);
+
+console.log('\nThe page\'s player over it');
+const output = new Output(ctx, 'lite', { core, layout: 1 });
+const host = output.core;
+check('a host with no node: nothing for the WebView to play', host.native && host.node === null && output.output === null && nodes === 0);
+check('init first, with the worklet\'s options', bridge.sent[0] && bridge.sent[0].type === 'init' && bridge.sent[0].quality === 'lite' && bridge.sent[0].layout === 1, JSON.stringify(bridge.sent[0]));
+host.playLoad(2693262067, { vibes: [[3, null]], length: 'endless' }, 0, true);
+host.playTrack(2, 8, { seed: 5, ask: {}, fade: 1, track: [1, 2] });
+host.playJump(1, 12.5);
+output.setLayout(2);
+output.silence(1.5);
+const sent = bridge.sent.slice(1);
+check('the worklet\'s messages, as the worklet takes them', sent[0].type === 'playLoad' && sent[0].seed === 2693262067 && sent[0].ask.length === 'endless' && sent[0].resumed === true
+  && sent[1].type === 'playTrack' && sent[1].arm.track[1] === 2 && sent[2].type === 'playJump' && sent[2].at === 12.5
+  && sent[3].type === 'layout' && sent[3].channels === 2 && sent[4].type === 'param' && sent[4].time === 1.5, JSON.stringify(sent));
+
+let events = null;
+let picks = null;
+host.onevents = (m) => { events = m; };
+host.onpicks = (m) => { picks = m; };
+let busy = null;
+host.onbusy = (b) => { busy = b; };
+const probe = host.probe();
+const id = bridge.sent.at(-1).id;
+bridge.hear([
+  { type: 'events', events: [1.25, 0, 3, 3], grids: [{ at: 0, grid: [[1], [], [], [], []] }], trackEnd: -1, lost: 0, refused: 0, place: null },
+  { type: 'picks', tag: 4, met: true, why: null },
+  { type: 'cost', late: 0, missed: 0, dropped: 0, droppedBy: [0, 0, 0], ms: [10, 0], seconds: [2, 0], player: { state: 3, step: 4, time: 1.4 }, busy: { max: 0.1, behind: 0, windows: 8, seconds: 2 } },
+  { type: 'probe', id, late: 0, missed: 0, dropped: 0, droppedBy: [0, 0, 0], about: 'name=x\n', lanes: 2, player: { state: 3, step: 4, time: 1.4 } },
+  { type: 'native', time: 2.5, running: true, rate: 44100, latency: 0.02, underruns: 0, burst: 96, buffer: 192, capacity: 1920, channels: 2, performance: 12, sharing: 1, policy: 1, priority: 2, reopens: 0, busiest: 0.12, mean: 0.03, level: 0.1, sounding: 2.4, layout: 2 },
+]);
+const answered = await probe;
+check('the events, as from the worklet\'s port', events && events.events[0] === 1.25 && events.grids[0].grid[0][0] === 1);
+check('the picks\' answer', picks && picks.tag === 4 && picks.met === true);
+check('the cost and busy reports', host.cost.ms[0] === 10 && busy && busy.windows === 8 && host.playerAt.step === 4);
+check('the probe answered by number', answered && answered.about === 'name=x\n' && answered.lanes === 2);
+check('the clock, the rate and the latency are the core\'s', ctx.currentTime >= 2.5 && ctx.currentTime < 3 && ctx.sampleRate === 44100 && ctx.outputLatency === 0.02 && ctx.state === 'running');
+const t1 = ctx.currentTime;
+bridge.hear([{ type: 'native', time: 2.0, running: true, rate: 44100, underruns: 3 }]);
+check('the clock never goes back', ctx.currentTime >= t1);
+check('Diagnostics: the native core with the stream\'s underruns', /^native \(the core's player\)\s+late: 0\s+missed: 0\s+dropped: 0\s+underruns: 3\s+player: playing, step 4/.test(output.engineReport()), output.engineReport());
+check('Diagnostics: the stream', /^running, 44100 Hz/.test(ctx.streamReport()), ctx.streamReport());
+
+console.log('\nOn the music path (session 30g): callbacks in runs');
+{
+  // The speaker plays evenly; the core renders 80 ms every 80 ms.
+  const music = new NativeContext(new Bridge());
+  const real = performance.now.bind(performance);
+  let ms = 1000;
+  performance.now = () => ms;
+  let worst = 0;
+  let back = false;
+  let last = 0;
+  for (let i = 0; i <= 120; i++) {
+    const played = i * 0.05;
+    const rendered = (Math.floor(played / 0.08 + 1e-9) + 1) * 0.08 + 0.15;
+    music._hear([{ type: 'native', time: rendered, running: true, rate: 48000, latency: rendered - played, measured: 1, buffer: 7680 }]);
+    for (let k = 0; k < 5; k++) {
+      const now = music.currentTime;
+      back = back || now < last;
+      last = now;
+      if (i >= 40) worst = Math.max(worst, Math.abs(now - music.outputLatency - (played + k * 0.01)));
+      ms += 10;
+    }
+  }
+  check('what is heard follows the speaker, within 12 ms', worst < 0.012, worst);
+  check('and the clock still never goes back', !back);
+
+  // The clock may read ahead of the core; an alarm never does.
+  let rendered = music._served;
+  let rang = false;
+  const due = rendered + 0.06;
+  ms += 100;
+  music.alarm(due, () => { rang = true; });
+  check('an alarm waits for the core to render to it', !rang && music.currentTime >= due);
+  music._hear([{ type: 'native', time: rendered + 0.08, running: true, rate: 48000, latency: 0.2, measured: 1, buffer: 7680 }]);
+  check('and rings when it has', rang);
+
+  music._hear([{ type: 'native', time: rendered + 0.1, running: true, rate: 48000, burst: 1920, buffer: 7680, capacity: 7680, channels: 2, performance: 11, sharing: 1, policy: 1073741825, priority: 2, reopens: 0, busiest: 0.4, mean: 0.2, callback: 1024, underruns: 0,
+    watch: { over: 1, behind: 3, behindMs: 41, behindAgo: 12, gapMs: 190, gapAgo: 30, offSeconds: 612.4, worst: [{ share: 1.1, ms: 23.4, frames: 1024, ago: 30, did: 'init+load' }] } }]);
+  const report = music.streamReport();
+  check('Diagnostics: the path and the thread', report.includes('callbacks of 1024') && report.includes('power saving') && report.includes('thread SCHED_FIFO/2'), report);
+  check('Diagnostics: the glitches, each way they are counted', report.includes('\nglitches: 0 underruns, 3 times playback fell behind (41 ms in all, the last 12 s ago)'), report);
+  check('Diagnostics: the worst callbacks', report.includes('\ncallback, worst 1: 110% (23.4 ms, 1024 frames, init+load), 30 s ago'), report);
+  check('Diagnostics: the time played with the screen off', report.includes('\nscreen off: 612 s played with the screen off'), report);
+  const sent = music.bridge.sent.length;
+  music.resetCounts();
+  check('reset counters reaches the native core', music.bridge.sent.length === sent + 1 && music.bridge.sent.at(-1).type === 'resetCounts');
+  performance.now = real;
+}
+
+bridge.hear([{ type: 'failed', message: 'the stream did not open' }]);
+check('a stream that can\'t open: the page hears it failed', host.failed === 'the stream did not open');
+
+console.log('\nThe rest of the page');
+{
+  let rang = 0;
+  ctx.alarm(ctx.currentTime - 1, () => { rang++; });
+  check('an alarm on the core\'s clock, due: rung', rang === 1);
+  const media = new MediaBridge(ctx);
+  media.attach(output.output);
+  check('no keepalive element: the WebView plays nothing', media.mode === 'native' && media.audio === null);
+  host.dispose();
+  check('dispose goes to the core', bridge.sent.at(-1).type === 'dispose');
+  const again = new CoreHost(ctx, core, { quality: 'full', layout: 2 });
+  check('a new player starts with init again', bridge.sent.at(-1).type === 'init' && bridge.sent.at(-1).quality === 'full' && again.port === ctx.port);
+}
+
+if (failures) {
+  console.log(`\n${failures} failed`);
+  process.exit(1);
+}
+console.log('\nAll good.');
+process.exit(0);

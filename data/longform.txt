@@ -1,0 +1,343 @@
+# Long pieces, composed (queue item 102; docs/LONGFORM.md): the numbers the
+# piece's plan is drawn by. The core alone reads this file (core/build.rs
+# compiles it in; core/src/generator/longform.rs draws by it); the page does
+# not. The format is js/data.js's. Every number here is a first pick for
+# Mikey's ears: sessions 12 to 16 tune them. The wander's are heard since
+# session 12 (core/src/generator/heard.rs); the arc's energy since session
+# 13 ([longform energy]); its themes, variations, keys and movements since
+# session 14; the joins between its units since session 15 ([longform
+# joins]).
+
+# Which journey a piece takes: an arc, as a symphony's, or the long slow
+# wander. Drawn per piece on a stream of its own; a request pins it
+# (journey=arc, journey=wander).
+[longform journey]
+# The two, by weight, before the vibes lean them.
+weights = arc 1, wander 1
+# Endless is the wander's natural home: the arc's weight there is this much
+# of its own (never 0: Endless plays arcs in turn too).
+endless = 0.6
+# The vibes lean the arc's weight (the choices' way and bounds: toward x1.5
+# to x3, away x0.2 to x0.5, never 0), so a vibe below 1 leans to the wander.
+vibes = still 0.3, serene 0.4, meditative 0.3, glacial 0.3, droning 0.25,
+    floating 0.4, hazy 0.5, misty 0.5, dreamy 0.5, restful 0.4,
+    adventurous 3, triumphant 3, soaring 2.5, lively 2, playful 2,
+    wondrous 2, joyful 2, bouncy 2
+
+# A long piece with no length asked (queue item 117; Mikey, 2026-11-23:
+# "Sometimes"): a loop made with no length asked is a long piece this share
+# of the time, its length drawn from `lengths` (bars, by weight), on a
+# stream of its own from the seed, so a loop that stays short plays exactly
+# as before. Its journey is drawn as any long piece's is (above). Endless is
+# never drawn: it is only ever asked. For Mikey's ears: the share and the
+# lengths, weighted toward the short end (64 to 128 bars seven times in ten;
+# about 2 to 10 minutes at most tempos, 512 bars about 20 to 40).
+[longform unasked]
+share = 0.1
+lengths = 64 6, 96 4, 128 4, 192 2, 256 2, 384 1, 512 1
+
+# The arc: a run of roles with one peak. Its spans are set in time and
+# turned into sections (or phrases) at the loop's tempo.
+[longform arc]
+# How long an arc is, in minutes (a symphony's movement is about ten). A
+# finite piece holds a whole number of arcs of about the length drawn;
+# Endless plays arcs of that length in turn.
+minutes = 4 15
+# The vibes that lean an arc longer (above 1) or shorter.
+long = glacial 2, meditative 1.5, still 1.5, droning 2, cosmic 1.5,
+    lively 0.5, bouncy 0.5, playful 0.6, nimble 0.5
+# An arc shorter than this many minutes plays the small form (a short long
+# piece: 64 bars is two to five minutes).
+small = 4
+# An arc of fewer sections than this is planned in phrases, not sections:
+# its roles change at phrase lines inside a section.
+need = 12
+# The full form: each role's share of the arc, in order. The peak ends near
+# two thirds. The last arc of a finite piece ends in the close; any other
+# arc ends in a breath of the same share.
+full = opening 0.07, theme 0.15, build 0.08, second 0.15, development 0.15,
+    peak 0.07, release 0.09, return 0.16, close 0.08
+# The small form: one theme, a lift for a peak, a short release after it
+# (without one the energy would fall from the peak in a single line).
+short = opening 0.12, theme 0.24, lift 0.2, release 0.08, return 0.24,
+    close 0.12
+# Each role's energy, from its first unit to its last, where the arc's peak
+# is 1 (the arc's own height scales them all). It never falls before the
+# peak nor rises after it.
+energy.opening = 0.25 0.4
+energy.theme = 0.45 0.5
+energy.build = 0.5 0.65
+energy.second = 0.65 0.65
+energy.development = 0.65 0.9
+energy.peak = 1 1
+energy.lift = 0.6 1
+energy.release = 0.85 0.55
+energy.return = 0.55 0.5
+energy.close = 0.4 0.15
+energy.breath = 0.3 0.2
+# Where in the arc the peak ends (the full form's shares put it at 0.67),
+# and how high an arc's peak is: both drawn per arc.
+peak = 0.6 0.72
+height = 0.85 1
+# The share of arc pieces with a second theme; the rest keep one (simple
+# loops stay simple), and their second role plays theme A in the related
+# key.
+second = 0.7
+# How the return changes theme A, by weight (never plain: known at once, and
+# still new), and what the build and the lift do to it.
+returns = register 2, voice 2, stretched 1, reharmonized 2, answered 2
+builds = plain 2, register 1, voice 1
+# A close lasts at least this many seconds: a last section cut short takes
+# the bars before it too.
+close = 10
+# A related key shares at least this much of the home key's notes.
+common = 0.6
+# No related key's mode is darker than this (theory's brightness: phrygian
+# 0.08, harmonicMinor 0.14, aeolian 0.24), unless the home mode is darker
+# still: a calm piece does not turn to the darkest modes.
+dark = 0.2
+# In the development a key lasts at least this many seconds (and two units).
+stay = 30
+# Movements of different kinds (Mikey, 2026-11-12; session 14): a piece of
+# three movements or more plays them in a repeating cycle, a full arc first
+# (the form above), then the others in an order drawn per piece: a gentle
+# one (the full form with a low peak), a light one (the small form) and, in
+# pieces of four or more, an interlude (the wander's way: one thing moving
+# at a time, each coming home before it ends). Each kind's length is this
+# share of a full arc's. The first movement and the last are full arcs.
+kinds = full 1, gentle 0.7, light 0.4, interlude 0.5
+# A gentle movement's energy: every role's between these two (the second
+# its peak), so it has no build to speak of.
+gentle = 0.32 0.6
+# How often a movement's return is prepared: over the last phrase before
+# theme A comes home the bass holds the home key's fifth.
+prepare = 0.5
+# How often a pair of the development's units is a call and response: each
+# phrase theme A's fragment, then the other theme's in A's rests (one
+# voice), in place of a unit of one and a unit of the other.
+call = 0.35
+# A theme thinned to its outline in a release leaves out at least this
+# share of its notes, the bar lines' kept longest (an opening and a close
+# are as thin as their energy makes them: [longform energy] thin).
+outline = 0.5
+
+# The wander: holds of a drawn length, one thing moving at each hold's end.
+[longform wander]
+# How long a hold lasts, in seconds.
+hold = 60 300
+# A piece whose mean hold is fewer sections than this is planned in phrases.
+sections = 3
+# How often an epoch (each thing's turn once) visits a related key, and
+# hands the tune to the second theme. Rare; 0 turns either off.
+key = 0.15
+# The theme's turn hands the tune to the piece's second theme for the
+# epoch (session 14, which made theme B's tune; 0.2 was 102a's pick).
+theme = 0.2
+# How thin the tune may go: the share of its notes that sound, 1 its own.
+density = 0.55 1
+# Each turn of the warmth and the space takes it to the other side of the
+# loop's own, and a turn of the tune's density thins it or brings it home:
+# at least this share of the way out, so every turn is a step that is heard.
+apart = 0.4
+# How far the warmth and the space move the Sound panel's (0 to 1) at their
+# furthest: a turn is a slow glide over its unit, a tenth to a quarter.
+reach = 0.25
+# The chords shorter and longer, as shares of their own lengths. Longer
+# never runs into the next chord; a loop whose chords can't be made longer
+# (or shorter) moves them the other way.
+lengths = 0.6 1.5
+# How long a move glides where it can (a layer resting or returning, the
+# tone, the tune thinning or filling), in seconds: over the units after the
+# move, as many as that takes. A voice, a register, a length or a key
+# changes on the move's line.
+glide = 24
+
+# How an arc's energy is heard (session 13, core/src/generator/heard.rs):
+# each unit's energy (the arc's [longform arc] energy, 0 to 1, the peak at
+# about 1) played as marks and levels on the loop's own events, gliding over
+# each unit from where the unit before ended. Density and brightness carry
+# it more than level: someone working in a coffee shop should notice a
+# build only once it has passed. The loop is its own at about the theme's
+# energy (0.45 to 0.5). Every number is a first pick for Mikey's ears.
+[longform energy]
+# Each layer's level by the energy: nothing at the first number, the
+# fourth's share of its own at the second, its own at the third, in a line
+# between (a layer asked on, off or re-rolled is always its own; the chords
+# and the tune always play, and a loop that has fewer than two of them
+# keeps its bass, then its texture). Under the first its notes rest. The
+# loop as composed is the arc's fullest, near its peak: the rest of the arc
+# is the loop held back a little, so the loudness climbs the whole way,
+# gently. The kit and the bass carry most of a loop's loudness: they stay
+# in an opening, a little down, and leave only as a close thins.
+level.bass = 0.12 0.24 0.85 0.85
+level.texture = 0.16 0.28 0.85 0.7
+level.drums = 0.12 0.24 0.85 0.85
+# The chords and the tune always play, but swell a little with the rest:
+# at the first number's share of their level at the second energy and
+# under, their own from the third (a layer asked on, off or re-rolled
+# apart): the one level every loop shares, so even a loop with nothing to
+# fade rises and falls, by under a decibel.
+swell = 0.85 0.2 0.85
+# The kit's shimmer (these pieces: the hats, the shakers, the jingles) by
+# the energy: silent under the first, its own velocity from the second, in
+# a line between; the kick stays, softer (below). So a
+# build is heard as the shimmer arriving: brighter and busier. (The brief
+# had it the other way, hats in and the kick out: measured, hats over a
+# quiet kit made an opening brighter, not thinner. For Mikey's ears.)
+kit = 0.3 0.5
+shimmer = hat 1, ohat 1, shaker 1, jingle 1, ojingle 1
+# The backbeat (these pieces: the snares, the claps, the rims, the brushes)
+# comes in over the same energies from this share of its velocity: it
+# carries much of a kit's brightness, so an opening with it at its own is
+# as bright as the loop.
+backbeat = snare 1, clap 1, rim 1, brush 1
+beat = 0.5
+# The kit's velocities, softer by this share of their own at the energy's
+# lowest (none at the loop's own energy and over).
+soft = 0.25
+# The tune thins under the first energy, toward the second share of its
+# notes left out (its thinnest) at nothing.
+thin = 0.45 0.55
+# Under this energy the chords sound longer (the wander's longer length,
+# where they have room): held, as an opening and a close are.
+held = 0.42
+# The tune doubled an octave up (where the octave keeps it at 96 and
+# under), swelling in with the energy: silent at the first energy and
+# under, at the third number's share of the tune's velocity from the
+# second. So the build to the peak brightens as it goes, the peak most.
+double = 0.6 0.95 0.3
+# The arc's filter (the loop's own slow swing, blocks/arc.rs) takes the
+# energy as its slow aim: the loop's own at the first energy (near the
+# peak, as the levels are), all the way at the first plus or minus the
+# second.
+aim = 0.7 0.35
+# At the aim's darkest the filter sits this share of its range lower (the
+# swing's darkest point stays where it is); at its brightest the swing's
+# depth is this share less (its dark side lifted). A loop with no swing has
+# the filter open at its own energy and darkening below it the same way.
+dark = 0.6
+open = 0.5
+# The space opens with the brightness: the Sound panel's space moved by
+# this much at the aim's furthest (never where the code edited the tone).
+space = 0.12
+# A finite arc lands: its last bars, at least this many seconds and a bar,
+# play the loop's tonic chord and the tune on the tonic alone, held for
+# half of them and ringing out; the tune's last phrase sounds whole before
+# them.
+land = 4
+
+# How a long piece's units meet (session 15; docs/LONGFORM.md, "The joins"):
+# where two units meet and something changes (a theme, a key, a role, a
+# wander's line move), the line is written, not left to chance: a fill into
+# it, the floor out for its last bar, a chord both keys share held across
+# it, the tune's last bar alone, or a breath. The plan chooses by what
+# changes and by the energy either side (core/src/generator/longform.rs,
+# Form::join_of); core/src/generator/heard.rs plays it. Every number is a
+# first pick for Mikey's ears.
+[longform joins]
+# Where a theme changes, a rise in the energy of this much or more across
+# the line is a fill into it, a fall as large from the peak (or the lift)
+# the floor out (where only a role changes, twice this).
+step = 0.04
+# A join lasts this many bars before its line, at most this share of its
+# unit (a four-bar phrase's join is a beat, a sixteen-bar section's a bar:
+# measured, half a bar of a four-bar unit broke the loudness order of five
+# 64-bar arcs in thirty).
+bars = 1
+share = 0.0625
+# A breath leaves out this share of a join's length: the last half bar.
+breath = 0.5
+# A fill's hits (the kit's backbeat, or its shimmer where it has none, on
+# the steps of the last beat), from the first to the last, as shares of the
+# instrument's loudest hit in the loop: a gentle rise into the line.
+fill = 0.35 0.65
+# A pivot's chord, struck on the join's first step, holds this many beats
+# past the line.
+hold = 1
+# Never a hole (session 16b): where what a join keeps would leave the mix
+# this many dB under the unit there, read from the notes (the voices'
+# loudness below, `Heard::under`), it falls back to a breath, or where that
+# would too, to a glide.
+hole = 12
+
+[longform loudness]
+# Each voice's loudness in the mix over a note's life (session 16b), by
+# which a join knows from the notes alone how much of the mix the layers it
+# keeps carry (`Heard::share`): a note held at velocity 1, its mean power in
+# dB over 0 to 1/8 s, to 1/4, 1/2, 1, 2, 4 and 8 s from its start (the
+# last since session 23: a long note's life past 4 s), through its
+# layer's own path and the channel's gain. Measured, not tuned:
+# `node tools/voice-loudness.mjs` writes these lines and `--check` holds
+# them to the voices. A voice not here is heard as its layer's first.
+drums.kick = -12 -37 -67 -99 -99 -99 -99
+drums.softkick = -11 -39 -73 -99 -99 -99 -99
+drums.snare = -29 -91 -99 -99 -99 -99 -99
+drums.clap = -29 -80 -99 -99 -99 -99 -99
+drums.rim = -46 -99 -99 -99 -99 -99 -99
+drums.hat = -46 -99 -99 -99 -99 -99 -99
+drums.ohat = -40 -73 -99 -99 -99 -99 -99
+drums.shaker = -44 -99 -99 -99 -99 -99 -99
+drums.frame = -12 -36 -64 -99 -99 -99 -99
+drums.tap = -27 -89 -99 -99 -99 -99 -99
+drums.jingle = -44 -99 -99 -99 -99 -99 -99
+drums.ojingle = -34 -61 -91 -99 -99 -99 -99
+bass.sub = -27 -27 -28 -28 -29 -29 -29
+bass.round = -23 -24 -24 -25 -26 -26 -26
+bass.pluckbass = -21 -20 -23 -27 -27 -27 -27
+bass.moogbass = -24 -24 -24 -25 -25 -25 -25
+bass.fifths = -27 -26 -25 -25 -25 -26 -26
+bass.rhodesbass = -21 -21 -22 -24 -26 -33 -33
+chords.keys = -24 -24 -25 -27 -29 -36 -36
+chords.pad = -43 -39 -33 -25 -29 -42 -48
+chords.harp = -23 -24 -25 -28 -30 -41 -41
+chords.accordion = -35 -32 -33 -35 -33 -32 -32
+chords.piano = -25 -25 -26 -27 -30 -37 -37
+chords.rhodes = -24 -24 -25 -27 -29 -36 -36
+chords.moogpad = -43 -39 -33 -25 -29 -42 -48
+chords.softpad = -50 -45 -40 -32 -28 -39 -47
+chords.analogpad = -45 -41 -36 -27 -30 -43 -49
+chords.prepared = -26 -27 -28 -28 -33 -46 -48
+chords.musicbox = -24 -25 -25 -27 -30 -38 -38
+chords.kalimba = -25 -26 -29 -34 -48 -77 -99
+chords.marimba = -24 -26 -27 -31 -39 -65 -99
+chords.vowel = -40 -31 -28 -32 -38 -50 -53
+chords.hum = -44 -36 -33 -35 -40 -54 -56
+chords.choir = -35 -30 -27 -31 -37 -48 -50
+chords.templebell = -23 -26 -32 -38 -46 -67 -91
+chords.tubular = -30 -32 -35 -42 -55 -77 -90
+chords.stab = -39 -79 -99 -99 -99 -99 -99
+chords.nylon = -29 -32 -35 -40 -49 -64 -81
+melody.pluck = -27 -27 -27 -27 -27 -35 -36
+melody.bell = -20 -20 -21 -22 -25 -33 -34
+melody.keys = -20 -20 -21 -22 -25 -31 -32
+melody.saw = -27 -26 -26 -26 -26 -32 -33
+melody.ocarina = -28 -27 -27 -27 -27 -29 -29
+melody.flute = -28 -27 -27 -27 -27 -29 -29
+melody.harp = -20 -19 -21 -22 -26 -36 -36
+melody.musicbox = -20 -20 -21 -22 -25 -33 -34
+melody.fiddle = -30 -27 -27 -27 -27 -28 -28
+melody.accordion = -29 -25 -25 -28 -28 -28 -28
+melody.piano = -21 -21 -22 -23 -26 -32 -33
+melody.sine = -37 -28 -22 -23 -30 -44 -48
+melody.rhodes = -20 -20 -21 -22 -25 -31 -32
+melody.moog = -28 -27 -27 -27 -27 -30 -30
+melody.whistle = -29 -28 -28 -28 -28 -29 -30
+melody.softpad = -49 -43 -33 -27 -24 -35 -44
+melody.analoglead = -26 -27 -25 -26 -26 -29 -29
+melody.prepared = -21 -22 -23 -25 -29 -41 -43
+melody.celeste = -21 -21 -22 -23 -26 -32 -33
+melody.kalimba = -20 -22 -24 -30 -44 -75 -99
+melody.marimba = -20 -21 -23 -26 -35 -62 -99
+melody.vowel = -35 -27 -24 -27 -34 -44 -47
+melody.hum = -40 -32 -28 -31 -36 -50 -52
+melody.choir = -33 -30 -24 -25 -32 -42 -44
+melody.templebell = -21 -26 -29 -33 -45 -65 -87
+melody.tubular = -25 -28 -31 -38 -51 -74 -86
+melody.stab = -35 -74 -99 -99 -99 -99 -99
+melody.panflute = -28 -27 -27 -27 -27 -29 -29
+texture.bell = -21 -21 -22 -23 -26 -33 -33
+texture.swell = -47 -39 -33 -27 -21 -25 -25
+texture.drop = -56 -99 -99 -99 -99 -99 -99
+texture.chime = -21 -21 -22 -23 -26 -33 -33
+texture.wind = -61 -52 -46 -40 -35 -35 -35
+texture.waves = -51 -38 -30 -27 -21 -26 -26

@@ -1,0 +1,427 @@
+//! The sung voices: vowel, hum and choir (`voice('vowel' | 'hum' |
+//! 'choir')` in synth.js), call for call.
+//!
+//! A singer is the `glottal` wave (a hum's is the triangle) whose detune is
+//! a scoop into the note, then a jitter of many small ramps, with a vibrato
+//! summed into it; a choir is three singers into one tract. The tract is
+//! three peaking formant filters in series, which slide toward another
+//! vowel on a long note, then a lowpass; a breath of looped noise through a
+//! bandpass joins the tract under one envelope.
+//!
+//! What JavaScript decides arrives with the note: the vowel, where it
+//! drifts to (both settled before the voice budget is asked, since the
+//! budget and the trim depend on them), the note's formant trim
+//! (`_formantTrim`, worked out in JavaScript from the vowel and the note
+//! and sent, since the synth already caches it) and the composer's standing
+//! detune. Every other choice, the scoop, the jitter, the vibrato and the
+//! breath, is a draw the core makes itself from where the note sits in its
+//! loop (`rng`).
+//!
+//! The jitter takes one detune event for every 0.09 to 0.17 s of the note,
+//! so a singer's detune holds `DETUNE_EVENTS`, sized from the longest sung
+//! note in 30,000 loops (10.2 s) with room to spare; a longer note
+//! (`LONGEST`) plays in JavaScript. A sung voice is far bigger than any
+//! other, so the sung voices have a pool of their own (`POOL`), sized from
+//! the voice budget: a hum, the cheapest, costs 16 of its 260 units.
+
+// Web Audio's parameters are 32-bit floats, set from the host's 64-bit
+// numbers: a voice narrows every value it hands one.
+#![allow(clippy::cast_possible_truncation)]
+// The names follow synth.js's (f, g, c...), so the port reads against it.
+#![allow(clippy::many_single_char_names)]
+// A note's setup is one JavaScript function, ported call for call: split,
+// it would no longer read against its twin.
+#![allow(clippy::too_many_lines)]
+// Counts and places (a singer, a step, a vowel) as floats and back, each
+// well inside both.
+#![allow(clippy::cast_precision_loss, clippy::cast_possible_wrap, clippy::cast_sign_loss)]
+
+use crate::QUANTUM;
+use crate::block::{Block, Context, Mods, NO_EXTRA, Note, Probe, Signal, Voice};
+use crate::param::Param;
+use crate::rng::{Draws, salt};
+
+use super::filter::{self, Biquad, Filter, Kind};
+use super::lfo::Lfo;
+use super::noise_source::NoiseSource;
+use super::osc::{self, Oscillator, Shape, frame_at};
+use super::shared::{FILTER_TAIL, QUIET, UNITY, midi_to_freq, release, starts_in};
+
+/// Which sung voice: `VOWEL`, `HUM` or `CHOIR`.
+#[derive(Clone, Copy, PartialEq)]
+pub enum Kind3 {
+    /// One singer on a vowel.
+    Vowel,
+    /// One singer, mouth closed.
+    Hum,
+    /// Three singers into one tract.
+    Choir,
+}
+
+/// Sung voices sounding at once. The budget lets at most sixteen hums be
+/// billed together, and a voice lingers 0.1 s past its bill.
+pub const POOL: usize = 32;
+
+/// The most steps of jitter a singer takes, and so the longest note the
+/// core sings: the jitter's first step is at 0.12 s and they come at least
+/// 0.09 s apart (`SUNG_LONGEST` in synth.js, which keeps longer notes).
+pub const MAX_STEPS: usize = 150;
+/// The longest sung note the core takes, in seconds; a longer one plays in
+/// JavaScript.
+pub const LONGEST: f64 = 13.5;
+const _: () = assert!(0.12 + MAX_STEPS as f64 * 0.09 > LONGEST);
+/// A singer's detune: the scoop's two events and the jitter's.
+const DETUNE_EVENTS: usize = MAX_STEPS + 2;
+const SINGERS: usize = 3;
+
+/// [centre Hz, bandwidth Hz, boost dB] for each formant (`VOWELS`): a, e,
+/// o, u, as the note's vowel numbers them.
+const VOWELS: [[[f64; 3]; 3]; 4] = [
+    [[800.0, 80.0, 16.0], [1150.0, 90.0, 13.0], [2900.0, 130.0, 9.0]],
+    [[400.0, 60.0, 16.0], [1600.0, 80.0, 13.0], [2700.0, 130.0, 9.0]],
+    [[450.0, 70.0, 17.0], [800.0, 80.0, 12.0], [2830.0, 120.0, 7.0]],
+    [[325.0, 50.0, 17.0], [700.0, 60.0, 11.0], [2530.0, 170.0, 6.0]],
+];
+/// A closed mouth.
+const HUM: [[f64; 3]; 3] = [[280.0, 60.0, 18.0], [1100.0, 100.0, 8.0], [2200.0, 160.0, 3.0]];
+/// Where a long hum opens to (`OPEN_HUM`); target 4.
+const OPEN_HUM: [[f64; 3]; 3] = [[330.0, 70.0, 16.5], [1200.0, 110.0, 10.0], [2350.0, 170.0, 5.0]];
+
+/// The note's level before its velocity and trim.
+const LEVEL_CHOIR: f64 = 0.112;
+const LEVEL_HUM: f64 = 0.085;
+const LEVEL_VOWEL: f64 = 0.174;
+
+/// One singer: an oscillator at the note's frequency, never automated,
+/// whose `DETUNE` takes its own scoop and jitter plus a vibrato.
+struct Singer {
+    osc: Oscillator<0>,
+    detune: Param<DETUNE_EVENTS>,
+    lfo: Lfo,
+}
+
+impl Singer {
+    const fn new() -> Self {
+        Singer { osc: Oscillator::new(), detune: Param::new(0.0), lfo: Lfo::new() }
+    }
+}
+
+/// One formant of the tract: a peaking filter whose frequency, Q and gain
+/// move together, each driven by its envelope (`FREQ`, `Q`, `GAIN`).
+struct Formant {
+    filter: Filter,
+    freq: Param,
+    q: Param,
+    gain: Param,
+}
+
+impl Formant {
+    const fn new() -> Self {
+        Formant {
+            filter: Filter::new(),
+            freq: Param::new(0.0),
+            q: Param::new(0.0),
+            gain: Param::new(0.0),
+        }
+    }
+}
+
+/// A sung note: a vowel, a hum or the choir.
+pub struct Sung {
+    /// Taken by a sounding note.
+    pub busy: bool,
+    singers: [Singer; SINGERS],
+    count: usize,
+    humming: bool,
+    formants: [Formant; 3],
+    corner: f32,
+    lowpass: Biquad,
+    amp: Param,
+    breath: NoiseSource,
+    breath_hz: f32,
+    breath_filter: Biquad,
+    breath_gain: Param,
+    start: u64,
+    end: u64,
+}
+
+impl Sung {
+    /// Silent and all zeros, so a pool of them costs nothing in the `.wasm`;
+    /// starting it sets every value a render reads.
+    // Built in a `const` for the static core, never on a stack at run time.
+    #[allow(clippy::large_stack_arrays)]
+    #[must_use]
+    pub const fn new() -> Self {
+        Sung {
+            busy: false,
+            singers: [const { Singer::new() }; SINGERS],
+            count: 0,
+            humming: false,
+            formants: [const { Formant::new() }; 3],
+            corner: 0.0,
+            lowpass: Biquad::new(),
+            amp: Param::new(0.0),
+            breath: NoiseSource::idle(),
+            breath_hz: 0.0,
+            breath_filter: Biquad::new(),
+            breath_gain: Param::new(0.0),
+            start: 0,
+            end: 0,
+        }
+    }
+
+    /// `vowel` is 0-3 (a, e, o, u); `target`, where it drifts to (the same
+    /// numbers, 4 for an opening hum, anything else for none); `trim`, the
+    /// note's formant trim; `lean`, the composer's standing detune in cents
+    /// (`opts.detune`); `draws`, where the note sits in its loop, which
+    /// settles every other choice the singers make (see `rng::salt`).
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn play(
+        &mut self,
+        kind: Kind3,
+        midi: f64,
+        time: f64,
+        dur: f64,
+        vel: f64,
+        vowel: f64,
+        target: f64,
+        trim: f64,
+        lean: f64,
+        draws: &Draws,
+        noise: usize,
+        rate: f64,
+    ) {
+        let humming = kind == Kind3::Hum;
+        let choral = kind == Kind3::Choir;
+        self.humming = humming;
+        let f = midi_to_freq(midi);
+
+        let formants = if humming {
+            HUM
+        } else {
+            let v = if (0.0..4.0).contains(&vowel) { vowel as usize } else { 0 };
+            VOWELS.get(v).copied().unwrap_or(VOWELS[0])
+        };
+        let to = match target {
+            4.0 => Some(OPEN_HUM),
+            t if (0.0..4.0).contains(&t) => VOWELS.get(t as usize).copied(),
+            _ => None,
+        };
+        let held = ((dur - 0.5) / 1.5).clamp(0.0, 1.0);
+        let depth = 0.34 + held * 0.66;
+
+        let stop_at = time + dur + 0.9;
+        let level = if choral {
+            LEVEL_CHOIR
+        } else if humming {
+            LEVEL_HUM
+        } else {
+            LEVEL_VOWEL
+        };
+        let a = &mut self.amp;
+        a.reset_at(QUIET, rate);
+        a.set_value_at_time(0.0001, time);
+        a.linear_ramp_to_value_at_time(
+            (vel * trim * level) as f32,
+            time + (dur * 0.25).min(0.3),
+            time,
+        );
+        release(a, time + dur * 0.72, stop_at, time);
+
+        let leave_at = time + dur * 0.35;
+        let land_at = time + dur * 0.85;
+        let part = |from: f64, to: f64| from + (to - from) * depth;
+        for (i, (fm, &[hz, bw, gain_db])) in self.formants.iter_mut().zip(formants.iter()).enumerate() {
+            // Every setting is all envelope, into the filter's inputs.
+            fm.filter.set(filter::Settings { kind: Kind::Peaking, freq: 0.0, q: 0.0, gain: 0.0 }, rate as f32);
+            fm.freq.reset_at(hz as f32, rate);
+            fm.q.reset_at((hz / bw) as f32, rate);
+            fm.gain.reset_at(gain_db as f32, rate);
+            if let Some([thz, tbw, tgain]) = to.and_then(|t| t.get(i).copied()) {
+                fm.freq.set_value_at_time(hz as f32, leave_at);
+                fm.freq
+                    .linear_ramp_to_value_at_time(part(hz, thz) as f32, land_at, time);
+                fm.q.set_value_at_time((hz / bw) as f32, leave_at);
+                fm.q.linear_ramp_to_value_at_time(
+                    (part(hz, thz) / part(bw, tbw)) as f32,
+                    land_at,
+                    time,
+                );
+                fm.gain.set_value_at_time(gain_db as f32, leave_at);
+                fm.gain
+                    .linear_ramp_to_value_at_time(part(gain_db, tgain) as f32, land_at, time);
+            }
+        }
+        self.corner = if humming { 1700.0 } else { 2600.0 };
+        self.lowpass.reset();
+
+        self.count = if choral { SINGERS } else { 1 };
+        let stop = stop_at + 0.01;
+        for (i, s) in self.singers.iter_mut().take(self.count).enumerate() {
+            // Each singer's draws are numbered from `base`, so a choir's
+            // three singers differ from one another.
+            let base = salt::SUNG_SINGER * i as u32;
+            let u = |kind: u32, n: u32| draws.unit(kind, base + n);
+            let shape = if humming { Shape::Triangle } else { Shape::Glottal };
+            s.osc.set(shape, f as f32, 0.0, time, stop, rate);
+            let spread = lean
+                + if choral {
+                    (i as f64 - 1.0) * (7.0 + u(salt::SUNG_SPREAD, 0) * 6.0)
+                } else {
+                    0.0
+                };
+            let det = &mut s.detune;
+            det.reset_at(0.0, rate);
+            det.set_value_at_time((spread - 22.0 - u(salt::SUNG_SCOOP, 0) * 14.0) as f32, time);
+            det.linear_ramp_to_value_at_time(
+                spread as f32,
+                time + 0.06 + u(salt::SUNG_SCOOP, 1) * 0.05,
+                time,
+            );
+            // The jitter: a new small detune every 0.09 to 0.17 s of the
+            // note. Each step's value and wait are draws of their own, so a
+            // note that takes more steps changes nothing after them.
+            let mut t = time + 0.12;
+            for step in 0..MAX_STEPS as u32 {
+                if t >= time + dur {
+                    break;
+                }
+                let v = u(salt::SUNG_JITTER, 2 * step);
+                det.linear_ramp_to_value_at_time((spread + (v - 0.5) * 11.0) as f32, t, time);
+                t += 0.09 + u(salt::SUNG_JITTER, 2 * step + 1) * 0.08;
+            }
+            s.lfo.set((4.3 + u(salt::SUNG_VIBRATO, 0) * 1.8) as f32, UNITY, time, stop, rate);
+            let peak = (if humming { 5.0 } else { 9.0 }) + u(salt::SUNG_VIBRATO, 1) * 4.0;
+            let dp = s.lfo.depth();
+            dp.reset_at(UNITY, rate);
+            dp.set_value_at_time(0.0, time);
+            dp.linear_ramp_to_value_at_time(
+                peak as f32,
+                time + (dur * 0.55).min(0.9) + u(salt::SUNG_VIBRATO, 2) * 0.2,
+                time,
+            );
+        }
+
+        let breath_rate = 0.8 + draws.unit(salt::SUNG_BREATH, 0) * 0.4;
+        self.breath.looped(time, stop_at, breath_rate, noise, rate);
+        self.breath_hz = if humming { 900.0 } else { 2200.0 };
+        self.breath_filter.reset();
+        let b = &mut self.breath_gain;
+        b.reset_at(QUIET, rate);
+        b.set_value_at_time(0.0001, time);
+        b.linear_ramp_to_value_at_time(
+            (vel * if humming { 0.05 } else { 0.1 }) as f32,
+            time + 0.04,
+            time,
+        );
+        b.exponential_ramp_to_value_at_time((vel * 0.02).max(0.0005) as f32, time + 0.3, time);
+        b.set_target_at_time(0.0001, time + dur * 0.8, 0.15);
+
+        self.start = frame_at(time, rate);
+        self.end = frame_at(stop + FILTER_TAIL, rate);
+    }
+
+    fn start_frame(&self) -> u64 {
+        self.start
+    }
+
+    fn end_frame(&self) -> u64 {
+        self.end
+    }
+}
+
+/// A probe's sung note: the vowel a, drifting nowhere, at its own trim,
+/// with no standing detune.
+const SUNG: [f64; crate::EXTRA] = {
+    let mut x = NO_EXTRA;
+    x[0] = 0.0;
+    x[2] = 1.0;
+    x[3] = 0.0;
+    x
+};
+
+impl Block for Sung {
+    type Settings = Note;
+
+    const PROBES: &'static [Probe<Note>] = &[
+        Probe { name: "vowel", settings: Note::probe(crate::VOWEL, crate::MELODY, 67.0, 0, SUNG) },
+        Probe { name: "hum", settings: Note::probe(crate::HUM, crate::MELODY, 67.0, 0, SUNG) },
+        Probe { name: "choir", settings: Note::probe(crate::CHOIR, crate::MELODY, 67.0, 0, SUNG) },
+    ];
+
+    fn start(&mut self, note: &Note, cx: &Context) {
+        let kind = match note.voice {
+            crate::HUM => Kind3::Hum,
+            crate::CHOIR => Kind3::Choir,
+            _ => Kind3::Vowel,
+        };
+        let [vowel, target, trim, lean, ..] = note.extra;
+        let (noise, rate) = (cx.noise.len(), cx.rate);
+        let (midi, time, dur, vel) = (note.midi, note.time, note.dur, note.vel);
+        self.play(kind, midi, time, dur, vel, vowel, target, trim, lean, &note.draws, noise, rate);
+    }
+
+    fn span(&self) -> (u64, u64) {
+        (self.start_frame(), self.end_frame())
+    }
+
+    fn render(&mut self, block: u64, cx: &Context, out: &mut Signal) {
+        let (rate, noise) = (cx.rate, cx.noise);
+        let r = rate as f32;
+        // The singers, summed into the tract.
+        let mut voices = [0.0f32; QUANTUM];
+        for s in self.singers.iter_mut().take(self.count) {
+            // The detune: its own events, plus the vibrato through its depth.
+            // Both are first rendered when the singer starts: clamped then
+            // (the vibrato's depth by the vibrato itself, which starts with
+            // the singer).
+            if starts_in(s.osc.start_frame(), block) {
+                s.detune.clamp_before(block, rate);
+            }
+            let mut cents = [0.0f32; QUANTUM];
+            s.detune.fill(block, rate, &mut cents);
+            s.lfo.render(block, cx, &mut cents);
+            s.osc.render_mod(block, cx, &mut voices, &Mods::NONE.with(osc::DETUNE, &cents));
+        }
+        // The tract's formants, each a filter whose frequency, Q and gain
+        // move frame by frame: their coefficients are worked out again only
+        // when these do.
+        for fm in &mut self.formants {
+            let (mut hz, mut q, mut gain) = ([0.0f32; QUANTUM], [0.0f32; QUANTUM], [0.0f32; QUANTUM]);
+            fm.freq.fill(block, rate, &mut hz);
+            fm.q.fill(block, rate, &mut q);
+            fm.gain.fill(block, rate, &mut gain);
+            let mods = Mods::NONE.with(filter::FREQ, &hz).with(filter::Q, &q).with(filter::GAIN, &gain);
+            fm.filter.render_mod(block, cx, &mut voices, &mods);
+        }
+        let mut amp = [0.0f32; QUANTUM];
+        self.amp.fill(block, rate, &mut amp);
+        let mut air = [0.0f32; QUANTUM];
+        self.breath.fill(block, noise, &mut air);
+        let mut breath_gain = [0.0f32; QUANTUM];
+        self.breath_gain.fill(block, rate, &mut breath_gain);
+        self.lowpass.set(Kind::Lowpass, self.corner, 0.7, 0.0, r);
+        self.breath_filter
+            .set(Kind::Bandpass, self.breath_hz, 0.8, 0.0, r);
+        for (i, y) in out.iter_mut().enumerate() {
+            let tract = self.lowpass.step(voices.get(i).copied().unwrap_or(0.0));
+            let b = self.breath_filter.step(air.get(i).copied().unwrap_or(0.0))
+                * breath_gain.get(i).copied().unwrap_or(0.0);
+            *y += (tract + b) * amp.get(i).copied().unwrap_or(0.0);
+        }
+        self.lowpass.flush();
+        self.breath_filter.flush();
+    }
+}
+
+impl Voice for Sung {
+    fn uses_noise(_: &Note) -> bool {
+        true
+    }
+}
+
+impl Default for Sung {
+    fn default() -> Self {
+        Self::new()
+    }
+}

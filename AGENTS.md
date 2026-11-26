@@ -1,0 +1,152 @@
+# Ballad Falls: guide for agents
+
+Read first by every Claude session in this repo (`CLAUDE.md` points here).
+`docs/README.md` maps every doc and says who reads it.
+
+## What Ballad Falls is
+
+A procedural loop machine at <https://balladfalls.com/>:
+relaxing, nostalgic loops, generated and synthesized in the browser, played
+forever. A loop is a seed and a request; the core (`core/`, a Rust audio
+core compiled to WebAssembly, built to the committed `js/dlplayer.wasm`)
+generates it, and its player decides and plays the notes in an
+AudioWorklet. The page sends commands and draws events (`js/player.js`),
+and reads a loop's record and notes from the same module (`js/gen.js`).
+A browser that can't run the core gets one plain line. The page has no build step and no dependencies, and it
+deploys as static files (`wrangler.jsonc`; pushing to `main` deploys). Mikey
+(nowmichaelclark) owns it. His ears are the acceptance test for anything
+that changes how it sounds.
+
+## The roles, and where each starts
+
+- **Brain** (a claude.ai chat in the Driftloom Project): plans, verifies,
+  writes the queue, builds listening albums; does not write code, and
+  merges only docs-only changes (and `data/vibes.txt`, the vibes). Starts at
+  `docs/BRAIN.md`, "Start here".
+- **Hands** (Claude Code): write code, open PRs, measure, merge, report.
+  Start at `docs/QUEUE.md`: status, standing rules, the next item. Then
+  read the brief for its type (`docs/briefs/`). A session that touches
+  `core/` also reads `core/AGENTS.md`. Ideas for later go in
+  `docs/inbox.md`, one line each.
+- **Research** (a hands session type since 2026-11-26, when the ears
+  folded into it): writes what is known into the wiki, and measures records
+  Mikey loves against Ballad Falls with `tools/ears/`. Starts at
+  `docs/briefs/research.md`.
+- **Painter** (design sessions): the look and the screens. Starts at
+  `docs/PAINTER.md`.
+
+## Rules that hold everywhere
+
+- **Merge policy** (Mikey: yes). The hands merge their own PRs when CI is
+  green and every check the item names passes (`docs/QUEUE.md`, "Merge
+  policy"). Red or unfinished checks: don't merge, say what is failing.
+  Nothing slow holds one, at 1.0 too: the nightly, the ten rows, export's
+  `long` (Mikey, 2026-11-25).
+- **Never write a token anywhere:** not in a file, commit, PR, note, memory
+  or the Project. Mikey pastes one into a session's opening message; use
+  it, never keep it.
+- **American English** in new comments, docs and PR text. Don't rename
+  identifiers or spec fields for spelling: share codes depend on them.
+- **Plain ASCII from the core:** everything the core emits (names, codes,
+  errors, logs) is ASCII.
+- **BUILD and CACHE together:** on every app change bump `BUILD` in
+  `js/main.js` and `CACHE` in `sw.js` to the same next version, taken from
+  the latest `main`.
+- **One PR per item**, from the latest `main`. Take the conservative option
+  where a musical choice is open and mark it "for Mikey's ears". If a
+  check can't be met or a decision is needed, stop and leave a note in
+  `docs/notes/<item>-<name>.md`.
+- **Keep the docs small:** live docs hold what is live; finished items
+  and answered notes leave (git keeps them; older: `docs/archived.txt`).
+  CI checks sizes and pointers (`node tools/check-docs.mjs`).
+
+## How Claude talks to Mikey
+
+These rules are the same in Broken Friends (its `CLAUDE.md`), so that
+both projects feel like one workflow.
+
+- **Ask Mikey only about listening and taste.** Do not ask him
+  technical questions. Read what the app already reports (Diagnostics,
+  the measuring tools). If the data you need is not there, add a probe
+  or a check, and add a line to `docs/notes/for-mikey.md` only for what
+  needs his ears, his phone or his accounts.
+- **Report facts that you checked.** Say what you ran, read or
+  measured, and what it showed. If you did not check a statement,
+  mark it `[unverified]`.
+- **A behavior that agrees with the queue or a decision is not a weak
+  spot.** If you think that the item or the decision is wrong, ask
+  Mikey about it as a taste question.
+- **If you cannot tell if a behavior is intended, say so.** Name the
+  item or the decision that does not answer it.
+- **End a session's summary with Weak spots:** the real problems that
+  you found, or "none". Do not write a fixed number.
+
+## Writing style: about 80% Simplified Technical English
+
+Write docs, explanations, PR text, session summaries and doc comments
+about 80% of the way to ASD-STE100 (Simplified Technical English). Use
+its main rules. If a rule makes the text unclear or unnatural, do not
+use that rule.
+
+- Keep sentences short: steps 20 words at most, descriptions 25.
+- Write one instruction in each sentence, and start it with a verb.
+- Use the active voice and the present tense when possible.
+- Use simple, common words, each with one meaning ("use," not
+  "utilize"). Explain a technical name the first time a doc uses it.
+- Keep "the," "a" and "this." Do not write in note-style fragments.
+- Write about one topic in each paragraph, 6 sentences at most.
+- Use a numbered list for steps in order, a bullet list for the rest.
+- Put a condition before its instruction: "If the build fails, read
+  the log."
+
+This style is for prose only, not for code or for Mikey's own files.
+When you edit an old doc, write the parts that you change in this style.
+
+## Build and test
+
+- Page: `python3 -m http.server 8000`, then <http://localhost:8000>
+  (ES modules don't load over `file://`).
+- **The gate** (item 103): `tools/gate.sh` runs what CI holds a merge to
+  (`core`, `sketch`, `node`, `baseline`, `docs`, or all); the slow renders
+  are the nightly's (`.github/workflows/nightly.yml`) and hold nothing.
+  CI's run is the gate (Mikey, 2026-11-17): run a part locally only to find
+  a failure, and never two heavy runs at once (about 7 GB here). The long
+  pieces' full check is CI's `longform` workflow, in shards, against
+  main's table (`node tools/longform.mjs --shard`, `--merge`, `--against`).
+- Tests (Node 22): `worklet`, `core-host`, `data`, `dials`, `fit`,
+  `golden`, `picks`, `quality`, `player`, each as
+  `node test/<name>.test.mjs`. Those that read what the generator decides
+  (and `stats`, `dials`, `gen-golden`, `octave`: `tools/gen-lib.mjs`) need
+  the tools' build first: `tools/build-core.sh --tools`.
+- Generation goldens (item 77): `node tools/gen-golden.mjs --check`; after
+  a change meant to move what is generated, run it without `--check` and
+  say in the PR which cases moved.
+- What a loop with nothing picked draws, and what never comes (item 117):
+  `node tools/unasked.mjs` (`--check` in the gate).
+- Balance lock: `node tools/stats.mjs --check`. Core baseline:
+  `node tools/baseline.mjs` (`--update` on purpose, saying what moved).
+- Core: `tools/build-core.sh` rebuilds `js/dlplayer.wasm`, and `--check`
+  proves it matches the source; `cd core && cargo test --locked`; golden
+  renders `tools/golden.sh --strict <target>`. More in `core/AGENTS.md`.
+- Measuring: `tools/measure.mjs` (on the player, in Node: loudness, the
+  voice probe, refusals, endings), `tools/perf.mjs`, `tools/views.mjs`;
+  usage in the queue's standing rules and the file headers. The app's
+  controls on the player, a check each: `node tools/rows.mjs` (`--long`
+  adds the length slider's minute).
+- Accessibility (item 114): `node tools/a11y.mjs` (Playwright's Chromium;
+  CI's `a11y` job in the export workflow runs it). Not the gate: it takes
+  minutes and a browser.
+- The old address (session 31a): `old-address/` is its own Worker (deployed
+  under the old name, `driftloom`), sending every path on to the new one;
+  `test/old-address.test.mjs` checks it in Node, `node tools/old-address.mjs`
+  in Chromium (an installed app sent on, its Library moved; CI's `move` job in
+  the export workflow).
+- Icons (item 120): every size from `icons/icon.svg` by `node tools/icons.mjs`
+  (`--check` the safe zones; ImageMagick 7 with librsvg).
+- Docs: `node tools/check-docs.mjs`. The toolbox, every tool with its
+  limits: `tools/README.md` (look there before you check a thing by hand).
+- Android (item 107): `cd android && ./gradlew assembleDebug` (needs the NDK
+  `android/gradle.properties` pins and rustup; the core is built native by
+  `android/native/build.sh`); `cd android/native && cargo test`;
+  `android/README.md` says the rest. CI builds it on PRs that touch `android/` or the app's files
+  (`.github/workflows/android.yml`, not part of the gate yet).

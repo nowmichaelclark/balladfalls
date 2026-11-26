@@ -1,0 +1,699 @@
+# The per-loop choices and their tables (queue items 54 to 73, 76b to 76d and
+# 78): everything the choices decide by number, in one place. The format is
+# in js/data.js; js/choices.js reads this and holds the rest: the draws
+# and each choice's eligibility test (which loops can have it).
+#
+# Mikey's rules for every choice (2026-10-18; core/AGENTS.md, "Rules for
+# sound items"): today's behavior stays one option of every choice, never
+# replaced; each choice is drawn per loop, from the loop's seed on a stream
+# of its own, so no other draw moves and a loop replays the same way; most
+# loops get one or two of the changes.
+#
+# A loop first draws how many changes it gets (changes, below), then which of
+# the choices it is eligible for (weighted by the vibes, without repeats),
+# then each chosen one's option other than today's. A choice the loop is not
+# eligible for is never drawn, so a loop eligible for fewer changes than it
+# drew gets all it can. Batch 6's own draws (the choices drawn alone, and
+# the settings tuningOffset, planingSevenths, lowBell and twang) count
+# against the changes a loop drew, and the list fills only what they leave
+# (queue item 101h, Mikey 2026-11-17): a loop that drew two changes and
+# plays twang gets one from the list.
+
+[choices all]
+# How many changes a loop gets: none 15%, one 45%, two 30%, three 10%. A
+# taste call, for Mikey's ears: most loops get one or two (his rule), a few
+# stay as they are, and three is rare enough that a loop never feels like a
+# demo of the batch. With batch 6's draws counted (above), over 10,000
+# loops: none 4.8%, one 39.2%, two 39.3%, three or more 16.6%.
+changes = 0 15, 1 45, 2 30, 3 10
+# A choice's lean for one vibe is held between these: toward x1.5 to x3,
+# away x0.2 to x0.5, never 0 (docs/ears/batch-5.md, "The [JUDGMENT] lines").
+# A vibe not named keeps x1.
+lean = 0.2 3
+
+# The choices, in the order the draw walks them. Each is
+# `options` (today's first, then what it plays when picked, by weight, each
+# leaned by its `optionVibes.NAME`), `weight` (how often it is picked among
+# those a loop is eligible for, before the vibes lean it; 1 if missing) and
+# `vibes` (the vibes that lean it on or away). `ownStream = 1` (batch 6,
+# queue item 101): the option a picked choice plays is drawn on a stream of
+# its own (the loop's seed and the choice's place), not on the choices'
+# stream, so options added to a choice that had one move no other choice's
+# draw. A choice without it draws its option on the choices' stream, as
+# tunedKick always has. `alone = SHARE` (queue item 101b): the choice is not
+# in the list's draw. It is drawn by itself, on a stream of its own,
+# for that share of the loops it may go to (leaned by `vibes`, never to 0),
+# so it moves no other choice's option; it counts against the changes the
+# loop drew (above), so a loop that has it gets one fewer from the list.
+
+# glass (queue item 59; the prototypes, approved by Mikey 2026-10-10): on
+# a chord's first beat, now and then, two or three of its notes ring out
+# high as a soft FM bell. For any loop with a chord of two notes or more
+# (a one-note "chord" never rings out). No vibe leans: the batch's table
+# has none for the instruments (for Mikey's ears).
+[choice glass]
+options = today 1, on 1
+
+# dubStab (queue item 60; Ears 4, round 4, approved 2026-10-16): a soft
+# chord stab on the offbeat over a busy groove, thrown into the echo.
+# Busy loops only: drums, and seven or more notes a second.
+[choice dubStab]
+options = today 1, on 1
+
+# The chapel organ (queue item 61; Ears 4, round 7, approved 2026-10-16):
+# a pipe organ the loop holds its chords on, outside the voice budget.
+# For any loop that plays a chord. No vibe leans (for Mikey's ears).
+[choice organ]
+options = today 1, on 1
+
+# The wash (queue item 62; Ears 4, round 5, approved 2026-10-16): a slow
+# swell of air every 17-26 s, under whatever the loop plays. Any loop;
+# leaned toward glacial, rainy, breezy and droning (item 76b).
+[choice wash]
+options = today 1, on 1
+vibes = glacial 1.5, rainy 1.5, breezy 1.5, droning 1.5
+
+# The arc (queue items 63 and 63b; the prototypes, approved 2026-10-10):
+# the whole mix breathing dark and bright over minutes, in one of two
+# shapes (setting arc, below). Any loop. Its weight among the choices, and
+# the vibes that lean it on or away: calm, vast vibes toward it (x2), lively
+# ones away (x0.4), glacial x2.5.
+[choice arc]
+options = today 1, on 1
+weight = 1
+vibes = hazy 2, foggy 2, misty 2, frosty 2, still 2, meditative 2, spacious 2,
+    floating 2, hypnotic 2, mysterious 2, reflective 2, wondrous 2, droning 2,
+    dreamy 2, moonlit 2, dusky 2, cosmic 2, rainy 2, bouncy 0.4, lively 0.4,
+    skipping 0.4, zany 0.4, playful 0.4, bubbly 0.4, breezy 0.4,
+    whimsical 0.4, soaring 0.4, groovy 0.4, glacial 2.5
+
+# tunedKick (queue item 67; Ears 8, approved 2026-10-18): the kick on the
+# key's note, short as today or a long boom (setting kick, below). Any
+# loop with a kick. Short and long, half and half; long leans toward
+# booming and the rest of batch 5's table (and pulsing and groovy, item
+# 76b), away from the hushed, the soothing and glacial.
+[choice tunedKick]
+options = today 1, short 1, long 1
+optionVibes.long = booming 2.5, hypnotic 2, steady 1.5, cool 1.5, pulsing 1.5,
+    groovy 1.5, hushed 0.4, tiptoeing 0.4, twinkling 0.4, serene 0.5,
+    soothing 0.5, glacial 0.4
+
+# subDuck (queue item 68; Ears 8, approved 2026-10-18): the bass alone dips
+# at each kick (setting subduck, below). Only on a loop with a kick and a
+# bass line (Mikey's rule; the sketch's test). Batch 5's vibe table for it
+# (groovy, pulsing and chill from item 76b).
+#
+# deepDuck (queue item 101a; batch 6 #6, Ears 13, approved by Mikey
+# 2026-11-08): its deep, slow kind, `deep` (setting subduck, below), half and
+# half with the approved one, `on`. The batch's vibe table for it: toward the
+# pulsing and the hypnotic, away from the calm vibes (x0.3 to x0.4, never 0:
+# batch 5's way of keeping a choice from them).
+[choice subDuck]
+options = today 1, on 1, deep 1
+ownStream = 1
+weight = 1
+vibes = bouncy 2, lively 1.5, skipping 1.5, steady 1.5, groovy 1.5,
+    pulsing 1.5, chill 1.5, restful 0.4, serene 0.4, soothing 0.4, hushed 0.4
+optionVibes.deep = pulsing 2.5, groovy 2, hypnotic 2, droning 1.5,
+    booming 1.5, cruising 1.5, hushed 0.3, serene 0.3, restful 0.3,
+    soothing 0.3, tender 0.4, peaceful 0.4
+
+# lateFloor (queue item 69; Ears 8, approved 2026-10-18): after a load the
+# kit and the bass wait 8-30 s (setting latefloor, below). Only on a loop
+# with drums or a bass and something else that plays from its first
+# second, so it never starts with nothing. Batch 5's vibe table for it
+# (cruising, pulsing and glacial from item 76b).
+#
+# slowOpening (queue item 101a; batch 6 #9, Ears 13b, approved by Mikey
+# 2026-11-09): its long end, `slow`, a wait of 40-90 s and the floor fading
+# up (setting latefloor, below), half and half with the approved one, `on`,
+# which plays as it always has. The batch's vibe table for it.
+[choice lateFloor]
+options = today 1, on 1, slow 1
+ownStream = 1
+weight = 1
+vibes = hypnotic 2, meditative 1.5, spacious 1.5, wondrous 1.5,
+    adventurous 1.5, cruising 1.5, pulsing 1.5, enthusiastic 0.4,
+    skipping 0.4, bouncy 0.5, glacial 0.4
+optionVibes.slow = glacial 2, meditative 2, spacious 2, misty 1.5, rainy 1.5,
+    moonlit 1.5, cosmic 1.5, bouncy 0.4, lively 0.4, zesty 0.4,
+    enthusiastic 0.4
+
+# floorDrop's shapes (queue item 70; Ears 8, approved 2026-10-18): each of
+# the loop's floor drops draws a shape (setting floordrop, below). Only
+# where a floor can drop: a loop of 4 bars or more, with drums or a bass.
+[choice floorDrop]
+options = today 1, shapes 1
+weight = 1
+
+# pedalBass (queue item 71; Ears 8, approved 2026-10-18): the bass holds
+# the tonic in a rhythm under moving chords (setting pedal, below). Only
+# over a held, pulse, dub or walking bass. Batch 5's vibe table for it.
+[choice pedalBass]
+options = today 1, on 1
+weight = 1
+vibes = hypnotic 2, steady 1.5, meditative 1.5, cool 1.5, mysterious 1.5,
+    joyful 0.5, triumphant 0.5, merry 0.5
+
+# padSweep (queue item 72; Ears 8, approved 2026-10-18): the chord layer
+# swings dark and bright (setting padsweep, below). Only where the chords
+# are a sustained voice. Batch 5's vibe table for it (glacial, dreamy and
+# cosmic from item 76b).
+#
+# wideSweep (queue item 101a; batch 6 #7, Ears 13, approved by Mikey
+# 2026-11-08, both versions): its two far ends, `wide` (a slow ride of
+# about four octaves) and `fast` (a swing of two or three every few
+# seconds), each with its ranges (setting padsweep, below), a third each
+# with the approved one, `on`; `fast` only on a loop with a kit. The batch's
+# vibe table for each, the calm vibes away (x0.3 to x0.4, never 0).
+[choice padSweep]
+options = today 1, on 1, wide 1, fast 1
+ownStream = 1
+weight = 1
+vibes = hypnotic 2, floating 1.5, wondrous 1.5, hazy 1.5, strange 1.5,
+    glacial 1.5, dreamy 1.5, cosmic 1.5, still 0.4, restful 0.4, hushed 0.4,
+    serene 0.4
+optionVibes.wide = hypnotic 2, cosmic 1.5, bubbly 1.5, experimental 1.5,
+    groovy 1.5, still 0.3, restful 0.3, hushed 0.3, serene 0.3, glacial 0.4,
+    meditative 0.4
+optionVibes.fast = lively 1.5, pulsing 1.5, soaring 1.5, zesty 1.5, still 0.3,
+    restful 0.3, hushed 0.3, serene 0.3, glacial 0.4, meditative 0.4
+
+# padWow (queue item 101b; batch 6's #3, approved by Mikey 2026-11-08): a
+# slow tape-like wow on the chord layer alone, the kick and the bass steady
+# (setting padwow, below). For any loop that plays a chord. Drawn alone,
+# counted against the changes (above), for 15% of the loops that may have it before the vibes
+# lean it: the conservative share, for Mikey's ears. The batch's [JUDGMENT]
+# row: toward the hazy vibes, away from the clear and bright ones.
+[choice padWow]
+options = today 1, on 1
+alone = 0.15
+vibes = hazy 2.5, wistful 2, dreamy 2, misty 1.5, dusky 1.5, rainy 1.5,
+    mellow 1.5, foggy 1.5, crisp 0.3, bright 0.4, triumphant 0.4, frosty 0.5,
+    refreshing 0.5
+
+# widePad (queue item 101c; batch 6's #4, approved by Mikey 2026-11-09): the
+# chord layer much wider, on the side only, so the mono render and the fold to
+# mono stay exactly as they are; the bass, the kick and every other part as
+# they were. A space option: the chords' spread, its most and the width
+# ceiling raised, the chords' side above 250 Hz (core/src/space.rs, the
+# `wide` settings, the Ears 13b sketch's numbers), all scaled by the loop's
+# width, so a sparse loop stays at the narrow end. `on` is wide from the
+# start; `late` opens from the baseline's width to the same over 60-120 s
+# (`space.wide-open`), as two records open theirs late; half and half. For
+# any loop that plays a chord. Drawn alone, counted against the changes (above), on a
+# stream of its own, for 15% of the loops that may have it before the vibes
+# lean it: padWow's conservative share, for Mikey's ears. The batch's
+# [JUDGMENT] row: toward the spacious and floating vibes, away from the
+# intimate and the minimal; the late kind has no row of its own.
+[choice widePad]
+options = today 1, on 1, late 1
+ownStream = 1
+alone = 0.15
+vibes = spacious 2, floating 2, soaring 2, dreamy 1.5, hazy 1.5, cosmic 1.5,
+    glacial 1.5, intimate 0.3, minimal 0.4, cozy 0.5, plucky 0.5
+
+# tripletKit (queue item 101d; batch 6's #1, approved by Mikey 2026-11-09): a
+# kit in threes, the 12/8 shuffle (core/src/generator/kit.rs). The loop's own
+# kit, re-timed and filled: the eighth moves to two thirds of the beat (the
+# shuffle's place), a sixteenth to the third nearer it, and the first third
+# of every beat gets the loop's own hat at its own velocities and density, so
+# a beat plays three; the kick stays on the beat, and nothing is louder than
+# the loop's own kit plays it. For any loop with a kit but in 6/8 (its beat's
+# thirds are the eighths it already plays). Drawn alone, counted against the
+# changes (above), for 15% of the loops that may have it before the vibes lean it:
+# the batch's conservative share, for Mikey's ears. The batch's [JUDGMENT]
+# row: toward the swaying and skipping vibes, away from the still ones.
+[choice tripletKit]
+options = today 1, on 1
+alone = 0.15
+vibes = swaying 2, skipping 2, bubbly 1.5, groovy 1.5, playful 1.5,
+    whimsical 1.5, cozy 1.5, dusky 1.5, glacial 0.3, still 0.3, reverent 0.4,
+    crisp 0.5
+
+# dottedPulse (queue item 101d; batch 6's #8, approved by Mikey 2026-11-09,
+# both versions): a part every three eighths, a lilt against the bar
+# (core/src/generator/kit.rs). `pulse` adds a soft rim (the hand kit's tap)
+# every six steps across the kit's layer, at its own level (setting
+# dottedpulse, below); `kick332` writes the kick whole on a 3-3-2 of the bar's
+# eighths in place of the loop's own, only where the kit has a kick; half and
+# half. For a loop with a kit in a bar of 16 steps (4/4, where it was heard),
+# never beside a kit in threes (tripletKit is drawn first). Drawn alone,
+# counted against the changes (above), on a stream of its own, for 15% of the loops that may
+# have it before the vibes lean it: the batch's conservative share, for
+# Mikey's ears. The batch's [JUDGMENT] row, one for both versions: toward the
+# groovy and the quirky, away from the still.
+[choice dottedPulse]
+options = today 1, pulse 1, kick332 1
+ownStream = 1
+alone = 0.15
+vibes = groovy 2, quirky 1.5, cheeky 1.5, mischievous 1.5, intricate 1.5,
+    jazzy 1.5, still 0.4, restful 0.4, glacial 0.4
+
+# colorTone (queue item 101e; batch 6's #5, approved by Mikey 2026-11-08): a
+# held 13th over the major chords and an 11th over the minor ones, on a share
+# of the chords (setting colortone, below), voiced just above the chord's top
+# note (C6 at the most), soft, swelling in and letting go
+# (core/src/generator/color.rs decides which chords and where;
+# core/src/blocks/color_tone.rs is the tone, the sketch's). For any loop with a
+# chord that can take one: a major or minor third, a perfect fifth or none,
+# the color not in it already, and in the chord's scale. Drawn alone,
+# counted against the changes (above), for 15% of the loops that may have it before the vibes
+# lean it: the batch's conservative share, for Mikey's ears. The batch's
+# [JUDGMENT] row: toward the jazzy vibes, away from the minimal and the still.
+[choice colorTone]
+options = today 1, on 1
+alone = 0.15
+vibes = jazzy 2.5, intricate 2, mellow 1.5, velvety 1.5, dreamy 1.5,
+    cosmic 1.5, bubbly 1.5, golden 1.5, minimal 0.4, still 0.5, reverent 0.5,
+    earthy 0.5
+
+# The arc's settings (queue items 63 and 63b; Mikey, 2026-10-21 and 22):
+# every variable of the arc, named, with the range a loop draws it from, in
+# this one place, so phase 2's requests can pin them (docs/CORE.md, promises
+# 9 and 11) and a later slider or a game host can set them. `arcOf` draws a
+# loop's from them; the core plays it (core/src/blocks/arc.rs).
+#
+# The two shapes: `deep` is the prototype's swing, 300 Hz to 9 kHz and back,
+# lingering dark (under 700 Hz for about half of every swing); `dip` is open
+# at 9 kHz but for one smooth dip, over `dip` of the swing, to `floor`.
+# Calm, vast vibes lean deep and long; bright, lively ones lean dip and short.
+# Misty leans toward the arc and its calm period, but dip, not deep (queue
+# item 76b: misty the lighter of the misty-foggy pair). Glacial (item 76b;
+# Mikey, 2026-10-29) leans toward the arc and toward deep, and swings slower
+# than any other loop.
+[setting arc]
+# Which shape: deep about 1 in 3, dip about 2 in 3, each leaned by vibes.
+shapes = deep 1, dip 2
+shapeVibes.deep = hazy 2, foggy 2, frosty 2, still 2, meditative 2,
+    spacious 2, floating 2, hypnotic 2, mysterious 2, reflective 2,
+    wondrous 2, droning 2, dreamy 2, moonlit 2, dusky 2, cosmic 2, rainy 2,
+    glacial 3
+shapeVibes.dip = sunny 2, bright 2, happy 2, joyful 2, merry 2, bouncy 2,
+    lively 2, skipping 2, zany 2, playful 2, bubbly 2, breezy 2, whimsical 2,
+    soaring 2, groovy 2, misty 2, glacial 0.25
+# The swing's period, in seconds: whichever of the calm and bright lists
+# a loop's vibes weigh more picks its range; neither, the rest's. A calm
+# loop with glacial among its vibes takes glacial's own, 5-8 minutes
+# (Mikey), and 8-12 when one of glacialNear is with it.
+period.calm = 180 300
+period.bright = 90 150
+period.rest = 120 300
+period.glacial = 300 480
+period.glacialNear = 480 720
+calm = hazy foggy misty frosty still meditative spacious floating hypnotic mysterious reflective wondrous droning dreamy moonlit dusky cosmic rainy glacial
+bright = sunny bright happy joyful merry bouncy lively skipping zany playful bubbly breezy whimsical soaring groovy
+# The vibes that, with glacial, make its swing slower still (the brain's
+# list, for Mikey's ears).
+glacialNear = still serene meditative spacious floating frosty foggy misty hushed droning
+# A loop with glacial among its vibes that didn't draw the arc among its
+# choices plays it anyway with this chance times glacial's weight in the
+# loop, outside the choices (`arcPlays`; the brain, 2026-10-29: the arc is
+# what glacial is). For Mikey's ears.
+glacialChance = 0.6
+# Where a loop starts on its swing (0 the darkest point, 0.5 the
+# brightest): deep, a bright point (the cutoff 4.9 to 9 kHz; the
+# prototype started every loop closed, at 300 Hz: a taste call, for
+# Mikey's ears); dip, anywhere in the open part.
+from.deep = 0.4 0.6
+# The dip's floor, in Hz.
+floor = 800 1500
+# The share of the swing the dip takes (open at 9 kHz for the rest). Kept
+# at 35% for every period (Mikey, 2026-10-24): within twice its floor for
+# 15-45 s of a 2-5 minute swing, 11-22 s of a bright loop's short one.
+dip = 0.35
+
+# The tuned kick's settings (queue item 67; Ears 8's tunedKick, approved by
+# Mikey 2026-10-18; docs/ears/batch-5.md): every variable of it, named, with
+# its range, in this one place, as the arc's are. `kickOf` draws a loop's
+# from them and works out its level at load; the core plays it
+# (core/src/blocks/kick.rs).
+#
+# The kick and the soft kick keep today's sweep and land on the key's note
+# between G1 and D2, where the records' kicks sit; a key of D# to F# takes
+# its fifth. Short is today's shape falling at `short` dB a second; long is
+# today's punch (213 dB a second) down to a tail that rings on at `long`.
+[setting kick]
+# The note: the lowest and highest, as MIDI notes (G1, D2).
+note = 31 38
+# The falls, in dB a second.
+short = 180 260
+long = 45 80
+# Level by ear: each kick's K-weighted energy against today's kick's
+# (`loud`, 1: no louder), and a long boom's tail as loud as fits within
+# `tailLoud` of today's by ear (1.26: +1 dB) and `band` of today's kick's
+# own energy under 60 Hz and at 60-120 Hz (2: +3 dB).
+loud = 1
+tailLoud = 1.26
+band = 2
+# A wandering loop that plays a tuned kick may change its kick at the top
+# of a pass ("Let the loop wander"; Mikey, 2026-10-18), to today's or the
+# other tuned one, half and half: `swap` is how often a pass does (a taste
+# call, for Mikey's ears). The pass's first kick chokes the last one
+# still ringing, as every tuned kick's next hit does.
+swap = 0.25
+
+# subDuck's settings (queue item 68; Ears 8's subDuck, approved by Mikey
+# 2026-10-18): the bass channel alone dips at each kick and comes back, so
+# the kick and the sub take turns. Every variable, named, with its range;
+# `subDuckOf` draws a loop's; the core plays it (core/src/blocks/sub_duck.rs).
+[setting subduck]
+# The dip at a kick of velocity 0.8 or more, in dB (never deeper than 9:
+# the records' 20 dB "gates" are a bass playing off the beat).
+depth = 5 9
+# How long it takes to come back, in seconds, and never longer than this
+# share of a beat.
+recover = 0.15 0.25
+beat = 0.8
+# deepDuck's own ranges (the option `deep`; batch 6 #6): the dip in dB, 16 at
+# the most, and the recovery in seconds, the sketch's 14 dB and 0.6 s inside
+# them (measured on the bass stem: 11 to 14 dB down at its deepest, 30 ms
+# after a kick, and back within 1 dB 0.53 to 0.61 s after it). The recovery
+# is never longer than the loop's kick spacing (the median gap between one
+# kick and the next), so the bass is back before the next kick takes it
+# down. The share of a beat above is the approved kind's alone.
+deep.depth = 12 16
+deep.recover = 0.55 0.75
+
+# lateFloor's settings (queue item 69; Ears 8's lateFloor, approved by Mikey
+# 2026-10-18): after a load the kit and the bass sit out a while, then
+# arrive, as the records open with the pads and let the beat come to them.
+# Every variable, named, with its range; `lateFloorOf` draws a loop's; the
+# engine plays it (js/engine.js).
+[setting latefloor]
+# How long they wait, in seconds, rounded to this many bars (and at least
+# that many).
+seconds = 8 30
+round = 2
+# Only where something else plays within this many seconds of the start.
+first = 1
+# In what order they arrive: together, the kit first and the bass later,
+# or the bass first.
+orders = together 40, kitFirst 35, bassFirst 25
+# The gap between the two arrivals (kitFirst, bassFirst), drawn per loop
+# (queue item 76d; Mikey, 2026-10-29: "it doesn't need a set come in
+# time"), in whole bars with these weights, weighted toward the short end
+# (the conservative choice, "for Mikey's ears"; item 69's fixed gap was two
+# bars). Never past `maxGap`, and never past the end of the loop's first
+# pass when the first arrival is inside it (otherwise within one loop's
+# length of the first), so the second part comes in inside the loop's own
+# pass, not after another.
+gap = 1 30, 2 24, 3 16, 4 11, 5 7, 6 5, 7 4, 8 3
+maxGap = 8
+# The gaps from this many bars up are the long end the vibes lean.
+gapLong = 3
+# The vibes' lean on the gap's long end and on the wait itself (item 76d,
+# "for Mikey's ears"): calm, vast vibes toward long, lively ones toward
+# short. A lean on the wait bends its one draw (u^(1/lean) across the
+# seconds above), so no other draw moves, and a loop without vibes waits as
+# before.
+longVibes = glacial 1.6, droning 1.6, meditative 1.6, serene 1.6, still 1.6,
+    spacious 1.6, floating 1.6, dreamy 1.6, hypnotic 1.6, lively 0.5,
+    enthusiastic 0.5, bouncy 0.5, skipping 0.5, groovy 0.5, pulsing 0.5,
+    cruising 0.5
+# slowOpening's own (the option `slow`; batch 6 #9): the wait drawn from
+# these seconds instead, leaned long by the vibes above as the approved wait
+# is (the sketch: up to 90 s), and a fade: from each one's first hit, the
+# kit's and the bass's velocity rise from nothing to their own over this many
+# seconds, drawn per loop (the sketch: 12 s), never over 20. The approved
+# lateFloor (`on`) arrives at once, as it always has.
+slow.seconds = 40 90
+slow.fade = 4 20
+
+# floorDrop's shapes (queue item 70; Ears 8, approved by Mikey 2026-10-18):
+# a loop that draws them gives each of its floor drops (item 58: the kick
+# and the bass out for a bar or two, with "Let the loop wander" on) a shape
+# of its own. Every variable, named, with its range; the generator plays
+# them, at the end of drift's draws (js/generator.js, `drift`). The drops
+# themselves, their rate and where they fall, stay item 58's.
+[setting floordrop]
+# Each drop's shape, by weight: single (item 58's), stagger (the kick back
+# on time, the bass `stagger` bars later), stutter (`stutter` short drops,
+# one every two of their lengths), long (`long` seconds, or the whole pass
+# in a loop of `wholeUnder` bars or fewer). Stagger and stutter need a bass
+# line (Mikey's rule); without one a drop is single or long.
+shapes = single 40, stagger 25, stutter 20, long 15
+needBass = stagger stutter
+# batch 5's vibe table, each shape's own; single and stagger have none.
+shapeVibes.stutter = hypnotic 1.5, lively 1.5, mischievous 1.5, serene 0.4,
+    soothing 0.4, restful 0.4
+shapeVibes.long = hypnotic 2, spacious 2, meditative 1.5, reflective 1.5,
+    bouncy 0.5, skipping 0.5
+# The shapes follow the bar's length (Mikey's rule, the sketch's way): a
+# stagger's bass waits two bars when a bar is shorter than `staggerShort`
+# seconds, one otherwise; a stutter's drops last two bars when a bar is
+# shorter than `stutterShort` seconds, one otherwise, and there are three
+# or four of them, half and half (fewer where the loop has no room: under
+# two, the drop is single); a long drop is about `longSeconds`, 4-8 bars.
+staggerShort = 2.5
+stutterShort = 2.2
+stutter = 3 4
+longSeconds = 12
+longBars = 4 8
+wholeUnder = 8
+
+# pedalBass's settings (queue item 71; Ears 8's pedalBass, approved by Mikey
+# 2026-10-18): the bass holds the key's tonic in a rhythm while the chords
+# move, now and then stepping to one neighbor and back. Every variable,
+# named, with its range; the generator plays it (js/generator.js,
+# `pedalBass`).
+[setting pedal]
+# The bass styles it can take over (the drone, the chug and the sparse bass
+# stay as they are).
+styles = held pulse dub walk
+# Its rhythm, by weight: one note a bar, two, one a beat, or off the beat
+# between the kicks.
+rhythms = held 25, half 30, quarter 25, offbeat 20
+# Its neighbor, in semitones from the tonic, by weight, each only where the
+# loop's mode has it: a whole tone up, the tone below, the flat second, the
+# fifth. The flat second leans toward mysterious and strange and away from
+# the happy vibes (batch 5's table).
+neighbors = 2 3, -2 2, 1 3, 7 2
+neighborVibes.1 = mysterious 2, strange 2, happy 0.3, sunny 0.3, sweet 0.3,
+    peaceful 0.3
+# How often a note steps to the neighbor.
+share = 0.1 0.25
+# The bass's register (roundBass, queue item 56): the lowest and highest
+# MIDI notes.
+low = 36
+high = 57
+
+# padSweep's settings (queue item 72; Ears 8's padSweep, approved by Mikey
+# 2026-10-18): a lowpass on the chord layer swings open and shut every 12-28
+# s while the rest stays as bright as it was. Every variable, named, with its
+# range; `padSweepOf` draws a loop's; the core plays it
+# (core/src/blocks/pad_sweep.rs).
+[setting padsweep]
+# The chord voices it sweeps: the sustained ones (the sketch's list).
+sustained = pad softpad moogpad analogpad accordion organ choir vowel hum
+# Where it closes (Hz), how far it opens (octaves), one swing (seconds),
+# and its resonance (dB, as a BiquadFilterNode's Q).
+lo = 450 800
+oct = 2 3.5
+period = 12 28
+q = 0.7 1.2
+# wideSweep's two (batch 6 #7), each with the same four. wide closes near
+# 380 Hz and opens 3.5 to 4.5 octaves over a 14-20 s swing (the sketch: 380
+# Hz, 4.2 octaves, 16 s, Q 1.0); fast swings 2 to 3 octaves every 5-8 s (the
+# sketch: 550 Hz, 2.6 octaves, 6.5 s, Q 0.9). The ranges around the sketch's
+# are a taste call, for Mikey's ears.
+wide.lo = 350 410
+wide.oct = 3.5 4.5
+wide.period = 14 20
+wide.q = 0.8 1.2
+fast.lo = 450 650
+fast.oct = 2 3
+fast.period = 5 8
+fast.q = 0.7 1.1
+
+# padWow's settings (queue item 101b): the main swing's depth in cents and
+# its rate in Hz, drawn per loop. The sketch Mikey approved was 14 cents at
+# 0.5 Hz (the records' median is nearer 20; 14 is the conservative pick);
+# the ranges around it are a taste call, for Mikey's ears. A third of the
+# depth swings again at 0.37 of the rate, so the chords move up to a third
+# more than the depth: at 14.5 they reach 19.5 cents, within the batch's 20,
+# which the block's guards hold every loop to (`blocks/pad_wow.rs`).
+[setting padwow]
+depth = 12 14.5
+rate = 0.4 0.6
+
+# dottedPulse's settings (queue item 101d): the pulse's velocity on the rim
+# (the hand kit's tap). The lever's 0.2, the kit's ghost rim, read 38 to 43 LU
+# under the loop, too quiet to hear as a lilt; this level is measured to sit
+# where the kit's soft hits do (the PR has the figures), for Mikey's ears.
+[setting dottedpulse]
+pulse = 0.5
+# The 3-3-2's room, in dB: a bar's kicks (their velocities squared) no more
+# than this over the loop's own kicks in that bar (the batch's low guard: the
+# lever's moved kicks raised dust #69's 20-60 Hz past 1 dB).
+low = 1
+
+# colorTone's settings (queue item 101e): the share of a loop's chords that
+# take the color, each chord drawn on the loop's own stream. The sketch drew
+# about 6 chords in 10, but its reading of the chords left many out; 0.45
+# holds the color over 43% of the chord time on 600 corpus loops, inside the
+# batch's 25 to 50% (0.55 held it over 52%). For Mikey's ears.
+[setting colortone]
+share = 0.45
+
+# planingSevenths (queue item 101f; batch 6's #10, approved by Mikey
+# 2026-11-09): an option of the progression's per-loop draw, today's first.
+# Every chord a major seventh (the root, the major third, the fifth and the
+# major seventh), the roots a whole step or a minor third apart, either way,
+# turning back where they would go more than a fourth from the tonic: the
+# shape sliding rather than a progression in a key (Ears 13b's lever, its
+# walk unchanged). The tune, the bass and everything else that reads the key
+# follow the planed chord: each of their notes in the chord's own Lydian
+# scale, a note that is not moving to the nearest that is, a chord tone where
+# two are as near (core/src/generator/planing.rs). Drawn per loop at load on a
+# stream of its own, outside the list of choices and counted
+# against a loop's changes (above), as tuningOffset is; any loop may plane.
+[setting progression]
+# The share of loops that plane before the vibes lean it: 0.15, the batch's
+# conservative share, for Mikey's ears.
+planing = 0.15
+# The batch's [JUDGMENT] row: toward the dreamy and floating vibes, away from
+# the earthy, the reverent and the minimal (never 0). It leans the share.
+vibes = dreamy 2, floating 2, jazzy 1.5, cosmic 1.5, wondrous 1.5,
+    bubbly 1.5, earthy 0.5, reverent 0.5, minimal 0.5
+
+# lowBell (queue item 101g; batch 6's #2, Ears 13, approved by Mikey
+# 2026-11-08, both kinds): a struck low bell on the chord's root, between D2
+# and C#3, at each chord whose root changes or the same root after 4 s; a new
+# voice of the core (core/src/blocks/low_bell.rs, the sketch's sound and its
+# level rule), which the player strikes from the chords it knows. Drawn per
+# loop at load on a stream of its own, outside the list of choices and
+# counted against a loop's changes (above), as tuningOffset is: for any
+# loop that plays a chord. `struck` is the sketch's 35 ms attack, `swell`
+# its swelling kind's 0.4 s; half and half.
+[setting lowbell]
+# The share of loops that play the bell before the vibes lean it: 0.15, the
+# batch's conservative share, for Mikey's ears.
+share = 0.15
+kinds = struck 1, swell 1
+# The batch's [JUDGMENT] rows, one a kind (never 0): each leans its own
+# kind's share, so a glacial loop leans to the swell and a mysterious one to
+# the strike.
+kindVibes.struck = mysterious 2, moonlit 2, chiming 2, reflective 1.5,
+    starry 1.5, wistful 1.5, strange 1.5, cosmic 1.5, zesty 0.4, goofy 0.5,
+    bouncy 0.5, sunny 0.5
+kindVibes.swell = glacial 2, serene 1.5, still 1.5, floating 1.5,
+    meditative 1.5, lively 0.4, zesty 0.4, bouncy 0.5
+# The same root is struck again after this many seconds (the sketch's).
+regap = 4
+# dropSpotlight (queue item 101g; batch 6's #11, batch 5's, Ears 13b,
+# approved by Mikey 2026-11-09, struck and swelling): in a loop that plays the
+# bell and whose floor can drop (4 bars or more, with a kick or a bass), the
+# bell may step forward into the floor drops instead: struck only in them, on
+# the drop's first beat (alone there, at its least, where the chords have left
+# too) and at each new root while it lasts, at the Ears 13b sketch's louder
+# level, and damped as the floor comes back (the player,
+# core/src/player/sequencer.rs). Its kind is the loop's bell's. Drawn per
+# loop on a stream of its own: `spotlight` of those loops before the vibes
+# lean it (half and half with the bell on every chord: the batch's way with a
+# choice's two versions, for Mikey's ears), leaned by the batch's [JUDGMENT]
+# row (none away). A drop is where the kit's kick and the bass both leave for
+# a bar or more (the wander's floor drop and its shapes, a form's bars without
+# them); one shorter than `spotlightLeast` seconds strikes nothing: the sketch
+# caught drops of 2.4 s, and a stutter's drops last 2.2 s or more, while a
+# one-bar drop at a quick tempo would ring a bell a bar. Never in a full stop.
+spotlight = 0.5
+spotlightVibes = mysterious 1.5, reflective 1.5, spacious 1.5, chiming 1.5
+spotlightLeast = 2
+
+# twang (queue item 101h; batch 6's #13, Ears 13b, approved by Mikey
+# 2026-11-09, all three versions): a synth in the spirit of a tremolo baritone
+# guitar, picking each chord low and slow; a new voice of the core
+# (core/src/blocks/twang.rs, the sketch's sound and its level rule), which the
+# player picks from the chords it knows: at each chord whose root changes, or
+# the same root after `regap` seconds, the root's pitch class between E2 and
+# D#3, its fifth a beat later and its tenth a beat after that, while the
+# chord lasts; six strings ring, the oldest let go as a seventh is picked; one
+# tremolo moves them all. Drawn per loop at load on a stream of its own,
+# outside the list of choices and counted against a loop's changes (above), as the
+# low bell is: for a loop that plays a chord and has no kit busier than a
+# soft one (`kitMost` hits a second, the corpus's quietest tenth of kits: the
+# sketch was heard only on loops without one; for Mikey's ears). It is soft,
+# a 4.5 Hz tremolo 35% deep; the batch's slow and bright are gone (item
+# 105e).
+[setting twang]
+# The share of the loops it may play in that play it before the vibes lean
+# it: 0.15, the batch's conservative share, for Mikey's ears.
+share = 0.15
+# The versions a loop plays: soft alone (Mikey, 2026-11-17, the Batch 6
+# Album: "I only liked the soft version"). `drawn` is the draw as the batch
+# made it, every version by weight, so the loops that play twang are the
+# ones that did; a loop whose draw lands on a version not in `kinds` plays
+# the first of them. The core has no slow or bright since item 105e (a
+# code that pins either plays soft: data/codes.txt); their weights and
+# vibes here only choose which loops play twang.
+kinds = soft 1
+drawn = soft 1, slow 1, bright 1
+# The batch's [JUDGMENT] rows, one a version drawn (never 0): each leans its
+# own version's share of the draw.
+kindVibes.soft = dusky 2, wistful 2, moonlit 1.5, spacious 1.5, mellow 1.5,
+    cruising 1.5, reflective 1.5, swaying 1.5, hazy 1.5, zany 0.4, goofy 0.4,
+    bouncy 0.5, frosty 0.5, crisp 0.5, sour 0.5
+kindVibes.slow = meditative 2, dusky 1.5, droning 1.5, floating 1.5,
+    dreamy 1.5, moonlit 1.5, zany 0.4, goofy 0.4, bouncy 0.5, frosty 0.5,
+    crisp 0.5, sour 0.5, lively 0.5
+kindVibes.bright = cruising 2, plucky 1.5, golden 1.5, warm 1.5,
+    adventurous 1.5, dusky 1.5, zany 0.4, goofy 0.4, bouncy 0.5, frosty 0.5,
+    crisp 0.5, sour 0.5, hushed 0.5
+# The same root is picked again after this many seconds (the sketch's).
+regap = 3
+# How far apart a chord's three picks come, in beats: 1, the slow picking
+# the description names (Ears 13b, the queue), Mikey's call (2026-11-17,
+# as the albums' producer would play it: a baritone picked low and slow,
+# each note let ring under the tremolo, and not the nylon's strum again).
+# The approved clips struck the three together (0), since the sketch's
+# clock ran 128 times fast (it read a block's first frame as a block
+# count), so every pick waiting came at once.
+spread = 1
+# The busiest kit it plays over, in hits a second over the kit's own cycle.
+kitMost = 2
+
+# echoTime's settings (queue item 73; Ears 8's echoTime, approved by Mikey
+# 2026-10-18): the echo's time drawn per loop, in beats. Drawn for every
+# loop as the sketch drew it, outside the list of choices and not counted
+# among a loop's changes, as roundBass and longChords aren't (the brain,
+# 2026-10-26); `echoTimeOf` draws a loop's.
+[setting echo]
+# The times, in beats, and how often each is drawn: today's dotted eighth
+# first. 2/3 is two thirds of a beat, the quotient and not 0.6667.
+beats = 0.75 45, 1 25, 0.5 15, 0.6666666666666666 15
+# Batch 5's vibe table, by time: one beat toward spacious and floating
+# (and glacial, droning, dreamy and cosmic, item 76b), half a beat toward
+# nimble and skipping (and bubbly and playful).
+vibes.1 = spacious 1.5, floating 1.5, glacial 1.5, droning 1.5, dreamy 1.5,
+    cosmic 1.5
+vibes.0.5 = nimble 1.5, skipping 1.5, bubbly 1.5, playful 1.5
+
+# The bass layer's level for a loop (queue item 76c; Mikey's picks from
+# Session 26's album, 2026-10-29), in dB over the level the bass had before
+# roundBass's lift: +3 in a loop that plays a kick (dust #7, noan-nou), none
+# in one without (dust #42: the bass carries the low end alone there, and +3
+# lifted the whole loop 2.4 LU). Named, with its two values, so a vibe or a
+# request can move either later; the host sends the loop's to the core at
+# each load (`Core::bass_lift`). The JavaScript synth leaves its bass alone.
+[setting basslift]
+kick = 3
+noKick = 0
+
+# tuningOffset (queue item 101b; batch 6's #12, approved by Mikey
+# 2026-11-09): the whole loop a little off A440, the "old tape" cue at the
+# scale of a loop. Drawn per loop at load on a stream of its own, outside the
+# list of choices (`tuningOf`), as echoTime is, but counted against a
+# loop's changes (above). Every pitched voice moves by it together; the drums (the
+# tuned kick too) and the noises keep their pitch, as in the sketch.
+[setting tuning]
+# The share of loops off A440 before the vibes lean it; the rest play at
+# A440. 0.15 is the conservative pick (most loops none), for Mikey's ears.
+share = 0.15
+# How far off, in cents, either way (up or down, even odds). The sketch's
+# four were -32, +18, -24 and +27; the batch's guard is 40 at most.
+cents = 15 35
+# The batch's [JUDGMENT] row: toward the hazy vibes, away from the clear ones
+# (never 0). It leans the share, not the size.
+vibes = hazy 2, wistful 2, dusky 1.5, misty 1.5, crisp 0.3, frosty 0.4,
+    bright 0.5, chiming 0.5

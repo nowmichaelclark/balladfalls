@@ -1,0 +1,9 @@
+# The Rust core's build output. Only js/dlplayer.wasm, copied out by
+# tools/build-core.sh, is committed.
+core/target/
+node_modules/
+
+# Python bytecode (tools/ears/ runs under python3).
+__pycache__/
+# A baked design spec is made when needed, never kept (Mikey, 2026-11-26).
+design/driftloom_v20.html

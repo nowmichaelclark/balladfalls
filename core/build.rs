@@ -1,0 +1,1177 @@
+//! The generation data, compiled in.
+//!
+//! The profiles, vibes and moods are plain text in `data/`,
+//! one format the JavaScript generator reads at start (`js/data.js`) and
+//! this script reads at build time: it parses the files and writes them out
+//! as Rust tables (`$OUT_DIR/gen_data.rs`, included by `src/gen/data.rs`).
+//! So the core carries the data as read-only statics: nothing to parse at
+//! run time, nothing a host must hand over, no memory spent at `Core::new`,
+//! and the same bytes on every target.
+//!
+//! The format and its readings are `js/data.js`'s, and this parser follows
+//! it line for line: a comment from '#' to the end of a line, `[kind name]`
+//! blocks, `key = rows` entries (rows split on ',', tokens on spaces), a line
+//! that starts with a space or a tab continuing the entry above. A number is
+//! read as the one nearest double (Rust's `f64::from_str`, correctly rounded,
+//! as `Number` is), or a ratio `a/b`, one division; every number is written
+//! out by its bits, so the table holds exactly the double JavaScript reads.
+//! Anything malformed fails the build, naming the file, the block and the key.
+
+use std::collections::BTreeSet;
+use std::fmt::Write as _;
+use std::path::PathBuf;
+use std::{env, fs};
+
+struct Entry {
+    key: String,
+    rows: Vec<Vec<String>>,
+}
+
+struct Block {
+    kind: String,
+    name: String,
+    entries: Vec<Entry>,
+}
+
+fn parse(text: &str, file: &str) -> Vec<Block> {
+    let mut blocks: Vec<Block> = Vec::new();
+    let mut texts: Vec<Vec<(String, String)>> = Vec::new();
+    for (i, raw) in text.split('\n').enumerate() {
+        let n = i + 1;
+        let mut line = raw.strip_suffix('\r').unwrap_or(raw);
+        assert!(line.bytes().all(|c| c == b'\t' || (32..=126).contains(&c)), "{file}:{n}: plain printable ASCII only");
+        if let Some(hash) = line.find('#') {
+            line = &line[..hash];
+        }
+        if line.trim().is_empty() {
+            continue;
+        }
+        if line.starts_with(' ') || line.starts_with('\t') {
+            let block = texts.last_mut().unwrap_or_else(|| panic!("{file}:{n}: a continuation with nothing to continue"));
+            let entry = block.last_mut().unwrap_or_else(|| panic!("{file}:{n}: a continuation with nothing to continue"));
+            entry.1.push(' ');
+            entry.1.push_str(line.trim());
+            continue;
+        }
+        if let Some(head) = line.trim_end().strip_prefix('[').and_then(|l| l.strip_suffix(']')) {
+            let (kind, name) = head.split_once(' ').unwrap_or_else(|| panic!("{file}:{n}: a block is [kind name]"));
+            blocks.push(Block { kind: kind.to_string(), name: name.to_string(), entries: Vec::new() });
+            texts.push(Vec::new());
+            continue;
+        }
+        let (key, value) = line.split_once('=').unwrap_or_else(|| panic!("{file}:{n}: not a block, an entry or a comment"));
+        let key = key.trim().to_string();
+        assert!(key.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'_' || c == b'.'), "{file}:{n}: a bad key");
+        let block = texts.last_mut().unwrap_or_else(|| panic!("{file}:{n}: an entry before any block"));
+        assert!(block.iter().all(|(k, _)| *k != key), "{file}:{n}: '{key}' twice in a block");
+        block.push((key, value.trim().to_string()));
+    }
+    for (block, entries) in blocks.iter_mut().zip(texts) {
+        for (key, text) in entries {
+            let rows = text
+                .split(',')
+                .map(str::trim)
+                .filter(|r| !r.is_empty())
+                .map(|r| r.split_whitespace().map(str::to_string).collect())
+                .collect();
+            block.entries.push(Entry { key, rows });
+        }
+    }
+    blocks
+}
+
+/// A token as a number, as `js/data.js` reads one.
+fn number(token: &str, at: &str) -> f64 {
+    if let Some((a, b)) = token.split_once('/') {
+        let a: i64 = a.parse().unwrap_or_else(|_| panic!("{at}: '{token}' is not a number"));
+        let b: i64 = b.parse().unwrap_or_else(|_| panic!("{at}: '{token}' is not a number"));
+        #[allow(clippy::cast_precision_loss)] // small integers, exact
+        return a as f64 / b as f64;
+    }
+    let ok = {
+        let t = token.strip_prefix('-').unwrap_or(token);
+        let (mant, exp) = match t.find(['e', 'E']) {
+            Some(i) => (&t[..i], Some(&t[i + 1..])),
+            None => (t, None),
+        };
+        let digits = |s: &str| !s.is_empty() && s.bytes().all(|c| c.is_ascii_digit());
+        let mant_ok = match mant.split_once('.') {
+            Some((a, b)) => (digits(a) && (b.is_empty() || digits(b))) || (a.is_empty() && digits(b)),
+            None => digits(mant),
+        };
+        let exp_ok = exp.is_none_or(|e| digits(e.strip_prefix(['+', '-']).unwrap_or(e)));
+        mant_ok && exp_ok
+    };
+    assert!(ok, "{at}: '{token}' is not a number");
+    token.parse().unwrap_or_else(|_| panic!("{at}: '{token}' is not a number"))
+}
+
+fn f(x: f64) -> String {
+    format!("f({:#018x})", x.to_bits())
+}
+
+fn quote(s: &str) -> String {
+    format!("{s:?}")
+}
+
+struct Reader<'a> {
+    file: &'a str,
+    block: &'a Block,
+}
+
+impl Reader<'_> {
+    fn at(&self, key: &str) -> String {
+        format!("{}: [{} {}] {key}", self.file, self.block.kind, self.block.name)
+    }
+    fn rows(&self, key: &str) -> Option<&Vec<Vec<String>>> {
+        self.block.entries.iter().find(|e| e.key == key).map(|e| &e.rows)
+    }
+    fn one(&self, key: &str) -> Option<&str> {
+        self.rows(key).map(|rows| {
+            assert!(rows.len() == 1 && rows[0].len() == 1, "{}: expected one token", self.at(key));
+            rows[0][0].as_str()
+        })
+    }
+    fn num(&self, key: &str) -> Option<f64> {
+        self.one(key).map(|t| number(t, &self.at(key)))
+    }
+    /// One row of numbers, however many.
+    fn nums(&self, key: &str) -> Option<Vec<f64>> {
+        self.rows(key).map(|rows| {
+            assert!(rows.len() == 1, "{}: expected one row", self.at(key));
+            rows[0].iter().map(|t| number(t, &self.at(key))).collect()
+        })
+    }
+    fn range(&self, key: &str) -> Option<[f64; 2]> {
+        self.rows(key).map(|rows| {
+            assert!(rows.len() == 1 && rows[0].len() == 2, "{}: expected two numbers", self.at(key));
+            [number(&rows[0][0], &self.at(key)), number(&rows[0][1], &self.at(key))]
+        })
+    }
+    fn words(&self, key: &str) -> Option<Vec<String>> {
+        self.rows(key).map(|rows| {
+            assert!(rows.len() <= 1, "{}: expected one row", self.at(key));
+            rows.first().cloned().unwrap_or_default()
+        })
+    }
+    fn pool(&self, key: &str) -> Option<Vec<(String, f64)>> {
+        self.rows(key).map(|rows| {
+            rows.iter()
+                .map(|r| {
+                    assert!(r.len() == 2, "{}: expected a word and a number", self.at(key));
+                    (r[0].clone(), number(&r[1], &self.at(key)))
+                })
+                .collect()
+        })
+    }
+    fn numpool(&self, key: &str) -> Option<Vec<(f64, f64)>> {
+        self.rows(key).map(|rows| {
+            rows.iter()
+                .map(|r| {
+                    assert!(r.len() == 2, "{}: expected two numbers", self.at(key));
+                    (number(&r[0], &self.at(key)), number(&r[1], &self.at(key)))
+                })
+                .collect()
+        })
+    }
+    /// The keys this block may hold; any other fails the build.
+    fn only(&self, known: &[&str]) {
+        for e in &self.block.entries {
+            let head = e.key.split('.').next().unwrap_or("");
+            let ok = known.iter().any(|k| *k == e.key || k.strip_suffix(".*").is_some_and(|h| h == head && e.key.contains('.')));
+            assert!(ok, "{}: [{} {}] has no key '{}'", self.file, self.block.kind, self.block.name, e.key);
+        }
+    }
+}
+
+fn opt<T>(v: Option<T>, show: impl Fn(T) -> String) -> String {
+    v.map_or_else(|| "None".to_string(), |x| format!("Some({})", show(x)))
+}
+
+fn show_pool(p: Vec<(String, f64)>) -> String {
+    let mut s = String::from("&[");
+    for (k, w) in p {
+        let _ = write!(s, "({}, {}),", quote(&k), f(w));
+    }
+    s.push(']');
+    s
+}
+
+fn show_numpool(p: Vec<(f64, f64)>) -> String {
+    let mut s = String::from("&[");
+    for (k, w) in p {
+        let _ = write!(s, "({}, {}),", f(k), f(w));
+    }
+    s.push(']');
+    s
+}
+
+fn show_range(r: [f64; 2]) -> String {
+    format!("[{}, {}]", f(r[0]), f(r[1]))
+}
+
+/// A degree in a progression, as `js/characters.js` reads one: a number, or
+/// `4M` (a major chord), `6fM` (flattened, major).
+fn degree(token: &str, at: &str) -> String {
+    let digits: String = token.chars().take_while(char::is_ascii_digit).collect();
+    let rest = &token[digits.len()..];
+    assert!(!digits.is_empty() && ["", "f", "M", "fM"].contains(&rest), "{at}: '{token}' is not a degree");
+    let d: i32 = digits.parse().unwrap_or_else(|_| panic!("{at}: '{token}' is not a degree"));
+    let flat = rest.contains('f');
+    let major = rest.contains('M');
+    format!("Degree {{ d: {d}, flat: {flat}, major: {major}, spelled: {} }}", flat || major)
+}
+
+fn progression_rows(rows: &[Vec<String>], at: &str) -> String {
+    let mut s = String::from("&[");
+    for r in rows {
+        s.push_str("&[");
+        for t in r {
+            s.push_str(&degree(t, at));
+            s.push(',');
+        }
+        s.push_str("],");
+    }
+    s.push(']');
+    s
+}
+
+const CHARACTER_KEYS: &[&str] = &[
+    "label",
+    "groove",
+    "polymeter",
+    "microLoop",
+    "borrowedBright",
+    "tone.*",
+    "feel.*",
+    "gaits",
+    "progressions",
+    "progressions.*",
+    "bpm",
+    "swing",
+    "hatDensity",
+    "stepsPerBar",
+    "bars",
+    "chordSize",
+    "scales",
+    "chordVoices",
+    "melodyVoices",
+    "bassStyles",
+    "bassVoices",
+    "textures",
+    "kits",
+    "weight",
+    "level",
+    "airy",
+    "drums",
+    "restBar",
+    "flatSeven",
+    "quartal",
+    "pointillist",
+    "skipStep",
+    "glide",
+    "dubEcho",
+    "rolls",
+    "fourFloor",
+    "pump",
+    "drone",
+    "ornament",
+    "harmonize",
+    "chug",
+];
+const CHARACTER_NUMS: &[(&str, &str)] = &[
+    ("weight", "weight"),
+    ("level", "level"),
+    ("airy", "airy"),
+    ("drums", "drums"),
+    ("restBar", "rest_bar"),
+    ("flatSeven", "flat_seven"),
+    ("quartal", "quartal"),
+    ("pointillist", "pointillist"),
+    ("skipStep", "skip_step"),
+    ("glide", "glide"),
+    ("dubEcho", "dub_echo"),
+    ("rolls", "rolls"),
+    ("fourFloor", "four_floor"),
+    ("pump", "pump"),
+    ("drone", "drone"),
+    ("ornament", "ornament"),
+    ("harmonize", "harmonize"),
+    ("chug", "chug"),
+];
+const CHARACTER_POOLS: &[(&str, &str)] = &[
+    ("scales", "scales"),
+    ("chordVoices", "chord_voices"),
+    ("melodyVoices", "melody_voices"),
+    ("bassStyles", "bass_styles"),
+    ("bassVoices", "bass_voices"),
+    ("textures", "textures"),
+    ("kits", "kits"),
+];
+
+fn flag(r: &Reader, key: &str) -> Option<bool> {
+    r.one(key).map(|t| match t {
+        "true" => true,
+        "false" => false,
+        _ => panic!("{}: '{t}' is not true or false", r.at(key)),
+    })
+}
+
+#[allow(clippy::too_many_lines)] // one profile's every key, in the struct's order
+fn characters(out: &mut String, blocks: &[Block]) -> Vec<String> {
+    let file = "data/characters.txt";
+    let mut ids = Vec::new();
+    // The most names a pool of a blend can hold: every distinct name the
+    // profiles give that pool (a blend's pools are unions).
+    let mut union = 0;
+    for (key, _) in CHARACTER_POOLS {
+        let mut names = BTreeSet::new();
+        for b in blocks.iter().filter(|b| b.kind == "character") {
+            if let Some(p) = (Reader { file, block: b }).pool(key) {
+                names.extend(p.into_iter().map(|(n, _)| n));
+            }
+        }
+        union = union.max(names.len());
+    }
+    for key in ["stepsPerBar", "bars", "chordSize"] {
+        let mut names = BTreeSet::new();
+        for b in blocks.iter().filter(|b| b.kind == "character") {
+            if let Some(p) = (Reader { file, block: b }).numpool(key) {
+                names.extend(p.into_iter().map(|(n, _)| n.to_bits()));
+            }
+        }
+        union = union.max(names.len());
+    }
+    let _ = writeln!(out, "/// The most entries any pool of a blended profile can hold.\npub const POOL_MAX: usize = {union};");
+    // The largest bar count, step count and chord size any profile draws:
+    // the generator's lists are sized from them (`generator::plan`).
+    for (key, name) in [("bars", "MAX_BARS"), ("stepsPerBar", "MAX_STEPS_PER_BAR"), ("chordSize", "MAX_CHORD_SIZE")] {
+        let mut most = 0.0f64;
+        for b in blocks.iter().filter(|b| b.kind == "character") {
+            for (n, _) in (Reader { file, block: b }).numpool(key).unwrap_or_default() {
+                assert!(n >= 1.0 && n.fract() == 0.0, "{file}: [character {}] {key}: {n} is not a whole number", b.name);
+                most = most.max(n);
+            }
+        }
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // whole numbers, checked
+        let most = most as usize;
+        let _ = writeln!(out, "/// The largest `{key}` any profile draws.\npub const {name}: usize = {most};");
+    }
+    let count = blocks.iter().filter(|b| b.kind == "character").count();
+    let _ = writeln!(out, "/// How many profiles there are.\npub const CHARACTER_COUNT: usize = {count};");
+    out.push_str(
+        "/// The profiles, in the file's order (`data/characters.txt`).\npub static CHARACTERS: [Character; CHARACTER_COUNT] = [\n",
+    );
+    for b in blocks.iter().filter(|b| b.kind == "character") {
+        let r = Reader { file, block: b };
+        r.only(CHARACTER_KEYS);
+        ids.push(b.name.clone());
+        let _ = write!(out, "Character {{ id: {}, ", quote(&b.name));
+        let _ = write!(out, "label: {}, ", opt(r.one("label"), quote));
+        let _ = write!(out, "groove: {}, ", opt(r.one("groove"), quote));
+        let _ = write!(out, "polymeter: {}, ", opt(flag(&r, "polymeter"), |x| x.to_string()));
+        let _ = write!(out, "micro_loop: {}, ", opt(flag(&r, "microLoop"), |x| x.to_string()));
+        let _ = write!(
+            out,
+            "borrowed_bright: {}, ",
+            opt(r.words("borrowedBright"), |w| format!("&[{}]", w.iter().map(|x| quote(x)).collect::<Vec<_>>().join(",")))
+        );
+        let need = |k: &str| r.range(k).unwrap_or_else(|| panic!("{}: missing", r.at(k)));
+        let _ = write!(
+            out,
+            "tone: [{}, {}, {}], ",
+            show_range(need("tone.warmth")),
+            show_range(need("tone.space")),
+            show_range(need("tone.wobble"))
+        );
+        let _ = write!(
+            out,
+            "feel: [{}, {}, {}], ",
+            show_range(need("feel.lift")),
+            show_range(need("feel.energy")),
+            show_range(need("feel.warmth"))
+        );
+        let gaits = r.rows("gaits").map(|rows| {
+            let mut s = String::from("&[");
+            for g in rows {
+                assert!(g.len() == 5, "{}: expected weight, metre, steps a bar and a tempo range", r.at("gaits"));
+                let at = r.at("gaits");
+                let _ = write!(
+                    s,
+                    "Gait {{ weight: {}, metre: {}, steps_per_bar: {}, bpm: [{}, {}] }},",
+                    f(number(&g[0], &at)),
+                    quote(&g[1]),
+                    f(number(&g[2], &at)),
+                    f(number(&g[3], &at)),
+                    f(number(&g[4], &at))
+                );
+            }
+            s.push(']');
+            s
+        });
+        let _ = write!(out, "gaits: {}, ", opt(gaits, |s| s));
+        let progressions = if let Some(rows) = r.rows("progressions") {
+            Some(format!("Progressions::List({})", progression_rows(rows, &r.at("progressions"))))
+        } else {
+            let per: Vec<&Entry> = b.entries.iter().filter(|e| e.key.starts_with("progressions.")).collect();
+            if per.is_empty() {
+                None
+            } else {
+                let mut s = String::from("Progressions::PerMode(&[");
+                for e in per {
+                    let _ = write!(s, "({}, {}),", quote(&e.key["progressions.".len()..]), progression_rows(&e.rows, &r.at(&e.key)));
+                }
+                s.push_str("])");
+                Some(s)
+            }
+        };
+        let _ = write!(out, "progressions: {}, ", opt(progressions, |s| s));
+        for (k, name) in [("bpm", "bpm"), ("swing", "swing"), ("hatDensity", "hat_density")] {
+            let _ = write!(out, "{name}: {}, ", opt(r.range(k), show_range));
+        }
+        for (k, name) in [("stepsPerBar", "steps_per_bar"), ("bars", "bars"), ("chordSize", "chord_size")] {
+            let _ = write!(out, "{name}: {}, ", opt(r.numpool(k), show_numpool));
+        }
+        for (k, name) in CHARACTER_POOLS {
+            let _ = write!(out, "{name}: {}, ", opt(r.pool(k), show_pool));
+        }
+        for (k, name) in CHARACTER_NUMS {
+            let _ = write!(out, "{name}: {}, ", opt(r.num(k), f));
+        }
+        out.push_str("},\n");
+    }
+    out.push_str("];\n");
+    ids
+}
+
+const VIBE_TABLES: &[(&str, &str)] = &[
+    ("feel", "feel"),
+    ("tone", "tone"),
+    ("profiles", "profiles"),
+    ("modes", "modes"),
+    ("melody", "melody"),
+    ("chords", "chords"),
+    ("bass", "bass"),
+    ("bassStyle", "bass_style"),
+    ("texture", "texture"),
+];
+const VIBE_NUMS: &[(&str, &str)] = &[
+    ("tempo", "tempo"),
+    ("swing", "swing"),
+    ("drums", "drums"),
+    ("hats", "hats"),
+    ("rests", "rests"),
+    ("long", "long"),
+    ("bigChords", "big_chords"),
+    ("six8", "six8"),
+];
+
+fn vibes(out: &mut String, blocks: &[Block]) {
+    let file = "data/vibes.txt";
+    let order = blocks.iter().find(|b| b.kind == "order" && b.name == "vibes").expect("data/vibes.txt has no [order vibes]");
+    let ids = (Reader { file, block: order }).words("ids").expect("[order vibes] has no ids");
+    let _ = writeln!(out, "/// How many vibes there are.\npub const VIBE_COUNT: usize = {};", ids.len());
+    out.push_str("/// The vibes in the order share codes write them (`[order vibes]`): a\n/// vibe's index here is its number. Every id has its recipe.\npub static VIBES: [Vibe; VIBE_COUNT] = [\n");
+    for id in &ids {
+        let b = blocks
+            .iter()
+            .find(|b| b.kind == "vibe" && b.name == *id)
+            .unwrap_or_else(|| panic!("{file}: '{id}' is in [order vibes] but has no [vibe {id}]"));
+        let r = Reader { file, block: b };
+        let mut known: Vec<&str> = VIBE_TABLES.iter().map(|(k, _)| *k).collect();
+        known.extend(VIBE_NUMS.iter().map(|(k, _)| *k));
+        r.only(&known);
+        let _ = write!(out, "Vibe {{ id: {}, ", quote(id));
+        for (k, name) in VIBE_TABLES {
+            // A table: Object.fromEntries, so a repeated name keeps its last
+            // number (none repeats today).
+            let t = r.pool(k).map(|p| {
+                let mut seen: Vec<(String, f64)> = Vec::new();
+                for (n, w) in p {
+                    if let Some(e) = seen.iter_mut().find(|(x, _)| *x == n) {
+                        e.1 = w;
+                    } else {
+                        seen.push((n, w));
+                    }
+                }
+                seen
+            });
+            let _ = write!(out, "{name}: {}, ", opt(t, show_pool));
+        }
+        for (k, name) in VIBE_NUMS {
+            let _ = write!(out, "{name}: {}, ", opt(r.num(k), f));
+        }
+        out.push_str("},\n");
+    }
+    out.push_str("];\n");
+}
+
+fn moods(out: &mut String, blocks: &[Block]) {
+    let file = "data/moods.txt";
+    let count = blocks.iter().filter(|b| b.kind == "mood").count();
+    let _ = writeln!(out, "/// How many moods there are.\npub const MOOD_COUNT: usize = {count};");
+    out.push_str("/// The moods, in the file's order (`data/moods.txt`).\npub static MOODS: [Mood; MOOD_COUNT] = [\n");
+    for b in blocks.iter().filter(|b| b.kind == "mood") {
+        let r = Reader { file, block: b };
+        r.only(&["code", "word", "lift", "energy", "warmth"]);
+        let need = |k: &str| r.num(k).unwrap_or_else(|| panic!("{}: missing", r.at(k)));
+        let _ = writeln!(
+            out,
+            "Mood {{ id: {}, lift: {}, energy: {}, warmth: {} }},",
+            quote(&b.name),
+            f(need("lift")),
+            f(need("energy")),
+            f(need("warmth"))
+        );
+    }
+    out.push_str("];\n");
+}
+
+impl Reader<'_> {
+    // The readings a setting's keys need, each failing the build when the
+    // key is missing: every key `js/choices.js` reads is read there too.
+    fn need_num(&self, key: &str) -> String {
+        f(self.num(key).unwrap_or_else(|| panic!("{}: missing", self.at(key))))
+    }
+    fn need_range(&self, key: &str) -> String {
+        show_range(self.range(key).unwrap_or_else(|| panic!("{}: missing", self.at(key))))
+    }
+    fn need_words(&self, key: &str) -> String {
+        let w = self.words(key).unwrap_or_else(|| panic!("{}: missing", self.at(key)));
+        format!("&[{}]", w.iter().map(|x| quote(x)).collect::<Vec<_>>().join(","))
+    }
+    fn need_pool(&self, key: &str) -> String {
+        show_pool(self.pool(key).unwrap_or_else(|| panic!("{}: missing", self.at(key))))
+    }
+    fn need_numpool(&self, key: &str) -> String {
+        show_numpool(self.numpool(key).unwrap_or_else(|| panic!("{}: missing", self.at(key))))
+    }
+    /// A table (`READ.table`: `Object.fromEntries`, so a name given twice
+    /// keeps its last number), as a pool.
+    fn table(&self, key: &str) -> Option<String> {
+        self.pool(key).map(|p| {
+            let mut seen: Vec<(String, f64)> = Vec::new();
+            for (n, w) in p {
+                if let Some(e) = seen.iter_mut().find(|(x, _)| *x == n) {
+                    e.1 = w;
+                } else {
+                    seen.push((n, w));
+                }
+            }
+            show_pool(seen)
+        })
+    }
+    fn need_table(&self, key: &str) -> String {
+        self.table(key).unwrap_or_else(|| panic!("{}: missing", self.at(key)))
+    }
+    /// The entries `HEAD.part` (a `'HEAD.*'` key), in the block's order:
+    /// each part and its key.
+    fn parts(&self, head: &str) -> Vec<(String, String)> {
+        let prefix = format!("{head}.");
+        self.block.entries.iter().filter_map(|e| e.key.strip_prefix(&prefix).map(|p| (p.to_string(), e.key.clone()))).collect()
+    }
+    /// `HEAD.NAME` tables by name, as `&[(name, table)]`.
+    fn tables_by_name(&self, head: &str) -> String {
+        let mut s = String::from("&[");
+        for (part, key) in self.parts(head) {
+            let _ = write!(s, "({}, {}),", quote(&part), self.need_table(&key));
+        }
+        s.push(']');
+        s
+    }
+    /// `HEAD.NUMBER` tables by number, as `&[(number, table)]`. The
+    /// JavaScript looks one up by the number's own text (`ECHO.vibes[b]`),
+    /// so a part must be written as JavaScript writes its number ('0.5',
+    /// not '.5' or '0.50'), or the two would disagree on what it names.
+    fn tables_by_number(&self, head: &str) -> String {
+        let mut s = String::from("&[");
+        for (part, key) in self.parts(head) {
+            let n = number(&part, &self.at(&key));
+            assert!(format!("{n}") == part, "{}: write the number as {n}", self.at(&key));
+            let _ = write!(s, "({}, {}),", f(n), self.need_table(&key));
+        }
+        s.push(']');
+        s
+    }
+    /// `HEAD.NAME`'s range, for a NAME that must be there. Every part of
+    /// `HEAD` must read as a range, as the JavaScript reads them all.
+    fn part_range(&self, head: &str, name: &str) -> String {
+        for (_, key) in self.parts(head) {
+            self.need_range(&key);
+        }
+        self.need_range(&format!("{head}.{name}"))
+    }
+}
+
+/// The choices and every setting they draw from:
+/// the draw's counts and leans, each choice's options and vibes, and the
+/// settings of the arc, the tuned kick, subDuck, lateFloor, the floor drop's
+/// shapes, the pedal, padSweep, padWow, the echo time, the tuning, the
+/// progression's kind, lowBell, twang and the bass's level, each block's keys exactly the
+/// ones `js/choices.js` reads.
+#[allow(clippy::too_many_lines)] // every setting, key by key, in the file's order
+fn choices(out: &mut String, blocks: &[Block]) {
+    let file = "data/choices.txt";
+    let find = |kind: &str, name: &str| {
+        let block = blocks.iter().find(|b| b.kind == kind && b.name == name).unwrap_or_else(|| panic!("{file} has no [{kind} {name}]"));
+        Reader { file, block }
+    };
+    let all = find("choices", "all");
+    all.only(&["changes", "lean"]);
+    let _ = writeln!(out, "/// How many changes a loop gets, by weight.\npub static CHANGE_COUNTS: NumPool = {};", all.need_numpool("changes"));
+    let _ = writeln!(out, "/// A choice's lean for one vibe is held between these.\npub const CHOICE_LEAN: [f64; 2] = {};", all.need_range("lean"));
+    out.push_str("/// The choices, in the order the draw walks them.\npub static CHOICES: &[Choice] = &[\n");
+    for b in blocks.iter().filter(|b| b.kind == "choice") {
+        let r = Reader { file, block: b };
+        r.only(&["options", "weight", "vibes", "optionVibes.*", "ownStream", "alone"]);
+        let _ = writeln!(
+            out,
+            "Choice {{ id: {}, options: {}, weight: {}, vibes: {}, option_vibes: {}, own_stream: {}, alone: {} }},",
+            quote(&b.name),
+            r.need_pool("options"),
+            opt(r.num("weight"), f),
+            opt(r.table("vibes"), |s| s),
+            r.tables_by_name("optionVibes"),
+            r.num("ownStream").is_some_and(|x| x != 0.0),
+            opt(r.num("alone"), f)
+        );
+    }
+    out.push_str("];\n");
+
+    let arc = find("setting", "arc");
+    arc.only(&["shapes", "shapeVibes.*", "period.*", "calm", "bright", "glacialNear", "glacialChance", "from.*", "floor", "dip"]);
+    let _ = writeln!(
+        out,
+        "/// The arc's settings (`[setting arc]`).\npub static ARC: Arc = Arc {{ shapes: {}, shape_vibes: {}, period: ArcPeriods {{ calm: {}, bright: {}, rest: {}, glacial: {}, glacial_near: {} }}, calm: {}, bright: {}, glacial_near: {}, glacial_chance: {}, from_deep: {}, floor: {}, dip: {} }};",
+        arc.need_pool("shapes"),
+        arc.tables_by_name("shapeVibes"),
+        arc.part_range("period", "calm"),
+        arc.part_range("period", "bright"),
+        arc.part_range("period", "rest"),
+        arc.part_range("period", "glacial"),
+        arc.part_range("period", "glacialNear"),
+        arc.need_words("calm"),
+        arc.need_words("bright"),
+        arc.need_words("glacialNear"),
+        arc.need_num("glacialChance"),
+        arc.part_range("from", "deep"),
+        arc.need_range("floor"),
+        arc.need_num("dip")
+    );
+    let kick = find("setting", "kick");
+    kick.only(&["note", "short", "long", "loud", "tailLoud", "band", "swap"]);
+    let _ = writeln!(
+        out,
+        "/// The tuned kick's settings (`[setting kick]`).\npub static KICK: Kick = Kick {{ note: {}, short: {}, long: {}, loud: {}, tail_loud: {}, band: {}, swap: {} }};",
+        kick.need_range("note"),
+        kick.need_range("short"),
+        kick.need_range("long"),
+        kick.need_num("loud"),
+        kick.need_num("tailLoud"),
+        kick.need_num("band"),
+        kick.need_num("swap")
+    );
+    let duck = find("setting", "subduck");
+    duck.only(&["depth", "recover", "beat", "deep.depth", "deep.recover"]);
+    let _ = writeln!(
+        out,
+        "/// subDuck's settings (`[setting subduck]`).\npub static SUBDUCK: SubDuck = SubDuck {{ depth: {}, recover: {}, beat: {}, deep_depth: {}, deep_recover: {} }};",
+        duck.need_range("depth"),
+        duck.need_range("recover"),
+        duck.need_num("beat"),
+        duck.need_range("deep.depth"),
+        duck.need_range("deep.recover")
+    );
+    let late = find("setting", "latefloor");
+    late.only(&["seconds", "round", "first", "orders", "gap", "maxGap", "gapLong", "longVibes", "slow.seconds", "slow.fade"]);
+    let _ = writeln!(
+        out,
+        "/// lateFloor's settings (`[setting latefloor]`).\npub static LATEFLOOR: LateFloor = LateFloor {{ seconds: {}, round: {}, first: {}, orders: {}, gap: {}, max_gap: {}, gap_long: {}, long_vibes: {}, slow_seconds: {}, slow_fade: {} }};",
+        late.need_range("seconds"),
+        late.need_num("round"),
+        late.need_num("first"),
+        late.need_pool("orders"),
+        late.need_numpool("gap"),
+        late.need_num("maxGap"),
+        late.need_num("gapLong"),
+        late.need_table("longVibes"),
+        late.need_range("slow.seconds"),
+        late.need_range("slow.fade")
+    );
+    let drop = find("setting", "floordrop");
+    drop.only(&[
+        "shapes",
+        "needBass",
+        "shapeVibes.*",
+        "staggerShort",
+        "stutterShort",
+        "stutter",
+        "longSeconds",
+        "longBars",
+        "wholeUnder",
+    ]);
+    let _ = writeln!(
+        out,
+        "/// floorDrop's shapes (`[setting floordrop]`).\npub static FLOORDROP: FloorDrop = FloorDrop {{ shapes: {}, need_bass: {}, shape_vibes: {}, stagger_short: {}, stutter_short: {}, stutter: {}, long_seconds: {}, long_bars: {}, whole_under: {} }};",
+        drop.need_pool("shapes"),
+        drop.need_words("needBass"),
+        drop.tables_by_name("shapeVibes"),
+        drop.need_num("staggerShort"),
+        drop.need_num("stutterShort"),
+        drop.need_range("stutter"),
+        drop.need_num("longSeconds"),
+        drop.need_range("longBars"),
+        drop.need_num("wholeUnder")
+    );
+    let pedal = find("setting", "pedal");
+    pedal.only(&["styles", "rhythms", "neighbors", "neighborVibes.*", "share", "low", "high"]);
+    let _ = writeln!(
+        out,
+        "/// pedalBass's settings (`[setting pedal]`).\npub static PEDAL: Pedal = Pedal {{ styles: {}, rhythms: {}, neighbors: {}, neighbor_vibes: {}, share: {}, low: {}, high: {} }};",
+        pedal.need_words("styles"),
+        pedal.need_pool("rhythms"),
+        pedal.need_numpool("neighbors"),
+        pedal.tables_by_number("neighborVibes"),
+        pedal.need_range("share"),
+        pedal.need_num("low"),
+        pedal.need_num("high")
+    );
+    let pad = find("setting", "padsweep");
+    let kinds = ["wide", "fast"];
+    let mut keys = vec!["sustained".to_string(), "lo".to_string(), "oct".to_string(), "period".to_string(), "q".to_string()];
+    for k in kinds {
+        keys.extend(["lo", "oct", "period", "q"].map(|x| format!("{k}.{x}")));
+    }
+    pad.only(&keys.iter().map(String::as_str).collect::<Vec<_>>());
+    let sweep = |k: &str| {
+        let r = |x: &str| pad.need_range(&format!("{k}.{x}"));
+        format!("SweepRanges {{ lo: {}, oct: {}, period: {}, q: {} }}", r("lo"), r("oct"), r("period"), r("q"))
+    };
+    let _ = writeln!(
+        out,
+        "/// padSweep's settings (`[setting padsweep]`).\npub static PADSWEEP: PadSweep = PadSweep {{ sustained: {}, lo: {}, oct: {}, period: {}, q: {}, wide: {}, fast: {} }};",
+        pad.need_words("sustained"),
+        pad.need_range("lo"),
+        pad.need_range("oct"),
+        pad.need_range("period"),
+        pad.need_range("q"),
+        sweep("wide"),
+        sweep("fast")
+    );
+    let wow = find("setting", "padwow");
+    wow.only(&["depth", "rate"]);
+    let _ = writeln!(
+        out,
+        "/// padWow's settings (`[setting padwow]`).\npub static PADWOW: Wow = Wow {{ depth: {}, rate: {} }};",
+        wow.need_range("depth"),
+        wow.need_range("rate")
+    );
+    let dotted = find("setting", "dottedpulse");
+    dotted.only(&["pulse", "low"]);
+    let _ = writeln!(out, "/// dottedPulse's settings (`[setting dottedpulse]`).\npub static DOTTEDPULSE: Dotted = Dotted {{ pulse: {}, low: {} }};", dotted.need_num("pulse"), dotted.need_num("low"));
+    let color = find("setting", "colortone");
+    color.only(&["share"]);
+    let _ = writeln!(out, "/// colorTone's settings (`[setting colortone]`).\npub static COLORTONE: ColorTone = ColorTone {{ share: {} }};", color.need_num("share"));
+    let progression = find("setting", "progression");
+    progression.only(&["planing", "vibes"]);
+    let _ = writeln!(
+        out,
+        "/// The progression's per-loop draw (`[setting progression]`).\npub static PROGRESSION: Progression = Progression {{ planing: {}, vibes: {} }};",
+        progression.need_num("planing"),
+        progression.need_table("vibes")
+    );
+    let bell = find("setting", "lowbell");
+    bell.only(&["share", "kinds", "kindVibes.*", "regap", "spotlight", "spotlightVibes", "spotlightLeast"]);
+    let _ = writeln!(
+        out,
+        "/// lowBell's per-loop draw (`[setting lowbell]`).\npub static LOWBELL: LowBellDraw = LowBellDraw {{ share: {}, kinds: {}, kind_vibes: {}, regap: {}, spotlight: {}, spotlight_vibes: {}, spotlight_least: {} }};",
+        bell.need_num("share"),
+        bell.need_pool("kinds"),
+        bell.tables_by_name("kindVibes"),
+        bell.need_num("regap"),
+        bell.need_num("spotlight"),
+        bell.need_table("spotlightVibes"),
+        bell.need_num("spotlightLeast")
+    );
+    let twang = find("setting", "twang");
+    twang.only(&["share", "kinds", "drawn", "kindVibes.*", "regap", "spread", "kitMost"]);
+    let _ = writeln!(
+        out,
+        "/// twang's per-loop draw (`[setting twang]`).\npub static TWANG: TwangDraw = TwangDraw {{ share: {}, kinds: {}, drawn: {}, kind_vibes: {}, regap: {}, spread: {}, kit_most: {} }};",
+        twang.need_num("share"),
+        twang.need_pool("kinds"),
+        twang.need_pool("drawn"),
+        twang.tables_by_name("kindVibes"),
+        twang.need_num("regap"),
+        twang.need_num("spread"),
+        twang.need_num("kitMost")
+    );
+    let echo = find("setting", "echo");
+    echo.only(&["beats", "vibes.*"]);
+    let _ = writeln!(
+        out,
+        "/// echoTime's settings (`[setting echo]`).\npub static ECHO: Echo = Echo {{ beats: {}, vibes: {} }};",
+        echo.need_numpool("beats"),
+        echo.tables_by_number("vibes")
+    );
+    let tuning = find("setting", "tuning");
+    tuning.only(&["share", "cents", "vibes"]);
+    let _ = writeln!(
+        out,
+        "/// tuningOffset's settings (`[setting tuning]`).\npub static TUNING: Tuning = Tuning {{ share: {}, cents: {}, vibes: {} }};",
+        tuning.need_num("share"),
+        tuning.need_range("cents"),
+        tuning.need_table("vibes")
+    );
+    let lift = find("setting", "basslift");
+    lift.only(&["kick", "noKick"]);
+    let _ = writeln!(
+        out,
+        "/// The bass layer's level (`[setting basslift]`).\npub static BASS_LIFT: BassLift = BassLift {{ kick: {}, no_kick: {} }};",
+        lift.need_num("kick"),
+        lift.need_num("noKick")
+    );
+}
+
+fn voices(out: &mut String, blocks: &[Block]) {
+    let file = "data/voices.txt";
+    let layers = blocks.iter().find(|b| b.kind == "voices" && b.name == "layers").expect("data/voices.txt has no [voices layers]");
+    let order = (Reader { file, block: layers }).words("order").expect("[voices layers] has no order");
+    // The generator's layers are fixed in the core (`generator::Layer`); the file
+    // must agree, in its order.
+    assert_eq!(order, ["drums", "bass", "chords", "melody", "texture"], "{file}: the layers are not the core's (generator::Layer)");
+    // The voice budget's costs, which the player asks as the JavaScript synth
+    // does: the keys `js/synth.js` reads (`COSTS`).
+    let costs = blocks.iter().find(|b| b.kind == "voices" && b.name == "costs").expect("data/voices.txt has no [voices costs]");
+    let costs = Reader { file, block: costs };
+    costs.only(&["default", "dubstab", "cost"]);
+    let _ = writeln!(
+        out,
+        "/// The voice budget's costs (`[voices costs]`).\npub static VOICE_COSTS: VoiceCosts = VoiceCosts {{ default: {}, dubstab: {}, cost: {} }};",
+        costs.need_num("default"),
+        costs.need_num("dubstab"),
+        costs.need_table("cost")
+    );
+}
+
+/// The long pieces' numbers (`data/longform.txt`): the
+/// journey's draw, the arc's forms and the wander's holds, which
+/// `generator::longform` draws a piece's plan by. Every role, variation and
+/// vibe it names must be one the core knows, or the build fails here.
+#[allow(clippy::too_many_lines)] // one table, a line a number
+fn longform(out: &mut String, blocks: &[Block], vibes: &[String]) {
+    const ROLES: [&str; 11] = ["opening", "theme", "build", "second", "development", "peak", "release", "return", "close", "breath", "lift"];
+    const VARIATIONS: [&str; 8] = ["plain", "key", "register", "voice", "stretched", "reharmonized", "answered", "outline"];
+    let file = "data/longform.txt";
+    let find = |name: &str| {
+        let block = blocks.iter().find(|b| b.kind == "longform" && b.name == name).unwrap_or_else(|| panic!("{file} has no [longform {name}]"));
+        Reader { file, block }
+    };
+    let named = |r: &Reader, key: &str, known: &[&str]| {
+        for (name, _) in r.pool(key).unwrap_or_else(|| panic!("{}: missing", r.at(key))) {
+            assert!(known.contains(&name.as_str()), "{}: no such name '{name}'", r.at(key));
+        }
+        r.need_table(key)
+    };
+    let leaning = |r: &Reader, key: &str| {
+        let known: Vec<&str> = vibes.iter().map(String::as_str).collect();
+        named(r, key, &known)
+    };
+    let journey = find("journey");
+    journey.only(&["weights", "endless", "vibes"]);
+    let arc = find("arc");
+    arc.only(&["minutes", "long", "small", "need", "full", "short", "energy.*", "peak", "height", "second", "returns", "builds", "close", "common", "dark", "stay", "kinds", "gentle", "prepare", "call", "outline"]);
+    let wander = find("wander");
+    wander.only(&["hold", "sections", "key", "theme", "density", "apart", "reach", "lengths", "glide"]);
+    // A long piece with no length asked: a share, and
+    // lengths past the loop's own (a whole number of bars, 33 up: a shorter
+    // one would be a loop), never Endless.
+    let unasked = find("unasked");
+    unasked.only(&["share", "lengths"]);
+    let share = unasked.num("share").unwrap_or_else(|| panic!("{}: missing", unasked.at("share")));
+    assert!((0.0..=1.0).contains(&share), "{}: expected a share, 0 to 1", unasked.at("share"));
+    let lengths = unasked.numpool("lengths").unwrap_or_else(|| panic!("{}: missing", unasked.at("lengths")));
+    assert!(!lengths.is_empty(), "{}: expected a length", unasked.at("lengths"));
+    for &(bars, w) in &lengths {
+        assert!(bars > 32.0 && bars.fract() == 0.0 && bars <= 32_768.0 && w > 0.0, "{}: expected whole bars from 33 to 32,768, each with a weight", unasked.at("lengths"));
+    }
+    let mut energy = String::from("&[");
+    for (part, key) in arc.parts("energy") {
+        assert!(ROLES.contains(&part.as_str()), "{}: no such role", arc.at(&key));
+        let _ = write!(energy, "({}, {}),", quote(&part), arc.need_range(&key));
+    }
+    energy.push(']');
+    let _ = writeln!(
+        out,
+        "/// The long pieces' numbers (`data/longform.txt`).\npub static LONGFORM: Longform = Longform {{ weights: {}, endless: {}, vibes: {}, minutes: {}, long: {}, small: {}, need: {}, full: {}, short: {}, energy: {}, peak: {}, height: {}, second: {}, returns: {}, builds: {}, close: {}, common: {}, dark: {}, stay: {}, kinds: {}, gentle: {}, prepare: {}, call: {}, outline: {}, hold: {}, sections: {}, key: {}, theme: {}, density: {}, apart: {}, reach: {}, lengths: {}, glide: {}, unasked: {}, unasked_lengths: {} }};",
+        named(&journey, "weights", &["arc", "wander"]),
+        journey.need_num("endless"),
+        leaning(&journey, "vibes"),
+        arc.need_range("minutes"),
+        leaning(&arc, "long"),
+        arc.need_num("small"),
+        arc.need_num("need"),
+        named(&arc, "full", &ROLES),
+        named(&arc, "short", &ROLES),
+        energy,
+        arc.need_range("peak"),
+        arc.need_range("height"),
+        arc.need_num("second"),
+        named(&arc, "returns", &VARIATIONS),
+        named(&arc, "builds", &VARIATIONS),
+        arc.need_num("close"),
+        arc.need_num("common"),
+        arc.need_num("dark"),
+        arc.need_num("stay"),
+        named(&arc, "kinds", &["full", "gentle", "light", "interlude"]),
+        arc.need_range("gentle"),
+        arc.need_num("prepare"),
+        arc.need_num("call"),
+        arc.need_num("outline"),
+        wander.need_range("hold"),
+        wander.need_num("sections"),
+        wander.need_num("key"),
+        wander.need_num("theme"),
+        wander.need_range("density"),
+        wander.need_num("apart"),
+        wander.need_num("reach"),
+        wander.need_range("lengths"),
+        wander.need_num("glide"),
+        f(share),
+        show_numpool(lengths)
+    );
+    // How an arc's energy is heard: each layer that may fade,
+    // by name, with the two energies of its fade.
+    let heard = find("energy");
+    heard.only(&["level.*", "swell", "kit", "shimmer", "backbeat", "beat", "soft", "thin", "held", "double", "aim", "dark", "open", "space", "land"]);
+    let mut levels = String::from("&[");
+    for (part, key) in heard.parts("level") {
+        assert!(["bass", "texture", "drums"].contains(&part.as_str()), "{}: only the bass, the texture and the kit fade", heard.at(&key));
+        let n = heard.nums(&key).unwrap_or_else(|| panic!("{}: missing", heard.at(&key)));
+        assert!(n.len() == 4 && n[0] < n[1] && n[1] < n[2] && (0.0..=1.0).contains(&n[3]), "{}: expected three rising energies and a share", heard.at(&key));
+        let _ = write!(levels, "({}, [{}, {}, {}, {}]),", quote(&part), f(n[0]), f(n[1]), f(n[2]), f(n[3]));
+    }
+    levels.push(']');
+    let _ = writeln!(
+        out,
+        "/// How an arc's energy is heard (`data/longform.txt`, `[longform energy]`).\npub static ENERGY: Energy = Energy {{ levels: {}, swell: {}, kit: {}, shimmer: {}, backbeat: {}, beat: {}, soft: {}, thin: {}, held: {}, double: {}, aim: {}, dark: {}, open: {}, space: {}, land: {} }};",
+        levels,
+        {
+            let n = heard.nums("swell").unwrap_or_else(|| panic!("{}: missing", heard.at("swell")));
+            assert!(n.len() == 3 && (0.0..=1.0).contains(&n[0]) && n[1] < n[2], "{}: expected a share and two rising energies", heard.at("swell"));
+            format!("[{}, {}, {}]", f(n[0]), f(n[1]), f(n[2]))
+        },
+        heard.need_range("kit"),
+        heard.need_table("shimmer"),
+        heard.need_table("backbeat"),
+        heard.need_num("beat"),
+        heard.need_num("soft"),
+        heard.need_range("thin"),
+        heard.need_num("held"),
+        {
+            let n = heard.nums("double").unwrap_or_else(|| panic!("{}: missing", heard.at("double")));
+            assert!(n.len() == 3 && n[0] < n[1] && (0.0..=1.0).contains(&n[2]), "{}: expected two rising energies and a share", heard.at("double"));
+            format!("[{}, {}, {}]", f(n[0]), f(n[1]), f(n[2]))
+        },
+        heard.need_range("aim"),
+        heard.need_num("dark"),
+        heard.need_num("open"),
+        heard.need_num("space"),
+        heard.need_num("land")
+    );
+    // How a unit meets the next: the joins' numbers.
+    let joins = find("joins");
+    joins.only(&["step", "bars", "share", "breath", "fill", "hold", "hole"]);
+    let _ = writeln!(
+        out,
+        "/// How a long piece's units meet (`data/longform.txt`, `[longform joins]`).\npub static JOINS: Joins = Joins {{ step: {}, bars: {}, share: {}, breath: {}, fill: {}, hold: {}, hole: {} }};",
+        joins.need_num("step"),
+        joins.need_num("bars"),
+        joins.need_num("share"),
+        joins.need_num("breath"),
+        joins.need_range("fill"),
+        joins.need_num("hold"),
+        joins.need_num("hole")
+    );
+    // Each voice's loudness over a note's life, by layer in
+    // the generator's order: what a join reads its kept layers' share by.
+    let loud = find("loudness");
+    loud.only(&["drums.*", "bass.*", "chords.*", "melody.*", "texture.*"]);
+    let mut table = String::from("[");
+    for layer in ["drums", "bass", "chords", "melody", "texture"] {
+        table.push_str("&[");
+        for (voice, key) in loud.parts(layer) {
+            let n = loud.nums(&key).unwrap_or_else(|| panic!("{}: missing", loud.at(&key)));
+            assert!(n.len() == 7 && n.iter().all(|&x| (-99.0..=0.0).contains(&x)), "{}: expected seven levels in dB, -99 to 0", loud.at(&key));
+            let _ = write!(table, "({}, [{}]),", quote(&voice), n.iter().map(|&x| f(x)).collect::<Vec<_>>().join(", "));
+        }
+        table.push_str("],");
+    }
+    table.push(']');
+    let _ = writeln!(out, "/// Each voice's loudness in the mix over a note's life (`data/longform.txt`, `[longform loudness]`), by layer.\npub static LOUDNESS: [&[(&str, [f64; 7])]; 5] = {table};");
+}
+
+/// The dummy build's additions laid over a file's blocks: a block the file
+/// has gains the additions' keys, a key it has gains their rows (a row of
+/// words, `[order vibes] ids` and `newest`, gains their words), and a block
+/// it lacks is added at its end, as a later version adds a member last.
+fn laid_over(blocks: &mut Vec<Block>, more: Vec<Block>) {
+    for add in more {
+        let Some(b) = blocks.iter_mut().find(|b| b.kind == add.kind && b.name == add.name) else {
+            blocks.push(add);
+            continue;
+        };
+        let words = b.kind == "order";
+        for e in add.entries {
+            match b.entries.iter_mut().find(|x| x.key == e.key) {
+                Some(x) if words || x.key == "newest" => x.rows.iter_mut().take(1).for_each(|r| r.extend(e.rows.iter().flatten().cloned())),
+                // A field's numbers, as a build that took more wrote them.
+                Some(x) if x.key == "ranges" || x.key == "lists" => {
+                    x.rows.retain(|r| e.rows.iter().all(|n| n[0] != r[0]));
+                    x.rows.extend(e.rows);
+                }
+                Some(x) => x.rows.extend(e.rows),
+                None => b.entries.push(e),
+            }
+        }
+    }
+}
+
+/// The share codes' names, ids and versions (`data/codes.txt`):
+/// each list as `(name, id, since, member)` rows, the release's version
+/// and the one a new code writes, the numbers a field has ever taken, and
+/// the checks that keep them forever: an id or a name once in a list (a
+/// gone one's too), every `since` from the first version (2) to `newest`, a
+/// stand-in a member of the list still here that had joined by then.
+#[allow(clippy::too_many_lines)] // one table after another
+fn codes(out: &mut String, blocks: &[Block]) {
+    let file = "data/codes.txt";
+    let version = blocks.iter().find(|b| b.kind == "code" && b.name == "version").expect("data/codes.txt has no [code version]");
+    let r = Reader { file, block: version };
+    r.only(&["released", "newest"]);
+    let released: u32 = r.one("released").and_then(|t| t.parse().ok()).unwrap_or_else(|| panic!("{file}: [code version] released is a whole number"));
+    // The dummy build's additions raise it: the newest is the most named.
+    let newest = r.words("newest").expect("[code version] has no newest").iter().map(|t| t.parse::<u32>().unwrap_or_else(|_| panic!("{file}: newest is a whole number"))).max().expect("[code version] newest");
+    assert!(2 <= released && released <= newest, "{file}: released is 2 or more, and at most newest");
+    let _ = writeln!(out, "/// The version of the last release (`[code version] released`): what joins after it shares the next.\npub const CODE_RELEASED: u32 = {released};");
+    let _ = writeln!(out, "/// The version a new share code writes (`[code version] newest`).\npub const CODE_NEWEST: u32 = {newest};");
+    let list = |b: &Block| {
+        let r = Reader { file, block: b };
+        r.only(&["ids"]);
+        let rows = r.rows("ids").unwrap_or_else(|| panic!("{file}: [{} {}] has no ids", b.kind, b.name));
+        let mut s = String::from("&[");
+        let (mut names, mut ids) = (BTreeSet::new(), BTreeSet::new());
+        let at = r.at("ids");
+        for row in rows {
+            assert!(
+                row.len() == 3 || ((4..=5).contains(&row.len()) && row[3] == "gone"),
+                "{at}: each row is a name, its id and its version, then for one taken out gone and its stand-in"
+            );
+            let id: u32 = row[1].parse().unwrap_or_else(|_| panic!("{at}: '{}' is not an id", row[1]));
+            let since: u32 = row[2].parse().unwrap_or_else(|_| panic!("{at}: '{}' is not a version", row[2]));
+            assert!((2..=newest).contains(&since), "{at}: {} joined at {since}, outside 2 to {newest}", row[0]);
+            assert!(names.insert(row[0].clone()), "{at}: '{}' twice", row[0]);
+            assert!(ids.insert(id), "{at}: id {id} twice");
+            let member = match (row.len(), row.get(4)) {
+                (3, _) => "Member::Here".to_string(),
+                _ if b.name == "layers" || b.name == "tones" => panic!("{at}: the layers and the tone's parts are never removed"),
+                (_, None) => "Member::Gone".to_string(),
+                (_, Some(name)) => {
+                    let to = rows.iter().find(|x| x[0] == *name).unwrap_or_else(|| panic!("{at}: {}'s stand-in '{name}' has no row", row[0]));
+                    assert!(to.len() == 3, "{at}: {}'s stand-in '{name}' is gone too", row[0]);
+                    assert!(to[2].parse().is_ok_and(|joined: u32| joined <= since), "{at}: {}'s stand-in '{name}' joined after it", row[0]);
+                    format!("Member::StandIn({})", to[1])
+                }
+            };
+            let _ = write!(s, "({}, {id}, {since}, {member}),", quote(&row[0]));
+        }
+        s.push(']');
+        s
+    };
+    let one = |kind: &str, name: &str| {
+        let b = blocks.iter().find(|b| b.kind == kind && b.name == name).unwrap_or_else(|| panic!("{file} has no [{kind} {name}]"));
+        list(b)
+    };
+    for (name, konst, doc) in [
+        ("vibes", "CODE_VIBES", "The vibes"),
+        ("profiles", "CODE_PROFILES", "The profiles"),
+        ("moods", "CODE_MOODS", "The moods"),
+        ("scales", "CODE_SCALES", "The modes"),
+        ("layers", "CODE_LAYERS", "The layers"),
+        ("journeys", "CODE_JOURNEYS", "The journeys"),
+        ("tones", "CODE_TONES", "The tone's parts"),
+        ("bassStyles", "CODE_BASS_STYLES", "The bass's styles"),
+        ("choices", "CODE_CHOICES", "The choices"),
+        ("settings", "CODE_SETTINGS", "The settings a pin names"),
+    ] {
+        let _ = writeln!(out, "/// {doc} a share code names (`[code {name}]`): name, id, version joined, and whether here or gone.\npub static {konst}: Ids = {};", one("code", name));
+    }
+    out.push_str("/// Each layer's voices a share code names (`[voices LAYER]`), in the core's layer order.\npub static CODE_VOICES: [Ids; 5] = [\n");
+    for layer in ["drums", "bass", "chords", "melody", "texture"] {
+        let _ = writeln!(out, "{},", one("voices", layer));
+    }
+    out.push_str("];\n");
+    for (kind, konst, doc) in [("options", "CODE_OPTIONS", "Each choice's options"), ("words", "CODE_WORDS", "Each setting's words")] {
+        let _ = writeln!(out, "/// {doc} a share code names (`[{kind} NAME]`).\npub static {konst}: &[(&str, Ids)] = &[");
+        for b in blocks.iter().filter(|b| b.kind == kind) {
+            let _ = writeln!(out, "({}, {}),", quote(&b.name), list(b));
+        }
+        out.push_str("];\n");
+    }
+    let numbers = blocks.iter().find(|b| b.kind == "code" && b.name == "numbers").expect("data/codes.txt has no [code numbers]");
+    let r = Reader { file, block: numbers };
+    r.only(&["ranges", "lists"]);
+    let mut names = BTreeSet::new();
+    out.push_str("/// Every number a code's fields have ever taken (`[code numbers]`).\npub static CODE_NUMBERS: &[(&str, Numbers)] = &[\n");
+    for row in r.rows("ranges").into_iter().flatten() {
+        let at = r.at("ranges");
+        let whole = row.len() == 4 && row[3] == "whole";
+        assert!(row.len() == 3 || whole, "{at}: each row is a field, its least and its most, then whole or nothing");
+        assert!(names.insert(row[0].clone()), "{at}: '{}' twice", row[0]);
+        let (lo, hi) = (number(&row[1], &at), number(&row[2], &at));
+        assert!(lo <= hi, "{at}: {}'s least is over its most", row[0]);
+        let _ = writeln!(out, "({}, Numbers::Range([{}, {}], {whole})),", quote(&row[0]), f(lo), f(hi));
+    }
+    for row in r.rows("lists").into_iter().flatten() {
+        let at = r.at("lists");
+        assert!(row.len() >= 2, "{at}: each row is a field and its numbers");
+        assert!(names.insert(row[0].clone()), "{at}: '{}' twice", row[0]);
+        let values: Vec<String> = row[1..].iter().map(|x| f(number(x, &at))).collect();
+        let _ = writeln!(out, "({}, Numbers::List(&[{}])),", quote(&row[0]), values.join(", "));
+    }
+    out.push_str("];\n");
+}
+
+fn main() {
+    let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("cargo sets CARGO_MANIFEST_DIR"));
+    let root = manifest.join("..").join("data");
+    // The dummy build (the `dummy` feature, `tests/dummy.rs`): each file's
+    // additions from `tests/dummy/` laid over it, as a later version would add
+    // them. Never in any other build.
+    let dummy = env::var_os("CARGO_FEATURE_DUMMY").is_some();
+    let read = |name: &str| {
+        let path = root.join(format!("{name}.txt"));
+        println!("cargo::rerun-if-changed={}", path.display());
+        let text = fs::read_to_string(&path).unwrap_or_else(|e| panic!("data/{name}.txt: {e}"));
+        let mut blocks = parse(&text, &format!("data/{name}.txt"));
+        let extra = manifest.join("tests").join("dummy").join(format!("{name}.txt"));
+        println!("cargo::rerun-if-changed={}", extra.display());
+        if dummy && let Ok(more) = fs::read_to_string(&extra) {
+            laid_over(&mut blocks, parse(&more, &format!("core/tests/dummy/{name}.txt")));
+        }
+        blocks
+    };
+    let mut out = String::from("// Written by core/build.rs from data/*.txt. Do not edit.\n");
+    let _ = characters(&mut out, &read("characters"));
+    let vibe_blocks = read("vibes");
+    vibes(&mut out, &vibe_blocks);
+    let vibe_names: Vec<String> = vibe_blocks.iter().filter(|b| b.kind == "vibe").map(|b| b.name.clone()).collect();
+    moods(&mut out, &read("moods"));
+    choices(&mut out, &read("choices"));
+    voices(&mut out, &read("voices"));
+    longform(&mut out, &read("longform"), &vibe_names);
+    codes(&mut out, &read("codes"));
+    let dest = PathBuf::from(env::var("OUT_DIR").expect("cargo sets OUT_DIR")).join("gen_data.rs");
+    fs::write(dest, out).expect("can write the generated tables");
+    println!("cargo::rerun-if-changed=build.rs");
+}

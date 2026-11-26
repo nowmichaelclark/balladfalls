@@ -1,0 +1,140 @@
+# The fast gate (queue item 103), on every PR and every push to main: the
+# checks that hold a merge until the app is 1.0 and on F-Droid (Mikey,
+# 2026-11-10: no session waits on the slow renders). Each job is one part of
+# tools/gate.sh, so what CI runs and what a session runs locally are the same
+# lines; the parts run side by side and the slowest sets the wall time, aimed
+# under 15 minutes.
+#
+#   core      the committed js/dlplayer.wasm is exactly what its source
+#             builds (tools/build-core.sh --check), the
+#             core's own tests, and clippy pedantic at zero
+#   sketch    the same tests and clippy with the sketch folder built in
+#             (queue item 83); never in the app's .wasm
+#   node      the Node tests (test/*.test.mjs), the generation goldens (queue
+#             item 77) and the balance lock (queue item 80), all on the
+#             core's generator, the only one since queue item 97
+#   baseline  the player's renders against test/core-baseline.json (queue
+#             items 32 and 96), the "nothing moved" guard, in three groups of
+#             its parts: any change to what the core plays fails here until a
+#             PR updates the baseline on purpose
+#   flac      the core's FLAC writer (queue item 104a) on the golden lists
+#             and twenty corpus loops, every way, against the reference
+#             decoder (the runner's `flac`, dev-only): it decodes, nulls
+#             against the WAV of the same render, carries the right MD5, and
+#             the wasm and the C host write the same bytes; and the app's
+#             audio export (queue item 104b, tools/export.mjs): its files
+#             decode and null against straight renders, and its sizes; and
+#             (item 121) an album of four as one zip and a file a track, its
+#             tags and covers read back by ffprobe, the zip by unzip
+#
+# Everything slower is in nightly.yml and never holds a merge: every target's
+# golden renders, Emscripten, Endless for 24 hours, rendering ahead's sweep
+# and the other sample rates. They come back as gates at 1.0 on F-Droid.
+#
+# The toolchain is pinned in core/rust-toolchain.toml; rustup, already on
+# the runner, installs that exact version and its wasm32 target on first
+# use, so nothing here names a version.
+name: core
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A PR's newer push replaces its older run; pushes to main each run.
+concurrency:
+  group: core-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The committed .wasm, the core's tests, clippy
+        run: tools/gate.sh core
+
+  sketch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: The core's tests and clippy, sketch build
+        run: tools/gate.sh sketch
+
+  node:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The Node tests, the generation goldens, the balance lock
+        run: tools/gate.sh node
+
+  flac:
+    runs-on: ubuntu-24.04
+    # The check takes about 8 minutes. The install is held to 12 of the 30:
+    # from a slow mirror, ffmpeg with its recommends (the video drivers,
+    # mesa, speech models: 100 packages, 105 MB) took 19 minutes and more
+    # (2026-11-24), so it comes without them, and its packages are kept in
+    # the cache for the next run.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The packages the last run fetched
+        id: debs
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/apt-debs
+          key: flac-ffmpeg-unzip-debs-ubuntu-24.04-v1
+      - name: The reference decoder, and ffmpeg and unzip for the album's tags (item 121)
+        timeout-minutes: 12
+        run: |
+          mkdir -p ~/apt-debs/partial
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            -o Dir::Cache::Archives="$HOME/apt-debs" \
+            -o APT::Keep-Downloaded-Packages=true -o Acquire::Retries=3 \
+            flac ffmpeg unzip
+          sudo chown -R "$USER" ~/apt-debs
+          echo "$(ls ~/apt-debs/*.deb | wc -l) packages, $(du -sh ~/apt-debs | cut -f1)"
+          ffmpeg -hide_banner -encoders | grep -q libopus && ffprobe -version | head -1 && flac --version && unzip -v | head -1
+      - name: The packages kept for the next run
+        if: steps.debs.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/apt-debs
+          key: flac-ffmpeg-unzip-debs-ubuntu-24.04-v1
+      - name: The FLAC writer against it
+        run: tools/gate.sh flac
+
+  baseline:
+    name: baseline (${{ matrix.parts }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # The loops, the stereo render and the player's fingerprints read
+        # the same renders, so they share a job.
+        parts: ['loops,stereo,player,costs', 'voices', 'refusals']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # On the player in Node since queue item 96: no browser.
+      - name: The core against its baseline
+        run: tools/gate.sh baseline ${{ matrix.parts }}

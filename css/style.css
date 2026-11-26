@@ -1,0 +1,3152 @@
+/* Ballad Falls: design v17 ("Library + Now Playing", Painter session 3),
+   brought into the app in Painter session 4.
+
+   The look, the nine themes and every measured number come from
+   design/archive/driftloom_v17_library.html. Since v18 (Painter session
+   5) the spec is baked from this app instead: design/driftloom_v18.html
+   is this stylesheet and the app's own markup, so bake it again
+   (design/test-kit/bake.mjs) after changing the look. The middle of this file is that
+   spec's stylesheet, lifted section by section (zones, shared controls,
+   the nine theme blocks, the v17 views, the theme swatches) so the two
+   can be diffed. This first part fits the mockup's fixed 340 x 780 phone
+   to a real screen; the last part styles what the app has that the
+   mockup does not draw (the Sound sliders, the Save view, the toast).
+
+   Departures from the spec, on purpose (Mikey, 2026-10-11):
+   - No LEDs and no latched look on the bottom keys. They only change
+     their icons, and only Play and the Sound / Layers switch do that.
+   - Row 3 is two keys, as in PR #153: Now playing and one switch whose
+     icon alternates between Sound and Layers. */
+
+@font-face { font-family: 'Inter'; font-weight: 500; font-display: swap; src: url('../fonts/inter-500.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 600; font-display: swap; src: url('../fonts/inter-600.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 700; font-display: swap; src: url('../fonts/inter-700.woff2') format('woff2'); }
+@font-face { font-family: 'Space Grotesk'; font-weight: 600; font-display: swap; src: url('../fonts/space-grotesk-600.woff2') format('woff2'); }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background: #08060c;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+  overflow: hidden;
+}
+body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+h1, h2, h3, h4, h5, p { margin: 0; }
+
+/* The phone is the whole screen. The mockup's phone is 340 wide with a
+   780px content area; here the zones keep their sizes and the Dynamic zone
+   takes whatever height is left. On a wide screen the zones stay a phone's
+   width in the middle and the theme's backdrop fills the rest. */
+.phone {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  /* The safe area, less what is already outside the page (js/viewport.js
+     sets an --inset-* to 0 there). */
+  padding: var(--inset-top, env(safe-area-inset-top, 0px)) var(--inset-right, env(safe-area-inset-right, 0px))
+           var(--inset-bottom, env(safe-area-inset-bottom, 0px)) var(--inset-left, env(safe-area-inset-left, 0px));
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  isolation: isolate;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+.phone > .zone-info,
+.phone > .zone-dynamic,
+.phone > .zone-buttons {
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+}
+
+/* ============================================================
+   FROM THE SPEC: design/archive/driftloom_v17_library.html
+   ============================================================ */
+
+/* Zone 1 — Info */
+.zone-info {
+  flex: 0 0 205px;
+  padding: 40px 12px 0;
+  display: flex; flex-direction: column;
+  position: relative; z-index: 5;
+}
+.info-inner {
+  flex: 1; border-radius: 18px;
+  padding: 14px 14px 12px;
+  display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
+}
+/* The art on the right, the words on the left (session 30k, item 119:
+   Mikey, "the info card feels very left leaning"). */
+.info-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 118px;
+  gap: 14px; flex: 1; min-height: 0;
+}
+.cover {
+  width: 118px; height: 118px;
+  align-self: start; overflow: hidden; position: relative;
+}
+.info-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+/* A plain line in the card's place (queue item 97): what a browser that
+   cannot run the core is told. The card's own contents step aside. */
+.plain-line {
+  margin: auto 6px; text-align: center;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1rem; line-height: 1.35; font-weight: 500;
+}
+.plain-line a { color: inherit; text-decoration: underline; }
+.info-inner.plain > .info-row,
+.info-inner.plain > .playhead { display: none; }
+
+.name {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-style: normal;
+  /* Session 5 — large text: follows the preference up to 1.3x (36px)
+     and then stops. The text column is 156px wide; at 56px (200%) even
+     "me-kei" would not fit on one line, and at 42px a 8-letter name
+     wraps. */
+  font-weight: 600; font-size: min(1.75rem, 36px); letter-spacing: -0.02em; line-height: 1;
+  overflow-wrap: anywhere;
+}
+/* Session 5 — meta is four block lines in priority order:
+     .m-mix    53% Tide · 47% Glade     (bold, always shown)
+     .m-mood   93% enthusiastic · …
+     .m-key    Bb Mixolydian · 93 bpm
+     .m-meter  6/8 · 8 bars             (first to go)
+   At 100% they render exactly as the old pre-line text did. Like the
+   name, the meta follows the preference up to 1.5x (15px) and then
+   stops: the card is 119px tall and the cover cannot shrink. */
+/* v15 — 10px -> 11px, the iOS (11pt) / Material (11sp) minimum.
+   Leading 1.7 -> 1.5 pays for it, so all four lines still fit at
+   100% and the cover keeps its full 118px. */
+.meta {
+  font-family: 'Inter', sans-serif;
+  font-size: min(0.6875rem, 15px);
+  line-height: 1.5;
+  font-weight: 500;
+}
+.meta > * { display: block; }
+.meta b { font-weight: 700; }
+
+/* The playhead is a row of round dots, a dot a step, as the layers' dots
+   are (session 30d, item 112): a guide dot of 5px, the beats 7px, and the
+   one lit a ring and a halo of 14px, bigger and bolder than the layers'
+   notes. The row keeps its 8px: the lit dot's ring and halo overhang it
+   into the card's padding. */
+.playhead {
+  display: grid; grid-template-columns: repeat(16, 1fr);
+  align-items: center; justify-items: center;
+  gap: 0; height: 8px; margin: 10px 0 0;
+  flex: 0 0 auto;
+}
+.playhead i {
+  display: block; position: relative;
+  width: 5px; height: 5px; border-radius: 50%;
+}
+.playhead i.beat { width: 7px; height: 7px; }
+.playhead i.on::after {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
+  transition: opacity 180ms ease;
+}
+
+/* Zone 2 — Dynamic */
+.zone-dynamic {
+  flex: 1; padding: 0 12px;
+  display: flex; flex-direction: column; min-height: 0;
+  position: relative; z-index: 4;
+}
+.dynamic-inner {
+  flex: 1; border-radius: 18px;
+  padding: 8px 14px;
+  display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
+}
+.layers { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.layer {
+  display: grid;
+  /* Session 2 — the two button tracks are exactly 44px (48px
+     since Session 12, below), so the drawn shape of roll / on-off
+     is the target. The label column
+     gave back 4px (52 → 48) to keep the note grid as wide as
+     it can be. Gap unchanged. */
+  /* Session 12 — roll and on/off grew from 44 to 48 so they meet
+     Material's 48 x 48dp as drawn shapes (Session 2's rule: if a
+     target must be bigger, the visible button gets bigger). The
+     pattern gave up 8px (cells about 8.3 -> 7.8px). */
+  grid-template-columns: 48px 1fr 48px 48px;
+  align-items: center; gap: 6px;
+  flex: 1; min-height: 0;
+  position: relative;
+  border-bottom: 1px solid var(--rule);
+}
+.layer:last-child { border-bottom: 0; }
+.layer .lbl {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.005em;
+  color: var(--text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* Session 3 — the off state no longer relies on low-contrast
+   text. The label keeps a compliant colour; the state is read
+   from the word "off", the 50%-opacity notes and the row rule. */
+.layer.dim .lbl { color: var(--text-dim); }
+
+.pattern {
+  display: grid; grid-template-columns: repeat(16, 1fr);
+  gap: 0; height: 22px; align-items: center; justify-items: center;
+}
+.pattern span {
+  display: block; width: 3px; height: 3px;
+  border-radius: 50%; background: var(--guide-dot);
+}
+.pattern span.on {
+  width: 8px; height: 8px;
+  background: var(--n);
+}
+/* A note as loud as it is heard (session 30b): a layer a long piece's
+   plan has soft, a kit still rising, drawn dimmer (js/ui.js sets
+   --heard, 0.3 to 0.9; none at a full share). */
+.pattern span.on[data-shade] {
+  background: color-mix(in srgb, var(--n) calc(var(--heard) * 100%), transparent);
+  box-shadow: inset 0 0 0 1.25px var(--n);
+}
+.pattern span.on.big {
+  width: 12px; height: 12px;
+}
+/* A muted layer's notes are rings: a shape, not only a fainter color. */
+.layer.dim .pattern span.on, .layer.dim .pattern span.on[data-shade] {
+  background: transparent; box-shadow: inset 0 0 0 1.5px var(--text-dim);
+}
+
+.phone.playhead-at-9.playing .layer:not(.dim) .pattern span:nth-child(9).on {
+  box-shadow:
+    0 0 0 2px var(--halo-inner),
+    0 0 10px var(--n),
+    0 0 18px var(--n-glow);
+}
+
+.layer .btn-roll,
+.layer .btn-on {
+  font-family: 'Inter', sans-serif;
+  /* Session 12 — 9px -> 11px, the iOS (11pt) and Material (11sp)
+     minimum, capped at 18px so the word fits the 48px square
+     under user text spacing. */
+  font-size: min(0.6875rem, 18px); font-weight: 600;
+  /* Session 2 — the drawn shape IS the target. 48 × 48 since
+     Session 12 (was 44), border-box, so the 1px border sits
+     inside and the outer edge a finger lands on measures
+     exactly 48 × 48. */
+  width: 48px;
+  height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; text-align: center;
+  border-radius: 8px;
+  border: 1px solid var(--btn-mini-border);
+  background: var(--btn-mini-bg);
+  color: var(--btn-mini-text);
+  box-shadow: var(--btn-mini-shadow);
+}
+/* Session 3 — opacity: 0.7 removed. It multiplied an already
+   measured ratio and was never counted in the audit. The colour
+   alone now carries the quieter state, and it clears 4.5:1. */
+.layer.dim .btn-on {
+  color: var(--text-dim);
+}
+
+/* Zone 3 — Buttons */
+.zone-buttons {
+  flex: 0 0 240px;
+  padding: 0 12px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+  position: relative; z-index: 5;
+}
+.row { display: flex; gap: 8px; flex: 1; min-height: 0; }
+.row-1 { flex: 1.25; }
+.row-2 { flex: 1; }
+.row-3 { flex: 1; }
+.row-1 .btn-play { flex: 2.4; }
+.btn {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 14px;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  box-shadow: var(--btn-shadow);
+  user-select: none;
+}
+.btn svg { width: 18px; height: 18px; display: block; }
+.row-1 .btn svg { width: 22px; height: 22px; }
+.btn-play {
+  background: var(--play-bg);
+  color: var(--play-text);
+  border-color: var(--play-border);
+  box-shadow: var(--play-shadow);
+  text-shadow: var(--play-text-shadow);
+}
+
+
+/* ============================================================
+   SESSION 5 · DYNAMIC TYPE  (up to 200%)
+   Text is rem and follows the user's size preference. The three
+   locked zones do not: Info 205 / Dynamic ~319 / Buttons 240 stay
+   exactly that at every text size, so the pins below stop a zone
+   growing to fit its content and squeezing its neighbour. What
+   changes is what happens INSIDE a zone, in steps, each measured in
+   ems of the phone's own font size:  340px / (16px x scale). (Since
+   v197 js/main.js measures them: a container query in em went stale
+   when the text size changed under the page, Chromium 141.)
+      Q1  <= 17.5em  scale >= 1.21   Layers stack
+   (The info card's lines no longer step: script lays out whole
+   lines and leaves off what does not fit, session 30d.)
+   The same rules answer to the browser's own text-size setting and
+   to the Android app's.
+   ============================================================ */
+.zone-info, .zone-buttons, .info-inner { min-height: 0; }
+.info-text { overflow: hidden; }
+
+/* Session 12 — the same stacked layer layout, applied by the fit
+   guard when a label would otherwise be cut short (user text
+   spacing at 102–120% made "Melody" read "Melo…"). */
+.phone.fit-stack .layer {
+  grid-template-columns: 1fr 48px 48px;
+  grid-template-rows: auto auto;
+  grid-template-areas: "lbl roll on" "pat roll on";
+  align-content: center; align-items: center;
+  row-gap: 1px;
+}
+.phone.fit-stack .layer .lbl      { grid-area: lbl;  align-self: end;   line-height: 1.15; }
+.phone.fit-stack .layer .pattern  { grid-area: pat;  align-self: start; }
+.phone.fit-stack .layer .btn-roll { grid-area: roll; }
+.phone.fit-stack .layer .btn-on   { grid-area: on;   }
+
+/* Layers: the label moves ABOVE the pattern and the two buttons
+     span both rows. The 48 x 48 targets are unchanged and the
+     pattern gets wider. */
+:where(.phone.text-large) .layer {
+    grid-template-columns: 1fr 48px 48px;
+    grid-template-rows: auto auto;
+    grid-template-areas: "lbl roll on" "pat roll on";
+    align-content: center; align-items: center;
+    row-gap: 1px;
+  }
+:where(.phone.text-large) .layer .lbl { grid-area: lbl;  align-self: end;   line-height: 1.15; }
+:where(.phone.text-large) .layer .pattern { grid-area: pat;  align-self: start; }
+:where(.phone.text-large) .layer .btn-roll { grid-area: roll; }
+:where(.phone.text-large) .layer .btn-on { grid-area: on;   }
+
+
+/* ============================================================
+   SESSION 7 · NATIVE BUTTONS + KEYBOARD FOCUS
+   Every control in the phone is now a real <button>, so Tab,
+   Enter and Space work with no script. This rule takes away
+   the browser's own button styling at zero specificity, so
+   every existing .btn / .btn-roll / .btn-on rule still wins and
+   the picture at 100% is unchanged.
+   ============================================================ */
+:where(.phone button) {
+  font: inherit; color: inherit; letter-spacing: inherit;
+  line-height: inherit; text-transform: inherit; text-align: center;
+  margin: 0; padding: 0;
+  -webkit-appearance: none; appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+/* One focus ring for every control: 2px, offset 2px, in the
+   theme's primary text colour. That colour already clears 4.5:1
+   on the panels (Session 3); the ring is measured against what
+   it actually sits on in the audit (>= 3:1, WCAG 2.4.13). It is
+   only drawn for keyboard focus, never for a tap. */
+.phone button:focus { outline: none; }
+.phone button:focus-visible {
+  outline: 2px solid var(--focus-ring, var(--text-primary));
+  outline-offset: 2px;
+}
+/* The bottom buttons sit straight on the backdrop, not on a
+   panel. In the three light themes whose backdrop darkens toward
+   the bottom (Ember, Tidal, Olive) the dark ring fell to 1.5–3.2:1
+   there, so those rings go light. */
+.phone .zone-buttons button:focus-visible {
+  outline-color: var(--focus-ring-zone, var(--focus-ring, var(--text-primary)));
+}
+/* Their backdrops are mid-tones, so one colour alone is marginal
+   (Olive's backdrop sits near L 0.24, where neither white nor the
+   dark text clears 3:1 everywhere). These three get a two-colour
+   indicator (WCAG technique C40): the light outline plus a 2px
+   dark band in the offset gap. The two bands are ~9:1 against
+   each other, so one of them always clears 3:1 against whatever
+   is behind it. */
+.t-ember { --focus-ring-zone: #fff3f8; --focus-ring-inner: var(--text-primary); }
+.t-tidal { --focus-ring-zone: #f0fbff; --focus-ring-inner: var(--text-primary); }
+.t-olive { --focus-ring-zone: #fffbea; --focus-ring-inner: var(--text-primary); }
+.phone .zone-buttons .btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--focus-ring-inner, transparent), var(--btn-shadow);
+}
+.phone .zone-buttons .btn-play:focus-visible {
+  box-shadow: 0 0 0 2px var(--focus-ring-inner, transparent), var(--play-shadow);
+}
+.phone .zone-buttons .btn:not(.btn-play):focus-visible:active {
+  box-shadow: 0 0 0 2px var(--focus-ring-inner, transparent), inset 0 3px 6px rgba(0,0,0,0.30), inset 0 -1px 0 rgba(255,255,255,0.16);
+}
+.phone .zone-buttons .btn-play:focus-visible:active {
+  box-shadow:
+    0 0 0 2px var(--focus-ring-inner, transparent),
+    inset 0 3px 6px rgba(0,0,0,0.40),
+    inset 0 -1px 0 rgba(255,255,255,0.16),
+    0 1px 2px rgba(0,0,0,0.35);
+}
+/* ============================================================
+   v15 · EVERY BUTTON RECESSES
+   Every control now sinks into the screen like Play does, like
+   the keys on an old phone: it drops (2px for the big buttons,
+   1px for roll and on/off), darkens a little, and its shadow turns
+   inward. Under reduced motion the drop is removed and the
+   darkening and inward shadow stay (see SESSION 6).
+   ============================================================ */
+.phone .btn:not(.btn-play),
+.layer .btn-roll,
+.layer .btn-on {
+  transition: transform 90ms cubic-bezier(.3,.8,.4,1), box-shadow 90ms ease, filter 90ms ease;
+}
+.phone .btn:not(.btn-play):active {
+  transform: translateY(2px);
+  filter: brightness(0.94);
+  box-shadow: inset 0 3px 6px rgba(0,0,0,0.30), inset 0 -1px 0 rgba(255,255,255,0.16), 0 1px 2px rgba(0,0,0,0.25);
+}
+.layer .btn-roll:active,
+.layer .btn-on:active {
+  transform: translateY(1px);
+  filter: brightness(0.94);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.32), inset 0 -1px 0 rgba(255,255,255,0.14);
+}
+
+/* ============================================================
+   v15 · OFF STAYS PRESSED IN
+   When a layer is off, its on/off key stays latched down: sunk
+   1px, a darker fill, an inward shadow. You can see at a glance
+   which layers are off. The word "off" still carries the state
+   on its own (it clears 4.5:1 on the darker fill in every theme;
+   measured), so the look is extra, not required.
+   Light themes darken toward their own primary text colour;
+   dark themes darken toward black.
+   ============================================================ */
+.layer.dim .btn-on {
+  transform: translateY(1px);
+  background: var(--btn-off-bg);
+  border-color: var(--btn-off-border);
+  box-shadow: inset 0 2px 5px var(--btn-off-shade), inset 0 -1px 0 rgba(255,255,255,0.12);
+  color: var(--btn-off-text);
+}
+.t-dawn, .t-ember, .t-tidal, .t-olive {
+  --btn-off-bg: linear-gradient(180deg, color-mix(in srgb, var(--text-primary) 26%, transparent), color-mix(in srgb, var(--text-primary) 16%, transparent));
+  --btn-off-border: color-mix(in srgb, var(--text-primary) 30%, transparent);
+  --btn-off-shade: color-mix(in srgb, var(--text-primary) 45%, transparent);
+  --btn-off-text: var(--text-primary);
+}
+.t-dark, .t-amoled, .t-nightlight, .t-nocturne, .t-abyss {
+  --btn-off-bg: linear-gradient(180deg, rgba(0,0,0,0.62), rgba(0,0,0,0.44));
+  --btn-off-border: rgba(0,0,0,0.55);
+  --btn-off-shade: rgba(0,0,0,0.7);
+  --btn-off-text: var(--text-secondary);
+}
+
+/* ============================================================
+   SESSION 6 · REDUCED MOTION
+   Under prefers-reduced-motion: reduce nothing in the phone
+   moves or fades. The Play press keeps its non-motion feedback
+   (6% darker, inset shadow) and drops only the 2px drop.
+   (Painter session 5: this comment had lost its end and the
+   @media line when the spec was lifted in, so the rule below
+   applied to everyone and the press never moved. Put back from
+   the v17 spec.)
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .phone *, .phone *::before, .phone *::after {
+    transition: none !important; animation: none !important;
+  }
+  /* !important: the press rules above are more specific. */
+  .phone .btn-play:active,
+  .phone .btn:active,
+  .layer .btn-roll:active,
+  .layer .btn-on:active,
+  .layer.dim .btn-on { transform: none !important; }
+}
+
+/* ============================================================
+   SESSION 30k · THE PLAYHEAD AN LED  (item 119; Mikey's pick, B3)
+   (replaces v16's solid lamp on the light themes, v17's glint on
+   it, and the dark themes' ring and glow)
+   The lit dot is a diffused LED: a bead a size up (13px), lit
+   from its middle out to the theme's color, a thin rim of that
+   color's deep shade, and a soft bloom of the same hue round it.
+   No sparkle, nothing that twinkles: it moves only as the beat
+   moves it.
+   On a dark card the middle is near white. On a light card
+   nothing is brighter than the card, so the light themes' middle
+   stays a deep, saturated shade (3:1 or more against the card,
+   held by tools/a11y.mjs at the dot's middle) and the light comes
+   from the gradient and the bloom: v15's pale middle read as
+   bright and dark at once.
+   Bigger than the rest, so "lit" is shape as well as color; in
+   forced colors it is Highlight with a ring (below).
+   --led-hot   the middle        --led-core  the body
+   --led-rim   the edge          --led-bloom the light round it
+   --lit-ring stays: the rail's bead (Now Playing) still uses it.
+   ============================================================ */
+.t-dawn  { --led-hot: #c96000; --led-core: #b85600; --led-rim: #8a3e00; --led-bloom: rgba(255,140,30,0.5);  --lit-ring: rgba(255,251,244,0.96); }
+.t-ember { --led-hot: #c8006a; --led-core: #ae0058; --led-rim: #78003c; --led-bloom: rgba(255,60,140,0.45); --lit-ring: rgba(255,242,238,0.96); }
+.t-tidal { --led-hot: #00807f; --led-core: #00716f; --led-rim: #00504f; --led-bloom: rgba(0,200,200,0.45);  --lit-ring: rgba(240,255,255,0.96); }
+.t-olive { --led-hot: #886c00; --led-core: #765c00; --led-rim: #524000; --led-bloom: rgba(240,200,20,0.55); --lit-ring: rgba(255,253,235,0.96); }
+.t-dark       { --led-hot: #eef7ff; --led-core: #7ab8f0; --led-rim: #3a78b8; --led-bloom: rgba(90,150,220,0.55); }
+.t-amoled     { --led-hot: #e8faff; --led-core: #60d0f0; --led-rim: #2090c0; --led-bloom: rgba(80,200,240,0.55); }
+.t-nightlight { --led-hot: #fff3d6; --led-core: #ffc060; --led-rim: #d07a20; --led-bloom: rgba(255,160,60,0.55); }
+.t-nocturne   { --led-hot: #fff6dc; --led-core: #ffc25e; --led-rim: #c8701c; --led-bloom: rgba(255,172,72,0.55); }
+.t-abyss      { --led-hot: #fff4e0; --led-core: #ffc888; --led-rim: #d0803e; --led-bloom: rgba(232,152,88,0.55); }
+/* Specificity (0,3,3): beats each theme's own lit-dot rule, and ties
+   with the forced-colors rule, which comes later and wins. */
+body .phone .playhead i.on::after {
+  width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px;
+  background: radial-gradient(circle at 50% 50%, var(--led-hot) 0 22%, var(--led-core) 58%, var(--led-rim) 100%);
+  box-shadow: 0 0 0 1px var(--led-rim), 0 0 5px 2px var(--led-bloom), 0 0 14px 5px var(--led-bloom);
+}
+
+/* ============================================================
+   SESSION 10 · FORCED COLOURS  (Windows High Contrast / Contrast
+   Themes)
+   The browser repaints everything in the user's system colours.
+   Text, borders and buttons come through on their own. What
+   does not: the notes, guide dots and playhead are coloured
+   backgrounds, which get flattened to the canvas colour and
+   vanish, and the halo is a box-shadow, which is removed. Those
+   two strips opt out of forcing and are redrawn in system
+   colours, so they follow whatever palette the user picked:
+     note           CanvasText     guide dot      GrayText
+     off-layer note GrayText       halo           Highlight ring
+     playhead cell  GrayText       beat cell      CanvasText
+     lit cell       Highlight      focus ring     Highlight
+   The off state also goes GrayText on the label and the word.
+   ============================================================ */
+@media (forced-colors: active) {
+  .pattern, .playhead { forced-color-adjust: none; }
+  .pattern span { background: GrayText; }
+  .pattern span.on, .pattern span.on[data-shade] { background: CanvasText; box-shadow: none; }
+  .layer.dim .pattern span.on, .layer.dim .pattern span.on[data-shade] { background: transparent; box-shadow: inset 0 0 0 1.5px GrayText; }
+  .phone.playhead-at-9.playing .layer:not(.dim) .pattern span:nth-child(9).on {
+    box-shadow: 0 0 0 2px Canvas, 0 0 0 4px Highlight;
+  }
+  /* "body .phone" outranks the per-theme ".t-x .playhead i". */
+  body .phone .playhead i { background: GrayText; box-shadow: none; }
+  body .phone .playhead i.beat { background: CanvasText; }
+  body .phone .playhead i.on::after { background: Highlight; box-shadow: none; opacity: 1; }
+  body .phone:not(.playing) .playhead i.on::after { opacity: 0; }
+  /* Shape, not just colour: the lit cell also gets a ring, since
+     Highlight and CanvasText can sit close in some palettes. */
+  body .phone.playing .playhead i.on { outline: 2px solid Highlight; outline-offset: 1px; }
+  .layer.dim .lbl, .layer.dim .btn-on { color: GrayText; }
+  .phone button:focus-visible,
+  .phone .zone-buttons button:focus-visible { outline-color: Highlight; }
+  .cover { border: 1px solid CanvasText; }
+}
+
+/* ============================================================
+   PLAY / PAUSE
+   ============================================================ */
+.btn-play {
+  cursor: pointer;
+  transition:
+    transform 90ms cubic-bezier(.3,.8,.4,1),
+    box-shadow 90ms ease,
+    filter 90ms ease;
+}
+/* Focus ring: see SESSION 7 (shared by every control). */
+
+.btn-play:active {
+  transform: translateY(2px);
+  filter: brightness(0.94) saturate(0.92);
+  box-shadow:
+    inset 0 3px 6px rgba(0,0,0,0.40),
+    inset 0 -1px 0 rgba(255,255,255,0.16),
+    0 1px 2px rgba(0,0,0,0.35);
+}
+
+.btn-play .ico-pause { display: none; }
+.phone.playing .btn-play .ico-play  { display: none; }
+.phone.playing .btn-play .ico-pause { display: block; }
+
+.phone:not(.playing) .playhead i.on::after { opacity: 0; }
+
+/* Reduced motion: see SESSION 6. */
+
+
+/* ============================================================
+   THEME 01 · DAWN GLASS
+   Contrast (Session 3) — surface L ≈ 0.84
+     primary   #3a2848  11.3:1
+     secondary #6a5868   5.5:1
+     dim       #74627c   4.7:1   (was #a090a8 · 2.6:1)
+   Only dim moved. The panel was already a stable light surface.
+   ============================================================ */
+.t-dawn {
+  --glass-bg: rgba(255,255,255,0.52);
+  --glass-border: rgba(255,255,255,0.78);
+  --glass-shadow: 0 20px 40px -25px rgba(80,60,90,0.5), inset 0 1px 0 rgba(255,255,255,0.9);
+  --text-primary: #3a2848;
+  --text-secondary: #645262;
+  --text-dim: #6a5973;
+  --rule: rgba(74,56,80,0.32);
+  --guide-dot: rgba(74,56,80,0.42);
+  --playhead-bg: rgba(74,56,80,0.28);
+  --playhead-beat: rgba(74,56,80,0.65);   /* Session 12: beat cells to 3:1 */
+  --playhead-on: linear-gradient(180deg, #ffd890, #e8a048);
+  --playhead-on-shadow: 0 0 10px rgba(255,168,72,0.7);
+  /* v16 — jewel tones: coral, cobalt, emerald, orchid, violet.
+     Light rows 3.7-3.8:1, deep rows 5.2-5.5:1, so neighbors
+     differ in lightness as well as hue (see v16 notes).
+     Session 12's were #b46e01 #4a7898 #886898 #bb6e12 #408f67. */
+  --n1: #e33120; --n2: #1457da; --n3: #23886c; --n4: #a2209d; --n5: #7f5ee6;
+  --halo-inner: rgba(255,255,255,0.55);
+  --n-glow: rgba(255,180,120,0.35);
+  --btn-mini-bg: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.55));
+  --btn-mini-border: rgba(255,255,255,0.9);
+  --btn-mini-text: #4a3850;
+  --btn-mini-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 2px 5px -2px rgba(74,56,80,0.3);
+  --btn-bg: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.55));
+  --btn-border: rgba(255,255,255,0.95);
+  --btn-text: #4a3850;
+  --btn-shadow: inset 0 1px 0 rgba(255,255,255,1), 0 4px 12px -4px rgba(74,56,80,0.4);
+  --play-bg: linear-gradient(180deg, #ffd8a0 0%, #e8a040 48%, #b87820 50%, #d08830 100%);
+  --play-text: #ffffff;
+  --play-border: rgba(255,255,255,0.8);
+  --play-shadow: inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -2px 4px rgba(0,0,0,0.15), 0 6px 16px -4px rgba(184,120,32,0.7), 0 0 22px rgba(255,180,80,0.4);
+  --play-text-shadow: 0 -1px 0 rgba(0,0,0,0.2), 0 1px 0 rgba(255,255,255,0.4);
+
+  background:
+    radial-gradient(60% 45% at 30% 15%, #ffdcc0 0%, transparent 55%),
+    radial-gradient(55% 40% at 78% 25%, #d8b8d8 0%, transparent 60%),
+    radial-gradient(70% 45% at 20% 85%, #b8d0d8 0%, transparent 60%),
+    radial-gradient(60% 40% at 88% 78%, #ffd8c8 0%, transparent 55%),
+    linear-gradient(170deg, #f8e4d0 0%, #e8d0dc 50%, #d0dce0 100%);
+  color: #4a3850;
+}
+.t-dawn .status { color: #5a4a5a; }
+.t-dawn .info-inner,
+.t-dawn .dynamic-inner {
+  background: var(--glass-bg);
+  backdrop-filter: blur(22px) saturate(1.15);
+  -webkit-backdrop-filter: blur(22px) saturate(1.15);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.t-dawn .cover {
+  background:
+    radial-gradient(circle at 35% 30%, #fff8e0 0%, #ffd8a8 20%, #e8a0b8 45%, #a888b8 70%, #6a7898 100%);
+  border: 1px solid rgba(255,255,255,0.85);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4), inset 0 8px 20px rgba(255,255,255,0.5);
+}
+.t-dawn .name { color: var(--text-primary); }
+.t-dawn .meta { color: var(--text-secondary); }
+.t-dawn .meta b { color: var(--text-primary); }
+.t-dawn .playhead i { background: var(--playhead-bg); box-shadow: inset 0 1px 1px rgba(255,255,255,0.6); }
+.t-dawn .playhead i.beat { background: var(--playhead-beat); }
+.t-dawn .playhead i.on::after {
+  background: var(--playhead-on);
+  box-shadow: var(--playhead-on-shadow);
+}
+.t-dawn .layer:nth-child(1) .pattern span.on { --n: var(--n1); }
+.t-dawn .layer:nth-child(2) .pattern span.on { --n: var(--n2); }
+.t-dawn .layer:nth-child(3) .pattern span.on { --n: var(--n3); }
+.t-dawn .layer:nth-child(4) .pattern span.on { --n: var(--n4); }
+.t-dawn .layer:nth-child(5) .pattern span.on { --n: var(--n5); }
+
+/* ============================================================
+   THEME 02 · EMBER GLASS  (Dusk × Bloom)
+   Contrast (Session 3) — surface L ≈ 0.48
+     primary   #2a1428   8.7:1
+     secondary #5a2840   5.9:1
+     dim       #663450   5.1:1   (was #8a5878 · 2.8:1)
+   The panel bottoms out on a mid-tone background, so the glass
+   was made more opaque (0.42/0.28 → 0.72/0.66). Text alone
+   could not clear 4.5:1 without collapsing to black.
+   ============================================================ */
+.t-ember {
+  --glass-bg: linear-gradient(180deg, rgba(255,238,224,0.72), rgba(255,222,208,0.66));
+  --glass-border: rgba(255,215,190,0.62);
+  --glass-shadow:
+    0 20px 40px -25px rgba(50,10,45,0.65),
+    0 0 40px -14px rgba(255,120,140,0.3),
+    inset 0 1px 0 rgba(255,235,220,0.85),
+    inset 0 -1px 0 rgba(180,90,110,0.18);
+  --text-primary: #2a1428;
+  --text-secondary: #5a2840;
+  --text-dim: #602f4b;
+  --rule: rgba(42,20,40,0.36);
+  --guide-dot: rgba(42,20,40,0.48);
+  --playhead-bg: rgba(42,20,40,0.32);
+  --playhead-beat: rgba(42,20,40,0.59);   /* Session 12: beat cells to 3:1 */
+  --playhead-on: linear-gradient(180deg, #fff0c0, #ff9048);
+  --playhead-on-shadow: 0 0 12px rgba(255,150,80,0.9);
+  /* v16 — ruby, violet, vermilion, plum, royal blue. Light rows
+     3.6:1, deep rows 5.4:1, Air between at 4.2:1.
+     Session 12's were #c03050 #ab4e00 #8840a8 #8e5200 #a7285d. */
+  --n1: #ac1a30; --n2: #651cae; --n3: #983012; --n4: #75135e; --n5: #2338c5;
+  --halo-inner: rgba(255,235,220,0.6);
+  --n-glow: rgba(255,140,120,0.5);
+  --btn-mini-bg: linear-gradient(180deg, rgba(255,235,220,0.6), rgba(255,210,190,0.3));
+  --btn-mini-border: rgba(255,235,220,0.65);
+  --btn-mini-text: #2a1428;
+  --btn-mini-shadow: inset 0 1px 0 rgba(255,235,220,0.8), 0 2px 5px -2px rgba(50,15,70,0.4);
+  --btn-bg: linear-gradient(180deg, rgba(255,235,220,0.55), rgba(255,205,190,0.28));
+  --btn-border: rgba(255,215,190,0.65);
+  --btn-text: #2a1428;
+  --btn-shadow: inset 0 1px 0 rgba(255,235,220,0.8), 0 4px 12px -4px rgba(50,15,70,0.5);
+  --play-bg: linear-gradient(180deg, #ffb878 0%, #e85878 48%, #a02858 50%, #c03868 100%);
+  --play-text: #ffffff;
+  --play-border: rgba(255,225,205,0.75);
+  --play-shadow: inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -2px 4px rgba(0,0,0,0.2), 0 6px 16px -4px rgba(180,60,90,0.75), 0 0 28px rgba(255,130,110,0.5);
+  --play-text-shadow: 0 -1px 0 rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.3);
+
+  background:
+    radial-gradient(55% 45% at 25% 15%, #ffb070 0%, transparent 60%),
+    radial-gradient(50% 40% at 78% 22%, #e85890 0%, transparent 60%),
+    radial-gradient(65% 50% at 20% 82%, #7a2878 0%, transparent 65%),
+    radial-gradient(60% 45% at 88% 85%, #c84878 0%, transparent 60%),
+    radial-gradient(40% 22% at 50% 4%, #ffd0a0 0%, transparent 75%),
+    linear-gradient(180deg, #e89878 0%, #b85888 45%, #4a1858 100%);
+  color: #2a1428;
+}
+.t-ember .status { color: #2a1428; opacity: 0.9; text-shadow: 0 1px 0 rgba(255,225,205,0.35); }
+.t-ember .info-inner,
+.t-ember .dynamic-inner {
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(1.35);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.t-ember .info-inner::before {
+  content: ''; position: absolute; inset: -22px;
+  background: radial-gradient(closest-side, rgba(255,210,170,0.4) 0%, rgba(255,140,160,0.18) 55%, transparent 100%);
+  border-radius: 32px;
+  pointer-events: none; z-index: -1;
+}
+.t-ember .cover {
+  background:
+    radial-gradient(circle at 40% 65%, #ffe0a0 0%, #ff9870 22%, #e84880 48%, #8828a0 76%, #3a1858 100%);
+  border: 1px solid rgba(255,225,205,0.55);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.28),
+    inset 0 -10px 24px rgba(50,15,70,0.42),
+    inset 0 10px 20px rgba(255,200,150,0.4),
+    0 0 26px rgba(255,140,120,0.4);
+}
+.t-ember .name { color: var(--text-primary); text-shadow: 0 1px 0 rgba(255,225,205,0.3); }
+.t-ember .meta { color: var(--text-secondary); }
+.t-ember .meta b { color: var(--text-primary); }
+.t-ember .playhead i { background: var(--playhead-bg); box-shadow: inset 0 1px 1px rgba(255,225,205,0.4); }
+.t-ember .playhead i.beat { background: var(--playhead-beat); }
+.t-ember .playhead i.on::after {
+  background: var(--playhead-on);
+  box-shadow: var(--playhead-on-shadow);
+}
+.t-ember .layer:nth-child(1) .pattern span.on { --n: var(--n1); }
+.t-ember .layer:nth-child(2) .pattern span.on { --n: var(--n2); }
+.t-ember .layer:nth-child(3) .pattern span.on { --n: var(--n3); }
+.t-ember .layer:nth-child(4) .pattern span.on { --n: var(--n4); }
+.t-ember .layer:nth-child(5) .pattern span.on { --n: var(--n5); }
+
+/* ============================================================
+   THEME 03 · TIDAL GLASS  (Rain × Underwater)
+   Contrast (Session 3) — surface L ≈ 0.58
+     primary   #0e2e40   8.5:1   (unchanged — already passed)
+     secondary #1c4654   6.2:1   (was #2a5868 · 3.0:1)
+     dim       #2e5466   4.9:1   (was #5888a0 · 1.5:1)
+   Worst offender in the file. Glass made more opaque
+   (0.46/0.32 → 0.72/0.64) so the panel stops drifting dark
+   toward the bottom of the phone.
+   ============================================================ */
+.t-tidal {
+  --glass-bg: linear-gradient(180deg, rgba(228,246,248,0.72), rgba(208,236,240,0.64));
+  --glass-border: rgba(210,235,240,0.66);
+  --glass-shadow:
+    0 20px 40px -25px rgba(15,45,65,0.6),
+    inset 0 1px 0 rgba(235,250,250,0.8),
+    inset 0 -2px 8px rgba(20,100,130,0.15);
+  --text-primary: #0e2e40;
+  --text-secondary: #1c4654;
+  --text-dim: #294e60;
+  --rule: rgba(14,46,64,0.36);
+  --guide-dot: rgba(14,46,64,0.48);
+  --playhead-bg: rgba(14,46,64,0.32);
+  --playhead-beat: rgba(14,46,64,0.61);   /* Session 12: beat cells to 3:1 */
+  --playhead-on: linear-gradient(180deg, #d8fff0, #48b8b0);
+  --playhead-on-shadow: 0 0 12px rgba(120,220,200,0.9);
+  /* v16 — ocean, sea teal, violet, reef coral, deep cerulean.
+     Light rows 3.6-3.7:1, deep rows 5.2-5.7:1, Air 4.8:1.
+     Session 12's were #1a5868 #288080 #208071 #86671a #007557. */
+  --n1: #145492; --n2: #19685d; --n3: #6230c1; --n4: #bd2c26; --n5: #13546a;
+  --halo-inner: rgba(230,250,250,0.7);
+  --n-glow: rgba(130,220,205,0.5);
+  --btn-mini-bg: linear-gradient(180deg, rgba(230,250,250,0.6), rgba(205,235,240,0.32));
+  --btn-mini-border: rgba(210,235,240,0.68);
+  --btn-mini-text: #0e2e40;
+  --btn-mini-shadow: inset 0 1px 0 rgba(230,250,250,0.85), 0 2px 5px -2px rgba(15,45,65,0.4);
+  --btn-bg: linear-gradient(180deg, rgba(230,250,250,0.6), rgba(205,235,240,0.3));
+  --btn-border: rgba(210,235,240,0.7);
+  --btn-text: #0e2e40;
+  --btn-shadow: inset 0 1px 0 rgba(230,250,250,0.85), 0 4px 12px -4px rgba(15,45,65,0.5);
+  --play-bg: linear-gradient(180deg, #b8e8e0 0%, #38a0a8 48%, #0a6878 50%, #187888 100%);
+  --play-text: #ffffff;
+  --play-border: rgba(210,235,240,0.75);
+  --play-shadow: inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -2px 4px rgba(0,0,0,0.2), 0 6px 16px -4px rgba(15,80,100,0.75), 0 0 26px rgba(130,220,205,0.5);
+  --play-text-shadow: 0 -1px 0 rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.35);
+
+  background:
+    radial-gradient(55% 45% at 28% 15%, #b8e0da 0%, transparent 55%),
+    radial-gradient(50% 40% at 78% 24%, #88bcc4 0%, transparent 60%),
+    radial-gradient(75% 55% at 22% 82%, #2a7890 0%, transparent 65%),
+    radial-gradient(55% 40% at 88% 82%, #68a8b4 0%, transparent 55%),
+    linear-gradient(170deg, #c8e8e0 0%, #78b8c4 45%, #285a78 100%);
+  color: #0e2e40;
+}
+.t-tidal .status { color: #0e2e40; opacity: 0.9; text-shadow: 0 1px 0 rgba(210,240,240,0.4); }
+.t-tidal .info-inner,
+.t-tidal .dynamic-inner {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.t-tidal .info-inner::before {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    radial-gradient(ellipse 30px 10px at 26% 22%, rgba(255,255,255,0.42), transparent 70%),
+    radial-gradient(ellipse 40px 14px at 72% 62%, rgba(255,255,255,0.34), transparent 70%),
+    radial-gradient(ellipse 20px 7px at 22% 82%, rgba(255,255,255,0.36), transparent 70%),
+    radial-gradient(ellipse 32px 11px at 86% 30%, rgba(255,255,255,0.3), transparent 70%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.9;
+}
+.t-tidal .dynamic-inner::before {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    radial-gradient(ellipse 22px 8px at 26% 30%, rgba(255,255,255,0.34), transparent 70%),
+    radial-gradient(ellipse 30px 10px at 74% 66%, rgba(255,255,255,0.3), transparent 70%),
+    radial-gradient(ellipse 24px 9px at 55% 92%, rgba(255,255,255,0.26), transparent 70%);
+  mix-blend-mode: screen;
+  opacity: 0.75;
+  pointer-events: none;
+}
+.t-tidal .cover {
+  background:
+    radial-gradient(circle at 42% 48%, #e8faf8 0%, #70c8c8 30%, #2a7890 62%, #0a3858 100%);
+  border: 1px solid rgba(210,235,240,0.6);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3), inset 0 8px 20px rgba(255,255,255,0.4);
+}
+.t-tidal .cover::before {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    radial-gradient(ellipse 16px 6px at 30% 25%, rgba(255,255,255,0.5), transparent 70%),
+    radial-gradient(ellipse 20px 7px at 70% 65%, rgba(255,255,255,0.4), transparent 70%);
+  pointer-events: none;
+}
+.t-tidal .name { color: var(--text-primary); text-shadow: 0 1px 0 rgba(210,240,240,0.4); }
+.t-tidal .meta { color: var(--text-secondary); }
+.t-tidal .meta b { color: var(--text-primary); }
+.t-tidal .playhead i { background: var(--playhead-bg); box-shadow: inset 0 1px 1px rgba(220,250,250,0.5); }
+.t-tidal .playhead i.beat { background: var(--playhead-beat); }
+.t-tidal .playhead i.on::after {
+  background: var(--playhead-on);
+  box-shadow: var(--playhead-on-shadow);
+}
+.t-tidal .layer:nth-child(1) .pattern span.on { --n: var(--n1); }
+.t-tidal .layer:nth-child(2) .pattern span.on { --n: var(--n2); }
+.t-tidal .layer:nth-child(3) .pattern span.on { --n: var(--n3); }
+.t-tidal .layer:nth-child(4) .pattern span.on { --n: var(--n4); }
+.t-tidal .layer:nth-child(5) .pattern span.on { --n: var(--n5); }
+
+/* ============================================================
+   THEME 04 · DARK GLASS
+   Contrast (Session 3) — surface L ≈ 0.025
+     primary   #e8e8ec  11.5:1
+     secondary #b8b8c0   7.1:1   (was #9a9aa4 · 5.0:1)
+     dim       #a0a0a8   5.4:1   (was #5a5a64 · 2.3:1)
+   Secondary was passing but sitting too close to where dim had
+   to land, so it moved up to keep a three-step ladder.
+   ============================================================ */
+.t-dark {
+  --glass-bg: linear-gradient(180deg, rgba(40,40,48,0.85), rgba(28,28,34,0.92));
+  --glass-border: rgba(255,255,255,0.18);
+  --glass-shadow:
+    0 20px 40px -25px rgba(0,0,0,0.9),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  --text-primary: #e8e8ec;
+  --text-secondary: #b8b8c0;
+  --text-dim: #a0a0a8;
+  --rule: rgba(255,255,255,0.28);
+  --guide-dot: rgba(255,255,255,0.36);
+  --playhead-bg: rgba(255,255,255,0.22);
+  --playhead-beat: rgba(255,255,255,0.38);
+  --playhead-on: linear-gradient(180deg, #7ab8f0, #3a78b8);
+  --playhead-on-shadow: 0 0 10px rgba(90,150,220,0.6);
+  --n1: #6aaed6; --n2: #7ec8a0; --n3: #b8a0d8; --n4: #d8b878; --n5: #88d0c0;
+  --halo-inner: rgba(255,255,255,0.35);
+  --n-glow: rgba(100,160,220,0.4);
+  --btn-mini-bg: linear-gradient(180deg, rgba(50,50,58,0.9), rgba(36,36,42,0.9));
+  --btn-mini-border: rgba(255,255,255,0.22);
+  --btn-mini-text: #c8c8d0;
+  --btn-mini-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 2px 5px -2px rgba(0,0,0,0.6);
+  --btn-bg: linear-gradient(180deg, rgba(48,48,56,0.9), rgba(34,34,40,0.9));
+  --btn-border: rgba(255,255,255,0.22);
+  --btn-text: #d0d0d8;
+  --btn-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 12px -4px rgba(0,0,0,0.7);
+  --play-bg: linear-gradient(180deg, #5a9ad0 0%, #3a78b0 48%, #1e5a88 50%, #2a6a98 100%);
+  --play-text: #ffffff;
+  --play-border: rgba(255,255,255,0.15);
+  --play-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -2px 4px rgba(0,0,0,0.3), 0 6px 16px -4px rgba(30,90,140,0.7), 0 0 22px rgba(80,140,200,0.3);
+  --play-text-shadow: 0 -1px 0 rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.15);
+
+  background:
+    radial-gradient(55% 45% at 28% 18%, #1e1e28 0%, transparent 60%),
+    radial-gradient(50% 40% at 78% 25%, #1a1a24 0%, transparent 60%),
+    radial-gradient(65% 50% at 22% 82%, #16161e 0%, transparent 65%),
+    radial-gradient(55% 40% at 88% 82%, #1a1a22 0%, transparent 55%),
+    linear-gradient(170deg, #18181e 0%, #121218 50%, #0e0e14 100%);
+  color: #e0e0e4;
+}
+.t-dark .status { color: #b8b8c0; }
+.t-dark .info-inner,
+.t-dark .dynamic-inner {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(1.1);
+  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.t-dark .cover {
+  background:
+    radial-gradient(circle at 38% 35%, #4a5a6a 0%, #2a3a4a 30%, #1a2530 60%, #0e1520 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04), inset 0 -6px 16px rgba(0,0,0,0.5);
+}
+.t-dark .name { color: var(--text-primary); }
+.t-dark .meta { color: var(--text-secondary); }
+.t-dark .meta b { color: var(--text-primary); }
+.t-dark .playhead i { background: var(--playhead-bg); box-shadow: inset 0 1px 1px rgba(255,255,255,0.1); }
+.t-dark .playhead i.beat { background: var(--playhead-beat); }
+.t-dark .playhead i.on::after {
+  background: var(--playhead-on);
+  box-shadow: var(--playhead-on-shadow);
+}
+.t-dark .layer:nth-child(1) .pattern span.on { --n: var(--n1); }
+.t-dark .layer:nth-child(2) .pattern span.on { --n: var(--n2); }
+.t-dark .layer:nth-child(3) .pattern span.on { --n: var(--n3); }
+.t-dark .layer:nth-child(4) .pattern span.on { --n: var(--n4); }
+.t-dark .layer:nth-child(5) .pattern span.on { --n: var(--n5); }
+
+/* ============================================================
+   THEME 05 · AMOLED GLASS
+   Contrast (Session 3) — surface L ≈ 0.005
+     primary   #e5e5e5  15.2:1
+     secondary #a8a8b0   8.1:1   (was #8a8a92 · 5.6:1)
+     dim       #8a8a92   5.6:1   (was #4a4a52 · 2.2:1)
+   Brightening dim costs a little power on an OLED panel — the
+   pixels are no longer near-off. Compliance wins; the text is
+   still well below the off-white primary, so halation is not a
+   concern at these levels.
+   ============================================================ */
+.t-amoled {
+  --glass-bg: linear-gradient(180deg, rgba(20,20,24,0.7), rgba(10,10,14,0.85));
+  --glass-border: rgba(255,255,255,0.16);
+  --glass-shadow:
+    0 20px 40px -25px rgba(0,0,0,0.95),
+    inset 0 1px 0 rgba(255,255,255,0.04);
+  --text-primary: #e5e5e5;
+  --text-secondary: #a8a8b0;
+  --text-dim: #8a8a92;
+  --rule: rgba(255,255,255,0.28);
+  --guide-dot: rgba(255,255,255,0.36);
+  --playhead-bg: rgba(255,255,255,0.22);
+  --playhead-beat: rgba(255,255,255,0.40);
+  --playhead-on: linear-gradient(180deg, #60d0f0, #2090c0);
+  --playhead-on-shadow: 0 0 12px rgba(80,200,240,0.7);
+  --n1: #40b0e0; --n2: #60d0b0; --n3: #8090e0; --n4: #c0c060; --n5: #60c8c0;
+  --halo-inner: rgba(255,255,255,0.3);
+  --n-glow: rgba(80,180,230,0.45);
+  --btn-mini-bg: linear-gradient(180deg, rgba(24,24,30,0.95), rgba(14,14,20,0.95));
+  --btn-mini-border: rgba(255,255,255,0.20);
+  --btn-mini-text: #b8b8c0;
+  --btn-mini-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 5px -2px rgba(0,0,0,0.8);
+  --btn-bg: linear-gradient(180deg, rgba(22,22,28,0.95), rgba(12,12,18,0.95));
+  --btn-border: rgba(255,255,255,0.20);
+  --btn-text: #c0c0c8;
+  --btn-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 12px -4px rgba(0,0,0,0.9);
+  --play-bg: linear-gradient(180deg, #ff5cb4 0%, #ff1f92 48%, #c4006e 50%, #d80c7a 100%);
+  --play-text: #ffffff;
+  --play-border: rgba(255,150,215,0.35);
+  --play-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.35), 0 6px 16px -4px rgba(150,0,80,0.85), 0 0 30px rgba(255,45,150,0.5);
+  --play-text-shadow: 0 -1px 0 rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.2);
+
+  background: #000000;
+  color: #e5e5e5;
+}
+.t-amoled .status { color: #8a8a92; }
+.t-amoled .info-inner,
+.t-amoled .dynamic-inner {
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.t-amoled .cover {
+  background:
+    radial-gradient(circle at 40% 40%, #3a6a8a 0%, #1a3a5a 35%, #0a1a30 70%, #000000 100%);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), inset 0 -8px 20px rgba(0,0,0,0.7);
+}
+.t-amoled .name { color: var(--text-primary); }
+.t-amoled .meta { color: var(--text-secondary); }
+.t-amoled .meta b { color: var(--text-primary); }
+.t-amoled .playhead i { background: var(--playhead-bg); box-shadow: inset 0 1px 1px rgba(255,255,255,0.08); }
+.t-amoled .playhead i.beat { background: var(--playhead-beat); }
+.t-amoled .playhead i.on::after {
+  background: var(--playhead-on);
+  box-shadow: var(--playhead-on-shadow);
+}
+.t-amoled .layer:nth-child(1) .pattern span.on { --n: var(--n1); }
+.t-amoled .layer:nth-child(2) .pattern span.on { --n: var(--n2); }
+.t-amoled .layer:nth-child(3) .pattern span.on { --n: var(--n3); }
+.t-amoled .layer:nth-child(4) .pattern span.on { --n: var(--n4); }
+.t-amoled .layer:nth-child(5) .pattern span.on { --n: var(--n5); }
+
+/* ============================================================
+   THEME 06 · NIGHT LIGHT GLASS
+   Contrast (Session 3) — surface L ≈ 0.02
+     primary   #f0d8b8  10.9:1
+     secondary #d4a070   6.5:1   (was #c09060 · 5.3:1)
+     dim       #c09060   5.3:1   (was #7a5a3a · 2.4:1)
+   Secondary and dim swapped roles: the old secondary became the
+   new dim, and secondary moved up into the 6–7:1 band. No new
+   hue was introduced — both are the same amber family, and the
+   palette still contains no blue.
+   ============================================================ */
+.t-nightlight {
+  --glass-bg: linear-gradient(180deg, rgba(60,35,20,0.6), rgba(40,20,10,0.75));
+  --glass-border: rgba(255,180,120,0.28);
+  --glass-shadow:
+    0 20px 40px -25px rgba(20,5,0,0.9),
+    inset 0 1px 0 rgba(255,200,150,0.1);
+  --text-primary: #f0d8b8;
+  --text-secondary: #d4a070;
+  --text-dim: #c09060;
+  --rule: rgba(255,160,100,0.32);
+  --guide-dot: rgba(255,160,100,0.42);
+  --playhead-bg: rgba(255,160,100,0.28);
+  --playhead-beat: rgba(255,160,100,0.55);   /* Session 12: beat cells to 3:1 */
+  --playhead-on: linear-gradient(180deg, #ffd080, #e89040);
+  --playhead-on-shadow: 0 0 12px rgba(255,160,60,0.8);
+  --n1: #e08040; --n2: #d06030; --n3: #c88050; --n4: #e8b060; --n5: #b86838;
+  --halo-inner: rgba(255,220,180,0.4);
+  --n-glow: rgba(255,140,60,0.5);
+  --btn-mini-bg: linear-gradient(180deg, rgba(70,40,22,0.8), rgba(50,25,12,0.8));
+  --btn-mini-border: rgba(255,180,120,0.32);
+  --btn-mini-text: #e0c0a0;
+  --btn-mini-shadow: inset 0 1px 0 rgba(255,200,150,0.1), 0 2px 5px -2px rgba(20,5,0,0.8);
+  --btn-bg: linear-gradient(180deg, rgba(65,38,20,0.8), rgba(45,22,10,0.8));
+  --btn-border: rgba(255,180,120,0.32);
+  --btn-text: #e8c8a8;
+  --btn-shadow: inset 0 1px 0 rgba(255,200,150,0.1), 0 4px 12px -4px rgba(20,5,0,0.9);
+  --play-bg: linear-gradient(180deg, #e8a860 0%, #d08040 48%, #a05820 50%, #b06828 100%);
+  --play-text: #ffffff;
+  --play-border: rgba(255,200,150,0.25);
+  --play-shadow: inset 0 1px 0 rgba(255,220,180,0.2), inset 0 -2px 4px rgba(0,0,0,0.3), 0 6px 16px -4px rgba(140,70,20,0.8), 0 0 26px rgba(255,150,60,0.4);
+  --play-text-shadow: 0 -1px 0 rgba(0,0,0,0.3), 0 1px 0 rgba(255,200,150,0.15);
+
+  background:
+    radial-gradient(55% 45% at 28% 18%, #3a2010 0%, transparent 60%),
+    radial-gradient(50% 40% at 78% 25%, #2a1808 0%, transparent 60%),
+    radial-gradient(65% 50% at 22% 82%, #1e1006 0%, transparent 65%),
+    radial-gradient(55% 40% at 88% 82%, #2a160a 0%, transparent 55%),
+    linear-gradient(170deg, #2a1808 0%, #1a0e04 50%, #100800 100%);
+  color: #e8d0b0;
+}
+.t-nightlight .status { color: #c09060; }
+.t-nightlight .info-inner,
+.t-nightlight .dynamic-inner {
+  background: var(--glass-bg);
+  backdrop-filter: blur(22px) saturate(1.1);
+  -webkit-backdrop-filter: blur(22px) saturate(1.1);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.t-nightlight .cover {
+  background:
+    radial-gradient(circle at 42% 45%, #e8a050 0%, #c06030 30%, #803020 60%, #401808 100%);
+  border: 1px solid rgba(255,180,120,0.15);
+  box-shadow: inset 0 0 0 1px rgba(255,200,150,0.08), inset 0 -6px 16px rgba(20,5,0,0.6);
+}
+.t-nightlight .name { color: var(--text-primary); }
+.t-nightlight .meta { color: var(--text-secondary); }
+.t-nightlight .meta b { color: var(--text-primary); }
+.t-nightlight .playhead i { background: var(--playhead-bg); box-shadow: inset 0 1px 1px rgba(255,200,150,0.15); }
+.t-nightlight .playhead i.beat { background: var(--playhead-beat); }
+.t-nightlight .playhead i.on::after {
+  background: var(--playhead-on);
+  box-shadow: var(--playhead-on-shadow);
+}
+.t-nightlight .layer:nth-child(1) .pattern span.on { --n: var(--n1); }
+.t-nightlight .layer:nth-child(2) .pattern span.on { --n: var(--n2); }
+.t-nightlight .layer:nth-child(3) .pattern span.on { --n: var(--n3); }
+.t-nightlight .layer:nth-child(4) .pattern span.on { --n: var(--n4); }
+.t-nightlight .layer:nth-child(5) .pattern span.on { --n: var(--n5); }
+
+/* ============================================================
+   THEME 07 · EMBER NOCTURNE  (dark twin of Ember)
+   Contrast (Session 3) — surface L ≈ 0.05
+     primary   #ede4fb   8.6:1
+     secondary #d8ccf0   7.2:1   (was #b8a4d8 · 4.7:1)
+     dim       #c4b4e0   5.7:1   (was #7868a0 · 2.1:1)
+   Secondary was the only tier in the file passing at under
+   4.8:1. It moved up so dim had room to clear the floor.
+   ============================================================ */
+.t-nocturne {
+  --glass-bg: linear-gradient(180deg, rgba(58,32,88,0.55), rgba(28,14,52,0.72));
+  --glass-border: rgba(180,140,230,0.36);
+  --glass-shadow:
+    0 20px 40px -25px rgba(5,0,15,0.9),
+    0 0 50px -18px rgba(150,80,220,0.35),
+    inset 0 1px 0 rgba(220,190,255,0.14);
+  --text-primary: #ede4fb;
+  --text-secondary: #d8ccf0;
+  --text-dim: #c4b4e0;
+  --rule: rgba(200,170,255,0.30);
+  --guide-dot: rgba(200,170,255,0.40);
+  --playhead-bg: rgba(200,170,255,0.26);
+  --playhead-beat: rgba(218,194,255,0.68);   /* Session 12: beat cells to 3:1 */
+  --playhead-on: linear-gradient(180deg, #ffd890, #e89040);
+  --playhead-on-shadow: 0 0 12px rgba(255,180,90,0.85);
+  --n1: #c878e8; --n2: #e878b8; --n3: #78b8e8; --n4: #e8b878; --n5: #a888e8;
+  --halo-inner: rgba(240,220,255,0.42);
+  --n-glow: rgba(190,120,240,0.55);
+  --btn-mini-bg: linear-gradient(180deg, rgba(70,40,105,0.72), rgba(45,22,72,0.72));
+  --btn-mini-border: rgba(190,150,240,0.34);
+  --btn-mini-text: #dcc8f4;
+  --btn-mini-shadow: inset 0 1px 0 rgba(220,190,255,0.12), 0 2px 5px -2px rgba(5,0,15,0.8);
+  --btn-bg: linear-gradient(180deg, rgba(65,38,98,0.72), rgba(40,20,66,0.78));
+  --btn-border: rgba(190,150,240,0.34);
+  --btn-text: #e0d0f8;
+  --btn-shadow: inset 0 1px 0 rgba(220,190,255,0.12), 0 4px 12px -4px rgba(5,0,15,0.9);
+  --play-bg: linear-gradient(180deg, #c878e8 0%, #a048c8 48%, #7828a0 50%, #8838b0 100%);
+  --play-text: #ffffff;
+  --play-border: rgba(220,180,255,0.25);
+  --play-shadow: inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -2px 4px rgba(0,0,0,0.3), 0 6px 16px -4px rgba(110,40,160,0.85), 0 0 30px rgba(190,110,240,0.45);
+  --play-text-shadow: 0 -1px 0 rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.15);
+
+  background:
+    radial-gradient(55% 45% at 26% 16%, #6a3aa8 0%, transparent 60%),
+    radial-gradient(50% 40% at 76% 22%, #b04898 0%, transparent 60%),
+    radial-gradient(60% 45% at 20% 82%, #3a1a6a 0%, transparent 65%),
+    radial-gradient(55% 42% at 86% 84%, #7a3aa0 0%, transparent 60%),
+    radial-gradient(35% 20% at 52% 6%, #d878b8 0%, transparent 75%),
+    linear-gradient(175deg, #241046 0%, #160830 50%, #0a0420 100%);
+  color: #e8dcf8;
+}
+.t-nocturne .status { color: #c4b4e0; }
+.t-nocturne .info-inner,
+.t-nocturne .dynamic-inner {
+  background: var(--glass-bg);
+  backdrop-filter: blur(22px) saturate(1.3);
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.t-nocturne .cover {
+  background:
+    radial-gradient(ellipse 70% 55% at 30% 70%, #ffe0b0 0%, #f088b0 22%, #c058c8 45%, #5a28a0 70%, transparent 100%),
+    radial-gradient(ellipse 55% 45% at 78% 25%, #88d8f0 0%, #5a78d8 40%, transparent 70%),
+    radial-gradient(ellipse 45% 40% at 65% 82%, #ff9060 0%, #d04898 45%, transparent 75%),
+    linear-gradient(160deg, #2a1050 0%, #140630 60%, #08021a 100%);
+  border: 1px solid rgba(200,160,255,0.22);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.05),
+    inset 0 -10px 24px rgba(5,0,20,0.5),
+    0 0 28px rgba(170,90,230,0.4);
+}
+.t-nocturne .cover::before {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    radial-gradient(1.2px 1.2px at 18% 22%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(1px 1px at 42% 12%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1.4px 1.4px at 78% 38%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(1px 1px at 62% 72%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1.2px 1.2px at 28% 88%, rgba(255,255,255,0.75), transparent),
+    radial-gradient(1px 1px at 88% 82%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 52% 48%, rgba(255,255,255,0.5), transparent);
+  pointer-events: none;
+}
+.t-nocturne .name { color: var(--text-primary); text-shadow: 0 0 20px rgba(180,110,230,0.35); }
+.t-nocturne .meta { color: var(--text-secondary); }
+.t-nocturne .meta b { color: var(--text-primary); }
+.t-nocturne .playhead i { background: var(--playhead-bg); box-shadow: inset 0 1px 1px rgba(220,190,255,0.12); }
+.t-nocturne .playhead i.beat { background: var(--playhead-beat); }
+.t-nocturne .playhead i.on::after {
+  background: var(--playhead-on);
+  box-shadow: var(--playhead-on-shadow);
+}
+.t-nocturne .layer:nth-child(1) .pattern span.on { --n: var(--n1); }
+.t-nocturne .layer:nth-child(2) .pattern span.on { --n: var(--n2); }
+.t-nocturne .layer:nth-child(3) .pattern span.on { --n: var(--n3); }
+.t-nocturne .layer:nth-child(4) .pattern span.on { --n: var(--n4); }
+.t-nocturne .layer:nth-child(5) .pattern span.on { --n: var(--n5); }
+
+/* ============================================================
+   THEME 08 · TIDAL ABYSS  (dark twin of Tidal)
+   Contrast (Session 3) — surface L ≈ 0.03
+     primary   #c8e8d8  10.0:1
+     secondary #a0c8b8   7.2:1   (was #86b0a0 · 5.5:1)
+     dim       #7ca898   5.0:1   (was #4e7268 · 2.5:1)
+   The status bar colour moved from #7aa898 (4.6:1 against the
+   backdrop) to #86b8a6 (5.4:1) for the same reason.
+   ============================================================ */
+.t-abyss {
+  --glass-bg: linear-gradient(180deg, rgba(28,44,48,0.85), rgba(15,27,31,0.9));
+  --glass-border: rgba(140,210,190,0.28);
+  --glass-shadow:
+    0 20px 40px -25px rgba(0,0,0,0.9),
+    inset 0 1px 0 rgba(180,230,215,0.08);
+  --text-primary: #c8e8d8;
+  --text-secondary: #a0c8b8;
+  --text-dim: #7ca898;
+  --rule: rgba(140,210,190,0.30);
+  --guide-dot: rgba(140,210,190,0.40);
+  --playhead-bg: rgba(140,210,190,0.26);
+  --playhead-beat: rgba(140,210,190,0.51);   /* Session 12: beat cells to 3:1 */
+  --playhead-on: linear-gradient(180deg, #ffd8a0, #e89858);
+  --playhead-on-shadow: 0 0 12px rgba(232,152,88,0.85);
+  --n1: #8fd8b8; --n2: #68b8a0; --n3: #58a8b8; --n4: #e0a868; --n5: #a8d8c0;
+  --halo-inner: rgba(220,255,240,0.35);
+  --n-glow: rgba(140,220,190,0.5);
+  --btn-mini-bg: linear-gradient(180deg, rgba(30,46,50,0.9), rgba(19,32,36,0.9));
+  --btn-mini-border: rgba(140,210,190,0.30);
+  --btn-mini-text: #b0d8c8;
+  --btn-mini-shadow: inset 0 1px 0 rgba(180,230,215,0.08), 0 2px 5px -2px rgba(0,0,0,0.7);
+  --btn-bg: linear-gradient(180deg, rgba(30,46,50,0.9), rgba(18,30,34,0.9));
+  --btn-border: rgba(140,210,190,0.30);
+  --btn-text: #b8dcd0;
+  --btn-shadow: inset 0 1px 0 rgba(180,230,215,0.08), 0 4px 12px -4px rgba(0,0,0,0.8);
+  --play-bg: linear-gradient(180deg, #2e8a80 0%, #1e6a62 48%, #144a46 50%, #1a5652 100%);
+  --play-text: #ffd8a0;
+  --play-border: rgba(232,168,104,0.4);
+  --play-shadow: inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -2px 4px rgba(0,0,0,0.4), 0 6px 16px -4px rgba(10,50,45,0.85), 0 0 26px rgba(232,168,104,0.28);
+  --play-text-shadow: 0 -1px 0 rgba(0,0,0,0.35), 0 1px 0 rgba(255,220,170,0.2);
+
+  background:
+    radial-gradient(55% 45% at 28% 18%, #16323a 0%, transparent 60%),
+    radial-gradient(50% 40% at 78% 25%, #142a30 0%, transparent 60%),
+    radial-gradient(65% 50% at 22% 82%, #0e2228 0%, transparent 65%),
+    radial-gradient(55% 40% at 88% 82%, #122830 0%, transparent 55%),
+    linear-gradient(170deg, #142830 0%, #0e1e24 50%, #081418 100%);
+  color: #b8dcd0;
+}
+.t-abyss .status { color: #86b8a6; }
+.t-abyss .info-inner,
+.t-abyss .dynamic-inner {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(1.15);
+  -webkit-backdrop-filter: blur(20px) saturate(1.15);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.t-abyss .cover {
+  background:
+    radial-gradient(ellipse 55% 50% at 66% 34%, rgba(232,168,104,0.9) 0%, rgba(160,100,60,0.35) 38%, transparent 70%),
+    radial-gradient(circle at 34% 66%, #a8e8cc 0%, #48988c 26%, #1c5450 58%, #081a1e 100%);
+  border: 1px solid rgba(140,210,190,0.14);
+  box-shadow:
+    inset 0 0 0 1px rgba(180,230,215,0.06),
+    inset 0 -8px 22px rgba(0,0,0,0.6),
+    0 0 24px rgba(120,200,180,0.25);
+}
+.t-abyss .name { color: var(--text-primary); }
+.t-abyss .meta { color: var(--text-secondary); }
+.t-abyss .meta b { color: var(--text-primary); }
+.t-abyss .playhead i { background: var(--playhead-bg); box-shadow: inset 0 1px 1px rgba(180,230,215,0.1); }
+.t-abyss .playhead i.beat { background: var(--playhead-beat); }
+.t-abyss .playhead i.on::after {
+  background: var(--playhead-on);
+  box-shadow: var(--playhead-on-shadow);
+}
+.t-abyss .layer:nth-child(1) .pattern span.on { --n: var(--n1); }
+.t-abyss .layer:nth-child(2) .pattern span.on { --n: var(--n2); }
+.t-abyss .layer:nth-child(3) .pattern span.on { --n: var(--n3); }
+.t-abyss .layer:nth-child(4) .pattern span.on { --n: var(--n4); }
+.t-abyss .layer:nth-child(5) .pattern span.on { --n: var(--n5); }
+
+/* ============================================================
+   THEME 09 · OLIVE GLASS
+   Contrast (Session 3) — surface L ≈ 0.59
+     primary   #2c2a10   8.9:1
+     secondary #4a4518   6.0:1
+     dim       #565020   5.1:1   (was #6e6830 · 2.8:1)
+
+   THE BACKDROP IS FROZEN. The three-stop olive field below —
+   #9c9642 with its two radial overlays — is byte-for-byte what
+   it was in v10. Only the frosted panel that sits on top of it
+   moved, from 0.62/0.44 to 0.70/0.62 alpha, so dark text has a
+   stable surface to land on all the way down the phone.
+   The cover swatch (#a49e46 → #9c9642 → #928c3a) is untouched.
+   ============================================================ */
+.t-olive {
+  --glass-bg: linear-gradient(180deg, rgba(255,250,228,0.70), rgba(248,242,208,0.62));
+  --glass-border: rgba(255,252,232,0.8);
+  --glass-shadow:
+    0 20px 40px -25px rgba(45,40,8,0.55),
+    inset 0 1px 0 rgba(255,255,245,0.9);
+  --text-primary: #2c2a10;
+  --text-secondary: #4a4518;
+  --text-dim: #565020;
+  --rule: rgba(44,42,16,0.36);
+  --guide-dot: rgba(44,42,16,0.48);
+  --playhead-bg: rgba(44,42,16,0.32);
+  --playhead-beat: rgba(44,42,16,0.62);   /* Session 12: beat cells to 3:1 */
+  --playhead-on: linear-gradient(180deg, #c9bc48, #8a7c14);
+  --playhead-on-shadow: 0 0 10px rgba(180,160,50,0.8);
+  /* v17 — leaf, wine, rust, forest, gold (Mikey's call): the
+     swatch's family widened to its warm neighbors, wine and rust,
+     so Olive gets real pop. Still no cool hue. Rows alternate
+     light and deep as in the other light themes (measured in
+     the v17 notes).
+     v16's in-family set was #60741b #6a3c0f #83641a #194a0c
+     #6c6618; v15's #3a3810 #7a4210 #3a5a10 #8a6818 #4e4a28. */
+  --n1: #4d7a1b; --n2: #98193c; --n3: #a1581b; --n4: #104f18; --n5: #81631a;
+  --halo-inner: rgba(255,253,235,0.7);
+  --n-glow: rgba(180,160,60,0.5);
+  --btn-mini-bg: linear-gradient(180deg, rgba(255,250,228,0.72), rgba(245,238,205,0.46));
+  --btn-mini-border: rgba(255,252,232,0.8);
+  --btn-mini-text: #2c2a10;
+  --btn-mini-shadow: inset 0 1px 0 rgba(255,255,245,0.95), 0 2px 5px -2px rgba(45,40,8,0.4);
+  --btn-bg: linear-gradient(180deg, rgba(255,250,228,0.66), rgba(245,238,205,0.4));
+  --btn-border: rgba(255,252,232,0.82);
+  --btn-text: #2c2a10;
+  --btn-shadow: inset 0 1px 0 rgba(255,255,245,0.95), 0 4px 12px -4px rgba(45,40,8,0.45);
+  --play-bg: linear-gradient(180deg, #cfc458 0%, #9a9430 48%, #6e6a18 50%, #7d7922 100%);
+  --play-text: #fffbe8;
+  --play-border: rgba(255,252,225,0.7);
+  --play-shadow: inset 0 1px 0 rgba(255,255,240,0.8), inset 0 -2px 4px rgba(0,0,0,0.18), 0 6px 16px -4px rgba(80,76,10,0.7), 0 0 22px rgba(200,190,70,0.4);
+  --play-text-shadow: 0 -1px 0 rgba(0,0,0,0.2), 0 1px 0 rgba(255,255,240,0.3);
+
+  /* FROZEN — Session 3 constraint. Do not edit this declaration. */
+  background:
+    radial-gradient(70% 45% at 50% 0%, rgba(255,250,200,0.18) 0%, transparent 65%),
+    radial-gradient(80% 50% at 50% 100%, rgba(50,46,8,0.20) 0%, transparent 70%),
+    #9c9642;
+  color: #2c2a10;
+}
+.t-olive .status { color: #2e2b0c; }
+.t-olive .info-inner,
+.t-olive .dynamic-inner {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(1.1);
+  -webkit-backdrop-filter: blur(20px) saturate(1.1);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.t-olive .cover {
+  background: linear-gradient(180deg, #a49e46 0%, #9c9642 55%, #928c3a 100%);
+  border: 1px solid rgba(255,250,220,0.35);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+.t-olive .name { color: var(--text-primary); }
+.t-olive .meta { color: var(--text-secondary); }
+.t-olive .meta b { color: var(--text-primary); }
+.t-olive .playhead i { background: var(--playhead-bg); box-shadow: inset 0 1px 1px rgba(255,252,230,0.5); }
+.t-olive .playhead i.beat { background: var(--playhead-beat); }
+.t-olive .playhead i.on::after {
+  background: var(--playhead-on);
+  box-shadow: var(--playhead-on-shadow);
+}
+.t-olive .layer:nth-child(1) .pattern span.on { --n: var(--n1); }
+.t-olive .layer:nth-child(2) .pattern span.on { --n: var(--n2); }
+.t-olive .layer:nth-child(3) .pattern span.on { --n: var(--n3); }
+.t-olive .layer:nth-child(4) .pattern span.on { --n: var(--n4); }
+.t-olive .layer:nth-child(5) .pattern span.on { --n: var(--n5); }
+
+
+/* ============================================================
+   v17 · VIEWS IN THE DYNAMIC ZONE  (Painter session 3)
+   The Dynamic zone now holds three views: Layers (unchanged),
+   Library and Now Playing. Contents follow PR #153; the look is
+   the v16 language: glass panel, rules between rows, small
+   glass keys with lowercase action words, every key recesses.
+     - A NAME is capitalized (Albums, Rainy Afternoons, Advanced).
+       An ACTION is a lowercase word on a key (play, move, share),
+       like roll and on / off.
+     - Album art is content, the same in every theme, and square
+       like the cover (never rounded).
+     - Where you are is a key held down with its LED lit: the
+       selected Library tab is a raised key with a lit LED in a
+       recessed groove (iOS segmented control, Material's 3:1
+       state indicator), and the Library / Now playing keys in
+       the Buttons zone stay pressed in with their LED lit while
+       their view is up.
+   SCROLLING (v17 rule change): only two kinds of place scroll,
+   both inside this zone: the Library's lists (Albums, an album's
+   tracks, Loops) and the Advanced page. Each scroller is a
+   .scroll. The skeleton zones never move and nothing else
+   scrolls: More and Now Playing fit at every text size.
+   ============================================================ */
+/* One accent per theme for marks drawn on the panel: the
+   now-playing marker, a lit LED, the progress fill. Each is the
+   theme's lamp hue at 3:1 or more against its panel (measured:
+   Dawn 4.21, Ember 3.65, Tidal 3.46, Olive 4.16, dark themes
+   7.2 and up). */
+.t-dawn       { --mark: #b25400; --led-glow: 0 0 5px 1px rgba(255,140,30,0.55); }
+.t-ember      { --mark: #a80052; --led-glow: 0 0 5px 1px rgba(255,50,130,0.5); }
+.t-tidal      { --mark: #006e72; --led-glow: 0 0 5px 1px rgba(0,190,190,0.55); }
+.t-olive      { --mark: #745a00; --led-glow: 0 0 5px 1px rgba(230,190,20,0.6); }
+.t-dark       { --mark: #7ab8f0; --led-glow: 0 0 6px 1px rgba(90,150,220,0.7); }
+.t-amoled     { --mark: #60d0f0; --led-glow: 0 0 6px 1px rgba(80,200,240,0.7); }
+.t-nightlight { --mark: #ffb860; --led-glow: 0 0 6px 1px rgba(255,160,60,0.7); }
+.t-nocturne   { --mark: #ffc070; --led-glow: 0 0 6px 1px rgba(255,180,90,0.7); }
+.t-abyss      { --mark: #f0a868; --led-glow: 0 0 6px 1px rgba(232,152,88,0.7); }
+.t-dawn, .t-ember, .t-tidal, .t-olive {
+  --groove-bg: color-mix(in srgb, var(--text-primary) 9%, transparent);
+  --groove-shade: color-mix(in srgb, var(--text-primary) 28%, transparent);
+  --led-ring: rgba(255,255,255,0.9);
+  --np-fill: var(--mark);
+  --check-ink: #ffffff;
+  --press-tint: color-mix(in srgb, var(--text-primary) 9%, transparent);
+  /* Pressed in and lit from inside: the lamp hue, not grey. */
+  --latched-bg: linear-gradient(180deg, color-mix(in srgb, var(--mark) 20%, rgba(255,255,255,0.46)), color-mix(in srgb, var(--mark) 14%, rgba(255,255,255,0.34)));
+  --latched-shade: color-mix(in srgb, var(--text-primary) 40%, transparent);
+}
+.t-dark, .t-amoled, .t-nightlight, .t-nocturne, .t-abyss {
+  --groove-bg: rgba(0,0,0,0.3);
+  --groove-shade: rgba(0,0,0,0.6);
+  --led-ring: rgba(0,0,0,0.55);
+  --np-fill: var(--mark);
+  --check-ink: #101014;
+  --press-tint: rgba(255,255,255,0.07);
+  --latched-bg: linear-gradient(180deg, rgba(0,0,0,0.5), rgba(0,0,0,0.36));
+  --latched-shade: rgba(0,0,0,0.7);
+}
+
+.phone [hidden] { display: none !important; }
+/* The Session 7 reset strips font and spacing only (every older
+   control draws its own fill). These new buttons draw nothing of
+   their own at rest, so they also lose the browser's fill and
+   border. */
+.phone :where(.lrow-main, .tab, .sw) { background: transparent; border: 0; }
+/* Screen-reader-only text (commas between items, "now playing"). */
+.phone .vh {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+.view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.phone .layers:focus, .view :focus:not(:focus-visible) { outline: none; }
+.phone .layers:focus-visible, .phone .view :is(.hero-title, .page-title):focus-visible {
+  outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: -2px; border-radius: 8px;
+}
+
+/* ---------- keys inside the Dynamic zone ----------------------
+   The layer row's mini key, widened for a word: 48px tall at the
+   least, glass fill, lowercase word, recesses when pressed. */
+.vkey {
+  min-width: 48px; min-height: 48px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 4px 12px; border-radius: 10px;
+  border: 1px solid var(--btn-mini-border);
+  background: var(--btn-mini-bg);
+  color: var(--btn-mini-text);
+  box-shadow: var(--btn-mini-shadow);
+  font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 600;
+  line-height: 1.2; letter-spacing: 0.005em;
+  transition: transform 90ms cubic-bezier(.3,.8,.4,1), box-shadow 90ms ease, filter 90ms ease;
+}
+/* Row keys use the layer rows' word size and cap, so they read as
+   the same family as roll and on / off. */
+.vkey.word { font-size: min(0.6875rem, 18px); padding: 4px 8px; border-radius: 8px; }
+.vkey svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.vkey:active,
+.lrow-main:active,
+.sw:active {
+  transform: translateY(1px);
+  filter: brightness(0.94);
+}
+.vkey:active { box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(255,255,255,0.14); }
+/* An "off" switch stays pressed in, like a layer's off key. */
+.vkey[role="switch"][aria-checked="false"] {
+  transform: translateY(1px);
+  background: var(--btn-off-bg);
+  border-color: var(--btn-off-border);
+  box-shadow: inset 0 2px 5px var(--btn-off-shade), inset 0 -1px 0 rgba(255,255,255,0.12);
+  color: var(--btn-off-text);
+}
+.vkey[role="switch"] { width: 48px; padding: 0; flex: 0 0 auto; }
+/* A destructive key asks twice. Armed, it reads "sure?" and
+   carries a ring in the primary text colour (not colour alone). */
+.vkey.armed { box-shadow: inset 0 0 0 2px var(--text-primary); color: var(--text-primary); }
+
+/* ---------- an LED: lit on the key that says where you are ---- */
+.led {
+  width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto;
+  background: color-mix(in srgb, var(--text-primary) 22%, transparent);
+  position: relative;
+}
+[aria-selected="true"] > .led,
+[aria-pressed="true"] > .led {
+  background: var(--mark);
+  box-shadow: 0 0 0 1.5px var(--led-ring), var(--led-glow);
+}
+
+/* ---------- Library tabs: a recessed groove, one raised key ---- */
+.tabs {
+  flex: 0 0 auto;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 2px 0 8px; border-radius: 12px;
+  background: var(--groove-bg);
+  box-shadow: inset 0 1px 3px var(--groove-shade), inset 0 -1px 0 rgba(255,255,255,0.14);
+}
+.tab {
+  position: relative; isolation: isolate;
+  min-height: 48px; min-width: 0;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 4px 6px; border-radius: 12px;
+  font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 600;
+  line-height: 1.15; color: var(--text-secondary);
+  transition: filter 90ms ease;
+}
+.tab::before {
+  content: ''; position: absolute; inset: 4px; z-index: -1;
+  border-radius: 9px; border: 1px solid transparent;
+}
+.tab[aria-selected="true"] { color: var(--text-primary); font-weight: 700; }
+.tab[aria-selected="true"]::before {
+  background: var(--btn-mini-bg);
+  border-color: var(--btn-mini-border);
+  box-shadow: var(--btn-mini-shadow);
+}
+.tab:active { filter: brightness(0.94); }
+/* The groove never scrolls or grows much, so tab words are capped
+   at 1.5x like the Info meta, and step down toward 1x (never
+   below) if a word still will not fit its third (fit guard). */
+.tab { font-size: min(0.75rem, calc(12px * var(--tcap, 1.5))); }
+.tab-word { overflow-wrap: normal; }
+
+/* ---------- panes, pages, scrollers --------------------------- */
+.pane, .page { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* The scroller reaches the panel's edges, so its hairlines run
+   edge to edge (like an iOS bar) and its scrollbar sits on the
+   glass edge. The hairlines are borders, outside the scrolled
+   content, and only take a colour while there is more to see
+   past that edge. */
+/* position: relative makes the scroller (not the panel) the box
+   its hidden screen-reader text (.vh, absolute) lives in;
+   otherwise that text stretches the Dynamic panel, which could
+   then be scrolled by scrollIntoView (review, v17).
+   scroll-padding keeps a focused key's ring clear of both edges
+   when focus scrolls it into view. */
+.scroll {
+  position: relative;
+  flex: 1; min-height: 0;
+  overflow-x: hidden; overflow-y: auto;
+  scroll-padding-block: 8px;
+  overscroll-behavior: contain;
+  margin: 0 -14px; padding: 4px 14px 6px;
+  border-top: 1px solid transparent; border-bottom: 1px solid transparent;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-primary) 40%, transparent) transparent;
+}
+.scroll.more-up { border-top-color: var(--rule); }
+.scroll.more-down { border-bottom-color: var(--rule); }
+
+/* ---------- list rows ------------------------------------------ */
+.lrows { display: flex; flex-direction: column; }
+.lrow {
+  display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+.lrow:last-child { border-bottom: 0; }
+.lrow-main {
+  flex: 1; min-width: 0; min-height: 56px;
+  display: flex; align-items: center; gap: 12px;
+  margin: 0 -6px; padding: 6px;
+  border-radius: 10px; text-align: left;
+  transition: transform 90ms cubic-bezier(.3,.8,.4,1), background-color 90ms ease, filter 90ms ease;
+}
+/* It bleeds 6px past the text so its pressed tint has room, but
+   never toward a key beside it, or the key would cover its focus
+   ring. */
+.lrow-main:not(:last-child) { margin-right: 0; }
+.lrow-main:active { background-color: var(--press-tint); }
+@media (hover: hover) { .lrow-main:hover { background-color: var(--press-tint); } }
+/* 52px: at 100% the fourth album shows about half its art, which
+   says "there is more" (review, v17). */
+.lrows .lrow-main { min-height: 52px; }
+.lrow-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lrow-title {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'Inter', sans-serif; font-size: 0.8125rem; font-weight: 600;
+  line-height: 1.25; color: var(--text-primary);
+  overflow-wrap: break-word; min-width: 0;
+}
+.lrow-title > span { min-width: 0; }
+.lrow-meta {
+  font-family: 'Inter', sans-serif; font-size: 0.6875rem; font-weight: 500;
+  line-height: 1.35; color: var(--text-secondary);
+}
+.lrow-meta .sep { white-space: normal; }
+.trk {
+  flex: 0 0 auto; min-width: 1.1em; text-align: right;
+  font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 600;
+  color: var(--text-dim); font-variant-numeric: tabular-nums;
+}
+/* Now playing: the Now playing key's own glyph, in the lamp hue.
+   Shape and words ("now playing" for screen readers, "playing
+   3 of 8" in the meta) carry it too, never colour alone. */
+.now-mark { width: 14px; height: 14px; flex: 0 0 auto; color: var(--mark); }
+.lrow.current .lrow-title { color: var(--text-primary); }
+.row-keys { display: flex; gap: 6px; flex: 0 0 auto; }
+
+/* Album art: content, so the same in every theme. Square like
+   the cover. A hairline and a soft drop keep it off the glass. */
+.art {
+  flex: 0 0 auto; width: 44px; height: 44px; border-radius: 0;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22), 0 1px 3px rgba(0,0,0,0.25);
+}
+.art.big { width: 48px; height: 48px; }
+
+/* The first row of Albums: two action keys side by side. */
+.lib-actions {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+  padding: 2px 0 10px; border-bottom: 1px solid var(--rule);
+}
+
+/* ---------- a page inside a tab (an album, Advanced) ----------- */
+/* The name sits beside the back key when it fits on one line;
+   otherwise it drops below the key and wraps between words. */
+.page-head {
+  flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
+  margin-bottom: 8px; min-width: 0;
+}
+.back { padding-left: 6px; gap: 4px; flex: 0 0 auto; }
+.back svg { width: 16px; height: 16px; }
+.page-title {
+  font-family: 'Inter', sans-serif; font-size: 0.8125rem; font-weight: 700;
+  color: var(--text-primary); margin: 0; min-width: 0; overflow-wrap: break-word;
+  flex: 1 1 auto;
+}
+/* An album page: the name sits in the head row beside the back
+   key, so the first tracks show without scrolling. Art, count
+   and the three everyday keys above the tracks; delete album at
+   the end of the list, where a destructive action belongs. */
+.hero {
+  display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 8px 12px;
+  align-items: center; padding: 2px 0 10px;
+  border-bottom: 1px solid var(--rule);
+}
+.hero-title {
+  font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600;
+  font-size: min(1.0625rem, 22px); line-height: 1.15; letter-spacing: -0.01em;
+}
+.hero-meta {
+  font-family: 'Inter', sans-serif; font-size: 0.6875rem; font-weight: 500;
+  line-height: 1.35; color: var(--text-secondary); margin: 0;
+}
+.hero-keys {
+  grid-column: 1 / -1;
+  display: grid; grid-template-columns: minmax(0, 1fr) 48px repeat(2, minmax(0, 1.35fr)); gap: 6px;
+}
+.hero-keys .vkey { padding: 4px 6px; }
+.end-keys { display: flex; padding: 10px 0 4px; border-top: 1px solid var(--rule); }
+.end-keys .vkey { flex: 1; }
+
+/* ---------- More: theme picker + one way into Advanced ---------- */
+.more { gap: 8px; }
+.more-head {
+  flex: 0 0 auto; display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  font-family: 'Inter', sans-serif; line-height: 1.3;
+}
+.sec {
+  font-family: 'Inter', sans-serif; font-size: 0.6875rem; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary);
+  margin: 0;
+}
+/* More and Now Playing never scroll, so like the Info card their
+   text follows the size setting up to 1.5x and then stops (the
+   meta's cap, Session 5). Lists and Advanced scroll and are not
+   capped. */
+.more .sec { font-size: min(0.6875rem, calc(11px * var(--cap, 1.5))); }
+.theme-name { font-size: min(0.75rem, calc(12px * var(--cap, 1.5))); font-weight: 700; color: var(--text-primary); }
+.themes {
+  flex: 0 0 auto;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 48px; gap: 6px;
+}
+/* Each swatch is a little scene of its theme: the backdrop, a
+   glass card with three of its notes, and its Play colour. It is
+   a preview, so it keeps its own colours in every theme (and in
+   forced colours, like an image). A 1px edge in the phone's own
+   text colour keeps every swatch apart from the panel. */
+.sw {
+  position: relative; min-height: 48px; border-radius: 10px; overflow: hidden;
+  transition: transform 90ms cubic-bezier(.3,.8,.4,1), filter 90ms ease;
+}
+.sw-art { position: absolute; inset: 0; border-radius: inherit; }
+.sw::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-primary) 62%, transparent);
+}
+.sw[aria-checked="true"]::after {
+  box-shadow: inset 0 0 0 2.5px var(--text-primary), inset 0 0 0 4px color-mix(in srgb, var(--check-ink) 70%, transparent);
+}
+.sw-card {
+  position: absolute; left: 14%; right: 14%; top: 27%; bottom: 27%;
+  display: flex; align-items: center; gap: 3px; padding: 0 5px;
+  border-radius: 5px; background: var(--sw-glass); border: 1px solid var(--sw-edge);
+}
+.sw-card i { width: 5px; height: 5px; border-radius: 50%; display: block; }
+.sw-card i:nth-child(1) { background: var(--sw-a); }
+.sw-card i:nth-child(2) { background: var(--sw-b); }
+.sw-card i:nth-child(3) { background: var(--sw-c); }
+.sw-card b { margin-left: auto; width: 13px; height: 7px; border-radius: 2.5px; background: var(--sw-play); }
+.sw-check {
+  position: absolute; top: 4px; right: 4px; width: 16px; height: 16px;
+  border-radius: 50%; display: none; align-items: center; justify-content: center;
+  background: var(--text-primary); color: var(--check-ink);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--check-ink) 70%, transparent);
+}
+.sw-check svg { width: 10px; height: 10px; }
+.sw[aria-checked="true"] .sw-check { display: flex; }
+
+/* The way into Advanced: a wide key, name on the left, what is
+   in there in quieter words, a chevron at the right. */
+.go {
+  flex: 0 0 auto; width: 100%; justify-content: space-between; text-align: left;
+  padding: 6px 10px 6px 14px; gap: 10px;
+}
+.go-text { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 1px; min-width: 0; }
+.go-name { font-size: min(0.75rem, calc(12px * var(--cap, 1.5))); font-weight: 700; color: var(--text-primary); }
+.go-hint { font-size: min(0.6875rem, calc(11px * var(--cap, 1.5))); font-weight: 500; color: var(--text-secondary); }
+.go { font-size: min(0.75rem, calc(12px * var(--cap, 1.5))); }
+
+/* ---------- Advanced ------------------------------------------- */
+.adv-sec { padding: 10px 0 12px; border-bottom: 1px solid var(--rule); }
+.adv-sec:last-child { border-bottom: 0; }
+.adv-sec:first-child { padding-top: 2px; }
+.hint {
+  font-family: 'Inter', sans-serif; font-size: 0.6875rem; font-weight: 500;
+  line-height: 1.45; color: var(--text-secondary); margin: 4px 0 8px;
+}
+.keys2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.keys3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.keys3 .vkey { padding: 4px 4px; }
+/* Symbols for words (session 30e; Mikey, 2026-11-22). */
+.layer .btn-roll svg, .layer .btn-on svg { width: 18px; height: 18px; display: block; margin: auto; pointer-events: none; }
+/* The die a size up, so its pips read (session 30k). */
+.layer .btn-roll svg { width: 22px; height: 22px; }
+.np-next svg { width: 1.1em; height: 1.1em; vertical-align: -0.18em; margin-right: 6px; }
+/* Fewer words (session 30e): a section's keys stand where its line was. */
+.adv-keys, .sec + .setrow { margin-top: 8px; }
+.speed-link { display: flex; margin-top: 6px; text-decoration: none; }
+/* Share's keys, and its two views: a head with a way back, and keys. */
+.share-keys { grid-template-columns: repeat(6, minmax(0, 1fr)); padding: 2px; }
+.share-keys .vkey { grid-column: span 2; padding: 4px; }
+.share-keys .share-more { grid-column: span 3; }
+.ln-head :is(#exportBack, #seedBack) { justify-self: start; }
+.v-sheet .ln-body { gap: 12px; }
+.format-keys { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
+.format-keys .vkey { padding: 4px; }
+#exportAbout { margin-bottom: 0; text-align: center; }
+#exportSaved { overflow-wrap: anywhere; }
+#exportSheet .hint { text-align: center; }
+/* Neither view scrolls, so their words stop growing at 1.5x, as Bars' do. */
+.v-sheet :is(.hint, .srow span) { font-size: min(0.6875rem, 16.5px); }
+.v-sheet .vkey { font-size: min(0.75rem, 18px); }
+.share-keys .vkey { font-size: min(0.75rem, 18px); }
+.setrow { display: flex; align-items: center; gap: 12px; }
+.setrow-text { flex: 1; min-width: 0; }
+.setrow-name {
+  display: block; font-family: 'Inter', sans-serif; font-size: 0.8125rem; font-weight: 600;
+  line-height: 1.3; color: var(--text-primary);
+}
+.setrow .hint { margin: 2px 0 0; }
+/* Exporting audio (queue item 104b): the progress is a groove filled
+   with the theme's mark. */
+.vkey:disabled { opacity: 0.55; }
+.export-bar {
+  height: 10px; margin: 8px 0 4px; border-radius: 5px; overflow: hidden;
+  background: var(--groove-bg); box-shadow: inset 0 1px 3px var(--groove-shade);
+}
+.export-bar span { display: block; height: 100%; width: 0; background: var(--np-fill, var(--mark)); transition: width 240ms linear; }
+.diag {
+  margin: 0 0 8px; padding: 8px 10px; border-radius: 8px;
+  background: var(--groove-bg);
+  box-shadow: inset 0 1px 3px var(--groove-shade);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.6875rem; line-height: 1.5;
+  color: var(--text-primary); white-space: pre-line; overflow-wrap: break-word;
+}
+.trim { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.trim .setrow-text { flex: 1; }
+.trim-val {
+  font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 700;
+  color: var(--text-primary); font-variant-numeric: tabular-nums;
+  min-width: 3.6em; text-align: center;
+}
+.trim .vkey { width: 48px; padding: 0; font-size: 1rem; }
+/* The list of keys (session 30n, item 122): a popup, solid as a popup is,
+   over a dimmed app; it scrolls inside where a screen is short. */
+.keys-pop {
+  width: min(calc(100vw - 32px), 520px); max-height: min(calc(100dvh - 32px), 680px);
+  padding: 12px 16px 16px; border-radius: 14px; overflow: auto;
+  color: var(--btn-mini-text);
+  background: var(--toast-base);
+  border: 1px solid var(--btn-mini-border);
+  box-shadow: 0 16px 40px -12px rgba(0,0,0,0.7);
+}
+.keys-pop::backdrop { background: rgba(0,0,0,0.55); }
+.kp-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.kp-head .page-title { color: var(--btn-mini-text); font-size: 0.9375rem; }
+.kp-list {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17em), 1fr)); gap: 6px 16px;
+}
+.kp-list li {
+  display: grid; grid-template-columns: 7em minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0;
+  font-family: 'Inter', sans-serif; font-size: 0.8125rem; font-weight: 500; line-height: 1.3;
+}
+.kp-what { min-width: 0; overflow-wrap: anywhere; }
+.kp-list kbd {
+  justify-self: start; padding: 3px 7px; border-radius: 6px; white-space: nowrap;
+  border: 1px solid var(--btn-mini-border); box-shadow: inset 0 -1px 0 var(--btn-mini-border);
+  font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 700;
+}
+.keys-pop .hint { color: var(--btn-mini-text); margin: 10px 0 0; }
+@media (forced-colors: active) {
+  .keys-pop { border-color: CanvasText; }
+  .kp-list kbd { border-color: CanvasText; }
+}
+
+/* ---------- Now Playing ---------------------------------------
+   Calm and centred: the album and where you are in it, how long
+   is left, how far through, what Next does, and the one action a
+   thumb's reach from the buttons. Nothing scrolls. */
+.v-now { align-items: stretch; text-align: center; padding: 4px 0 2px; }
+.np-top { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.np-album {
+  margin: 0; font-family: 'Inter', sans-serif; font-size: min(0.8125rem, 19.5px); font-weight: 700;
+  line-height: 1.25; color: var(--text-primary); overflow-wrap: break-word;
+}
+.np-pos { margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.np-dots { display: flex; align-items: center; gap: 5px; }
+.np-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--guide-dot); display: block; }
+.np-dots i.on { width: 8px; height: 8px; background: var(--mark); box-shadow: 0 0 0 1.5px var(--led-ring), var(--led-glow); }
+.np-of {
+  font-family: 'Inter', sans-serif; font-size: min(0.6875rem, 16.5px); font-weight: 600;
+  color: var(--text-secondary); font-variant-numeric: tabular-nums;
+}
+/* "safe": if it ever overflows, it overflows downward, where the
+   fit guard can measure it, never up over the album line. */
+.np-mid { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: safe center; gap: 12px; }
+.np-time {
+  margin: 0; font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600;
+  /* Large text, capped like the track name (1.29x). */
+  font-size: min(3.5rem, 72px); line-height: 1; letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums; color: var(--text-primary);
+}
+/* The bar: a quiet rail (decorative, like the off-beat playhead
+   cells, so the lit fill stands out from it at 3:1) and a
+   lit fill in the lamp's colours, ending in a lit bead built like
+   the lit playhead cell (fill, light ring, same-hue halo). */
+.np-bar { position: relative; flex: 0 0 auto; height: 24px; margin: -6px 4px; border-radius: 6px; }
+/* The rail moves the playhead (session 30h): a press, a drag, the keys.
+   Its box is the 24px target (half of it in the gaps around it, so the
+   page doesn't move); the bar drawn in it stays 6px. */
+.np-bar::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 9px; height: 6px; border-radius: 3px;
+  background: color-mix(in srgb, var(--text-primary) 7%, transparent);
+}
+.np-bar { touch-action: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.np-bar[aria-disabled="true"] { cursor: default; }
+.np-bar:focus, .pc-line:focus { outline: none; }
+.np-bar:focus-visible { outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: 2px; }
+.pc-line:focus-visible { outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: 4px; }
+.np-bar i {
+  position: absolute; left: 0; top: 9px; height: 6px; width: var(--p); border-radius: 3px;
+  background: var(--np-fill);
+}
+.np-bar i::after {
+  content: ''; position: absolute; right: -5px; top: 50%; width: 10px; height: 10px;
+  margin-top: -5px; border-radius: 50%; background: var(--np-fill);
+  box-shadow: 0 0 0 2px var(--lit-ring, rgba(255,255,255,0.85)), var(--led-glow);
+}
+.np-next {
+  flex: 0 0 auto; margin: 4px 0 0; font-family: 'Inter', sans-serif; font-size: min(0.75rem, 18px);
+  font-weight: 500; line-height: 1.35; color: var(--text-secondary); overflow-wrap: break-word;
+}
+.np-next b { color: var(--text-primary); font-weight: 700; }
+.np-action { flex: 0 0 auto; width: 100%; font-size: min(0.75rem, 18px); }
+/* The Vibes key (queue item 38b) at the top left, an album's title
+   row centred beside it between the key and a spacer as wide. */
+.np-head {
+  flex: 0 0 auto; display: grid; align-items: start; gap: 8px;
+  grid-template-columns: minmax(var(--vibes-key, 88px), 1fr) minmax(0, auto) minmax(var(--vibes-key, 88px), 1fr);
+}
+.np-head .np-vibes { grid-column: 1; justify-self: start; }
+.np-head .np-top { grid-column: 2; padding-top: 4px; }
+.np-vibes { min-width: var(--vibes-key, 88px); font-size: min(0.75rem, 18px); }
+
+/* ---------- A long piece on Now Playing (queue item 106b) ----------
+   The piece's line stands where the rail stood: ticks for where a theme
+   enters, the peak, the return, the close and a wander's turns (painted once
+   into the canvas), the playhead a bead moved by a transform, and under it
+   where you are in words, a key each way to the section before or after.
+   Pressing the line shows where a let-go would jump to. Nothing scrolls. */
+.np-piece { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; --piece-tick: var(--text-secondary); --piece-mark: var(--text-primary); }
+.pc-line {
+  position: relative; height: 34px; margin: 0 4px; touch-action: none; cursor: pointer;
+  border-radius: 6px; outline-offset: 2px; -webkit-tap-highlight-color: transparent;
+}
+.pc-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.pc-head, .pc-ghost { position: absolute; left: 0; top: 0; bottom: 0; width: 0; pointer-events: none; will-change: transform; }
+.pc-head::before { content: ''; position: absolute; left: -1px; top: 0; bottom: 2px; width: 2px; border-radius: 1px; background: var(--np-fill); }
+.pc-head::after {
+  content: ''; position: absolute; left: -5px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; background: var(--np-fill);
+  box-shadow: 0 0 0 2px var(--lit-ring, rgba(255,255,255,0.85)), var(--led-glow);
+}
+.pc-ghost::before { content: ''; position: absolute; left: -1px; top: 0; bottom: 0; width: 2px; background: var(--text-primary); opacity: 0.75; }
+.np-piece.idle .pc-head::after { box-shadow: 0 0 0 2px var(--lit-ring, rgba(255,255,255,0.85)); }
+.pc-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.pc-key { min-width: 44px; width: 44px; min-height: 44px; padding: 0; }
+.pc-key:disabled { opacity: 0.55; }
+.pc-text { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
+.pc-bars { font-size: min(0.8125rem, 19.5px); font-weight: 600; line-height: 1.25; color: var(--text-primary); overflow-wrap: anywhere; }
+.pc-times { font-size: min(0.6875rem, 16.5px); font-weight: 500; line-height: 1.25; color: var(--text-secondary); min-height: 1.25em; }
+.v-now.fit-tight .np-piece { gap: 2px; }
+.v-now.fit-tight .pc-line { height: 26px; }
+.v-now.fit-tight .pc-times { display: none; }
+@media (prefers-reduced-motion: reduce) { .ln-journey { transition: none; } }
+@media (forced-colors: active) {
+  .pc-head::before, .pc-head::after { background: Highlight; box-shadow: none; }
+  .pc-ghost::before { background: CanvasText; }
+  .ln-journey .vkey[aria-pressed="true"] { outline: 2px solid Highlight; }
+}
+
+/* ---------- Vibes ---------------------------------------------
+   Every vibe in two columns, tap to pick. The list scrolls (the one
+   view that does, for the number of vibes); the header row with
+   close and clear all stays put. A picked vibe lights its LED and
+   carries a ring in the primary text colour, so it is never marked
+   by colour alone. */
+.v-vibes { padding: 4px 0 2px; gap: 8px; }
+.vb-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.vb-count {
+  flex: 1; min-width: 0; text-align: center;
+  font-family: 'Inter', sans-serif; font-size: min(0.6875rem, 16.5px); font-weight: 600;
+  color: var(--text-secondary); overflow-wrap: break-word;
+}
+.vb-head .vkey:disabled { opacity: 0.55; }
+.vb-list {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start;
+  gap: 8px; padding: 2px 2px 8px;
+}
+.vb-key { justify-content: flex-start; gap: 10px; padding: 4px 12px; font-size: min(0.75rem, 18px); min-width: 0; }
+.vb-word { min-width: 0; overflow-wrap: anywhere; text-align: left; }
+.vb-key[aria-pressed="true"] {
+  color: var(--text-primary);
+  box-shadow: inset 0 0 0 2px var(--text-primary), var(--btn-mini-shadow);
+}
+.vb-key[aria-pressed="true"] .vb-word { font-weight: 700; }
+
+/* Fit steps, measured by the fit guard (script) when the caps
+   are not enough, e.g. under user text spacing: More takes the
+   five-across swatch grid; Now Playing tightens its gaps, then
+   steps the time down (56, 48, 40px), as the name steps down.
+   If More still cannot fit (large text plus user spacing), its
+   text cap (--cap) steps from 1.5x toward 1x, never below the
+   100% size, like the Info meta. */
+.v-now.fit-tight .np-mid { gap: 6px; }
+.v-now.fit-tight .np-next { margin-top: 0; }
+/* Paused, the bead goes dark like the lit cell; the bar stays. */
+.phone:not(.playing) .np-bar i::after { box-shadow: 0 0 0 2px var(--lit-ring, rgba(255,255,255,0.85)); }
+
+/* ---------- Text size: steps for the new views -----------------
+   Same steps as Session 5 (container queries in ems). Lists just
+   grow and scroll; More and Now Playing must still fit. */
+.more.fit-five .themes { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.more.fit-five .sw-card { left: 10%; right: 10%; top: 30%; bottom: 30%; gap: 2px; padding: 0 3px; }
+.more.fit-five .sw-card i:nth-child(3) { display: none; }
+.more.fit-five .sw-card b { width: 9px; }
+:where(.phone.text-large) .themes { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+:where(.phone.text-large) .sw-card { left: 10%; right: 10%; top: 30%; bottom: 30%; gap: 2px; padding: 0 3px; }
+:where(.phone.text-large) .sw-card i:nth-child(3) { display: none; }
+:where(.phone.text-large) .sw-card b { width: 9px; }
+:where(.phone.text-large) .trim { flex-wrap: wrap; }
+:where(.phone.text-large) .trim .setrow-text { flex-basis: 100%; }
+:where(.phone.text-large) .trim .trim-val { flex: 1; }
+:where(.phone.text-large) .hero-keys { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+:where(.phone.text-large) .hero-keys .vkey:last-child:nth-child(odd) { grid-column: 1 / -1; }
+:where(.phone.text-large) .keys3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* Rows with keys put the keys under the text, so a long name
+     keeps the full width and never breaks mid-word. */
+:where(.phone.text-large) .lrow.track,
+:where(.phone.text-large) .lrow.album { flex-wrap: wrap; row-gap: 0; }
+:where(.phone.text-large) .lrow.track .lrow-main,
+:where(.phone.text-large) .lrow.album .lrow-main { flex-basis: 100%; }
+:where(.phone.text-large) .lrow.track .row-keys,
+:where(.phone.text-large) .lrow.album > .vkey { margin: 0 0 8px auto; }
+:where(.phone.text-larger) .v-now .np-mid { gap: 8px; }
+:where(.phone.text-larger) .go-hint { flex-basis: 100%; }
+
+/* ---------- Reduced motion -------------------------------------
+   The global rule (SESSION 6) already stops every transition and
+   animation. These keys also lose their 1–2px drop; the darker
+   fill and inward shadow stay. */
+@media (prefers-reduced-motion: reduce) {
+  .phone .vkey:active, .phone .lrow-main:active, .phone .sw:active,
+  .phone .vkey[role="switch"][aria-checked="false"] { transform: none !important; }
+}
+
+/* ---------- Forced colours (Session 10 rules, new marks) -------
+   LEDs, the now-playing bead and dots, and the progress fill are
+   background colours, so they opt out and are redrawn in system
+   colours. Swatches and album art are pictures of colour, so
+   they keep their own colours, like images. */
+@media (forced-colors: active) {
+  .led, .np-dots, .np-bar, .sw-art, .art, .sw-check { forced-color-adjust: none; }
+  .led { background: GrayText; box-shadow: none; }
+  [aria-selected="true"] > .led, [aria-pressed="true"] > .led { background: Highlight; box-shadow: none; }
+  .tab::before { border-color: transparent; }
+  .tab[aria-selected="true"]::before { border: 2px solid Highlight; }
+  .np-dots i { background: GrayText; box-shadow: none; }
+  .np-dots i.on { background: Highlight; }
+  .np-bar::before { background: GrayText; }
+  .np-bar i, .np-bar i::after { background: Highlight; box-shadow: none; }
+  .sw::after { box-shadow: inset 0 0 0 1px CanvasText; forced-color-adjust: none; }
+  .sw[aria-checked="true"]::after { box-shadow: inset 0 0 0 3px Highlight; }
+  .sw-check { background: Highlight; color: HighlightText; box-shadow: none; }
+  .now-mark { color: Highlight; }
+  .vkey.armed { outline: 2px solid Highlight; }
+  .vb-key[aria-pressed="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
+}
+
+/* Theme swatches. Each copies its theme's backdrop, glass, first
+   three notes and Play colour (generated from the theme blocks;
+   re-generate if a theme changes). */
+.sw-dawn {
+  --sw-glass: rgba(255,255,255,0.52);
+  --sw-edge: rgba(255,255,255,0.78);
+  --sw-a: #e33120; --sw-b: #1457da; --sw-c: #23886c;
+  --sw-play: linear-gradient(180deg, #ffd8a0 0%, #e8a040 48%, #b87820 50%, #d08830 100%);
+  background: radial-gradient(60% 45% at 30% 15%, #ffdcc0 0%, transparent 55%), radial-gradient(55% 40% at 78% 25%, #d8b8d8 0%, transparent 60%), radial-gradient(70% 45% at 20% 85%, #b8d0d8 0%, transparent 60%), radial-gradient(60% 40% at 88% 78%, #ffd8c8 0%, transparent 55%), linear-gradient(170deg, #f8e4d0 0%, #e8d0dc 50%, #d0dce0 100%);
+}
+.sw-ember {
+  --sw-glass: linear-gradient(180deg, rgba(255,238,224,0.72), rgba(255,222,208,0.66));
+  --sw-edge: rgba(255,215,190,0.62);
+  --sw-a: #ac1a30; --sw-b: #651cae; --sw-c: #983012;
+  --sw-play: linear-gradient(180deg, #ffb878 0%, #e85878 48%, #a02858 50%, #c03868 100%);
+  background: radial-gradient(55% 45% at 25% 15%, #ffb070 0%, transparent 60%), radial-gradient(50% 40% at 78% 22%, #e85890 0%, transparent 60%), radial-gradient(65% 50% at 20% 82%, #7a2878 0%, transparent 65%), radial-gradient(60% 45% at 88% 85%, #c84878 0%, transparent 60%), radial-gradient(40% 22% at 50% 4%, #ffd0a0 0%, transparent 75%), linear-gradient(180deg, #e89878 0%, #b85888 45%, #4a1858 100%);
+}
+.sw-tidal {
+  --sw-glass: linear-gradient(180deg, rgba(228,246,248,0.72), rgba(208,236,240,0.64));
+  --sw-edge: rgba(210,235,240,0.66);
+  --sw-a: #145492; --sw-b: #19685d; --sw-c: #6230c1;
+  --sw-play: linear-gradient(180deg, #b8e8e0 0%, #38a0a8 48%, #0a6878 50%, #187888 100%);
+  background: radial-gradient(55% 45% at 28% 15%, #b8e0da 0%, transparent 55%), radial-gradient(50% 40% at 78% 24%, #88bcc4 0%, transparent 60%), radial-gradient(75% 55% at 22% 82%, #2a7890 0%, transparent 65%), radial-gradient(55% 40% at 88% 82%, #68a8b4 0%, transparent 55%), linear-gradient(170deg, #c8e8e0 0%, #78b8c4 45%, #285a78 100%);
+}
+.sw-dark {
+  --sw-glass: linear-gradient(180deg, rgba(40,40,48,0.85), rgba(28,28,34,0.92));
+  --sw-edge: rgba(255,255,255,0.18);
+  --sw-a: #6aaed6; --sw-b: #7ec8a0; --sw-c: #b8a0d8;
+  --sw-play: linear-gradient(180deg, #5a9ad0 0%, #3a78b0 48%, #1e5a88 50%, #2a6a98 100%);
+  background: radial-gradient(55% 45% at 28% 18%, #1e1e28 0%, transparent 60%), radial-gradient(50% 40% at 78% 25%, #1a1a24 0%, transparent 60%), radial-gradient(65% 50% at 22% 82%, #16161e 0%, transparent 65%), radial-gradient(55% 40% at 88% 82%, #1a1a22 0%, transparent 55%), linear-gradient(170deg, #18181e 0%, #121218 50%, #0e0e14 100%);
+}
+.sw-amoled {
+  --sw-glass: linear-gradient(180deg, rgba(20,20,24,0.7), rgba(10,10,14,0.85));
+  --sw-edge: rgba(255,255,255,0.16);
+  --sw-a: #40b0e0; --sw-b: #60d0b0; --sw-c: #8090e0;
+  --sw-play: linear-gradient(180deg, #ff5cb4 0%, #ff1f92 48%, #c4006e 50%, #d80c7a 100%);
+  background: #000000;
+}
+.sw-nightlight {
+  --sw-glass: linear-gradient(180deg, rgba(60,35,20,0.6), rgba(40,20,10,0.75));
+  --sw-edge: rgba(255,180,120,0.28);
+  --sw-a: #e08040; --sw-b: #d06030; --sw-c: #c88050;
+  --sw-play: linear-gradient(180deg, #e8a860 0%, #d08040 48%, #a05820 50%, #b06828 100%);
+  background: radial-gradient(55% 45% at 28% 18%, #3a2010 0%, transparent 60%), radial-gradient(50% 40% at 78% 25%, #2a1808 0%, transparent 60%), radial-gradient(65% 50% at 22% 82%, #1e1006 0%, transparent 65%), radial-gradient(55% 40% at 88% 82%, #2a160a 0%, transparent 55%), linear-gradient(170deg, #2a1808 0%, #1a0e04 50%, #100800 100%);
+}
+.sw-nocturne {
+  --sw-glass: linear-gradient(180deg, rgba(58,32,88,0.55), rgba(28,14,52,0.72));
+  --sw-edge: rgba(180,140,230,0.36);
+  --sw-a: #c878e8; --sw-b: #e878b8; --sw-c: #78b8e8;
+  --sw-play: linear-gradient(180deg, #c878e8 0%, #a048c8 48%, #7828a0 50%, #8838b0 100%);
+  background: radial-gradient(55% 45% at 26% 16%, #6a3aa8 0%, transparent 60%), radial-gradient(50% 40% at 76% 22%, #b04898 0%, transparent 60%), radial-gradient(60% 45% at 20% 82%, #3a1a6a 0%, transparent 65%), radial-gradient(55% 42% at 86% 84%, #7a3aa0 0%, transparent 60%), radial-gradient(35% 20% at 52% 6%, #d878b8 0%, transparent 75%), linear-gradient(175deg, #241046 0%, #160830 50%, #0a0420 100%);
+}
+.sw-abyss {
+  --sw-glass: linear-gradient(180deg, rgba(28,44,48,0.85), rgba(15,27,31,0.9));
+  --sw-edge: rgba(140,210,190,0.28);
+  --sw-a: #8fd8b8; --sw-b: #68b8a0; --sw-c: #58a8b8;
+  --sw-play: linear-gradient(180deg, #2e8a80 0%, #1e6a62 48%, #144a46 50%, #1a5652 100%);
+  background: radial-gradient(55% 45% at 28% 18%, #16323a 0%, transparent 60%), radial-gradient(50% 40% at 78% 25%, #142a30 0%, transparent 60%), radial-gradient(65% 50% at 22% 82%, #0e2228 0%, transparent 65%), radial-gradient(55% 40% at 88% 82%, #122830 0%, transparent 55%), linear-gradient(170deg, #142830 0%, #0e1e24 50%, #081418 100%);
+}
+.sw-olive {
+  --sw-glass: linear-gradient(180deg, rgba(255,250,228,0.70), rgba(248,242,208,0.62));
+  --sw-edge: rgba(255,252,232,0.8);
+  --sw-a: #4d7a1b; --sw-b: #98193c; --sw-c: #a1581b;
+  --sw-play: linear-gradient(180deg, #cfc458 0%, #9a9430 48%, #6e6a18 50%, #7d7922 100%);
+  background: radial-gradient(70% 45% at 50% 0%, rgba(255,250,200,0.18) 0%, transparent 65%), radial-gradient(80% 50% at 50% 100%, rgba(50,46,8,0.20) 0%, transparent 70%), #9c9642;
+}
+
+
+/* ============================================================
+   THE APP: fitting the spec to a real screen, and the parts the
+   mockup does not draw.
+   ============================================================ */
+
+/* ---------- zone sizes on a real screen ------------------------ */
+/* The mockup's 40px top pad made room for a drawn status bar; the real
+   one is the safe-area inset, already on the phone. */
+.zone-info { flex: 0 0 auto; padding: 10px 12px 0; }
+.zone-buttons {
+  /* 240px as drawn, but never more than about a third of a short screen. */
+  flex: 0 0 min(240px, 34dvh);
+  padding-bottom: 12px;
+}
+.phone [hidden] { display: none !important; }
+
+/* ---------- the Info card --------------------------------------- */
+/* The text column is exactly as tall as the art, so the readout fitter
+   (ui.js) can tell when a loop has too much to say. */
+.info-row { grid-template-rows: 118px; }
+.cover { border-radius: 0; }
+.cover canvas { display: block; width: 100%; height: 100%; }
+/* The spec's cover sparkles decorate stand-in art; real covers are drawn. */
+.phone .cover::before { display: none; }
+
+.name {
+  white-space: nowrap; overflow: hidden;
+  overflow-wrap: normal; cursor: text; margin: 0;
+  flex: 0 0 auto;
+  /* Room for descenders, which line-height 1 would clip. */
+  padding-bottom: 0.12em;
+}
+.name.wrap {
+  white-space: normal;
+  display: -webkit-box; -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2; line-clamp: 2;
+  line-height: 1.05;
+}
+.name.break { overflow-wrap: anywhere; }
+.name:focus { outline: none; }
+.name:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }
+.name-edit {
+  min-height: 24px;
+  font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600;
+  font-size: min(1.75rem, 36px); letter-spacing: -0.02em; line-height: 1;
+  width: 100%; min-width: 0; padding: 0 0 2px; margin: 0;
+  color: var(--text-primary); background: transparent;
+  border: 0; border-bottom: 1px solid var(--text-secondary); border-radius: 0;
+}
+.meta { margin: 0; padding: 0; list-style: none; }
+/* Every line is whole (session 30d): the script sets only lines that fit
+   and leaves off the rest, so nothing here wraps or shows an ellipsis. */
+.meta li { white-space: nowrap; overflow: hidden; }
+.meta li.mix { font-weight: 700; color: var(--text-primary); }
+.meta li.album-line { font-weight: 700; color: var(--mark-text, var(--mark)); }
+/* The details, and the tap that shows what was left off. The strip at the
+   side holds the quiet mark (a dot a page) where there is more. */
+.meta-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+.meta-wrap.paged > .meta:not(.vh) { margin-right: 14px; }
+.meta-more {
+  position: absolute; inset: 0; width: 100%; margin: 0; padding: 0;
+  background: transparent; border: 0; border-radius: 8px;
+  color: var(--text-secondary); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.meta-more:focus { outline: none; }
+.meta-more:focus-visible { outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: 2px; }
+.meta-dots {
+  position: absolute; right: 0; top: 2px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  pointer-events: none;
+}
+.meta-dots i {
+  display: block; width: 6px; height: 6px; border-radius: 50%;
+  box-sizing: border-box; border: 1px solid currentColor; opacity: 0.75;
+}
+.meta-dots i.on { background: currentColor; opacity: 1; }
+/* Too many pages for dots to fit: a thin track, its thumb on the page. */
+.meta-dots.track { top: 2px; bottom: 2px; width: 4px; display: block; border-radius: 2px; }
+.meta-dots.track::before {
+  content: ''; position: absolute; inset: 0; border-radius: 2px;
+  background: currentColor; opacity: 0.25;
+}
+.meta-dots.track i {
+  position: absolute; left: 0; width: 4px; min-height: 3px; border: 0; border-radius: 2px;
+  background: currentColor; opacity: 1;
+}
+@media (forced-colors: active) {
+  .meta-dots { forced-color-adjust: none; color: CanvasText; }
+}
+
+/* ---------- Layers: the halo follows the playhead --------------- */
+.v-layers { padding: 0; }
+.phone.playing .layer:not(.dim) .pattern span.at.on {
+  box-shadow:
+    0 0 0 2px var(--halo-inner),
+    0 0 10px var(--n),
+    0 0 18px var(--n-glow);
+}
+/* The quiet guide dot under the playhead lifts a little, so the column
+   reads even where a layer is silent. */
+.phone.playing .pattern span.at:not(.on) { background: var(--text-secondary); }
+@media (forced-colors: active) {
+  .phone.playing .layer:not(.dim) .pattern span.at.on { box-shadow: 0 0 0 2px Canvas, 0 0 0 4px Highlight; }
+}
+
+/* ---------- Buttons zone: icons only ----------------------------- */
+.btn { min-width: 0; }
+.btn svg { pointer-events: none; }
+
+/* ---------- Sound ------------------------------------------------ */
+/* One label column for every row, so a slider never jumps as its value
+   changes width. */
+.v-sounds {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-content: space-evenly;
+  column-gap: 14px;
+  padding: 2px 0;
+}
+.srow { display: contents; cursor: pointer; }
+.srow span {
+  align-self: center;
+  font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 600;
+  color: var(--text-primary); white-space: nowrap;
+}
+.srow span b {
+  font-weight: 600; color: var(--text-secondary);
+  font-variant-numeric: tabular-nums; margin-left: 4px;
+}
+.srow.off span { color: var(--text-dim); }
+.phone input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 40px; margin: 0; padding: 0;
+  background: transparent; cursor: pointer;
+}
+.phone input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 3px;
+  background: var(--groove-bg);
+  box-shadow: inset 0 1px 2px var(--groove-shade), inset 0 -1px 0 rgba(255,255,255,0.12);
+}
+.phone input[type="range"]::-moz-range-track {
+  height: 6px; border-radius: 3px;
+  background: var(--groove-bg);
+  box-shadow: inset 0 1px 2px var(--groove-shade);
+}
+.phone input[type="range"]::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--mark); }
+/* The knob is solid (session 30k, item 119: Mikey, "those slider circles
+   don't need to be semi-transparent"): the key's glass laid over the
+   theme's solid popup color, so the track never shows through it. */
+.phone input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 24px; height: 24px; margin-top: -9px; border-radius: 50%;
+  border: 1px solid var(--btn-mini-border);
+  background: var(--btn-mini-bg), var(--toast-base);
+  box-shadow: var(--btn-mini-shadow), 0 0 0 0 transparent;
+}
+.phone input[type="range"]::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 1px solid var(--btn-mini-border);
+  background: var(--btn-mini-bg), var(--toast-base);
+  box-shadow: var(--btn-mini-shadow);
+}
+.phone input[type="range"]:focus { outline: none; }
+.phone input[type="range"]:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; border-radius: 8px; }
+
+/* ---------- Library and Save ------------------------------------- */
+.tabs.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tab-ico, .go-chev, .back > span[data-ico] { display: inline-flex; }
+.tab-ico svg { width: 16px; height: 16px; }
+.go-chev svg { width: 16px; height: 16px; }
+.empty {
+  font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 500;
+  line-height: 1.45; color: var(--text-secondary);
+  padding: 16px 4px; margin: 0; text-align: center;
+}
+.art { display: block; }
+canvas.art { image-rendering: auto; }
+.lrow > .vkey.word { flex: 0 0 auto; }
+.lrow.in .lrow-title { color: var(--text-primary); }
+/* A tick box: empty while the loop is not in this album, filled with the
+   lamp colour once it is. Shape (the tick) carries it as well as colour. */
+.pick {
+  flex: 0 0 auto; margin-left: auto;
+  width: 26px; height: 26px; border-radius: 7px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid color-mix(in srgb, var(--text-primary) 70%, transparent);
+  color: var(--text-secondary);
+}
+.pick svg { width: 16px; height: 16px; }
+.lrow.in .pick { background: var(--mark); border-color: var(--mark); color: var(--check-ink); }
+.pick.warn { border-color: var(--text-primary); color: var(--text-primary); background: transparent !important; box-shadow: inset 0 0 0 1px var(--text-primary); }
+.lrow-main .pick { margin-right: 2px; }
+
+.page-foot {
+  flex: 0 0 auto; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+  gap: 6px; padding-top: 8px;
+}
+.page-foot .vkey { padding: 4px 6px; }
+.save-head { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding-bottom: 8px; }
+.save-head .hint { margin: 0; flex: 1 1 100%; }
+.save-head.changed .hint { color: var(--text-primary); font-weight: 600; }
+.save-head .vkey { flex: 1 1 0; }
+.save-head:not(.changed) { padding: 0; }
+.diag { max-height: none; }
+#shareOut { margin-top: 8px; user-select: all; }
+
+/* ---------- Now Playing ------------------------------------------ */
+.np-bar i { width: 100%; transform-origin: left center; transform: scaleX(0); will-change: transform; }
+.np-bar i::after { display: none; }
+.np-dots i.on { width: 8px; height: 8px; }
+
+/* ============================================================
+   PAINTER 6 · NEXT PICKS  (design/next-picks.md)
+   What new loops lean toward, in three places: Now Playing shows
+   the picked values as outline pills (outside an album only), the
+   Vibe panel (the brief's "New loops") lists five lines, and the
+   Length picker sets bars. Each line has its own colour; colours
+   only outline pills and colour the length slider and the lit ∞,
+   text stays in the
+   theme's text colours. Nothing here scrolls.
+   ============================================================ */
+.t-dark, .t-amoled, .t-nightlight, .t-nocturne, .t-abyss {
+  --pk-mood: #ffb347; --pk-tempo: #6fd6c8; --pk-length: #b8a2f2;
+  --pk-key: #f39ac0; --pk-style: #9fd38a; --pk-voices: #8fc3f0;
+  --pk-knob: #ffffff;
+}
+/* The light themes take the darker set. */
+.t-dawn, .t-ember, .t-tidal, .t-olive {
+  --pk-mood: #c77a12; --pk-tempo: #1f8f84; --pk-length: #7c5cd6;
+  --pk-key: #c94c86; --pk-style: #4f9a3a; --pk-voices: #3a7fc4;
+  --pk-knob: #ffffff;
+}
+
+/* ---------- the pill ------------------------------------------- */
+/* A picked value: a 1.25px inset ring in its line's colour at 80%
+   (a shadow, since a border that thin is drawn at 1px). A value left
+   to chance beside a picked one (line two) is dashed at 60%, in the
+   secondary text colour; a dashed line has to be a border, which
+   Chromium draws at 1px. Forced colours get a real border instead
+   (see the forced-colors block). */
+.pk-pill {
+  --pk: var(--text-secondary);
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 30px; padding: 3px 12px; border-radius: 15px;
+  border: 0; box-shadow: inset 0 0 0 1.25px color-mix(in srgb, var(--pk) 80%, transparent);
+  font-family: 'Inter', sans-serif; font-size: min(0.8125rem, calc(13px * var(--pk-cap, 1.5))); font-weight: 600;
+  line-height: 1.2; color: var(--text-primary); font-variant-numeric: tabular-nums;
+  white-space: nowrap; max-width: 100%; min-width: 0;
+}
+.pk-pill.dashed {
+  border: 1.5px dashed color-mix(in srgb, var(--pk) 60%, transparent); box-shadow: none;
+  padding: 2px 11px; font-weight: 500; color: var(--text-secondary);
+}
+/* Only very long moods at large text: wrap between words rather
+   than run out of the panel (set by script after layout). */
+.pk-pill.wrap { white-space: normal; text-align: center; border-radius: 14px; }
+.pk-mood { --pk: var(--pk-mood); }
+.pk-tempo { --pk: var(--pk-tempo); }
+.pk-length { --pk: var(--pk-length); }
+.pk-key { --pk: var(--pk-key); }
+.pk-style { --pk: var(--pk-style); }
+.pk-voices { --pk: var(--pk-voices); }
+.pk-journey { --pk: var(--pk-length); }
+
+/* ---------- Now Playing: the picks under the clock ------------- */
+/* One button, centred, at least 44px tall, drawing nothing of its
+   own: the pills are the key. It recesses when pressed, like every
+   key. Moods on the first row, tempo and length on the second. */
+.np-picks {
+  flex: 0 0 auto; align-self: center; max-width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; min-width: 44px; padding: 4px 6px; margin-top: 2px;
+  border: 0; border-radius: 14px; background: transparent; color: inherit;
+  transition: transform 90ms cubic-bezier(.3,.8,.4,1), filter 90ms ease;
+}
+.np-picks:active { transform: translateY(1px); filter: brightness(0.94); }
+@media (hover: hover) { .np-picks:hover { background: var(--press-tint); } }
+.pk-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 100%; }
+.np-picks .pk-pill {
+  min-height: 26px; padding: 2px 10px; border-radius: 13px;
+  font-size: min(0.75rem, 18px);
+}
+.np-picks .pk-pill.dashed { padding: 1px 9px; }
+.np-picks .pk-pill.wrap { border-radius: 13px; }
+/* Nothing picked: one quiet dashed "anything", so there is still
+   something to tap. */
+.np-picks .pk-none { border-color: var(--rule); }
+/* The fit guard's last step, after the text is back to 1x: the
+   lines lose their padding. */
+.v-picks.pk-tight .pk-line { padding: 0; }
+.v-picks.pk-tight .pk-vals { row-gap: 2px; }
+
+/* ---------- the Vibe panel ---------------------------------------- */
+/* Like the Info meta, the panel's text follows the size setting up to
+   1.5x (--pk-cap); when the picks are long enough not to fit, the
+   fit guard (picks.js) steps the cap down toward 1x, never below
+   the 100% size. */
+.v-picks { padding: 4px 0 0; }
+.pk-head { flex-wrap: nowrap; justify-content: flex-end; margin-bottom: 4px; }
+.pk-head .page-title { font-size: min(0.8125rem, 19.5px); }
+.pk-head .vkey { flex: 0 0 auto; font-size: min(0.75rem, 18px); }
+.pk-list { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.pk-line {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+  min-height: 48px; padding: 2px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.pk-vals {
+  flex: 1; min-width: 0; align-self: stretch;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px;
+}
+/* A value that opens a picker is a button that fills its share of
+   the line, left aligned. */
+.pk-val {
+  display: flex; align-items: center; justify-content: flex-start; min-width: 0; max-width: 100%;
+  min-height: 44px; padding: 0 2px; margin: 0;
+  border: 0; border-radius: 10px; background: transparent; color: inherit; text-align: left;
+  transition: transform 90ms cubic-bezier(.3,.8,.4,1), filter 90ms ease;
+}
+.pk-val.fill { flex: 1; }
+.pk-val.static { min-height: 0; }
+button.pk-val:active { transform: translateY(1px); filter: brightness(0.94); }
+@media (hover: hover) { button.pk-val:hover { background: var(--press-tint); } }
+.pk-any {
+  font-family: 'Inter', sans-serif; font-size: min(0.8125rem, calc(13px * var(--pk-cap, 1.5))); font-weight: 500;
+  line-height: 1.25; color: var(--text-secondary); overflow-wrap: break-word;
+}
+.pk-vals > .pk-any { padding-left: 2px; }
+.pk-sep { padding: 0 2px; }
+/* The any key: lit (.armed: a ring in the primary text colour, the
+   app's latched word key) while the whole line is left to chance. */
+.vkey.word.pk-anykey {
+  flex: 0 0 auto; align-self: center; min-width: 52px; min-height: 44px;
+  font-size: min(0.6875rem, calc(11px * var(--pk-cap, 1.5)));
+}
+
+/* ---------- the Length picker ------------------------------------ */
+.v-length { padding: 4px 0 0; }
+.ln-head {
+  flex: 0 0 auto; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
+}
+.ln-head .vkey { font-size: min(0.75rem, 18px); }
+.ln-head :is(#lenCancel, #trkCancel) { justify-self: start; }
+.ln-head .ln-done { justify-self: end; font-weight: 700; }
+.ln-title { flex: none; text-align: center; font-size: min(0.8125rem, 19.5px); }
+/* The body sits in the middle of the space under the head. */
+.ln-body {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: safe center;
+  gap: 22px; padding: 4px 4px 6px;
+}
+.ln-count { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.ln-step { font-variant-numeric: tabular-nums; font-size: min(0.8125rem, 19.5px); }
+.ln-num { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ln-input {
+  width: 100%; min-width: 0; min-height: 44px; padding: 0; margin: 0;
+  border: 0; background: transparent; color: var(--text-primary); text-align: center;
+  font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600;
+  font-size: min(3rem, 64px); line-height: 1.05; letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  /* The 2px underline in the length colour sits under the digits, as
+     wide as they are. */
+  text-decoration: underline 2px var(--pk-length); text-underline-offset: 0.16em;
+  text-decoration-skip-ink: none;
+  border-radius: 8px; caret-color: var(--pk-length);
+}
+.ln-input:disabled { opacity: 1; color: var(--text-primary); -webkit-text-fill-color: var(--text-primary); text-decoration: none; }
+.ln-time {
+  font-family: 'Inter', sans-serif; font-size: min(0.6875rem, 16.5px); font-weight: 500;
+  line-height: 1.3; color: var(--text-secondary); text-align: center; font-variant-numeric: tabular-nums;
+}
+/* The play time stays in one piece; the line breaks only after "·". */
+.ln-time .nw { white-space: nowrap; }
+/* The doubling slider: sixteen stops, a 4px track filled in the
+   length colour up to a 24px white thumb with a 3px ring. The input
+   itself is 44px tall, so the whole strip is the target. */
+.ln-slide { position: relative; padding: 0 2px; }
+.ln-slide input[type="range"] {
+  -webkit-appearance: none; appearance: none; display: block;
+  width: 100%; height: 44px; margin: 0; background: transparent; cursor: pointer;
+}
+.ln-slide input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px;
+  /* A quiet dot at each stop, the fill, then the rail. The stop
+     spacing and the fill's width come from script, in px. */
+  background:
+    radial-gradient(circle, var(--guide-dot) 1.5px, transparent 2px) calc(12px - var(--tile, 18px) / 2) 50% / var(--tile, 18px) 4px repeat-x,
+    linear-gradient(var(--pk-length), var(--pk-length)) 0 0 / var(--fill, 0px) 100% no-repeat,
+    color-mix(in srgb, var(--text-primary) 14%, transparent);
+}
+.ln-slide input[type="range"]::-moz-range-track {
+  height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--text-primary) 14%, transparent);
+}
+.ln-slide input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--pk-length); }
+.ln-slide input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 24px; height: 24px; margin-top: -10px; border-radius: 50%;
+  background: var(--pk-knob); box-shadow: 0 0 0 3px var(--pk-length), 0 1px 4px rgba(0,0,0,0.35);
+  border: 0;
+}
+.ln-slide input[type="range"]::-moz-range-thumb {
+  width: 24px; height: 24px; border-radius: 50%; border: 0;
+  background: var(--pk-knob); box-shadow: 0 0 0 3px var(--pk-length), 0 1px 4px rgba(0,0,0,0.35);
+}
+.ln-slide input[type="range"]:focus-visible { outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: 2px; border-radius: 8px; }
+.ln-ticks { position: relative; height: 1.3em; margin: -6px 2px 0; font-size: min(0.6875rem, 16.5px); }
+.ln-ticks span {
+  position: absolute; top: 0; transform: translateX(-50%);
+  font-family: 'Inter', sans-serif; font-weight: 600; line-height: 1.3;
+  color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+/* Each label sits under its stop: the thumb's centre runs from 12px
+   to 12px short of the end. The ends keep inside the panel. */
+.ln-ticks span[data-stop="0"] { left: 12px; }
+.ln-ticks span[data-stop="4"] { left: calc(12px + (100% - 24px) * 4 / 15); }
+.ln-ticks span[data-stop="8"] { left: calc(12px + (100% - 24px) * 8 / 15); }
+.ln-ticks span[data-stop="12"] { left: calc(12px + (100% - 24px) * 12 / 15); }
+.ln-ticks span[data-stop="15"] { left: calc(100% - 12px); }
+.ln-ticks span.on { color: var(--text-primary); font-weight: 700; }
+/* The last row: the ∞ key on the left, the any key on the right
+   (Mikey, 2026-10-14; they replace the Endless label and switch).
+   Both are lit the app's way, a ring in the primary text colour, so
+   neither state is shown by colour alone. Lit, the ∞ itself also
+   glows in the length colour. */
+.ln-keys { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.vkey.ln-inf { min-width: 64px; padding: 2px 14px; }
+.ln-inf > span {
+  font-family: 'Inter', sans-serif; font-size: min(1.375rem, 30px); font-weight: 600; line-height: 1;
+  color: var(--text-secondary);
+}
+.ln-inf[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 2px var(--text-primary), var(--btn-mini-shadow);
+}
+.ln-inf[aria-pressed="true"] > span {
+  color: var(--pk-length); font-weight: 700;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--pk-length) 70%, transparent);
+}
+.ln-keys .vkey.word.pk-anykey { min-width: 64px; min-height: 48px; }
+/* The journey (queue item 106b): arc and wander, between the ∞ and the
+   any key; lit as the ∞ is (a ring in the primary text colour, so colour is
+   never the only sign), pressed again to go back to chance. Dimmed for a
+   loop of up to 32 bars, which has none. */
+.ln-journey { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 120ms ease; }
+.ln-journey .vkey.word { flex: 0 1 auto; min-width: 64px; min-height: 48px; padding: 2px 10px; font-size: min(0.75rem, 18px); }
+.ln-journey .vkey[aria-pressed="true"] { color: var(--text-primary); font-weight: 700; box-shadow: inset 0 0 0 2px var(--text-primary), var(--btn-mini-shadow); }
+/* On the mid-tone light panels the length colour is under 3:1 against
+   the panel (Ember 2.45, Tidal 2.89, measured), so in the light themes
+   the slider thumb also gets a 1px edge in the text colour, which is
+   (WCAG 1.4.11). The colour itself stays as the brief has it. */
+.t-dawn, .t-ember, .t-tidal, .t-olive { --pk-edge: color-mix(in srgb, var(--text-primary) 70%, transparent); }
+.t-dawn .ln-slide input[type="range"]::-webkit-slider-thumb,
+.t-ember .ln-slide input[type="range"]::-webkit-slider-thumb,
+.t-tidal .ln-slide input[type="range"]::-webkit-slider-thumb,
+.t-olive .ln-slide input[type="range"]::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--pk-length), 0 0 0 4px var(--pk-edge), 0 1px 4px rgba(0,0,0,0.3);
+}
+/* Endless on: the number reads ∞ and the bar controls dim and rest. */
+.v-length.endless :is(.ln-step, .ln-slide) { opacity: 0.55; }
+.v-length.endless .ln-slide input { cursor: default; }
+.v-length.endless .ln-time { font-weight: 600; }
+/* Any: the number reads "any" in the secondary colour, without its
+   underline; the slider shows no fill. −1, +1, the slider and typing
+   stay live: each picks a number of bars. */
+.v-length.any .ln-input { color: var(--text-secondary); text-decoration: none; font-weight: 500; }
+/* ...and the thumb is hollow, a quiet ring in the secondary text
+   colour, so it doesn't read as a number picked. */
+.v-length.any .ln-slide input[type="range"]::-webkit-slider-thumb {
+  background: transparent; box-shadow: inset 0 0 0 2px var(--text-secondary);
+}
+.v-length.any .ln-slide input[type="range"]::-moz-range-thumb {
+  background: transparent; box-shadow: inset 0 0 0 2px var(--text-secondary);
+}
+.ln-step:disabled { opacity: 0.55; }
+/* ---------- the Track length view (session 30c) ------------------ */
+/* Built on the Bars view's parts: the time as the big number (h:mm:ss),
+   its words under it; a row of four step keys (a minute and a second
+   either way) under that, so the number keeps the width at 360 px; the
+   coarse slider; then on and on and the two fades, lit the app's way
+   (the final pass, 30f: the ∞ as large and as plain as Bars'). */
+.v-track .ln-body { gap: 18px; }
+.tk-num { width: 100%; }
+.tk-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.tk-steps .ln-step { min-height: 44px; padding: 2px 4px; white-space: nowrap; }
+.vkey.word.tk-on { flex: 0 0 auto; min-width: 64px; min-height: 48px; padding: 2px 14px; border-radius: 10px; font-size: min(0.75rem, 18px); }
+.vkey.tk-on[aria-pressed="true"] { color: var(--text-primary); font-weight: 700; box-shadow: inset 0 0 0 2px var(--text-primary), var(--btn-mini-shadow); }
+.tk-fades { justify-content: flex-end; }
+.v-track.endless .ln-input { text-decoration: none; }
+/* On and on, the steps and the slider still set a time: they keep their
+   contrast, the thumb hollow as Bars' is under any. */
+.v-track.endless :is(.ln-step, .ln-slide) { opacity: 1; }
+.v-track.endless .ln-slide input[type="range"]::-webkit-slider-thumb {
+  background: transparent; box-shadow: inset 0 0 0 2px var(--text-secondary);
+}
+.v-track.endless .ln-slide input[type="range"]::-moz-range-thumb {
+  background: transparent; box-shadow: inset 0 0 0 2px var(--text-secondary);
+}
+/* Short phones: the view asks its own height (what the card and the keys
+   leave it), and nothing in it scrolls. Under 324px the gaps close and the
+   tick labels no longer take the slider's touches; under 280px (360x640,
+   320x568) the time takes the title's place between cancel and done, and
+   its words and the tick labels go (still read out; the title too). */
+.v-track { container: track / size; position: relative; }
+.v-track .ln-ticks { pointer-events: none; }
+@container track (max-height: 323.98px) {
+  .v-track .ln-body { gap: 4px; padding-top: 0; padding-bottom: 0; }
+}
+@container track (max-height: 279.98px) {
+  .v-track .ln-head { grid-template-columns: auto 1fr auto; }
+  .v-track .ln-head .vkey { min-height: 44px; height: 44px; }
+  .v-track .ln-head .ln-done { grid-column: 3; }
+  .v-track .ln-title, .v-track .ln-time {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .v-track .tk-num { position: absolute; top: 4px; left: 72px; right: 72px; width: auto; height: 44px; }
+  .v-track .ln-input { height: 44px; font-size: min(1.5rem, 26px); }
+  .v-track .ln-body { gap: 0; padding: 0 4px; justify-content: space-evenly; }
+  .v-track .tk-steps .ln-step, .v-track .ln-keys .vkey.word { min-height: 44px; height: 44px; }
+  .v-track .ln-slide input[type="range"] { height: 28px; }
+  .v-track .ln-ticks { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone .np-picks:active, .phone button.pk-val:active { transform: none !important; }
+}
+@media (forced-colors: active) {
+  .pk-pill { border: 1px solid CanvasText; }
+  .pk-pill.dashed { border-color: GrayText; }
+  .ln-slide input[type="range"] { forced-color-adjust: none; }
+  .ln-inf[aria-pressed="true"] { outline: 2px solid Highlight; }
+  .ln-inf[aria-pressed="true"] > span { color: Highlight; text-shadow: none; }
+  .ln-slide input[type="range"]::-webkit-slider-runnable-track { background: GrayText; }
+  .ln-slide input[type="range"]::-webkit-slider-thumb { background: Canvas; box-shadow: 0 0 0 3px Highlight; }
+  .ln-input { text-decoration-color: CanvasText; }
+  .vkey.word.pk-anykey.armed { outline: 2px solid Highlight; }
+}
+
+/* ---------- the toast -------------------------------------------- */
+.toast {
+  position: absolute; left: 50%; z-index: 40;
+  bottom: calc(min(240px, 34dvh) + 12px + var(--inset-bottom, env(safe-area-inset-bottom, 0px)));
+  transform: translate(-50%, 8px);
+  max-width: min(90%, 420px);
+  padding: 10px 16px; border-radius: 12px;
+  font-family: 'Inter', sans-serif; font-size: 0.8125rem; font-weight: 600; line-height: 1.35;
+  text-align: center;
+  color: var(--btn-mini-text);
+  background: var(--btn-mini-bg), var(--toast-base);
+  border: 1px solid var(--btn-mini-border);
+  box-shadow: var(--btn-mini-shadow), 0 10px 24px -10px rgba(0,0,0,0.6);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  opacity: 0; pointer-events: none;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast:empty { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .toast { transition: none; }
+}
+
+/* Short screens: the Sound rows get closer so all six fit. */
+@media (max-height: 700px) {
+  .phone input[type="range"] { height: 28px; }
+}
+/* The smallest phones: Share and its views still fit without scrolling. */
+@media (max-height: 600px) {
+  .share-keys { padding: 0; }
+  .share-keys .vkey { font-size: min(0.75rem, 14px); padding: 1px 3px; line-height: 1.1; }
+  .share-keys .vkey, .v-sheet .ln-body .vkey { min-height: 44px; }
+  .v-sheet .ln-body { gap: 4px; padding: 0; }
+  .v-sheet .hint { margin: 2px 0 4px; }
+  .export-bar { margin: 2px 0; height: 8px; }
+}
+
+/* ============================================================
+   PAINTER 30f: EVERY SCREEN FITS
+   The panel asks its own height (what the card and the keys leave it),
+   so a view closes its gaps by the room it has, not by the phone's
+   name. Nothing here scrolls, and no target goes under 24px.
+   ============================================================ */
+.dynamic-inner { container: middle / size; }
+/* The slider's labels sit on its lower edge and don't take its touches. */
+.ln-ticks { pointer-events: none; }
+/* A layer's two keys are 48px, and never taller than their row. */
+.layer { grid-template-rows: minmax(0, 1fr); }
+.layer .btn-roll, .layer .btn-on { height: min(48px, 100%); min-height: 24px; align-self: center; }
+.phone.fit-stack .layer { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+:where(.phone.text-large) .layer { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
+
+/* The layer's name keeps its column at any text size. The text's steps
+   (.text-large, .text-larger) are js/main.js's stepText: on a wide screen
+   it asks the panel's width, which the zones hold at 480px. */
+.layer { grid-template-columns: max(48px, 3rem) minmax(0, 1fr) 48px 48px; }
+.phone.fit-stack .layer { grid-template-columns: minmax(0, 1fr) 48px 48px; }
+:where(.phone.text-large) .layer { grid-template-columns: minmax(0, 1fr) 48px 48px; }
+
+/* A short phone upright: the keys give the panel what they can spare and
+   stay 44px; on the smallest the card's art is 100px, room for four of its lines. */
+@media (max-height: 700px) {
+  .zone-buttons { flex-basis: max(172px, 28dvh); padding-bottom: 8px; }
+  .row-1 { flex-grow: 1.15; }
+  .toast { bottom: calc(max(172px, 28dvh) + 12px + var(--inset-bottom, env(safe-area-inset-bottom, 0px))); }
+}
+@media (max-height: 600px) {
+  .zone-info { padding-top: 6px; }
+  .info-inner { padding-block: 10px; }
+  .info-row { grid-template-columns: minmax(0, 1fr) 100px; grid-template-rows: 100px; }
+  .cover { width: 100px; height: 100px; }
+  .name, .name-edit { font-size: min(1.375rem, 28px); }
+}
+
+/* A phone on its side: two columns (Mikey, 2026-11-22). The panel the
+   screen's whole height at the left, the card over the keys at the right,
+   under the thumb. They share the safe area's whole width, up to 560px a
+   side. Previous, Play and Next are fixed in place there as upright. The
+   reading and Tab order is upright's: card, panel, keys. */
+@media (min-width: 480px) and (max-height: 519.98px) {
+  .phone {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 560px));
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "middle info" "middle keys";
+    justify-content: center;
+    gap: 8px 0;
+  }
+  .phone > .zone-info, .phone > .zone-dynamic, .phone > .zone-buttons { max-width: none; }
+  .phone > .zone-info { grid-area: info; }
+  .phone > .zone-dynamic { grid-area: middle; padding-block: 8px; }
+  .phone > .zone-buttons { grid-area: keys; padding-bottom: 8px; min-height: 0; }
+  .zone-info { padding-top: 8px; }
+  .toast { left: calc(50% - min(25%, 280px)); bottom: calc(12px + var(--inset-bottom, env(safe-area-inset-bottom, 0px))); max-width: min(46%, 420px); }
+}
+@media (min-width: 480px) and (max-height: 349.98px) {
+  .info-inner { padding-block: 10px; }
+  .info-row { grid-template-columns: minmax(0, 1fr) 100px; grid-template-rows: 100px; }
+  .cover { width: 100px; height: 100px; }
+  .name, .name-edit { font-size: min(1.375rem, 28px); }
+}
+
+/* Upright and under 440px high (the keyboard up, a split screen): the
+   card steps aside for the panel, unless its name is being typed or it
+   holds a plain line. By height alone, never by focus: nothing moves from
+   under a finger as a box loses it. Play stays. */
+@media (max-width: 479.98px) and (max-height: 440px) {
+  .phone:not(:has(.name-edit:not([hidden]), .info-inner.plain)) > .zone-info { display: none; }
+  .zone-dynamic { padding-top: 6px; }
+  .zone-buttons { flex-basis: max(100px, 28dvh); }
+}
+
+/* Under 340px of panel: Bars and Vibe close their gaps. */
+@container middle (max-height: 339.98px) {
+  #viewLength .ln-body { gap: 8px; padding-block: 2px; }
+  .pk-line { flex: 1 0 auto; min-height: 44px; }
+  .ln-num { gap: 0; }
+}
+/* Under 300px (360x640, and a phone on its side). */
+@container middle (max-height: 299.98px) {
+  .v-length, .v-picks { padding-top: 0; }
+  .v-length .ln-head .vkey, .pk-head .vkey { min-height: 40px; }
+  #viewLength .ln-body { gap: 2px; padding-block: 0; justify-content: space-evenly; }
+  #viewLength .ln-input { font-size: min(1.875rem, 34px); min-height: 36px; }
+  #viewLength :is(.ln-step, .ln-keys .vkey) { min-height: 40px; height: 40px; }
+  #viewLength .ln-slide input[type="range"] { height: 30px; }
+  .ln-time { line-height: 1.15; }
+  .pk-head { margin-bottom: 0; }
+  .pk-line { flex: 1 1 0; min-height: min-content; padding: 1px 0; }
+  .pk-val, .vkey.word.pk-anykey { min-height: 28px; }
+  .pk-line .vkey.word.pk-anykey { align-self: stretch; max-height: 44px; padding-block: 0; }
+  .pk-vals { row-gap: 0; }
+  .pk-list .pk-pill { min-height: 24px; padding-block: 1px; }
+  .v-now { padding-block: 0; }
+  .v-now .np-mid { gap: 6px; }
+  .v-now .np-time { font-size: min(2.5rem, 44px); }
+  .v-now .np-picks { margin-top: 0; padding-block: 2px; }
+  .np-head { align-items: center; }
+  .np-head .np-top { padding-top: 0; gap: 2px; }
+  .v-now .vkey { min-height: 44px; }
+  .more { gap: 5px; }
+  .themes { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-auto-rows: minmax(0, 44px); flex: 0 1 auto; min-height: 0; }
+  .themes .sw { min-height: 24px; }
+  .sw-card { left: 10%; right: 10%; top: 30%; bottom: 30%; gap: 2px; padding: 0 3px; }
+  .sw-card i:nth-child(3) { display: none; }
+  .sw-card b { width: 9px; }
+  .more .go { min-height: 44px; }
+  .tabs { margin: 0 0 4px; }
+  .tab { min-height: 44px; }
+  .page-head, .vb-head { margin-bottom: 2px; }
+  .v-sounds { align-content: space-evenly; padding: 0; }
+  .v-sounds .srow span { line-height: 1.15; }
+}
+/* Under 240px (320x568, or a browser's bars over a phone on its side). */
+@container middle (max-height: 239.98px) {
+  .v-sounds input[type="range"] { height: 26px; }
+  .v-sounds .srow span { font-size: min(0.75rem, 16px); }
+  .v-now .np-time { font-size: min(2rem, 34px); }
+  #viewLength .ln-input { font-size: min(1.625rem, 28px); min-height: 30px; }
+  .themes { grid-auto-rows: minmax(0, 34px); }
+}
+/* A narrow panel: Bars' four keys still stand in one row. */
+@container middle (max-width: 299.98px) {
+  #viewLength .ln-keys, #viewLength .ln-journey { gap: 4px; }
+  #viewLength .ln-keys :is(.vkey.ln-inf, .vkey.word.pk-anykey) { min-width: 48px; padding-inline: 6px; }
+  #viewLength .ln-journey .vkey.word { min-width: 48px; padding-inline: 4px; }
+  .v-track .tk-steps { gap: 5px; }
+  .v-track .tk-steps .ln-step { font-size: min(0.8125rem, 14px); padding-inline: 1px; }
+}
+/* The ∞ that opens Track length is a glyph wide: its key is a finger's. */
+.pk-val.pk-track { min-width: 44px; justify-content: center; }
+
+/* ============================================================
+   PAINTER 30f: ACCESSIBILITY (WCAG 2.2 AA; tools/a11y.mjs holds it)
+   ============================================================ */
+/* Words in the lamp's hue need 4.5:1; the mark alone is a graphic's 3:1. */
+.t-dawn, .t-ember, .t-tidal, .t-olive { --mark-text: color-mix(in srgb, var(--mark) 60%, var(--text-primary)); }
+/* The length color on the two mid-tone panels: 3:1 as a fill and a glyph. */
+.t-ember, .t-tidal { --pk-length: #5a38b8; }
+/* The tempo color on the three mid-tone panels (session 30j): 3:1 as the
+   tempo sliders' fill and ring. */
+.t-ember, .t-tidal, .t-olive { --pk-tempo: #0c5f58; }
+/* Play's glyph has a dark edge where the gloss under it is pale. */
+.t-dawn { --play-edge: #6e3d08; }
+.t-ember { --play-edge: #5c0c30; }
+.t-tidal { --play-edge: #04414c; }
+.t-olive { --play-edge: #3c3a08; }
+.t-nightlight { --play-edge: #4a2408; }
+:where(.t-dawn, .t-ember, .t-tidal, .t-olive, .t-nightlight) .btn-play svg > * {
+  stroke: var(--play-edge); stroke-width: 3; paint-order: stroke;
+}
+/* A slider's thumb has an edge that can be found on the glass. */
+.phone input[type="range"]::-webkit-slider-thumb { border: 2px solid var(--text-secondary); }
+.phone input[type="range"]::-moz-range-thumb { border: 2px solid var(--text-secondary); }
+.phone .ln-slide input[type="range"]::-webkit-slider-thumb { border: 0; }
+.phone .ln-slide input[type="range"]::-moz-range-thumb { border: 0; }
+
+/* Focus is shown on whatever takes it: a link, a typed number, a piece's
+   line and a title as much as a key. */
+.phone :is(a, input, pre, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring, var(--text-primary)); outline-offset: 2px;
+}
+.phone .ln-input:focus-visible { outline-offset: 0; }
+.phone .meta-more:focus-visible { outline-offset: -2px; }
+.info-text { overflow: hidden; overflow: clip; overflow-clip-margin: 5px; }
+.phone .name:focus-visible { outline-offset: 1px; }
+.vb-list { padding: 4px 4px 8px; scroll-padding-block: 6px; }
+.name { min-height: 24px; }
+
+@media (forced-colors: active) {
+  .phone :focus-visible { outline-color: Highlight !important; }
+  .vkey[aria-pressed="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
+  .phone input[type="range"], .export-bar { forced-color-adjust: none; }
+  .phone input[type="range"]::-webkit-slider-runnable-track { background: GrayText; box-shadow: none; }
+  .phone input[type="range"]::-moz-range-track { background: GrayText; box-shadow: none; }
+  .phone input[type="range"]::-webkit-slider-thumb { background: Canvas; border: 3px solid Highlight; box-shadow: none; }
+  .phone input[type="range"]::-moz-range-thumb { background: Canvas; border: 3px solid Highlight; box-shadow: none; }
+  /* (Bars' and Track length's thumbs, in each of their states, have rules of their own.) */
+  .phone .v-length .ln-slide input[type="range"]::-webkit-slider-thumb { background: Canvas; border: 3px solid Highlight; box-shadow: none; }
+  .phone .v-length .ln-slide input[type="range"]::-moz-range-thumb { background: Canvas; border: 3px solid Highlight; box-shadow: none; }
+  .phone input[type="range"]:disabled { opacity: 0.6; }
+  .export-bar { background: Canvas; border: 1px solid CanvasText; box-shadow: none; }
+  .export-bar span { background: Highlight; }
+  .lrow.in .pick { background: Canvas; border-color: Highlight; color: CanvasText; }
+  .t-dawn .btn-play svg > *, .t-ember .btn-play svg > *, .t-tidal .btn-play svg > *,
+  .t-olive .btn-play svg > *, .t-nightlight .btn-play svg > * { stroke: currentColor; stroke-width: 1; }
+}
+/* A short panel's page keeps room for its list at any text size: the
+   head's and the foot's words stop growing sooner (the list's don't). */
+@container middle (max-height: 299.98px) {
+  .page-head .vkey, .page-foot .vkey { font-size: min(0.75rem, 16px); min-height: 40px; }
+  .page-head .page-title { font-size: min(0.8125rem, 16px); }
+  .page-head { row-gap: 0; }
+  .page-foot { padding-top: 4px; }
+  .save-head { flex-wrap: nowrap; padding-bottom: 2px; }
+  .save-head .hint { flex: 0 1 auto; font-size: min(0.6875rem, 13px); }
+  .save-head .vkey { font-size: min(0.75rem, 14px); min-height: 40px; min-width: 0; padding-inline: 4px; }
+}
+/* A narrow panel (a small phone, or its side): the tabs' and the heads'
+   words stop growing where they would run into each other. */
+@container middle (max-width: 299.98px) {
+  .tab { font-size: min(0.75rem, 14px); padding-inline: 2px; gap: 4px; }
+  .v-sheet .ln-head { grid-template-columns: auto minmax(0, 1fr); }
+  .v-sheet .ln-title { font-size: min(0.8125rem, 16px); }
+  .v-sheet .ln-head .vkey { font-size: min(0.75rem, 14px); }
+  .page-foot .vkey, .page-head .vkey { font-size: min(0.75rem, 15px); }
+}
+/* A title that takes the focus wears its ring around its word, not through it. */
+.phone .view .page-title { flex: 0 1 auto; padding: 3px 6px; border-radius: 8px; }
+.phone .view :is(.hero-title, .page-title):focus-visible { outline-offset: 0; }
+.phone .view .page-title.vh { padding: 0; }
+@container track (max-height: 279.98px) {
+  .phone .v-track .page-title.ln-title { padding: 0; }
+}
+
+/* ============================================================
+   PAINTER 30f: THE FINAL PASS, ONE APP
+   ============================================================ */
+/* A popup is solid: the words under it don't show through. */
+.t-dawn { --toast-base: #f7ecee; }
+.t-ember { --toast-base: #f4d4cc; }
+.t-tidal { --toast-base: #cfe6e9; }
+.t-olive { --toast-base: #e9e3c0; }
+.t-dark { --toast-base: #22222a; }
+.t-amoled { --toast-base: #0e0e12; }
+.t-nightlight { --toast-base: #2a170b; }
+.t-nocturne { --toast-base: #2a1548; }
+.t-abyss { --toast-base: #14262a; }
+/* Vibe's five lines sit in the middle of a tall panel, as Bars' do, and
+   the last has no rule under it (as Layers'). */
+.pk-list { justify-content: safe center; }
+.pk-line:last-child { border-bottom: 0; }
+/* Seed album's slider is a Sound row: its name to the left of it. */
+#seedAlbum .srow { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: center; column-gap: 14px; }
+.v-sheet #seedAlbum .srow span { font-size: min(0.75rem, 18px); }
+/* A browser that can make no loop has the line alone: no empty keys. */
+.phone.unplayable { display: flex; justify-content: center; }
+.phone.unplayable > :is(.zone-dynamic, .zone-buttons) { display: none; }
+.phone.unplayable > .zone-info { flex: 0 0 auto; grid-area: auto; grid-column: 1 / -1; align-self: center; padding: 12px; }
+.phone.unplayable .info-inner { padding: 22px 14px; }
+
+/* ============================================================
+   PAINTER 30f: THE BROWSER'S BAR PUT AWAY BY A SCROLL
+   Mikey, 2026-11-22: "I would thing the user could just be able to scroll
+   down a bit". The one exception to the two scrolling places, and only in
+   a touch browser's tab (js/viewport.js): the document is a bar taller
+   than the screen and the app is stuck to its top at the screen's height,
+   so nothing in it moves or is cut; it only grows as the bar goes.
+   ============================================================ */
+html.bar-scroll {
+  height: auto;
+  overflow-x: hidden; overflow-y: auto;
+  scrollbar-width: none;
+  background: var(--page-back, #08060c);
+}
+html.bar-scroll body {
+  height: calc(100lvh + 80px);
+  overflow: visible;
+  background: var(--page-back, #08060c);
+}
+html.bar-scroll .phone { position: sticky; top: 0; }
+/* A finger dragged up or down scrolls the page from anywhere, a slider's
+   track and knob too (session 30k, item 119; js/viewport.js holds the
+   slider's value until the drag shows itself sideways); a drag across
+   moves the slider. The piece's line and the rail under the time keep
+   their drags. A list keeps its scroll to itself, even one too short to
+   scroll (it is a pixel taller than its box, so its overscroll stays in
+   it). */
+html.bar-scroll .phone input[type="range"] { touch-action: pan-y; }
+html.bar-scroll .vb-list { position: relative; }
+html.bar-scroll :is(.scroll, .vb-list)::after {
+  content: ''; position: absolute; left: 0; top: 0;
+  width: 1px; height: calc(100% + 1px);
+  pointer-events: none;
+}
+
+/* ============================================================
+   PAINTER 30f: 400% ZOOM ON A COMPUTER SCROLLS
+   Mikey, 2026-11-22: "let it scroll at 400%". Under 280px high with a
+   mouse or the keyboard alone (pointer fine or none; 1280x1024 at 400% is
+   320x256, WCAG 1.4.10) the app keeps the
+   height of the smallest phone's layout, card and all, and the page
+   scrolls down to it; never across. A finger's screens keep one screen:
+   the keyboard up and a split screen are that short too. The query is
+   js/viewport.js's ZOOMED as well.
+   ============================================================ */
+@media (max-height: 279.98px) and (pointer: fine),
+  (max-height: 279.98px) and (pointer: none) {
+  html {
+    height: auto;
+    overflow-x: hidden; overflow-y: auto;
+    scrollbar-width: thin;
+    background: var(--page-back, #08060c);
+  }
+  body { height: auto; overflow: visible; background: var(--page-back, #08060c); }
+  .phone { height: 568px; }
+  .toast { position: fixed; bottom: 12px; }
+}
+@media (max-height: 279.98px) and (pointer: fine) and (max-width: 479.98px),
+  (max-height: 279.98px) and (pointer: none) and (max-width: 479.98px) {
+  .phone:not(:has(.name-edit:not([hidden]), .info-inner.plain)) > .zone-info { display: flex; }
+  .zone-dynamic { padding-top: 0; }
+  .zone-buttons { flex-basis: 172px; }
+}
+@media (max-height: 279.98px) and (pointer: fine) and (min-width: 480px),
+  (max-height: 279.98px) and (pointer: none) and (min-width: 480px) {
+  .phone { height: 320px; }
+  .zone-dynamic { padding-top: 8px; }
+}
+
+/* ============================================================
+   THE FOUR PICKERS (session 30j, queue item 118; js/pickers.js)
+   Tempo, Key, Style and Voices, built on the Bars view's parts: the
+   head (cancel, the title, done), then the body. Keys lit the app's
+   way (a ring in the primary text colour, the line's colour inside
+   it) are what is asked: one pinned, several a set; none lit and the
+   any key lit is left to chance. Long lists page, never scroll.
+   ============================================================ */
+.pk-head #picksClear { margin-right: auto; flex: 0 0 auto; font-size: min(0.75rem, 18px); }
+.ln-head .pv-cancel { justify-self: start; }
+.pv-body {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 6px 4px;
+}
+/* What is asked, in the panel's words; "any" in the quiet colour. */
+.pv-value {
+  flex: 0 0 auto; margin: 0; text-align: center;
+  font-family: 'Inter', sans-serif; font-size: min(0.9375rem, 22px); font-weight: 600; line-height: 1.25;
+  color: var(--text-primary); overflow-wrap: anywhere;
+}
+.pv-value.any { color: var(--text-secondary); font-weight: 500; }
+.pv-cant {
+  flex: 0 0 auto; margin: 0; text-align: center;
+  font-family: 'Inter', sans-serif; font-size: min(0.75rem, 18px); font-weight: 500; line-height: 1.25;
+  color: var(--text-secondary);
+}
+/* Note or scale; the five layers. The one shown is ringed; a dot after
+   a name says it asks something. */
+.pv-tabs { flex: 0 0 auto; display: flex; gap: 6px; }
+.pv-tabs .vkey.word {
+  position: relative; flex: 1 1 0; min-width: 0; min-height: 44px; padding: 2px 3px;
+  font-size: min(0.75rem, 18px); white-space: nowrap;
+}
+.pv-tabs .vkey.word.asks::after {
+  content: ''; position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+}
+/* The tab shown is underlined, not ringed: a ring is a pick. */
+.pv-tab[aria-pressed="true"] {
+  color: var(--text-primary); font-weight: 700;
+  text-decoration: underline 2px; text-underline-offset: 0.3em;
+}
+:is(.pv-onoff .vkey, .pv-opt)[aria-pressed="true"] {
+  color: var(--text-primary); font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--text-primary), var(--btn-mini-shadow);
+}
+/* The options: as many columns as their words allow and as many rows of
+   44 px as the room holds (pickers.js sets --cols and --rows). */
+.pv-grid {
+  flex: 1 1 0; min-height: 0;
+  display: grid; gap: 6px; align-content: center;
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--rows, 1), minmax(0, 52px));
+}
+.vkey.word.pv-opt {
+  min-width: 0; min-height: 0; padding: 2px 6px;
+  font-size: min(0.75rem, 18px); line-height: 1.15; white-space: normal; text-align: center;
+}
+.v-key .pv-opt[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--text-primary), inset 0 0 0 4px color-mix(in srgb, var(--pk-key) 70%, transparent), var(--btn-mini-shadow); }
+.v-style .pv-opt[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--text-primary), inset 0 0 0 4px color-mix(in srgb, var(--pk-style) 70%, transparent), var(--btn-mini-shadow); }
+.v-voices .pv-opt[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--text-primary), inset 0 0 0 4px color-mix(in srgb, var(--pk-voices) 70%, transparent), var(--btn-mini-shadow); }
+/* The foot: on and off (voices), the pages, and the any key at the right. */
+.pv-foot { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; }
+.pv-pager { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.pv-pager[hidden] { display: none; }
+.vkey.pv-turn { min-width: 44px; min-height: 44px; padding: 2px 8px; }
+.pv-ico { display: inline-flex; width: 20px; height: 20px; }
+.pv-ico svg { width: 100%; height: 100%; }
+/* A narrow foot (voices beside a phone on its side): where you are is
+   still said, the keys close up. */
+.pv-foot { container: pvfoot / inline-size; }
+@container pvfoot (max-width: 319.98px) {
+  .v-voices .pv-page { display: none; }
+  .v-voices .pv-pager { gap: 4px; }
+  .v-voices .pv-foot .vkey.word.pk-anykey { min-width: 48px; }
+  .pv-onoff .vkey.word { min-width: 44px; padding-inline: 4px; }
+}
+@container pvfoot (max-width: 219.98px) {
+  .pv-page { display: none; }
+}
+.pv-page {
+  font-family: 'Inter', sans-serif; font-size: min(0.75rem, 18px); font-weight: 600;
+  color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.pv-onoff { flex: 0 0 auto; display: flex; gap: 6px; }
+.pv-onoff .vkey.word { min-width: 48px; min-height: 44px; padding: 2px 8px; font-size: min(0.75rem, 18px); }
+.pv-foot .vkey.word.pk-anykey { margin-left: auto; min-width: 64px; min-height: 44px; font-size: min(0.75rem, 18px); }
+
+/* Tempo: the number as Bars' is, underlined in the tempo colour; the
+   slow end over the fast end, both filled between them. */
+.v-tempo .ln-input { text-decoration-color: var(--pk-tempo); caret-color: var(--pk-tempo); }
+.v-tempo.any .ln-input { color: var(--text-secondary); text-decoration: none; font-weight: 500; }
+.v-tempo .ln-body { gap: 12px; }
+.tp-slide input[type="range"] { height: 36px; }
+.tp-slide input[type="range"]::-webkit-slider-runnable-track {
+  background:
+    linear-gradient(var(--pk-tempo), var(--pk-tempo)) var(--from, 0px) 0 / max(4px, calc(var(--to, 0px) - var(--from, 0px))) 100% no-repeat,
+    color-mix(in srgb, var(--text-primary) 14%, transparent);
+}
+.tp-slide input[type="range"]::-moz-range-progress { background: transparent; }
+.tp-slide input[type="range"]::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--pk-tempo), 0 1px 4px rgba(0,0,0,0.35); }
+.tp-slide input[type="range"]::-moz-range-thumb { box-shadow: 0 0 0 3px var(--pk-tempo), 0 1px 4px rgba(0,0,0,0.35); }
+.t-dawn .tp-slide input[type="range"]::-webkit-slider-thumb,
+.t-ember .tp-slide input[type="range"]::-webkit-slider-thumb,
+.t-tidal .tp-slide input[type="range"]::-webkit-slider-thumb,
+.t-olive .tp-slide input[type="range"]::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--pk-tempo), 0 0 0 4px var(--pk-edge), 0 1px 4px rgba(0,0,0,0.3);
+}
+.v-tempo.any .tp-slide input[type="range"]::-webkit-slider-runnable-track { background: color-mix(in srgb, var(--text-primary) 14%, transparent); }
+.v-tempo.any .tp-slide input[type="range"]::-webkit-slider-thumb { background: transparent; box-shadow: inset 0 0 0 2px var(--text-secondary); }
+.v-tempo.any .tp-slide input[type="range"]::-moz-range-thumb { background: transparent; box-shadow: inset 0 0 0 2px var(--text-secondary); }
+.tp-ticks { margin-top: -8px; }
+.tp-ticks span[data-bpm="40"] { left: calc(12px + (100% - 24px) * 8 / 158); }
+.tp-ticks span[data-bpm="80"] { left: calc(12px + (100% - 24px) * 48 / 158); }
+.tp-ticks span[data-bpm="120"] { left: calc(12px + (100% - 24px) * 88 / 158); }
+.tp-ticks span[data-bpm="160"] { left: calc(12px + (100% - 24px) * 128 / 158); }
+.tp-keys { justify-content: flex-end; }
+
+/* Short panels: the gaps close first; under 300 px the keys are 40 px,
+   the number smaller, the tick labels gone (each slider still says its
+   value); under 240 px the value line takes the title's place. */
+@container middle (max-height: 339.98px) {
+  .pv-body { gap: 4px; padding-block: 2px; }
+  .v-tempo .ln-body { gap: 4px; }
+}
+@container middle (max-height: 299.98px) {
+  .pv-body { padding-block: 0; }
+  .v-tempo .ln-body { gap: 0; padding-block: 0; justify-content: space-evenly; }
+  .v-tempo .ln-input { font-size: min(1.875rem, 34px); min-height: 36px; }
+  .v-tempo :is(.ln-step, .ln-keys .vkey) { min-height: 40px; height: 40px; }
+  .tp-slide input[type="range"] { height: 28px; }
+  .tp-ticks { display: none; }
+  .pv-tabs .vkey.word, .pv-onoff .vkey.word, .vkey.pv-turn, .pv-foot .vkey.word.pk-anykey { min-height: 40px; height: 40px; }
+  .pv-value { font-size: min(0.8125rem, 19.5px); }
+}
+/* Under 280 px (360x640, 320x568, a phone on its side): what is asked
+   takes the title's place between cancel and done (the title is still
+   read out), and the tabs and the foot close up. */
+.v-pick { position: relative; }
+@container middle (max-height: 279.98px) {
+  .v-pick .ln-head { grid-template-columns: auto 1fr auto; }
+  .v-pick .ln-head .ln-done { grid-column: 3; }
+  .v-pick .ln-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .v-pick .pv-value {
+    position: absolute; top: 0; left: 84px; right: 84px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: min(0.75rem, 18px); line-height: 1.15;
+  }
+  .pv-body { gap: 4px; padding-top: 2px; }
+}
+@media (forced-colors: active) {
+  :is(.pv-onoff .vkey, .pv-opt)[aria-pressed="true"] { outline: 2px solid Highlight; }
+  .tp-slide input[type="range"]::-webkit-slider-thumb { background: Canvas; box-shadow: 0 0 0 3px Highlight; }
+}
+
+/* The version, Advanced's last line (1.0, session 31). */
+.app-version { text-align: center; margin: 16px 0 8px; }

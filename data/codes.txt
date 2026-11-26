@@ -1,0 +1,281 @@
+# Share codes, version 2 (queue item 105): every name a code can carry, its
+# number in a code, and the version it joined. The format itself is in
+# core/README.md, "Share codes"; core/src/code.rs writes and reads it, and
+# core/build.rs compiles this file in.
+#
+# The rules, for whoever adds or removes something (Mikey, 2026-11-10: an
+# addition leaves old codes as they sound; 2026-11-17: no code rot, so no
+# code ever grows to keep an older one's sound). core/tests/codes.rs and the
+# dummy build (core/tests/dummy/) hold them.
+#
+# Every row is `name id since`, or for a member taken out
+# `name id since gone` or `name id since gone stand-in`.
+#
+# - **No member is added until the app keeps a code's version** (Mikey,
+#   2026-11-22: "Before first new sound"; docs/notes/105e-page.md): the app
+#   drops it today, so an addition would move every older code played there.
+#   Take this rule out with that fix.
+# - **Ids are forever.** The id is the name's number in a code, given once
+#   and never changed, reused or taken back, whatever happens to the list's
+#   order elsewhere. A new member takes the next free id of its list. A
+#   member renamed keeps its id. **No row is ever deleted:** every id ever
+#   given is in this file, so an id with a row is this build's (gone or
+#   not) and an id with none a newer build's.
+# - **`since` is the version it joined, and a release has one version.** A
+#   new member's `since` is `released + 1`, and `newest` is set to that in
+#   the same change: every member added between two releases shares it, so a
+#   code made on a build between releases may change as another joins
+#   (Mikey, 2026-11-18). A release sets `released = newest`, and nothing
+#   else moves either. A code's head is one character to version 15.
+# - **Every draw is filtered by the loop's version.** A code carries its
+#   version, and its loop is drawn from what existed then:
+#   - a pool of members listed here keeps only those that had joined
+#     (`data::there`, `data::joined_of`) before it is drawn from, a pool the
+#     core writes in Rust as well;
+#   - a setting whose word a loop draws (a `[words ...]` list here) draws
+#     only among the words that had joined;
+#   - **a new setting drawn per loop** (as tuning.cents, progression.kind,
+#     lowBell.kind and twang.kind are, each counted against a loop's
+#     changes) draws nothing below its own version: its draw asks
+#     `data::drawn_at` first and plays today's where that is false, on a
+#     stream of its own, and it is counted only where it plays
+#     (`Render::settings_changes`);
+#   - a pool with no list here (floorDrop's shapes, the echo's beats, the
+#     organ's stops, a kit's patterns) moves old codes when it grows: a new
+#     member of one first gets a list here and the filter where it is drawn.
+# - **New members go last** in their own file (data/characters.txt,
+#   data/vibes.txt, data/choices.txt and the rest), as they do here: a
+#   choice's place salts its streams.
+# - **Removing leaves a row.** Take the member out of the core and the data
+#   and write `gone` after its row's version, then a stand-in's name where
+#   one fits: a member of the same list, still here, that had joined by
+#   then (one later taken out too is written again here with another). An
+#   older code naming it plays the stand-in; with none it goes without
+#   (a vibe, a mode, a style, a voice, a choice, a setting or a word leaves
+#   the request; a journey leaves the piece's to the generator), but an
+#   option plays its choice's today. A choice's `[options]` and a setting's
+#   `[words]` stay after it, so a code holding it can still be read. The
+#   layers and the tone's parts are the format's and are never removed.
+# - **A number keeps every value ever written** (`[code numbers]`): a range
+#   widened widens its row, a range narrowed leaves the row as it was, and an
+#   older code's number then plays the nearest the field takes today. A
+#   number outside its row was written by no build and is no code.
+# - **A field this build stopped writing is still read** (its tag, core/src/
+#   code.rs) and set aside, never refused, and its tag is never given again.
+# - **Every member is listed.** core/tests/codes.rs fails if a vibe, a
+#   profile, a mood, a mode, a voice, a bass style, a choice, an option, a
+#   setting or a word has no row here, or a row here that is not gone names
+#   nothing.
+# - A deliberate improvement to a sound that already exists changes old codes
+#   too: that is allowed, and the release notes say so.
+
+# The version of the last release (until 1.0, the version the format began
+# at), and the version a new code writes: `released`, or one past it once
+# something has joined since.
+[code version]
+released = 2
+newest = 2
+
+[code vibes]
+ids = adventurous 0 2, airy 1 2, booming 2 2, bouncy 3 2, breezy 4 2,
+    bright 5 2, bubbly 6 2, cheeky 7 2, chill 8 2, chiming 9 2,
+    comforting 10 2, cool 11 2, cosmic 12 2, cozy 13 2, crisp 14 2,
+    cruising 15 2, dewy 16 2, dreamy 17 2, droning 18 2, dusky 19 2,
+    earthy 20 2, enthusiastic 21 2, experimental 22 2, floating 23 2,
+    flowing 24 2, foggy 25 2, frosty 26 2, glacial 27 2, golden 28 2,
+    goofy 29 2, groovy 30 2, happy 31 2, hazy 32 2, heartwarming 33 2,
+    hushed 34 2, hypnotic 35 2, intimate 36 2, intricate 37 2, jazzy 38 2,
+    joyful 39 2, lively 40 2, meditative 41 2, mellow 42 2, merry 43 2,
+    minimal 44 2, mischievous 45 2, misty 46 2, moonlit 47 2,
+    mysterious 48 2, nimble 49 2, peaceful 50 2, playful 51 2, plucky 52 2,
+    pulsing 53 2, quirky 54 2, rainy 55 2, reflective 56 2, refreshing 57 2,
+    restful 58 2, reverent 59 2, rippling 60 2, serene 61 2, skipping 62 2,
+    soaring 63 2, soothing 64 2, sour 65 2, spacious 66 2, spicy 67 2,
+    starry 68 2, steady 69 2, still 70 2, strange 71 2, sunny 72 2,
+    swaying 73 2, sweet 74 2, tangy 75 2, tart 76 2, tender 77 2,
+    tiptoeing 78 2, triumphant 79 2, twinkling 80 2, velvety 81 2, warm 82 2,
+    whimsical 83 2, wistful 84 2, wondrous 85 2, zany 86 2, zesty 87 2
+
+[code profiles]
+ids = dust 0 2, glade 1 2, thaw 2 2, haven 3 2, bloom 4 2, vapor 5 2,
+    halcyon 6 2, clockwork 7 2, shatter 8 2, grove 9 2, hollow 10 2,
+    shrine 11 2, undertow 12 2, tide 13 2, cinder 14 2, wayfare 15 2
+
+[code moods]
+ids = joyful 0 2, happy 1 2, enthusiastic 2 2, refreshing 3 2, soothing 4 2,
+    peaceful 5 2, comforting 6 2, reflective 7 2
+
+[code scales]
+ids = dorian 0 2, aeolian 1 2, ionian 2 2, mixolydian 3 2, lydian 4 2,
+    phrygian 5 2, harmonicMinor 6 2, minorPent 7 2, majorPent 8 2, kumoi 9 2,
+    hirajoshi 10 2, insen 11 2, wholeTone 12 2, lydianDominant 13 2,
+    phrygianDominant 14 2, dorianSharp4 15 2, yo 16 2, ritusen 17 2,
+    akebono 18 2
+
+[code layers]
+ids = drums 0 2, bass 1 2, chords 2 2, melody 3 2, texture 4 2
+
+[code journeys]
+ids = arc 0 2, wander 1 2
+
+[code tones]
+ids = warmth 0 2, space 1 2, wobble 2 2
+
+[voices drums]
+ids = brush 0 2, tape 1 2, hand 2 2, machine 3 2
+
+[voices bass]
+ids = sub 0 2, round 1 2, pluckbass 2 2, moogbass 3 2, fifths 4 2,
+    rhodesbass 5 2
+
+[voices chords]
+ids = keys 0 2, pad 1 2, harp 2 2, accordion 3 2, piano 4 2, rhodes 5 2,
+    moogpad 6 2, softpad 7 2, analogpad 8 2, prepared 9 2, musicbox 10 2,
+    kalimba 11 2, marimba 12 2, templebell 13 2, tubular 14 2, stab 15 2,
+    nylon 16 2, vowel 17 2, hum 18 2, choir 19 2
+
+[voices melody]
+ids = pluck 0 2, bell 1 2, keys 2 2, saw 3 2, ocarina 4 2, flute 5 2,
+    harp 6 2, musicbox 7 2, fiddle 8 2, accordion 9 2, piano 10 2, sine 11 2,
+    rhodes 12 2, moog 13 2, whistle 14 2, softpad 15 2, analoglead 16 2,
+    prepared 17 2, celeste 18 2, kalimba 19 2, marimba 20 2, templebell 21 2,
+    tubular 22 2, stab 23 2, panflute 24 2, vowel 25 2, hum 26 2, choir 27 2
+
+[voices texture]
+ids = bells 0 2, swell 1 2, drops 2 2, chime 3 2, wind 4 2, waves 5 2,
+    none 6 2
+
+[code bassStyles]
+ids = held 0 2, pulse 1 2, dub 2 2, walk 3 2, sparse 4 2
+
+[code choices]
+ids = glass 0 2, dubStab 1 2, organ 2 2, wash 3 2, arc 4 2, tunedKick 5 2,
+    subDuck 6 2, lateFloor 7 2, floorDrop 8 2, pedalBass 9 2, padSweep 10 2,
+    padWow 11 2, widePad 12 2, tripletKit 13 2, dottedPulse 14 2,
+    colorTone 15 2
+
+[options glass]
+ids = today 0 2, on 1 2
+
+[options dubStab]
+ids = today 0 2, on 1 2
+
+[options organ]
+ids = today 0 2, on 1 2
+
+[options wash]
+ids = today 0 2, on 1 2
+
+[options arc]
+ids = today 0 2, on 1 2
+
+[options tunedKick]
+ids = today 0 2, short 1 2, long 2 2
+
+[options subDuck]
+ids = today 0 2, on 1 2, deep 2 2
+
+[options lateFloor]
+ids = today 0 2, on 1 2, slow 2 2
+
+[options floorDrop]
+ids = today 0 2, shapes 1 2
+
+[options pedalBass]
+ids = today 0 2, on 1 2
+
+[options padSweep]
+ids = today 0 2, on 1 2, wide 2 2, fast 3 2
+
+[options padWow]
+ids = today 0 2, on 1 2
+
+[options widePad]
+ids = today 0 2, on 1 2, late 2 2
+
+[options tripletKit]
+ids = today 0 2, on 1 2
+
+[options dottedPulse]
+ids = today 0 2, pulse 1 2, kick332 2 2
+
+[options colorTone]
+ids = today 0 2, on 1 2
+
+[code settings]
+ids = arc.shape 0 2, arc.period 1 2, arc.from 2 2, arc.floor 3 2,
+    kick.note 4 2, kick.short 5 2, kick.long 6 2, subDuck.depth 7 2,
+    subDuck.recover 8 2, lateFloor.order 9 2, lateFloor.seconds 10 2,
+    lateFloor.gap 11 2, padSweep.lo 12 2, padSweep.oct 13 2,
+    padSweep.period 14 2, padSweep.q 15 2, echo.beats 16 2,
+    lateFloor.fade 17 2, tuning.cents 18 2, progression.kind 19 2,
+    lowBell.kind 20 2, lowBell.drops 21 2, twang.kind 22 2,
+    space.room-weight 23 2, space.ensemble-weight 24 2, space.room 25 2,
+    space.spread-chords 26 2, space.spread-texture 27 2,
+    space.spread-light-texture 28 2, space.spread-melody 29 2,
+    space.spread-scale 30 2, space.spread-max 31 2, space.spread-delay 32 2,
+    space.spread-sway 33 2, space.spread-rate 34 2,
+    space.spread-rate-step 35 2, space.kit 36 2, space.kit-soft 37 2,
+    space.texture-place 38 2, space.room-cutoff 39 2,
+    space.spread-cutoff 40 2, space.place-cutoff 41 2, space.busy-from 42 2,
+    space.busy-span 43 2, space.width-least 44 2, space.wet-from 45 2,
+    space.wet-scale 46 2, space.ceiling-busy 47 2, space.ceiling-sparse 48 2,
+    space.ceiling-very-sparse 49 2, space.dense 50 2, space.sparse 51 2,
+    space.wash 52 2, space.wash-follows-width 53 2, space.wash-cutoff 54 2,
+    space.wide 55 2, space.wide-chords 56 2, space.wide-max 57 2,
+    space.wide-ceiling-busy 58 2, space.wide-ceiling-sparse 59 2,
+    space.wide-ceiling-very-sparse 60 2, space.wide-cutoff 61 2,
+    space.wide-open 62 2
+
+[words arc.shape]
+ids = deep 0 2, dip 1 2
+
+[words lateFloor.order]
+ids = together 0 2, kitFirst 1 2, bassFirst 2 2
+
+[words progression.kind]
+ids = today 0 2, planing 1 2
+
+[words lowBell.kind]
+ids = today 0 2, struck 1 2, swell 2 2
+
+[words lowBell.drops]
+ids = today 0 2, on 1 2
+
+[words twang.kind]
+# slow and bright: taken out by session 24c (Mikey, 2026-11-17, the Batch 6
+# Album: "I only liked the soft version").
+ids = today 0 2, soft 1 2, slow 2 2 gone soft, bright 3 2 gone soft
+
+
+# Every number a code's fields have ever taken: a field's least and most
+# (`whole`: whole numbers only), or the numbers of one that takes a list.
+# The tempo is a request's, `bpm` the edit the slider makes, `tone` each of
+# the tone's parts, `length` in bars; the rest are the settings'.
+[code numbers]
+ranges = tempo 32 190 whole, bpm 32 190, tone 0 1,
+    length 1 9007199254740991 whole, arc.period 90 720, arc.from 0 1,
+    arc.floor 800 1500, kick.note 31 38 whole, kick.short 180 260,
+    kick.long 45 80, subDuck.depth 5 16, subDuck.recover 0.15 0.75,
+    lateFloor.seconds 8 90, lateFloor.gap 1 8 whole, padSweep.lo 350 800,
+    padSweep.oct 2 4.5, padSweep.period 5 28, padSweep.q 0.7 1.2,
+    lateFloor.fade 4 20, tuning.cents -35 35, space.room-weight 0.64 0.64,
+    space.ensemble-weight 0.5 0.5, space.room 0.7 0.9,
+    space.spread-chords 0.3 0.5, space.spread-texture 0.35 0.6,
+    space.spread-light-texture 0.15 0.3, space.spread-melody 0 0.12,
+    space.spread-scale 1.6 1.6, space.spread-max 0.8 0.8,
+    space.spread-delay 0.012 0.012, space.spread-sway 0.003 0.003,
+    space.spread-rate 0.35 0.35, space.spread-rate-step 0.07 0.07,
+    space.kit 0.08 0.15, space.kit-soft 0.7 0.7, space.texture-place 0.1 0.25,
+    space.room-cutoff 180 180, space.spread-cutoff 200 200,
+    space.place-cutoff 150 150, space.busy-from 0.5 0.5, space.busy-span 5 5,
+    space.width-least 0.25 0.25, space.wet-from 0.7 0.7,
+    space.wet-scale 0.75 0.75, space.ceiling-busy -7 -7,
+    space.ceiling-sparse -9 -9, space.ceiling-very-sparse -12 -12,
+    space.dense 0.5 0.5, space.sparse 0.15 0.15, space.wash 1 1,
+    space.wash-follows-width 1 1, space.wash-cutoff 200 200, space.wide 0 0,
+    space.wide-chords 1.4 1.4, space.wide-max 2 2,
+    space.wide-ceiling-busy -4 -4, space.wide-ceiling-sparse -5 -5,
+    space.wide-ceiling-very-sparse -7 -7, space.wide-cutoff 250 250,
+    space.wide-open 60 120
+lists = echo.beats 0.75 1 0.5 0.6666666666666666

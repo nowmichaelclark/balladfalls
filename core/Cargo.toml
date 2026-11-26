@@ -1,0 +1,107 @@
+[package]
+name = "dlcore"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Ballad Falls' audio core: the synth's voices, host-agnostic"
+license-file = "../LICENSE"
+
+# No dependencies, by design (roadmap 16).
+[dependencies]
+
+[lib]
+# A plain Rust library: native tests, the test host and any later host
+# link it. The WebAssembly module the worklet loads is the same library
+# built as a cdylib with the `web` feature (tools/build-core.sh). A `no_std`
+# library cannot be a cdylib on its own: the final module needs a panic
+# handler, and only the web host's build should bring one, or any program
+# that links the library alongside `std` would have two.
+crate-type = ["rlib"]
+
+[features]
+# Room for sample rates up to 192 kHz: the mix's delay lines, the master's
+# wobble and the noise are fixed arrays sized for the highest rate a build
+# supports (nothing allocates after start), and 192 kHz takes twice the
+# memory of 96 kHz (about 3 MB more). On by default for hosts that want the
+# charter's whole range (22,050 to 192,000 Hz); the web build leaves it off
+# (tools/build-core.sh): a browser's context runs at 96 kHz at most, and the
+# app keeps the memory it has.
+default = ["wide"]
+wide = []
+
+# The WebAssembly exports `js/worklet.js` calls (`src/wasm.rs`) and the
+# module's panic handler. Only tools/build-core.sh turns it on.
+web = []
+
+# The generator's WebAssembly exports (`src/wasm.rs`, `dl_spec` and the
+# rest), for the build tools/gen-core.sh checks the generation goldens with
+# (queue item 79). Not in the app's .wasm until the player is (item 82).
+generator = ["web"]
+
+# The player's WebAssembly exports (`src/wasm.rs`, `dl_play_*`; queue item
+# 82): the build tools/build-core.sh writes to js/dlplayer.wasm, the module
+# the app plays (its only one since queue item 97).
+player = ["web"]
+
+# The measuring tools' build (queue item 96): the player's module with the
+# generator's exports and the tools' own (`src/wasm.rs`, `dl_tools_*`: a
+# request as text, the voice probe, the budget's counts) and the FLAC
+# encoder's (`dl_flac_*`, tools/flac.mjs), which tools/build-core.sh --tools
+# writes to core/target/dltools.wasm. Never shipped: the app's modules stay
+# the bytes they were.
+tools = ["generator", "player", "flac", "codes"]
+
+# FLAC, the lossless export (`src/flac/`, queue item 104a) and its
+# WebAssembly exports (`src/wasm.rs`, `dl_flac_*`). Natively the encoder is
+# always there (the C face's `dl_flac_*` too); in a web build only with this
+# feature, which tools/build-core.sh's player build turns on since the app
+# exports (session 20, queue item 104b: js/export-worker.js). The tools'
+# build has it.
+flac = []
+
+# The C face (`src/capi.rs`, `include/dlcore.h`; promise 4, queue item 82): a
+# native static library with the player's calls and the library's panic
+# handler, built with `cargo rustc --release --lib --features capi
+# --crate-type staticlib` (CI's C host, `examples/c/seed.c`). Like `web`, only
+# that build turns it on: a program linking the library alongside `std` would
+# have two panic handlers.
+capi = []
+
+# The share codes' WebAssembly exports (`src/wasm.rs`, `dl_code_*`; queue
+# item 105): in the tools' build, and in js/dlplayer.wasm since session 23,
+# when the app moved to version 2 codes (tools/build-core.sh). Natively the
+# codes are always there, the C face's `dl_code_*` and `dl_album_*` too.
+codes = ["player"]
+
+# The dummy build (queue item 105): `build.rs` lays `tests/dummy/*.txt` over
+# `data/`, members that join at a later version, so `tests/dummy.rs` can show
+# they move no older code (`cargo test --features dummy --test dummy`; the
+# gate's core part runs it). Never in any other build.
+dummy = []
+
+# Sketch blocks (queue item 83): `core/sketch/` holds one block file and one
+# line of data that an ears or brain session drops in, the registry plays it
+# (`src/blocks/sketch.rs`), and `dlrender --sketch` turns it on where the
+# data says. Also the clips' hooks: choices forced, and named constants moved
+# (`src/tuning.rs`). Never in the app's .wasm, the player's or the C header's
+# build: tools/build-core.sh --check holds that byte for byte.
+sketch = []
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+# The core's tests (`cargo test`, tools/gate.sh's core and sketch parts),
+# optimized: they render minutes of audio, which at opt-level 0 took most
+# of the gate's time. The checks a debug build makes stay on: debug
+# assertions (and what reads `cfg!(debug_assertions)`) and overflow checks.
+# Floating point is not reordered at any opt-level, so every render the
+# tests hold to a hash is the same. The app's .wasm is the release
+# profile's, untouched (tools/build-core.sh --check).
+[profile.test]
+opt-level = 3
+debug-assertions = true
+overflow-checks = true

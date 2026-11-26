@@ -1,0 +1,69 @@
+# Removed from the tree after 1.0 (2026-11-26, the slim)
+#
+# Each path below left the repository's files. Its text is not lost:
+#
+# - Read it as it was at commit 72b13f0, the last commit before the slim:
+#   https://github.com/nowmichaelclark/balladfalls/tree/72b13f0/<path>
+#   (the paths of part 2, below, are there too)
+# - Everything before 1.0 is also in the archived driftloom repository:
+#   https://github.com/nowmichaelclark/driftloom
+#
+# A pointer in a doc, a comment or a workflow to a path below (or to a file
+# under a folder below, which ends in "/") is not broken: it names that old
+# text. `node tools/check-docs.mjs` fails on a pointer into docs/ or design/
+# that is neither a file here now nor on this list.
+#
+# Finished items leave the live docs and are not archived again: the PR keeps
+# their text, git keeps their history and docs/DONE.md has their line.
+
+design/archive/
+design/reference/
+docs/archive/
+docs/sessions/
+docs/theory-sheets.md
+docs/notes/101e-choice-room.md
+docs/notes/102-b3-measured.md
+docs/notes/102c-arc-brightness.md
+docs/notes/102d-arc-brightness.md
+docs/notes/98-testers.md
+docs/notes/102-mikey.md
+
+# Part 2 of the slim (the ears' material; its findings are on the wiki's
+# Ballad Falls/What the ears found page, and the game's note on its
+# Ballad Falls/In Broken Friends page).
+docs/ears/raw/
+docs/ears/batch-1.md
+docs/ears/batch-2.md
+docs/ears/batch-3.md
+docs/ears/batch-4.md
+docs/ears/batch-5.md
+docs/ears/batch-6.md
+docs/ears/cards-pile-1.md
+docs/ears/cards-pile-2.md
+docs/ears/cards-pile-3.md
+docs/ears/cards-pile-4.md
+docs/ears/cards-pile-5.md
+docs/ears/cards-pile-6.md
+docs/ears/cards-test.md
+docs/ears/prompt-ears-7.md
+docs/ears/prompt-ears-8.md
+docs/ears/prompt-ears-9.md
+docs/ears/prompt-ears-10.md
+docs/ears/prompt-ears-11.md
+docs/ears/prompt-ears-12.md
+docs/ears/prompt-ears-12b.md
+docs/ears/prompt-ears-13.md
+docs/ears/prompt-ears-13b.md
+docs/ears/prototypes.md
+docs/ears/space-sketch.md
+docs/ears/tools.md
+docs/ears/uploads.md
+docs/notes/82-for-broken-friends.md
+
+# Part 3 (Mikey's answers, 2026-11-26): the ears fold into Research sessions,
+# so their role's docs leave (the findings are on the wiki's Ballad Falls/What
+# the ears found and its subpages; the tools and data.csv stay in tools/ears/);
+# no baked design spec is kept (design/test-kit/bake.mjs makes one).
+docs/EARS.md
+docs/ears/
+design/driftloom_v20.html

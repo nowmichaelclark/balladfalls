@@ -1,0 +1,607 @@
+//! `dlrender`: the core's native test host.
+//!
+//! Reads note lists (`notelist.rs`), renders each through the core on this
+//! machine and prints one line of hashes per list; with `--wav` it writes
+//! the samples too. No JavaScript, no dependencies: the host a game or a
+//! command-line exporter would be (roadmap 17 grows from here).
+//!
+//! ```text
+//! cargo run --release --example dlrender -- LIST...          hash lines
+//! cargo run --release --example dlrender -- --twice LIST...  and render each
+//!                                           twice, failing if they differ
+//! cargo run --release --example dlrender -- --flush LIST...  with the
+//!                                           processor flushing subnormal
+//!                                           numbers (must hash the same)
+//! cargo run --release --example dlrender -- --rate 96000 LIST...  at another
+//!                                           sample rate (the name says which)
+//! cargo run --release --example dlrender -- --blocks 1,441,random LIST...
+//!                                           also render each through
+//!                                           `Core::render`, that many frames
+//!                                           a call, failing if the speaker
+//!                                           output differs from the plain
+//!                                           render's
+//! cargo run --release --example dlrender -- --wav OUT.wav [--signal NAME] LIST
+//! cargo run --release --example dlrender -- --seed N[,N...] [--vibes ID,...]
+//!     [--request TEXT] [--seconds 45] [--rate 44100] [--stereo] [--lite] [--wander 1]
+//!     [--salt 0] [--track bars=N|passes=N] [--wav OUT.wav] [--calls OUT.calls]
+//!                                           a loop from its seed on the
+//!                                           player, no note
+//!                                           list: one hash line a seed;
+//!                                           --request asks as the C
+//!                                           host's dl_player_ask does
+//!                                           ("glacial=0.7,bpm=70-85,organ=on");
+//!                                           --fades measures the voice
+//!                                           budget's let-go fades against
+//!                                           the loop's own steps (85e)
+//! cargo run --release --example dlrender -- --corpus SEED:N [the same]
+//!     [--wav DIR] [--calls DIR]             the first N loops of corpus SEED
+//!                                           (Rng(SEED).seed32() a loop), each
+//!                                           to DIR/I-NAME.wav with --wav
+//! cargo run --release --example dlrender -- --changes N [--from-corpus 1]
+//!     [--moment KIND] [--crossfade S | --ring] [--each] [--runs N]
+//!                                           changes of loop at a moment
+//!                                           (`change.rs`):
+//!                                           on the moment, no click, the
+//!                                           new loop as itself, the cost
+//! cargo run --release --example dlrender -- --endless HOURS [--seed N]
+//!     [--request TEXT] [--rate 22050] [--stereo] [--full] [--wander 1]
+//!                                           an Endless piece for hours at
+//!                                           speed (`endless.rs`): no drift, no
+//!                                           growth, a line an hour
+//! cargo run --release --example dlrender -- --jumps [--seed N,...] [--request TEXT]
+//!     [--at 240] [--settle 8] [--length 20] [--rate 44100]
+//!                                           jumps within a piece
+//!                                           (`jump.rs`): played, played on
+//!                                           a later core, and jumped, heard
+//!                                           from the line, and the jump's
+//!                                           cost
+//! cargo run --release --example dlrender -- --seed N | --corpus SEED:N | LIST
+//!     --flac OUT.flac [--bits 16|24] [the same options]
+//!                                           the render as FLAC, by the
+//!                                           core's own encoder
+//!                                           (`flac.rs`): from a seed
+//!                                           streamed a block at a time, a
+//!                                           directory for a corpus; 24 bits
+//!                                           unless asked; --wav beside it
+//!                                           writes the float WAV too
+//! cargo run --release --example dlrender -- --compare A.wav B.wav
+//! cargo run --release --example dlrender -- --block NAME/PROBE [--rate HZ] [--wav OUT.wav]
+//!                                           one building block alone, as the
+//!                                           test kit plays it:
+//!                                           its hash, and its samples for an
+//!                                           A/B between two versions;
+//!                                           NAME/PROBE~SETTING with that
+//!                                           setting driven, NAME/PROBE:stereo
+//!                                           a stereo block's two sides,
+//!                                          NAME/PROBE:wide
+//!                                           a stereo processor's, fed two
+//!                                           different sides
+//! ```
+//!
+//! Everything it prints is plain ASCII. It exits with 1 on any error.
+
+mod change;
+mod clip;
+mod endless;
+mod fades;
+mod flac;
+mod jump;
+mod notelist;
+mod seed;
+
+use std::process::ExitCode;
+
+use dlcore::block::{Block, Context, Note, Play, Voice, solo};
+use dlcore::blocks::{Visit, each};
+use dlcore::Core;
+use notelist::{Blocks, Fnv, line, parse, read_wav, render, render_blocks, render_flushing, signals, wav, wav_channels};
+
+const USAGE: &str = "usage: dlrender [--twice] [--flush] [--stereo] [--rate HZ] [--blocks N,N,random] [--wav OUT.wav [--signal NAME]] LIST...\n       dlrender --seed N[,N...] | --corpus SEED:N [--vibes ID,...] [--request TEXT] [--seconds S] [--rate HZ] [--stereo] [--lite] [--wander A] [--salt N] [--wav OUT] [--calls OUT] [--costs | --fades]\n         [--pick I] [--choices] [--from S] [--force CHOICE=OPTION] [--set NAME=VALUE] [--sketch] [--pin BLOCK.SETTING=V] [--space NAME=V|LO:HI] [--route sketch[.N]=LAYER] (the last six: --features sketch)\n       dlrender --changes N [--from-corpus SEED] [--moment now|beat|bar|phrase|pass] [--crossfade S | --ring] [--rate HZ] [--lite] [--wander A] [--each] [--runs N] [--change I [--wav-to DIR]]\n       dlrender --jumps [--seed N,...] [--request TEXT] [--at S] [--settle S] [--length S] [--rate HZ]
+       dlrender --endless HOURS [--seed N] [--request TEXT] [--rate HZ] [--stereo] [--full] [--wander A]\n       dlrender --seed N | --corpus SEED:N | LIST --flac OUT.flac [--bits 16|24] [the options above]\n       dlrender --compare A.wav B.wav\n       dlrender --block NAME/PROBE [--rate HZ] [--wav OUT.wav]";
+
+fn main() -> ExitCode {
+    match run(std::env::args().skip(1).collect()) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(message) => {
+            eprintln!("dlrender: {message}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn run(args: Vec<String>) -> Result<(), String> {
+    let (mut twice, mut flush, mut wav_to, mut signal) = (false, false, None, "out".to_string());
+    let mut layout = 1;
+    let (mut compare, mut lists, mut block) = (false, Vec::new(), None);
+    let (mut rate, mut blocks): (Option<f64>, Vec<Blocks>) = (None, Vec::new());
+    let mut by_seed = BySeed::default();
+    let mut changes = Changes::default();
+    let mut endless: Option<f64> = None;
+    let mut jumps = jump::Options::default();
+    let (mut flac_to, mut bits) = (None, 24u32);
+    let mut args = args.into_iter();
+    while let Some(arg) = args.next() {
+        if changes.take(&arg, &mut args)? || by_seed.take(&arg, &mut args)? || jumps.take(&arg, &mut args)? {
+            continue;
+        }
+        match arg.as_str() {
+            "--twice" => twice = true,
+            "--stereo" => layout = 2,
+            "--flush" => flush = true,
+            "--compare" => compare = true,
+            "--endless" => endless = Some(args.next().ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE)?),
+            "--block" => block = Some(args.next().ok_or(USAGE)?),
+            "--wav" => wav_to = Some(args.next().ok_or(USAGE)?),
+            "--flac" => flac_to = Some(args.next().ok_or(USAGE)?),
+            "--bits" => bits = args.next().ok_or(USAGE)?.parse::<u32>().map_err(|_| USAGE)?,
+            "--signal" => signal = args.next().ok_or(USAGE)?,
+            "--rate" => rate = Some(args.next().ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE)?),
+            "--blocks" => {
+                for word in args.next().ok_or(USAGE)?.split(',') {
+                    blocks.push(Blocks::parse(word)?);
+                }
+            }
+            "--help" | "-h" => {
+                println!("{USAGE}");
+                return Ok(());
+            }
+            flag if flag.starts_with("--") => return Err(format!("no such option: {flag}\n{USAGE}")),
+            _ => lists.push(arg),
+        }
+    }
+    if compare {
+        let [a, b] = <[String; 2]>::try_from(lists).map_err(|_| USAGE.to_string())?;
+        return compare_wavs(&a, &b);
+    }
+    if let Some(name) = block {
+        return solo_block(&name, rate.unwrap_or(48_000.0), wav_to.as_deref());
+    }
+    if jumps.on {
+        return jump::from_options(&jumps, by_seed.seeds.iter().map(|s| s.1).collect(), by_seed.request.clone(), rate);
+    }
+    if let Some(hours) = endless {
+        return by_seed.endless(hours, rate, layout);
+    }
+    if let Some(n) = changes.n {
+        return changes.run(n, rate, &by_seed);
+    }
+    if !by_seed.seeds.is_empty() {
+        if let Some(to) = &flac_to {
+            return by_seed.flac(rate, layout, to, bits, wav_to.as_deref());
+        }
+        return by_seed.run(rate, layout, wav_to.as_deref());
+    }
+    if lists.is_empty() || ((wav_to.is_some() || flac_to.is_some()) && lists.len() != 1) {
+        return Err(USAGE.to_string());
+    }
+    // In stereo `out` is both sides, written as a stereo file.
+    let names = signals(layout);
+    let keep = match wav_to.as_ref().or(flac_to.as_ref()) {
+        Some(_) if layout == 2 && signal == "out" => Some(0),
+        Some(_) => Some(
+            names
+                .iter()
+                .position(|s| *s == signal)
+                .ok_or_else(|| format!("no such signal: {signal} (one of {})", names.join(", ")))?,
+        ),
+        None => None,
+    };
+    for path in &lists {
+        let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+        let mut list = parse(&text).map_err(|e| format!("{path}: {e}"))?;
+        list.layout = layout;
+        if let Some(rate) = rate {
+            list = list.at_rate(rate);
+        }
+        let first = if flush { render_flushing(&list, keep) } else { render(&list, keep) }.map_err(|e| format!("{path}: {e}"))?;
+        if twice {
+            let again = render(&list, None).map_err(|e| format!("{path}: {e}"))?;
+            if again.hashes != first.hashes {
+                return Err(format!("{path}: rendering twice gave different hashes"));
+            }
+        }
+        println!("{}", line(&list, &first.hashes));
+        for &how in &blocks {
+            let out = render_blocks(&list, how).map_err(|e| format!("{path}: {e}"))?;
+            let want = first.hashes.get(..out.len()).unwrap_or(&[]);
+            if out != want {
+                return Err(format!("{path}: rendered {how:?} frames a call, the speaker output is {}, not {}", out.join(" "), want.join(" ")));
+            }
+        }
+        write_files(&first.kept, list.rate, layout == 2 && keep == Some(0), wav_to.as_deref(), flac_to.as_deref(), bits)?;
+    }
+    Ok(())
+}
+
+/// A note list's kept signal (both sides, interleaved, if `stereo`) to the
+/// WAV of `--wav` and the FLAC of `--flac`.
+fn write_files(kept: &[f32], rate: f64, stereo: bool, wav_to: Option<&str>, flac_to: Option<&str>, bits: u32) -> Result<(), String> {
+    if let Some(out) = wav_to {
+        let bytes = if stereo { wav_channels(kept, rate, 2) } else { wav(kept, rate) };
+        std::fs::write(out, bytes).map_err(|e| format!("{out}: {e}"))?;
+    }
+    if let Some(out) = flac_to {
+        println!("{}", flac::samples(out, kept, rate, if stereo { 2 } else { 1 }, bits)?);
+    }
+    Ok(())
+}
+
+/// The options of `--changes N` (`change.rs`): the corpus its
+/// loops come from, the handover, the kind of moment, a line each, and how
+/// many runs a change's costs are the least of.
+#[derive(Default)]
+struct Changes {
+    n: Option<usize>,
+    corpus: Option<u32>,
+    crossfade: Option<f64>,
+    ring: bool,
+    moment: Option<dlcore::player::Moment>,
+    each: bool,
+    runs: Option<usize>,
+    pick: Option<usize>,
+    wav: Option<String>,
+}
+
+impl Changes {
+    /// `--changes N` (`change::run`), with the rate, quality and wander the
+    /// seed options give.
+    fn run(self, n: usize, rate: Option<f64>, by_seed: &BySeed) -> Result<(), String> {
+        let way = change::Way {
+            changes: n,
+            corpus: self.corpus.unwrap_or(1),
+            rate: rate.unwrap_or(44_100.0),
+            full: !by_seed.lite,
+            wander: by_seed.wander.unwrap_or(1.0),
+            handover: change::handover(self.crossfade, self.ring),
+            moment: self.moment,
+            each: self.each,
+            runs: self.runs.unwrap_or(1),
+            pick: self.pick,
+            wav: self.wav,
+        };
+        change::run(&way)
+    }
+
+    fn take(&mut self, arg: &str, args: &mut impl Iterator<Item = String>) -> Result<bool, String> {
+        let mut word = || args.next().ok_or_else(|| format!("{arg} needs a value"));
+        match arg {
+            "--changes" => self.n = Some(word()?.parse().map_err(|_| "--changes N: a count")?),
+            "--from-corpus" => self.corpus = Some(word()?.parse().map_err(|_| "--from-corpus SEED: a seed")?),
+            "--crossfade" => self.crossfade = Some(word()?.parse().map_err(|_| "--crossfade S: seconds")?),
+            "--ring" => self.ring = true,
+            "--each" => self.each = true,
+            "--runs" => self.runs = Some(word()?.parse().map_err(|_| "--runs N: a count")?),
+            "--change" => self.pick = Some(word()?.parse().map_err(|_| "--change I: a change's number")?),
+            "--wav-to" => self.wav = Some(word()?),
+            "--moment" => {
+                let w = word()?;
+                let m = dlcore::player::Moment::ALL.iter().copied().find(|m| format!("{m:?}").eq_ignore_ascii_case(&w));
+                self.moment = Some(m.ok_or_else(|| format!("--moment {w}: now, beat, bar, phrase or pass"))?);
+            }
+            _ => return Ok(false),
+        }
+        Ok(true)
+    }
+}
+
+/// What `--seed` measures in place of rendering: each block's cost, or the
+/// voice budget's let-go fades.
+#[derive(Clone, Copy)]
+enum Measure {
+    Costs,
+    Fades,
+}
+
+/// The options of a loop from its seed: the seeds (each
+/// with its place in a corpus, if from one), and how to play them.
+#[derive(Default)]
+struct BySeed {
+    seeds: Vec<(Option<usize>, u32)>,
+    calls_to: Option<String>,
+    /// `--costs` or `--fades` in place of the renders.
+    measure: Option<Measure>,
+    lite: bool,
+    /// `--full`: the full mix for `--endless`, which renders lite unless
+    /// asked.
+    full: bool,
+    seconds: Option<f64>,
+    wander: Option<f64>,
+    salt: u32,
+    vibes: Vec<String>,
+    request: Option<String>,
+    clip: clip::Clip,
+    pick: Option<usize>,
+    choices: bool,
+    /// How long the track plays (`--track bars=N` or `passes=N`: the app's
+    /// length slider, `Player::set_track`); at its end the core's own next
+    /// loop follows, as the app's does (`Player::set_draws`).
+    track: Option<dlcore::player::Track>,
+}
+
+impl BySeed {
+    /// `--endless HOURS` (`endless.rs`): the first seed's loop (shaisk-sha's
+    /// unless one is given), Endless unless `--request` asks for another
+    /// length, at 22,050 Hz and lite unless asked otherwise.
+    fn endless(self, hours: f64, rate: Option<f64>, layout: u32) -> Result<(), String> {
+        let seed = self.seeds.first().map_or(1_027_928_796, |&(_, s)| s);
+        let way = seed::Way { seconds: 0.0, rate: 0.0, full: false, layout, wander: 0.0, salt: 0, vibes: self.vibes, request: Some(self.request.unwrap_or_else(|| "bars=endless".to_string())), clip: self.clip, choices: false, track: None };
+        let request = way.request()?;
+        endless::run(&endless::Way { hours, seed, rate: rate.unwrap_or(22_050.0), full: self.full, layout, wander: self.wander.unwrap_or(1.0), request })
+    }
+
+    /// `--seed` and `--corpus` with `--flac` (`flac.rs`): each loop
+    /// streamed to a FLAC file of `bits` bits.
+    fn flac(mut self, rate: Option<f64>, layout: u32, flac_to: &str, bits: u32, wav_to: Option<&str>) -> Result<(), String> {
+        if let Some(i) = self.pick {
+            self.seeds.retain(|(at, _)| *at == Some(i));
+            if self.seeds.is_empty() {
+                return Err(format!("--pick {i}: the corpus has no such loop"));
+            }
+        }
+        let way = seed::Way { seconds: self.seconds.unwrap_or(45.0), rate: rate.unwrap_or(44_100.0), full: !self.lite, layout, wander: self.wander.unwrap_or(1.0), salt: self.salt, vibes: self.vibes, request: self.request, clip: self.clip, choices: false, track: self.track };
+        flac::seeds(&self.seeds, &way, flac_to, bits, wav_to)
+    }
+
+    /// `--seed` and `--corpus` (`seed.rs`): the loops rendered, or their
+    /// costs or fades measured.
+    fn run(self, rate: Option<f64>, layout: u32, wav_to: Option<&str>) -> Result<(), String> {
+        let mut b = self;
+        // `--pick I` keeps the corpus's loop I and renders nothing else.
+        if let Some(i) = b.pick {
+            b.seeds.retain(|(at, _)| *at == Some(i));
+            if b.seeds.is_empty() {
+                return Err(format!("--pick {i}: the corpus has no such loop"));
+            }
+        }
+        let way = seed::Way { seconds: b.seconds.unwrap_or(45.0), rate: rate.unwrap_or(44_100.0), full: !b.lite, layout, wander: b.wander.unwrap_or(1.0), salt: b.salt, vibes: b.vibes, request: b.request, clip: b.clip, choices: b.choices, track: b.track };
+        match b.measure {
+            Some(Measure::Costs) => return seed_costs(&b.seeds, &way),
+            Some(Measure::Fades) => return fades::run(&b.seeds, &way),
+            None => {}
+        }
+        seed_renders(&b.seeds, &way, wav_to, b.calls_to.as_deref())
+    }
+
+    /// Take `arg` (and its value, from `args`) if it is one of these
+    /// options: true if it was.
+    fn take(&mut self, arg: &str, args: &mut impl Iterator<Item = String>) -> Result<bool, String> {
+        let number = |word: Option<String>| -> Result<f64, String> { word.ok_or(USAGE)?.parse::<f64>().map_err(|_| USAGE.to_string()) };
+        if self.clip.take(arg, args)? {
+            return Ok(true);
+        }
+        match arg {
+            "--seed" => {
+                for word in args.next().ok_or(USAGE)?.split(',') {
+                    self.seeds.push((None, word.parse::<u32>().map_err(|_| format!("not a seed: {word}"))?));
+                }
+            }
+            "--corpus" => {
+                let word = args.next().ok_or(USAGE)?;
+                let (from, n) = word.split_once(':').ok_or_else(|| format!("--corpus is SEED:N, not {word}"))?;
+                let (from, n) = (from.parse::<u32>().map_err(|_| USAGE)?, n.parse::<usize>().map_err(|_| USAGE)?);
+                self.seeds.extend(seed::corpus(from, n).into_iter().enumerate().map(|(i, s)| (Some(i), s)));
+            }
+            "--pick" => self.pick = Some(args.next().ok_or(USAGE)?.parse::<usize>().map_err(|_| USAGE)?),
+            "--choices" => self.choices = true,
+            "--calls" => self.calls_to = Some(args.next().ok_or(USAGE)?),
+            "--costs" => self.measure = Some(Measure::Costs),
+            "--fades" => self.measure = Some(Measure::Fades),
+            "--lite" => self.lite = true,
+            "--full" => self.full = true,
+            "--seconds" => self.seconds = Some(number(args.next())?),
+            "--wander" => self.wander = Some(number(args.next())?),
+            "--salt" => self.salt = args.next().and_then(|s| s.parse().ok()).ok_or(USAGE)?,
+            "--vibes" => self.vibes = args.next().ok_or(USAGE)?.split(',').map(str::to_string).collect(),
+            "--request" => self.request = Some(args.next().ok_or(USAGE)?),
+            "--track" => {
+                let word = args.next().ok_or(USAGE)?;
+                let (kind, count) = word.split_once('=').ok_or("--track is bars=N or passes=N")?;
+                let count: u32 = count.parse().map_err(|_| "--track: a count")?;
+                self.track = Some(match kind {
+                    "bars" => dlcore::player::Track::Bars(count),
+                    "passes" => dlcore::player::Track::Passes(count),
+                    _ => return Err("--track is bars=N or passes=N".to_string()),
+                });
+            }
+            _ => return Ok(false),
+        }
+        Ok(true)
+    }
+}
+
+/// Loops from their seeds (`seed.rs`): a hash line each, and with `--wav`
+/// and `--calls` their samples and the player's calls, to a file for one
+/// seed, or into a directory for a corpus (`I-NAME.wav`,
+/// `I-NAME.QUALITY.LAYOUT.calls`, as `tools/player.mjs --calls` names the
+/// page's).
+fn seed_renders(seeds: &[(Option<usize>, u32)], way: &seed::Way, wav_to: Option<&str>, calls_to: Option<&str>) -> Result<(), String> {
+    let corpus = seeds.iter().any(|(i, _)| i.is_some());
+    if !corpus && seeds.len() > 1 && (wav_to.is_some() || calls_to.is_some()) {
+        return Err("--wav and --calls take one --seed, or a --corpus and a directory".to_string());
+    }
+    for dir in [wav_to, calls_to].into_iter().flatten().filter(|_| corpus) {
+        std::fs::create_dir_all(dir).map_err(|e| format!("{dir}: {e}"))?;
+    }
+    for &(index, s) in seeds {
+        let r = seed::render_seed(s, way, calls_to.is_some())?;
+        let name = r.line.split(' ').find_map(|w| w.strip_prefix("name=")).unwrap_or("loop").to_string();
+        let file = |dir: &str, ext: &str| match index {
+            Some(i) => format!("{dir}/{i}-{name}{ext}"),
+            None => dir.to_string(),
+        };
+        match index {
+            Some(i) => println!("{i} {}", r.line),
+            None => println!("{}", r.line),
+        }
+        if let Some(dir) = wav_to {
+            let path = file(dir, ".wav");
+            std::fs::write(&path, seed::wav_of(&r, way)).map_err(|e| format!("{path}: {e}"))?;
+        }
+        if let (Some(dir), Some(calls)) = (calls_to, &r.calls) {
+            let kind = format!(".{}.{}.calls", if way.full { "full" } else { "lite" }, if way.layout == 2 { "stereo" } else { "mono" });
+            let path = file(dir, &kind);
+            std::fs::write(&path, calls).map_err(|e| format!("{path}: {e}"))?;
+        }
+    }
+    Ok(())
+}
+
+/// What each loop costs to play (`--costs`, `seed::cost_seed`), a line each
+/// in microseconds and against a block's deadline, and the worst of all.
+fn seed_costs(seeds: &[(Option<usize>, u32)], way: &seed::Way) -> Result<(), String> {
+    let deadline = f64::from(u32::try_from(dlcore::QUANTUM).unwrap_or(128)) / way.rate;
+    let us = |s: f64| s * 1e6;
+    let pct = |s: f64| 100.0 * s / deadline;
+    let (mut worst, mut worst_gen, mut worst_audio, mut gen_share, mut longest): (f64, f64, f64, f64, usize) = (0.0, 0.0, 0.0, 0.0, 0);
+    println!("# the deadline: a block of {} frames at {} Hz, {:.0} us; times are each block's least over 3 runs", dlcore::QUANTUM, way.rate, us(deadline));
+    for &(index, s) in seeds {
+        let c = seed::cost_seed(s, way, 3)?;
+        let all = c.generating + c.deciding + c.audio;
+        println!(
+            "{}seed={s} load={} blocks; worst block {:.0} us ({:.1}%): load stage {:.0} ({}), pass {:.0}, steps {:.0}, audio {:.0}; over {:.0} s: generating {:.2}%, deciding {:.2}%, audio {:.1}% of the time it played",
+            index.map_or(String::new(), |i| format!("{i} ")),
+            c.load_blocks,
+            us(c.worst_block),
+            pct(c.worst_block),
+            us(c.worst_load),
+            c.worst_stage,
+            us(c.worst_pass),
+            us(c.worst_steps),
+            us(c.worst_audio),
+            c.seconds,
+            100.0 * c.generating / c.seconds,
+            100.0 * c.deciding / c.seconds,
+            100.0 * c.audio / c.seconds,
+        );
+        worst = worst.max(c.worst_block);
+        worst_gen = worst_gen.max(c.worst_load.max(c.worst_pass));
+        worst_audio = worst_audio.max(c.worst_audio);
+        gen_share = gen_share.max(c.generating / all);
+        longest = longest.max(c.load_blocks);
+    }
+    println!(
+        "worst block {:.0} us ({:.1}% of the deadline); worst generation in a block {:.0} us; worst audio block {:.0} us; generation's largest share of a render {:.2}%; longest load {longest} blocks",
+        us(worst),
+        pct(worst),
+        us(worst_gen),
+        us(worst_audio),
+        100.0 * gen_share
+    );
+    Ok(())
+}
+
+/// How two renders differ: the largest difference between samples, where it
+/// is, where the first difference is, and the difference as a level under
+/// the first render's own.
+fn compare_wavs(first_path: &str, second_path: &str) -> Result<(), String> {
+    let load = |path: &str| -> Result<(Vec<f32>, u32), String> {
+        read_wav(&std::fs::read(path).map_err(|e| format!("{path}: {e}"))?).map_err(|e| format!("{path}: {e}"))
+    };
+    let ((was, rate), (is, other_rate)) = (load(first_path)?, load(second_path)?);
+    if was.len() != is.len() || rate != other_rate {
+        return Err(format!(
+            "not the same render: {} samples at {rate} Hz against {} at {other_rate}",
+            was.len(),
+            is.len()
+        ));
+    }
+    let (mut first, mut worst, mut largest) = (None, 0usize, 0.0f64);
+    let (mut energy_diff, mut energy, mut count) = (0.0f64, 0.0f64, 0usize);
+    for (at, (before, after)) in was.iter().zip(&is).enumerate() {
+        let before64 = f64::from(*before);
+        energy += before64 * before64;
+        if before.to_bits() == after.to_bits() {
+            continue;
+        }
+        count += 1;
+        first.get_or_insert(at);
+        let gap = (before64 - f64::from(*after)).abs();
+        energy_diff += gap * gap;
+        if gap > largest {
+            (largest, worst) = (gap, at);
+        }
+    }
+    // A frame number in a message for a person: never near 2^52.
+    #[allow(clippy::cast_precision_loss)]
+    let place = |at: usize| format!("frame {at} ({:.3} s)", at as f64 / f64::from(rate));
+    match first {
+        None => println!("identical: {} samples", was.len()),
+        Some(first) => {
+            let level = if energy_diff > 0.0 && energy > 0.0 { 10.0 * (energy_diff / energy).log10() } else { f64::NEG_INFINITY };
+            println!(
+                "differ: {count} of {} samples; first at {}; largest {largest:.3e} at {}; difference {level:.1} dB under the signal",
+                was.len(),
+                place(first),
+                place(worst)
+            );
+        }
+    }
+    Ok(())
+}
+
+/// One block alone, as the test kit plays it (`core/src/blocks/kit.rs`):
+/// `NAME/PROBE` is a line of `core/golden/blocks.txt`. Prints the same line's
+/// name and hash (at 48 kHz, the kit's), and writes the samples with
+/// `--wav`, so two versions of a block can be heard side by side and
+/// compared (`--compare`).
+fn solo_block(name: &str, rate: f64, wav_to: Option<&str>) -> Result<(), String> {
+    struct Find<'a> {
+        name: &'a str,
+        cx: Context<'a>,
+        /// The samples (a stereo row's interleaved) and how many channels.
+        out: Option<(Vec<f32>, u16)>,
+    }
+    impl Find<'_> {
+        fn play<B: Block + Default>(&mut self, block: &str, probe: &str, settings: &B::Settings) {
+            let row = format!("{block}/{probe}");
+            let mut ways = vec![(row.clone(), Play::Mono)];
+            ways.extend(B::MODS.iter().enumerate().map(|(n, m)| (format!("{row}~{}", m.name), Play::Driven(n))));
+            ways.extend(B::HEARS.iter().map(|&kind| (format!("{row}@{}", dlcore::block::event::name(kind)), Play::Heard(kind))));
+            ways.extend(B::SETTINGS.iter().enumerate().filter(|(_, s)| s.probe.is_finite()).map(|(n, s)| (format!("{row}={}", s.name), Play::Set(n))));
+            if B::STEREO {
+                ways.push((format!("{row}:stereo"), Play::Stereo));
+                if B::INPUT {
+                    ways.push((format!("{row}:wide"), Play::Wide));
+                }
+            }
+            for (name, play) in ways {
+                if self.name == name {
+                    let mut b = Box::new(B::default());
+                    let mut out = Vec::new();
+                    solo(&mut *b, settings, &self.cx, 12.0, play, |s| out.extend_from_slice(s));
+                    self.out = Some((out, if matches!(play, Play::Stereo | Play::Wide) { 2 } else { 1 }));
+                }
+            }
+        }
+    }
+    impl Visit for Find<'_> {
+        fn voice<V: Voice + Default>(&mut self, block: &'static str) {
+            for probe in V::PROBES {
+                let mut note: Note = probe.settings;
+                V::settle(&mut note);
+                self.play::<V>(block, probe.name, &note);
+            }
+        }
+        fn part<B: Block + Default>(&mut self, block: &'static str) {
+            for probe in B::PROBES {
+                self.play::<B>(block, probe.name, &probe.settings);
+            }
+        }
+    }
+    let stack = std::mem::size_of::<Core>() * 4 + (16 << 20);
+    let (samples, channels) = notelist::roomy(stack, || {
+                let mut core = Box::new(Core::new());
+                core.start(rate, 1).map_err(|e| e.message().to_string())?;
+                let mut find = Find { name, cx: core.context(), out: None };
+                each(&mut find);
+                find.out.ok_or_else(|| format!("no block and probe called {name} (see core/golden/blocks.txt)"))
+            })?;
+    let mut hash = Fnv::new();
+    hash.samples(&samples);
+    println!("{name} {}", hash.hex());
+    if let Some(out) = wav_to {
+        let bytes = if channels == 1 { wav(&samples, rate) } else { wav_channels(&samples, rate, channels) };
+        std::fs::write(out, bytes).map_err(|e| format!("{out}: {e}"))?;
+    }
+    Ok(())
+}

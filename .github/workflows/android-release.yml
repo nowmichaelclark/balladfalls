@@ -1,0 +1,179 @@
+# The release (queue item 107e, session 29; signing since 2026-11-25): a tag
+# `v<versionName>` builds the release APKs from that commit, keeps the unsigned
+# ones as an artifact, signs the universal one with the release key from this
+# repository's secrets, checks its certificate is the release key's, and
+# attaches it to the tag's GitHub release as `<name>-<versionName>.apk`, the
+# file F-Droid's recipe names (its Binaries line) and compares its own build with.
+#
+#   Publishing a release on GitHub's Releases page makes the tag; or
+#   git tag v1.0 && git push origin v1.0
+#
+# The tag must be the version in android/gradle.properties, the version code
+# must follow the scheme (android/README.md, "Versions"), and the changelog for
+# that code must be in fastlane/metadata/android/en-US/changelogs/ (all checked
+# first). By hand ("Run workflow"): with a tag (`v1.0`), it builds, signs and
+# attaches that tag's release again (this file's steps, at the tag's commit);
+# with none, it builds the branch's commit, without the tag check, unsigned.
+#
+# The secrets (Mikey, 2026-11-25: "I don't want to have to sign releases via my
+# linux machine"; docs/notes/for-mikey.md, "Your release key"):
+#   RELEASE_KEYSTORE_BASE64    release.jks, base64 in one line
+#   RELEASE_KEYSTORE_PASSWORD  its password
+#   RELEASE_KEY_ALIAS          the key's alias (release)
+#   RELEASE_KEY_PASSWORD       the key's own password, if it has one apart
+# Without them a tag's run fails at the signing step (the unsigned APKs are
+# still kept). The key never leaves the runner's temporary directory, and is
+# deleted at the end of the job.
+name: android-release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'A release tag to build, sign and attach again (v1.0); empty for the branch, unsigned'
+        required: false
+        default: ''
+
+# contents: write, to attach the signed APK to the tag's release.
+permissions:
+  contents: write
+
+env:
+  # The tag this run releases: the pushed tag, or the one asked by hand.
+  TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
+  # The release key's certificate, SHA-256 (docs/DECISIONS.md, 2026-11-25):
+  # public, and the signed APK must carry it.
+  RELEASE_CERT_SHA256: 76cb75b5f0256bf8903ee4eef2627fe5cfece78e5b2f13911064b24c672c91b2
+
+jobs:
+  release:
+    name: the unsigned release APKs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG || github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: the tag, the version and the changelog
+        run: |
+          if [ -n "$TAG" ]; then
+            node android/fdroid/check-metadata.mjs --tag "$TAG"
+          else
+            node android/fdroid/check-metadata.mjs
+          fi
+
+      # JDK 21: the same as F-Droid's buildserver (docs/notes/107-reproducible.md).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: the Android SDK pieces
+        run: |
+          ndk=$(sed -n 's/^driftloom\.ndkVersion=//p' android/gradle.properties)
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "build-tools;34.0.0" "ndk;$ndk" >/dev/null
+
+      - name: the Rust toolchain
+        working-directory: android/native
+        run: |
+          rustup toolchain install "$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)" --profile minimal \
+            --target wasm32-unknown-unknown,aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+
+      # F-Droid builds js/dlplayer.wasm from source (it refuses the committed
+      # binary): it must be the same bytes.
+      - name: the committed core module is its source
+        run: tools/build-core.sh --check
+
+      - name: build the release APKs
+        working-directory: android
+        run: sh gradle-retry.sh assembleRelease
+
+      - name: the APKs
+        run: |
+          set -eu
+          mkdir -p dist
+          cp android/app/build/outputs/apk/release/*-release-unsigned.apk dist/
+          (cd dist && sha256sum *.apk | tee SHA256SUMS)
+          {
+            echo "### The unsigned release APKs (${TAG:-$GITHUB_REF_NAME}, commit $(git rev-parse HEAD))"
+            echo
+            echo '```'; cat dist/SHA256SUMS; echo '```'
+            echo "The universal one is what F-Droid builds, and what is signed below for a release."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          # The tag, or the commit (a branch name may hold a slash, which an
+          # artifact's name cannot).
+          name: release-unsigned-${{ env.TAG || github.sha }}
+          path: dist
+          if-no-files-found: error
+          retention-days: 90
+
+      # apksigner from build-tools 34, not 35 or newer (docs/notes/for-mikey.md):
+      # the signature F-Droid copies onto its own build to compare the two.
+      - name: sign the universal APK with the release key
+        if: env.TAG != ''
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          set -eu
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KS_PASS" ] || [ -z "$KEY_ALIAS" ]; then
+            echo "::error::the release key's secrets are not set (RELEASE_KEYSTORE_BASE64, RELEASE_KEYSTORE_PASSWORD, RELEASE_KEY_ALIAS): docs/notes/for-mikey.md, \"Your release key\""
+            exit 1
+          fi
+          [ -n "$KEY_PASS" ] || KEY_PASS="$KS_PASS"
+          export KS_PASS KEY_PASS
+          signer="$ANDROID_HOME/build-tools/34.0.0/apksigner"
+          ks="$RUNNER_TEMP/release.jks"
+          printf '%s' "$KEYSTORE_BASE64" | tr -d ' \r\n' | base64 -d > "$ks"
+          name=$(sed -n 's/^driftloom\.appName=//p' android/gradle.properties | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9')
+          version=$(sed -n 's/^driftloom\.versionName=//p' android/gradle.properties)
+          unsigned=$(ls dist/*-universal-release-unsigned.apk)
+          out="dist-signed/$name-$version.apk"
+          mkdir -p dist-signed
+          "$signer" sign --ks "$ks" --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:KS_PASS --key-pass env:KEY_PASS --out "$out" "$unsigned"
+          rm -f "$ks"
+          "$signer" verify --print-certs "$out" | tee "$RUNNER_TEMP/certs.txt"
+          got=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/certs.txt" | head -1)
+          if [ "$got" != "$RELEASE_CERT_SHA256" ]; then
+            echo "::error::the APK is signed by $got, not the release key ($RELEASE_CERT_SHA256): check the secrets"
+            exit 1
+          fi
+          (cd dist-signed && sha256sum *.apk | tee SHA256SUMS)
+          {
+            echo
+            echo "### Signed: $out"
+            echo "Certificate SHA-256 $got, the release key's."
+            echo '```'; cat dist-signed/SHA256SUMS; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: the key is gone
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
+
+      - name: attach the signed APK to the tag's release
+        if: env.TAG != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          apk=$(ls dist-signed/*.apk)
+          if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes "See CHANGELOG.md."
+          fi
+          gh release upload "$TAG" "$apk" -R "$GITHUB_REPOSITORY" --clobber
+          echo "attached $(basename "$apk") to the $TAG release" | tee -a "$GITHUB_STEP_SUMMARY"

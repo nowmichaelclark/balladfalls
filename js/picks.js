@@ -1,0 +1,637 @@
+// The next picks (design/next-picks.md): what new loops lean toward. They
+// show in three places:
+// - Now Playing shows the picked values as pills, only outside an album. In
+//   an album, the album is what comes next.
+// - The Vibe panel lists the five lines. The vibe key and the pills open it.
+// - The Bars picker sets how many bars a new loop is.
+// When a loop ends is not a pick. It belongs to the loop that plays: the
+// Track length view (js/tracklen.js), whose key is on the pace line.
+//
+// The five lines are moods, tempo and length (sharing a line), key, style
+// and voices. The moods are the vibes (state.vibes). Length, tempo, key and
+// mode are state.picks, saved in the prefs. All of them reach the generator
+// as its request (`requestFor`):
+// - any length from 1 bar to 32,768, or Endless;
+// - one key or mode, or a set to choose from;
+// - one style (profile) or a set;
+// - the voices of each layer, and the layers on or off.
+// The tempo, the key, the style and the voices open their pickers
+// (js/pickers.js). Clear all, in the panel's head, puts every line back to
+// chance.
+
+import { el } from './ui.js';
+import { clock, spokenTime, trackOfSpec } from './tracklen.js';
+import { readRequest, RequestError, pieceTime, LAYERS, JOURNEYS } from './request.js';
+import { NOTE_NAMES, SCALES, SCALE_ORDER } from './theory.js';
+import { PROFILE_ORDER, VOICE_ORDER } from './characters.js';
+
+export const MIN_BARS = 1;
+export const MAX_BARS = 32768;
+// The doubling slider: one stop per power of two, 1 to 32,768.
+const STOPS = 15;
+
+const NB = ' ';
+const LINES = [
+  { id: 'mood', any: 'any mood', name: 'Any mood' },
+  { id: 'pace', any: 'any tempo · any bars', name: 'Any tempo and bars' },
+  { id: 'key', any: 'any key', name: 'Any key' },
+  { id: 'style', any: 'any style', name: 'Any style' },
+  { id: 'voices', any: 'any voices', name: 'Any voices' },
+];
+
+let api = null;
+// The Bars picker works on a draft: done keeps it, cancel drops it. `mode`
+// is 'bars', 'endless' or 'any'. `bars` is the number shown when the mode is
+// 'bars', and otherwise where −1, +1 and the slider start from.
+let draft = null;   // { bars, mode, journey }
+let before = null;  // what length was when the picker opened
+
+// ------------------------------------------------------------- words
+
+export function cleanPicks(p) {
+  const out = { tempo: null, length: null, key: null, scale: null, style: null, voices: null, layers: null, journey: null };
+  // The journey that a long piece takes: an arc, a wander, or left to chance
+  // (null).
+  if (p && JOURNEYS.includes(p.journey)) out.journey = p.journey;
+  if (p && Array.isArray(p.tempo) && p.tempo.length === 2) {
+    const lo = Math.round(Number(p.tempo[0])), hi = Math.round(Number(p.tempo[1]));
+    if (lo > 0 && hi >= lo) out.tempo = [lo, hi];
+  }
+  if (p && p.length === 'endless') out.length = 'endless';
+  else if (p && Number.isFinite(Number(p.length)) && p.length !== null) out.length = clampBars(p.length);
+  // The key (home notes, 0 is C) and the mode (names), a set each. What the
+  // generator would not take is left out.
+  if (p && Array.isArray(p.key)) {
+    const keys = [...new Set(p.key)].filter((k) => Number.isInteger(k) && k >= 0 && k <= 11).sort((a, b) => a - b);
+    if (keys.length) out.key = keys;
+  }
+  if (p && Array.isArray(p.scale)) {
+    const scales = SCALE_ORDER.filter((id) => p.scale.includes(id));
+    if (scales.length) out.scale = scales;
+  }
+  if (p && Array.isArray(p.style)) {
+    const styles = PROFILE_ORDER.filter((id) => p.style.includes(id));
+    if (styles.length) out.style = styles;
+  }
+  // The voices, { layer: names } in each layer's frozen order, and the
+  // layers, { layer: 'on' | 'off' } (not all five off).
+  if (p && p.voices && typeof p.voices === 'object') {
+    const voices = {};
+    for (const layer of LAYERS) {
+      const asked = Array.isArray(p.voices[layer]) ? VOICE_ORDER[layer].filter((v) => p.voices[layer].includes(v)) : [];
+      if (asked.length) voices[layer] = asked;
+    }
+    if (Object.keys(voices).length) out.voices = voices;
+  }
+  if (p && p.layers && typeof p.layers === 'object') {
+    const layers = {};
+    for (const layer of LAYERS) if (p.layers[layer] === 'on' || p.layers[layer] === 'off') layers[layer] = p.layers[layer];
+    if (Object.keys(layers).length && !LAYERS.every((l) => layers[l] === 'off')) out.layers = layers;
+  }
+  return out;
+}
+
+export function clampBars(n) {
+  return Math.max(MIN_BARS, Math.min(MAX_BARS, Math.round(Number(n)) || MIN_BARS));
+}
+
+const group = (n) => n.toLocaleString('en-US');
+
+// The first three moods, then an ellipsis.
+export function moodsText(moods) {
+  if (!moods.length) return '';
+  return moods.slice(0, 3).join(', ') + (moods.length > 3 ? '…' : '');
+}
+
+export function tempoText(t) {
+  return t ? (t[0] === t[1] ? `${t[0]}${NB}bpm` : `${t[0]}–${t[1]}${NB}bpm`) : '';
+}
+
+// The key line's words: "D dorian", "D or G", "dorian or aeolian", or ''.
+export function keyText(key, scale) {
+  const parts = [];
+  if (key && key.length) parts.push(key.map((k) => NOTE_NAMES[k]).join(' or '));
+  if (scale && scale.length) parts.push(scale.map((id) => SCALES[id].label.toLowerCase()).join(' or '));
+  return parts.join(' ');
+}
+
+// The style line's words: "tide", "tide or shrine", or ''.
+export function styleText(style) {
+  return style && style.length ? style.join(' or ') : '';
+}
+
+// The voices line's words: the voices asked ("kalimba, marimba"), then the
+// layers left out ("no drums") and the layers always played ("melody
+// always"), or ''.
+export function voicesText(voices, layers) {
+  const parts = [];
+  if (voices) for (const layer of LAYERS) for (const v of voices[layer] || []) if (!parts.includes(v)) parts.push(v);
+  if (layers) {
+    for (const layer of LAYERS) if (layers[layer] === 'off') parts.push(`no ${layer}`);
+    for (const layer of LAYERS) if (layers[layer] === 'on') parts.push(`${layer} always`);
+  }
+  return parts.join(', ');
+}
+
+// A journey means something only to a long piece (in the core, a loop of
+// up to 32 bars has none). The pick, as a request or a pill shows it, else
+// null.
+export const LONG_FROM = 33;
+export function journeyFor(picks) {
+  const len = picks && picks.length;
+  return picks && picks.journey && (len === 'endless' || (typeof len === 'number' && len >= LONG_FROM)) ? picks.journey : null;
+}
+
+export function lengthText(len) {
+  if (len === 'endless') return 'endless';
+  if (len == null) return '';
+  return `${group(len)}${NB}${len === 1 ? 'bar' : 'bars'}`;
+}
+
+// For screen readers: "70 to 85 bpm" rather than a dash.
+const spoken = (t) => t.replace('–', ' to ').replace(/ /g, ' ').replace('…', ', and more');
+
+// ---------------------------------------------------- the request
+
+// What the next loop is asked for (the generator's request): the moods, the
+// tempo, the length and the rest that is picked. It is the same shape that
+// a game or a developer sends.
+export function requestFor(state) {
+  const { tempo, length, key, scale, style, voices, layers } = state.picks;
+  return { vibes: state.vibes.slice(), tempo, length, key, scale, style, voices, layers, journey: journeyFor(state.picks) };
+}
+
+// The picks as the core holds them (`state.held`, its answer to the last
+// ones sent), so that what Now Playing shows is what the core will play:
+// { vibes, picks }, with the picks all "any" where it could hold only the
+// vibes. Before the core has answered for the picks as they stand (for
+// example, no core yet), the panel's own.
+export function heldPicks(state) {
+  const h = state.held;
+  if (!h || h.tag !== state.picksTag) return { vibes: state.vibes, picks: state.picks };
+  return { vibes: h.vibes, picks: h.met === false ? cleanPicks(null) : h.picks };
+}
+
+// The "can't do that" line for the picks (a short plain line; its look is a
+// Painter question), or null when the request can be met. It uses the
+// core's own words where the core has answered for the picks as they stand.
+export function pickProblem(state) {
+  const h = state.held;
+  if (h && h.tag === state.picksTag && h.met != null) return h.met ? null : (h.coreWhy || h.why);
+  try {
+    readRequest(requestFor(state));
+    return null;
+  } catch (e) {
+    if (e instanceof RequestError) return e.message;
+    throw e;
+  }
+}
+
+// ------------------------------------------------------------ the pills
+
+function pill(text, kind, opts = {}) {
+  const p = document.createElement('span');
+  p.className = `pk-pill pk-${kind}${opts.dashed ? ' dashed' : ''}`;
+  p.textContent = text;
+  return p;
+}
+
+// After layout: a pill wider than its row may wrap between words, so that
+// it does not run out of the panel (only very long moods at large text).
+function fitPills(host) {
+  for (const p of host.querySelectorAll('.pk-pill')) {
+    p.classList.remove('wrap');
+    if (p.scrollWidth > p.clientWidth + 1) p.classList.add('wrap');
+  }
+}
+
+// Now Playing, outside an album: the picked values on up to two rows, all
+// one button that opens the Vibe panel. Only picked values show. With
+// nothing picked, one quiet dashed "anything" shows.
+export function renderNowPicks() {
+  const { state } = api;
+  const b = el('nowPicks');
+  const held = heldPicks(state);
+  const moods = held.vibes;
+  const { tempo, length, key, scale, style, voices, layers } = held.picks;
+  b.textContent = '';
+  const spokenParts = [];
+  if (moods.length) {
+    const row = document.createElement('span');
+    row.className = 'pk-row';
+    row.append(pill(moodsText(moods), 'mood'));
+    b.append(row);
+    spokenParts.push(spoken(moodsText(moods)));
+  }
+  if (tempo || length != null) {
+    const row = document.createElement('span');
+    row.className = 'pk-row';
+    if (tempo) { row.append(pill(tempoText(tempo), 'tempo')); spokenParts.push(spoken(tempoText(tempo))); }
+    if (length != null) { row.append(pill(lengthText(length), 'length')); spokenParts.push(spoken(lengthText(length))); }
+    const journey = journeyFor(held.picks);
+    if (journey) { row.append(pill(journey, 'journey')); spokenParts.push(`${journey} journey`); }
+    b.append(row);
+  }
+  if (key || scale) {
+    const row = document.createElement('span');
+    row.className = 'pk-row';
+    row.append(pill(keyText(key, scale), 'key'));
+    b.append(row);
+    spokenParts.push(spoken(keyText(key, scale)));
+  }
+  if (style) {
+    const row = document.createElement('span');
+    row.className = 'pk-row';
+    row.append(pill(styleText(style), 'style'));
+    b.append(row);
+    spokenParts.push(spoken(styleText(style)));
+  }
+  if (voices || layers) {
+    const row = document.createElement('span');
+    row.className = 'pk-row';
+    row.append(pill(voicesText(voices, layers), 'voices'));
+    b.append(row);
+    spokenParts.push(spoken(voicesText(voices, layers)));
+  }
+  if (!spokenParts.length) {
+    const row = document.createElement('span');
+    row.className = 'pk-row';
+    row.append(pill('anything', 'none', { dashed: true }));
+    b.append(row);
+    spokenParts.push('anything');
+  }
+  b.setAttribute('aria-label', `Vibe: ${spokenParts.join(', ')}`);
+  fitPills(b);
+}
+
+// ------------------------------------------------------------ Vibe panel
+
+function lineButton(cls, onClick) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = `pk-val ${cls || ''}`.trim();
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+// The Track length key: the time set, or that the loop plays on. It is
+// plain beside "any tempo · any bars", and a pill beside picks.
+function trackKey(state, plainLine) {
+  const t = trackOfSpec(state.spec);
+  const b = lineButton('pk-track', () => api.openTrack());
+  const text = t.secs != null ? clock(t.secs) : '\u221e';
+  if (plainLine) {
+    const sep = document.createElement('span');
+    sep.className = 'pk-any pk-sep';
+    sep.setAttribute('aria-hidden', 'true');
+    sep.textContent = '·';
+    const wrap = document.createDocumentFragment();
+    b.append(t.secs != null ? pill(text, 'length') : plain(text));
+    wrap.append(sep, b);
+    b.setAttribute('aria-label', `Track length: ${t.secs != null ? spokenTime(t.secs) : 'plays on'}`);
+    return wrap;
+  }
+  b.append(t.secs != null ? pill(text, 'length') : pill(text, 'length', { dashed: true }));
+  b.setAttribute('aria-label', `Track length: ${t.secs != null ? spokenTime(t.secs) : 'plays on'}`);
+  return b;
+}
+
+function plain(text) {
+  const s = document.createElement('span');
+  s.className = 'pk-any';
+  s.textContent = text;
+  return s;
+}
+
+export function renderPanel() {
+  const { state } = api;
+  const list = el('picksList');
+  // Built again at every pick. The focus stays on the key it was on.
+  const had = document.activeElement && list.contains(document.activeElement)
+    ? [...list.querySelectorAll('button')].indexOf(document.activeElement) : -1;
+  list.textContent = '';
+  const moods = state.vibes;
+  const { tempo, length, key, scale, style, voices, layers } = state.picks;
+  const journey = journeyFor(state.picks);
+  const isAny = { mood: !moods.length, pace: !tempo && length == null, key: !key && !scale, style: !style, voices: !voices && !layers };
+
+  for (const line of LINES) {
+    const row = document.createElement('div');
+    row.className = `pk-line pk-line-${line.id}`;
+    const vals = document.createElement('div');
+    vals.className = 'pk-vals';
+
+    if (line.id === 'mood') {
+      // Moods open the Vibes list, picked or not.
+      const b = lineButton('fill', () => api.openVibes());
+      if (moods.length) {
+        b.append(pill(moodsText(moods), 'mood'));
+        b.setAttribute('aria-label', `Moods: ${spoken(moodsText(moods))}`);
+      } else {
+        b.append(plain('any mood'));
+        b.setAttribute('aria-label', 'Moods: any mood');
+      }
+      vals.append(b);
+    } else if (line.id === 'pace') {
+      // The tempo opens its picker, and the bars open the Bars picker.
+      // Beside them is the Track length view's key. It belongs to the loop
+      // that plays, not to new loops, so the line's any key leaves it.
+      const tb = lineButton('pk-go-tempo', () => api.openPicker('tempo'));
+      // The words on it, said whole (WCAG 2.5.3): "Tempo: 70–85 bpm".
+      tb.setAttribute('aria-label', `Tempo: ${tempo ? tempoText(tempo).replace(/\u00a0/g, ' ') : 'any tempo'}`);
+      if (isAny.pace) {
+        tb.append(plain('any tempo'));
+        vals.append(tb);
+        const sep = document.createElement('span');
+        sep.className = 'pk-any pk-sep';
+        sep.setAttribute('aria-hidden', 'true');
+        sep.textContent = '·';
+        vals.append(sep);
+        const b = lineButton('pk-go-bars', () => api.openLength());
+        b.append(plain('any bars'));
+        b.setAttribute('aria-label', 'Bars: any bars');
+        vals.append(b);
+      } else {
+        tb.append(tempo ? pill(tempoText(tempo), 'tempo') : pill('any tempo', 'tempo', { dashed: true }));
+        vals.append(tb);
+        const b = lineButton('pk-go-bars', () => api.openLength());
+        b.append(length != null ? pill(lengthText(length), 'length') : pill('any bars', 'length', { dashed: true }));
+        if (journey) b.append(pill(journey, 'journey'));
+        b.setAttribute('aria-label', `Bars: ${length != null ? spoken(lengthText(length)) : 'any bars'}${journey ? `, ${journey} journey` : ''}`);
+        vals.append(b);
+      }
+      vals.append(trackKey(state, isAny.pace));
+      const cant = pickProblem(state);
+      if (cant) {
+        const note = document.createElement('span');
+        note.className = 'pk-any pk-cant';
+        note.setAttribute('role', 'status');
+        // Only the reason shows on screen.
+        const lead = document.createElement('span');
+        lead.className = 'vh';
+        lead.textContent = "can't do that: ";
+        note.append(lead, cant);
+        vals.append(note);
+      }
+    } else {
+      // The key, the style and the voices open their pickers, picked or
+      // not: the value, or the line's "any" words.
+      const words = line.id === 'key' ? keyText(key, scale) : line.id === 'style' ? styleText(style) : voicesText(voices, layers);
+      const b = lineButton(`fill pk-go-${line.id}`, () => api.openPicker(line.id));
+      b.append(isAny[line.id] ? plain(line.any) : pill(words, line.id));
+      b.setAttribute('aria-label', `${line.id[0].toUpperCase()}${line.id.slice(1)}: ${isAny[line.id] ? line.any : spoken(words)}`);
+      vals.append(b);
+    }
+
+    // The any key: lit while the whole line is left to chance. Pressing an
+    // unlit one clears the line (on line two, both tempo and length).
+    const any = document.createElement('button');
+    any.type = 'button';
+    any.className = `vkey word pk-anykey${isAny[line.id] ? ' armed' : ''}`;
+    any.textContent = 'any';
+    any.setAttribute('aria-label', line.name);
+    any.setAttribute('aria-pressed', isAny[line.id] ? 'true' : 'false');
+    any.addEventListener('click', () => {
+      if (any.getAttribute('aria-pressed') === 'true') return;
+      api.clearLine(line.id);
+    });
+    row.append(vals, any);
+    list.append(row);
+  }
+  // Clear all: dim when there is nothing to clear.
+  el('picksClear').disabled = Object.values(isAny).every(Boolean);
+  fitPanel();
+  if (had >= 0) {
+    const all = list.querySelectorAll('button');
+    all[Math.min(had, all.length - 1)].focus({ preventScroll: true });
+  }
+}
+
+// The fit guard. At large text, very long picks can make the five lines
+// taller than the panel. Step the text cap down (1.5x, 1.3x, 1.15x, 1x)
+// until they fit, but never below the 100% size. Then take the lines'
+// padding away.
+const CAPS = [1.5, 1.3, 1.15, 1];
+export function fitPanel() {
+  const view = el('viewVibe');
+  const list = el('picksList');
+  const fits = () => list.scrollHeight <= list.clientHeight + 0.5;
+  view.classList.remove('pk-tight');
+  for (const cap of CAPS) {
+    view.style.setProperty('--pk-cap', String(cap));
+    fitPills(list);
+    if (fits()) return;
+  }
+  // Still too tall at 1x (the widest moods with both pace values): the
+  // lines lose their padding.
+  view.classList.add('pk-tight');
+  fitPills(list);
+}
+
+// ------------------------------------------------------------ Bars picker
+
+function stopOf(bars) { return Math.log2(bars); }
+
+// Seconds of play for `bars` bars, at each end of the picked tempo range
+// (or the playing loop's tempo), in the playing loop's meter. It uses
+// `pieceTime`, the same sum as the core's `piece::time`, so that the two
+// never disagree.
+function playTime(bars) {
+  const { state } = api;
+  const spec = state.spec;
+  const spb = (spec && spec.stepsPerBar) || 16;
+  const t = heldPicks(state).picks.tempo || [spec ? spec.bpm : 80, spec ? spec.bpm : 80];
+  return pieceTime(bars, spb, t);
+}
+
+function roughly([a, b]) {
+  // One unit for both ends, picked by the longer one.
+  let unit, div, step;
+  if (b < 90) { unit = 's'; div = 1; step = 5; }
+  else if (b < 90 * 60) { unit = 'min'; div = 60; step = 1; }
+  else if (b < 48 * 3600) { unit = 'hours'; div = 3600; step = 1; }
+  else { unit = 'days'; div = 86400; step = 1; }
+  const r = (x) => {
+    const v = x / div;
+    if (unit === 's' && v < 10) return Math.max(1, Math.round(v));
+    return Math.max(step, Math.round(v / step) * step);
+  };
+  const lo = r(a), hi = r(b);
+  if (unit === 'hours' && hi === 1) unit = 'hour';
+  if (unit === 'days' && hi === 1) unit = 'day';
+  return lo === hi ? `≈${NB}${lo}${NB}${unit}` : `≈${NB}${lo}–${hi}${NB}${unit}`;
+}
+
+// −1, +1, the slider and typing all pick a number of bars, whatever the
+// mode was.
+function setDraftBars(n) {
+  draft.bars = clampBars(n);
+  draft.mode = 'bars';
+  renderLength();
+}
+
+export function openLength() {
+  const { state } = api;
+  before = state.picks.length;
+  // From endless or any, −1, +1 and the slider start at the playing
+  // loop's length.
+  const start = typeof before === 'number' ? before : (state.spec ? state.spec.bars : 16);
+  const mode = before === 'endless' ? 'endless' : before == null ? 'any' : 'bars';
+  draft = { bars: clampBars(start), mode, journey: state.picks.journey };
+  renderLength();
+}
+
+export function renderLength() {
+  if (!draft) return;
+  const num = el('lenNum');
+  const slide = el('lenSlide');
+  const { bars, mode } = draft;
+  const endless = mode === 'endless';
+  const any = mode === 'any';
+  const view = el('viewLength');
+  view.classList.toggle('endless', endless);
+  view.classList.toggle('any', any);
+  // Endless shows ∞ and "endless"; any shows "any" alone, and typing a
+  // number from there picks it.
+  if (document.activeElement !== num || endless) num.value = endless ? '∞' : any ? 'any' : group(bars);
+  num.disabled = endless;
+  num.setAttribute('aria-label', endless ? 'Bars: endless' : any ? 'Bars: any' : 'Bars');
+  const time = el('lenTime');
+  time.textContent = endless ? 'endless' : any ? '\u00a0' : `${bars === 1 ? 'bar' : 'bars'} · `;
+  if (mode === 'bars') {
+    const nw = document.createElement('span');
+    nw.className = 'nw';
+    nw.textContent = roughly(playTime(bars));
+    time.append(nw);
+  }
+  el('lenDown').disabled = endless || bars <= MIN_BARS;
+  el('lenUp').disabled = endless || bars >= MAX_BARS;
+  slide.disabled = endless;
+  const s = stopOf(bars);
+  slide.value = String(s);
+  const w = slide.clientWidth || 280;
+  slide.style.setProperty('--tile', `${((w - 24) / STOPS).toFixed(3)}px`);
+  slide.style.setProperty('--fill', any ? '0px' : `${(12 + (w - 24) * (s / STOPS)).toFixed(2)}px`);
+  slide.setAttribute('aria-valuetext', endless ? 'endless' : any ? 'any' : lengthText(bars).replace(/ /g, ' '));
+  for (const tick of el('lenTicks').children) {
+    tick.classList.toggle('on', !any && Math.abs(Number(tick.dataset.stop) - s) < 1e-9);
+  }
+  el('lenEndless').setAttribute('aria-pressed', endless ? 'true' : 'false');
+  const anyKey = el('lenAny');
+  anyKey.setAttribute('aria-pressed', any ? 'true' : 'false');
+  anyKey.classList.toggle('armed', any);
+  // The journey: a pick like the vibes', for a piece past 32 bars or
+  // Endless. It is dimmed, and not asked, for a shorter loop. Arc or wander
+  // is lit; pressed again, it goes back to chance.
+  const long = endless || (mode === 'bars' && bars >= LONG_FROM);
+  el('lenJourney').classList.toggle('off', !long);
+  for (const key of el('lenJourney').querySelectorAll('button')) {
+    const on = draft.journey === key.dataset.journey;
+    key.setAttribute('aria-pressed', on ? 'true' : 'false');
+    key.classList.toggle('armed', on);
+    key.disabled = !long;
+  }
+  fitNumber();
+}
+
+// The number keeps its size until it would not fit between −1 and +1
+// (five digits at large text), then steps down.
+function fitNumber() {
+  const num = el('lenNum');
+  num.style.fontSize = '';
+  for (let i = 0; i < 8 && num.scrollWidth > num.clientWidth + 1; i++) {
+    num.style.fontSize = `${parseFloat(getComputedStyle(num).fontSize) * 0.9}px`;
+  }
+}
+
+function commitTyped() {
+  if (!draft) return;
+  const num = el('lenNum');
+  const digits = num.value.replace(/[^0-9]/g, '');
+  if (digits) { draft.bars = clampBars(digits); draft.mode = 'bars'; }
+  renderLength();
+}
+
+export function wirePicks(handlers) {
+  api = handlers;
+  el('nowPicks').addEventListener('click', () => api.setView('vibe'));
+  el('picksClose').addEventListener('click', () => api.setView('now'));
+  el('picksClear').addEventListener('click', () => {
+    api.clearAll();
+    // It goes dim with nothing picked: the focus to close beside it.
+    el('picksClose').focus({ preventScroll: true });
+  });
+
+  el('lenCancel').addEventListener('click', () => {
+    // Nothing was changed while the picker was open, so leaving it is
+    // enough: the length is still what it was before, "any" included.
+    draft = null;
+    api.setView('vibe');
+  });
+  el('lenDone').addEventListener('click', () => {
+    if (document.activeElement === el('lenNum')) commitTyped();
+    const value = draft.mode === 'endless' ? 'endless' : draft.mode === 'any' ? null : draft.bars;
+    const journey = draft.journey || null;
+    draft = null;
+    api.setLength(value, journey);
+    api.setView('vibe');
+  });
+  el('lenDown').addEventListener('click', () => setDraftBars(draft.bars - 1));
+  el('lenUp').addEventListener('click', () => setDraftBars(draft.bars + 1));
+
+  const num = el('lenNum');
+  num.addEventListener('focus', () => {
+    if (draft.mode === 'endless') return;
+    // From any, the field starts empty (leaving it empty keeps any).
+    num.value = draft.mode === 'any' ? '' : String(draft.bars);
+    num.select();
+  });
+  num.addEventListener('input', () => {
+    const digits = num.value.replace(/[^0-9]/g, '').slice(0, 5);
+    if (digits !== num.value) num.value = digits;
+  });
+  num.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); num.blur(); }
+    if (e.key === 'Escape') { e.preventDefault(); num.value = ''; num.blur(); }
+  });
+  num.addEventListener('blur', commitTyped);
+
+  // The slider snaps to its sixteen stops; arrows step a stop at a time,
+  // from a number between stops to the stop on that side.
+  const slide = el('lenSlide');
+  slide.addEventListener('input', () => setDraftBars(2 ** Math.round(Number(slide.value))));
+  slide.addEventListener('keydown', (e) => {
+    const up = e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'PageUp';
+    const down = e.key === 'ArrowLeft' || e.key === 'ArrowDown' || e.key === 'PageDown';
+    const s = stopOf(draft.bars);
+    let next = null;
+    if (up) next = Number.isInteger(s) ? s + 1 : Math.ceil(s);
+    else if (down) next = Number.isInteger(s) ? s - 1 : Math.floor(s);
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = STOPS;
+    if (next == null) return;
+    e.preventDefault();
+    setDraftBars(2 ** Math.max(0, Math.min(STOPS, next)));
+  });
+
+  // The journey: a lit key pressed again goes back to chance.
+  for (const key of el('lenJourney').querySelectorAll('button')) {
+    key.addEventListener('click', () => {
+      draft.journey = draft.journey === key.dataset.journey ? null : key.dataset.journey;
+      renderLength();
+    });
+  }
+
+  // The ∞ key lights while endless is on; pressed again, it goes back to
+  // a number of bars. The any key lights while length is left to chance;
+  // pressing it lit does nothing, like the panel's any keys.
+  el('lenEndless').addEventListener('click', () => {
+    draft.mode = draft.mode === 'endless' ? 'bars' : 'endless';
+    renderLength();
+  });
+  el('lenAny').addEventListener('click', () => {
+    if (draft.mode === 'any') return;
+    draft.mode = 'any';
+    renderLength();
+  });
+}

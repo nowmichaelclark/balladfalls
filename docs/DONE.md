@@ -77,3 +77,7 @@ repository.
   were out retire; no listening gate; the decisions in `docs/DECISIONS.md`,
   whose links to the removed reasoning file are now plain text. Nothing to
   hear.
+- balladfalls #13, the history's fresh start queued (Mikey, 2026-11-26; docs
+  only): queue item H1 starts the history again at 1.0 once F-Droid lists
+  1.0, with a bundle of the old history on the `v1.0` release. Nothing to
+  hear.
